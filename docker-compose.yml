@@ -1,0 +1,138 @@
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    pull_policy: build
+    container_name: equipment-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+  migration:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+      target: development
+    pull_policy: build
+    container_name: equipment-migration
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Tokyo
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    command: ["sh", "-c", "npm run db:deploy && npm run admin:create"]
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+      target: development
+    pull_policy: build
+    container_name: equipment-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Tokyo
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      ORIGIN: http://localhost:3000
+    volumes:
+      - ./api:/app
+      - api_node_modules:/app/node_modules
+    expose:
+      - "5174"
+    networks:
+      - app-network
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5174/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    pull_policy: build
+    container_name: equipment-frontend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    expose:
+      - "5173"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+
+  gateway:
+    image: nginx:1.29-alpine
+    container_name: equipment-gateway
+    restart: unless-stopped
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "3000:80"
+    networks:
+      - app-network
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  db_data:
+    name: equipment-db-data
+  api_node_modules:
+    name: equipment-api-node-modules
+  frontend_node_modules:
+    name: equipment-frontend-node-modules
+
+networks:
+  app-network:
+    name: equipment-network
+    driver: bridge

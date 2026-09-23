@@ -1,0 +1,733 @@
+openapi: 3.1.0
+info:
+  title: SME Portal Hub REST API
+  version: 1.0.0
+  description: Version 1 API for equipment and employee management.
+servers:
+  - url: http://localhost:3000
+    description: Local gateway
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Employees
+  - name: Roles
+  - name: Employee masters
+  - name: Assets
+  - name: Locations
+paths:
+  /v1/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /v1/auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier: { type: string, maxLength: 254 }
+                password: { type: string, maxLength: 1024 }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /v1/auth/session:
+    get:
+      tags: [Authentication]
+      operationId: getSession
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/auth/onboarding:
+    post:
+      tags: [Authentication]
+      operationId: completeOnboarding
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, minLength: 12, maxLength: 1024 }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/employees:
+    get:
+      tags: [Employees]
+      operationId: listEmployees
+      description: Employee representations include request-time derived `age` and `lengthOfService` values. These values are not stored in the database.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [id, employee, employeeCode, firstName, lastName, age, lengthOfService, department, group, position, employmentType, branch, roles, hiredAt, createdAt, updatedAt]
+            default: employeeCode
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Employees]
+      operationId: createEmployee
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/EmployeeWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/EmployeeValidationError' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/EmployeeConflict' }
+  /v1/employees/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Employees]
+      operationId: updateEmployee
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/EmployeeWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/EmployeeValidationError' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/EmployeeConflict' }
+    delete:
+      tags: [Employees]
+      operationId: deleteEmployee
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/roles:
+    get:
+      tags: [Roles]
+      operationId: listRoles
+      description: Lists active assignable roles. System administrator role changes require a system administrator; business administrators may assign roles up to business administrator.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [code, name], default: name }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/{master}:
+    parameters:
+      - $ref: '#/components/parameters/Master'
+    get:
+      tags: [Employee masters]
+      operationId: listEmployeeMaster
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [id, code, name, sortOrder, createdAt, updatedAt]
+            default: code
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Employee masters]
+      operationId: createEmployeeMaster
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+  /v1/{master}/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Master'
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Employee masters]
+      operationId: updateEmployeeMaster
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Employee masters]
+      operationId: deleteEmployeeMaster
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/storage-locations:
+    get:
+      tags: [Locations]
+      operationId: listStorageLocations
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [id, code, name, createdAt, updatedAt]
+            default: code
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Locations]
+      operationId: createStorageLocation
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+  /v1/storage-locations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Locations]
+      operationId: updateStorageLocation
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Locations]
+      operationId: deleteStorageLocation
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/rooms:
+    get:
+      tags: [Locations]
+      operationId: listRooms
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+    post:
+      tags: [Locations]
+      operationId: createRoom
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+  /v1/rooms/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Locations]
+      operationId: updateRoom
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Locations]
+      operationId: deleteRoom
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/desks:
+    $ref: '#/components/pathItems/AssetCollection'
+  /v1/desks/{id}:
+    $ref: '#/components/pathItems/AssetItem'
+  /v1/it-assets:
+    get:
+      tags: [Assets]
+      operationId: listItAssets
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [id, assetTag, modelNumber, serialNumber, ramGb, purchasedOn, disposalOn, createdAt, updatedAt]
+            default: assetTag
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: typeId
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: manufacturerId
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: statusId
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: locationId
+          in: query
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Assets]
+      operationId: createItAsset
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ItAssetWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/ItAssetValidationError' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/ItAssetConflict' }
+  /v1/it-assets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Assets]
+      operationId: getItAsset
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Assets]
+      operationId: updateItAsset
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ItAssetWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/ItAssetValidationError' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/ItAssetConflict' }
+    delete:
+      tags: [Assets]
+      operationId: deleteItAsset
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/it-assets/{id}/assignments:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Assets]
+      operationId: listItAssetAssignments
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    post:
+      tags: [Assets]
+      operationId: assignItAsset
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeId]
+              properties:
+                employeeId: { type: integer, minimum: 1, description: Employee receiving the IT asset. }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/it-assets/{id}/assignments/{assignmentId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    patch:
+      tags: [Assets]
+      operationId: returnItAsset
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/chairs:
+    $ref: '#/components/pathItems/AssetCollection'
+  /v1/chairs/{id}:
+    $ref: '#/components/pathItems/AssetItem'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: equipment_session
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    Master:
+      name: master
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [departments, employee-groups, positions, employment-types, branches, it-asset-types, manufacturers, cpu-types, operating-systems, it-asset-statuses]
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    Limit:
+      name: limit
+      in: query
+      description: Values outside 1 through 500, including zero, are rejected.
+      schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    SortOrder:
+      name: sortOrder
+      in: query
+      description: Case-insensitive sort direction. Responses normalize the value to lowercase.
+      schema: { type: string, enum: [asc, desc, ASC, DESC], default: asc }
+  requestBodies:
+    EmployeeWrite:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/EmployeeWrite'
+    ItAssetWrite:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ItAssetWrite'
+    JsonResource:
+      required: true
+      content:
+        application/json:
+          schema: { type: object }
+  responses:
+    Success:
+      description: Successful request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+    Created:
+      description: Resource created
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+    ListSuccess:
+      description: Successful paginated list
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ListEnvelope' }
+    Error:
+      description: API error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    EmployeeValidationError:
+      description: Employee input validation failed. `error.details` identifies each invalid field and its reason.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    EmployeeConflict:
+      description: Employee code or email is already in use, or another employee update conflict occurred. Field conflicts use `EMPLOYEE_FIELD_CONFLICT` and identify the field in `error.details`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    ItAssetValidationError:
+      description: IT asset input validation failed. The response uses `VALIDATION_ERROR`, and `error.details` identifies each invalid field and its reason.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          examples:
+            requiredFields:
+              value:
+                status: error
+                responseCode: 400
+                error:
+                  code: VALIDATION_ERROR
+                  message: One or more fields are invalid.
+                  details:
+                    - { field: assetTag, reason: This field is required. }
+                    - { field: typeId, reason: Select an option. }
+    ItAssetConflict:
+      description: Management number or the manufacturer and serial-number combination is already in use. The response uses `IT_ASSET_FIELD_CONFLICT`, and `error.details` identifies `assetTag` or `serialNumber`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          examples:
+            assetTag:
+              value:
+                status: error
+                responseCode: 409
+                error:
+                  code: IT_ASSET_FIELD_CONFLICT
+                  message: An IT asset already uses this value.
+                  details:
+                    - { field: assetTag, reason: This management number is already in use. }
+            manufacturerAndSerialNumber:
+              value:
+                status: error
+                responseCode: 409
+                error:
+                  code: IT_ASSET_FIELD_CONFLICT
+                  message: An IT asset already uses this value.
+                  details:
+                    - { field: serialNumber, reason: This manufacturer and serial number combination is already in use. }
+  schemas:
+    Role:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, enum: [system_administrator, business_administrator, general_user] }
+        name: { type: string }
+    EmployeeDerivedFields:
+      type: object
+      description: Language-neutral values calculated by the API for each employee response and never persisted.
+      required: [age, lengthOfService]
+      properties:
+        age: { type: integer, minimum: 0, description: Completed years as of the API calculation date. }
+        lengthOfService:
+          type: object
+          required: [years, months]
+          properties:
+            years: { type: integer, minimum: 0 }
+            months: { type: integer, minimum: 0, maximum: 11 }
+    EmployeeWrite:
+      type: object
+      required: [employeeCode, firstName, lastName, birthDate, gender, email, hiredAt, employmentTypeId, branchId, roleCodes]
+      properties:
+        employeeCode: { type: string, minLength: 10, maxLength: 64, pattern: '^[A-Za-z0-9]+$', description: Must be unique among employees. }
+        firstName: { type: string, maxLength: 128 }
+        middleName: { type: [string, 'null'], maxLength: 128 }
+        lastName: { type: string, maxLength: 128 }
+        nameKana: { type: [string, 'null'], maxLength: 255 }
+        birthDate: { type: string, format: date }
+        gender: { type: string, enum: [female, male, unspecified] }
+        bloodType: { type: [string, 'null'], enum: [A, B, AB, O, null] }
+        postalCode: { type: [string, 'null'], maxLength: 8, pattern: '^\d{3}-?\d{4}$' }
+        prefecture: { type: [string, 'null'], maxLength: 64 }
+        city: { type: [string, 'null'], maxLength: 128 }
+        streetAddress: { type: [string, 'null'], maxLength: 255 }
+        buildingName: { type: [string, 'null'], maxLength: 255 }
+        mobilePhone: { type: [string, 'null'], maxLength: 32, pattern: '^[+0-9][0-9 ()-]{6,31}$' }
+        email: { type: string, format: email, maxLength: 254, description: Must be unique among employees. }
+        hiredAt: { type: string, format: date }
+        departmentId: { type: [integer, 'null'], minimum: 1 }
+        groupId: { type: [integer, 'null'], minimum: 1 }
+        positionId: { type: [integer, 'null'], minimum: 1 }
+        employmentTypeId: { type: integer, minimum: 1 }
+        branchId: { type: integer, minimum: 1 }
+        retiredAt: { type: [string, 'null'], format: date, description: Must not be before hiredAt. }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        roleCodes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [system_administrator, business_administrator, general_user] }
+    PositiveIdInput:
+      description: A positive database identifier. Digit strings are accepted because browser form values are serialized as strings.
+      oneOf:
+        - { type: integer, minimum: 1 }
+        - { type: string, pattern: '^[1-9]\d*$' }
+    OptionalPositiveIdInput:
+      description: An optional positive identifier. Null and an empty string both mean not selected.
+      oneOf:
+        - $ref: '#/components/schemas/PositiveIdInput'
+        - { type: 'null' }
+        - { type: string, maxLength: 0 }
+    ItAssetWrite:
+      type: object
+      required: [assetTag, typeId, locationId, statusId]
+      properties:
+        assetTag:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Management number. Must be unique among IT assets.
+        typeId: { $ref: '#/components/schemas/PositiveIdInput' }
+        manufacturerId: { $ref: '#/components/schemas/OptionalPositiveIdInput' }
+        modelNumber: { type: [string, 'null'], maxLength: 255 }
+        serialNumber:
+          type: [string, 'null']
+          maxLength: 255
+          description: When both values are present, the manufacturerId and serialNumber combination must be unique.
+        cpuTypeId:
+          allOf:
+            - $ref: '#/components/schemas/OptionalPositiveIdInput'
+          description: Allowed only when the selected IT asset type supports a CPU.
+        ramGb:
+          description: Allowed only when the selected IT asset type supports RAM. Null or an empty string means unset.
+          oneOf:
+            - { type: integer, minimum: 1 }
+            - { type: string, pattern: '^[1-9]\d*$' }
+            - { type: 'null' }
+            - { type: string, maxLength: 0 }
+        operatingSystemId:
+          allOf:
+            - $ref: '#/components/schemas/OptionalPositiveIdInput'
+          description: Allowed only when the selected IT asset type supports an operating system.
+        loginUsername:
+          type: [string, 'null']
+          maxLength: 255
+          description: Allowed only when the selected IT asset type supports a login username.
+        locationId: { $ref: '#/components/schemas/PositiveIdInput' }
+        statusId: { $ref: '#/components/schemas/PositiveIdInput' }
+        purchasedOn:
+          description: Optional purchase date. Null or an empty string means unset.
+          oneOf:
+            - { type: string, format: date }
+            - { type: 'null' }
+            - { type: string, maxLength: 0 }
+        disposalOn:
+          description: Required, optional, or prohibited according to the selected status. When present, it must not be before purchasedOn. Null or an empty string means unset.
+          oneOf:
+            - { type: string, format: date }
+            - { type: 'null' }
+            - { type: string, maxLength: 0 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+    SuccessEnvelope:
+      type: object
+      required: [status, responseCode, data]
+      properties:
+        status: { const: success }
+        responseCode: { type: integer }
+        data: {}
+    ListEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          required: [meta]
+          properties:
+            data: { type: array, items: {} }
+            meta:
+              type: object
+              required: [offset, limit, returned, total, hasMore, sort]
+              properties:
+                offset: { type: integer, minimum: 0 }
+                limit: { type: integer, minimum: 1, maximum: 500 }
+                returned: { type: integer, minimum: 0 }
+                total: { type: integer, minimum: 0 }
+                hasMore: { type: boolean }
+                calculatedAsOf: { type: string, format: date, description: Present for Employee lists; the business date used for derived values and sorting. }
+                sort:
+                  type: object
+                  required: [field, order]
+                  properties:
+                    field: { type: string }
+                    order: { type: string, enum: [asc, desc] }
+    ErrorEnvelope:
+      type: object
+      required: [status, responseCode, error]
+      properties:
+        status: { const: error }
+        responseCode: { type: integer, minimum: 400, maximum: 599 }
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                required: [reason]
+                properties:
+                  field: { type: string }
+                  reason: { type: string }
+  pathItems:
+    AssetCollection:
+      get:
+        tags: [Assets]
+        security: [{ sessionCookie: [] }]
+        parameters:
+          - $ref: '#/components/parameters/Offset'
+          - $ref: '#/components/parameters/Limit'
+          - $ref: '#/components/parameters/SortOrder'
+          - name: sortBy
+            in: query
+            schema: { type: string, default: assetTag }
+        responses:
+          '200': { $ref: '#/components/responses/ListSuccess' }
+          '401': { $ref: '#/components/responses/Error' }
+          '403': { $ref: '#/components/responses/Error' }
+          '422': { $ref: '#/components/responses/Error' }
+      post:
+        tags: [Assets]
+        security: [{ sessionCookie: [] }]
+        requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+        responses:
+          '201': { $ref: '#/components/responses/Created' }
+          '400': { $ref: '#/components/responses/Error' }
+    AssetItem:
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      patch:
+        tags: [Assets]
+        security: [{ sessionCookie: [] }]
+        requestBody: { $ref: '#/components/requestBodies/JsonResource' }
+        responses:
+          '200': { $ref: '#/components/responses/Success' }
+          '400': { $ref: '#/components/responses/Error' }
+          '404': { $ref: '#/components/responses/Error' }
+      delete:
+        tags: [Assets]
+        security: [{ sessionCookie: [] }]
+        responses:
+          '200': { $ref: '#/components/responses/Success' }
+          '404': { $ref: '#/components/responses/Error' }
+          '409': { $ref: '#/components/responses/Error' }
+x-planned-security:
+  apiKey:
+    header: X-API-Key
+    note: API key issuance and authorization scopes are intentionally deferred until the access matrix is approved.

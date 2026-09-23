@@ -1,0 +1,13 @@
+/* Row action menus shared by Employees, IT Assets, and future list pages. */
+.kebab-button{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0;padding:0;background:transparent!important;color:var(--muted)!important;border:0;border-radius:4px}
+.kebab-button:hover,.kebab-button[aria-expanded='true']{background:var(--bg)!important;color:var(--text-secondary)!important}
+.kebab-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
+.kebab-button svg{width:14px;height:14px}
+.menu-popover{position:fixed;z-index:1100;display:flex;min-width:160px;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(15,23,42,.16);animation:menu-in 140ms cubic-bezier(.2,0,0,1)}
+@keyframes menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.menu-popover > button[role='menuitem']{margin:0;padding:7px 10px;background:transparent!important;color:var(--text)!important;border:0;border-radius:4px;text-align:left;font-size:13px;line-height:1.4286}
+.menu-popover > button[role='menuitem']:hover,.menu-popover > button[role='menuitem']:focus-visible{background:var(--surface-secondary)!important}
+.menu-popover > button.delete-item{color:#d63939!important}
+.menu-popover > button[role='menuitem']:disabled{cursor:not-allowed;opacity:.5}
+.menu-popover > button[role='menuitem']:disabled:hover{background:transparent!important}
+.menu-separator{height:1px;margin:4px 2px;background:var(--border-light)}

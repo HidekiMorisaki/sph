@@ -1,0 +1,11 @@
+﻿.env
+__pycache__/
+*.pyc
+.svelte-kit/
+node_modules/
+build/
+staticfiles/
+frontend/src/lib/server/generated/
+api/src/lib/server/generated/
+TEMP/*.*
+*.code-workspace
