@@ -26,7 +26,9 @@
 	}
 	function toggle(item: Item, event: MouseEvent) {
 		if (collapsed || compact) {
-			railFlyoutTop = Math.min(event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect().top : 0, Math.max(8, window.innerHeight - 170));
+			const triggerTop = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect().top : 0;
+			const flyoutHeight = Math.min(window.innerHeight - 16, (item.children?.length ?? 0) * 34 + 14);
+			railFlyoutTop = Math.max(8, Math.min(triggerTop, window.innerHeight - flyoutHeight - 8));
 			railFlyout = railFlyout === item.text ? '' : item.text;
 			return;
 		}
@@ -60,10 +62,9 @@
 	{#if home}<div class="brand"><span class="brand-icon">S</span><strong>{productName}</strong></div>{:else}<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>{/if}
 	<nav class="sidebar-nav" onscroll={() => railFlyout = ''}>
 		{#each menus as group}
-			{#if !group.managerOnly || canManageMasters}
+			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.role === 'system_administrator')}
 			<div class="nav-group"><p class="nav-label">{group.label}</p>
 				{#each group.items as item}
-					{#if item.href !== '/system-settings' || user?.role === 'system_administrator'}
 					{#if item.children}
 						<div class:open={openMenu === item.text} class:animate={animateMenu} class="nav-tree">
 							<button class="nav-link nav-toggle" type="button" data-rail-label={item.text} aria-expanded={collapsed || compact ? railFlyout === item.text : openMenu === item.text} onclick={(event) => toggle(item, event)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}<i class="nav-chev">›</i></button>
@@ -71,7 +72,6 @@
 							{#if (collapsed || compact) && railFlyout === item.text}<div class="rail-flyout" style:top="{railFlyoutTop}px">{#each item.children as child}<a href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div>{/if}
 						</div>
 					{:else}<a class:active={currentPath === item.href} class="nav-link" data-rail-label={item.text} href={item.href}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}</a>{/if}
-					{/if}
 				{/each}
 			</div>
 			{/if}
@@ -109,7 +109,7 @@
 	.sidebar-user-info small{display:block;margin-top:2px;color:var(--sidebar-muted, #7b8fa3);font-size:12px;line-height:1.2}
 	.more-icon{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-left:auto;color:var(--sidebar-muted, #7b8fa3)}
 	.user-menu{position:absolute;right:8px;bottom:58px;z-index:70;display:grid;width:188px;padding:6px;background:var(--sidebar);border:1px solid #ffffff14;border-radius:6px;box-shadow:var(--shadow)}.user-menu a,.user-menu button{padding:8px;background:transparent;border:0;color:var(--sidebar-muted, #7b8fa3);font-size:14px;text-align:left;text-decoration:none;cursor:pointer}.user-menu a:hover,.user-menu button:hover{background:#ffffff0c;color:#fff}.user-menu a:focus-visible,.user-menu button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
-	.rail-flyout{position:fixed;left:72px;z-index:100;display:grid;min-width:180px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:5px;box-shadow:var(--shadow)}.rail-flyout a{padding:8px;color:var(--text);font-size:12px;text-decoration:none}.rail-flyout a:hover{background:var(--bg)}
+	.rail-flyout{position:fixed;left:72px;z-index:100;display:grid;min-width:180px;max-height:calc(100dvh - 16px);overflow-y:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:5px;box-shadow:var(--shadow)}.rail-flyout a{padding:8px;color:var(--text);font-size:12px;text-decoration:none}.rail-flyout a:hover{background:var(--bg)}
 	aside.collapsed{width:64px;overflow:visible}
 	aside.collapsed .sidebar-nav{overflow-y:auto}
 	aside.collapsed .brand strong,aside.collapsed .nav-label,aside.collapsed .nav-text,aside.collapsed .badge,aside.collapsed .nav-chev,aside.collapsed .nav-sub,aside.collapsed .sidebar-user-info,aside.collapsed .more-icon{display:none}

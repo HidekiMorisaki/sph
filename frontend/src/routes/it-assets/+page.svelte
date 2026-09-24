@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
+	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
@@ -315,7 +316,7 @@
 <AssetManagementShell title="IT Assets" active="IT Assets">
 	<div class="heading">
 		<div><p>ASSET INVENTORY</p><h1>IT Assets</h1><span>Track computers, servers, network appliances, power equipment and peripherals.</span></div>
-		{#if role !== ''}<button class="app-add-button" type="button" onclick={create}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h8M8 4v8" /></svg>Add IT asset</button>{/if}
+		{#if role !== ''}<AddButton label="Add IT asset" onclick={create} />{/if}
 	</div>
 	{#if message}<p class="notice">{message}</p>{/if}
 	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title="IT assets" listHeading="All IT assets" description="Find and manage assets across locations." initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={role !== ''} canDelete={role !== ''} actionLabel={(item) => (item as Asset).assetTag} loadingLabel="Loading IT assets…" emptyLabel="No matches found" columns={[
@@ -359,7 +360,7 @@
 						<h3>Assign to employee</h3>
 						{@render searchableSelect('Employee', 'assignEmployeeId', [{ value: '', label: 'Unassigned' }, ...employees.map(employee => ({ value: String(employee.id), label: employeeName(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName] }))])}
 					</div>
-					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="primary save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : 'Save IT asset'}</button>{/if}</footer>
+					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add IT asset'}</button>{/if}</footer>
 				</form>
 			</dialog>
 		</div>
@@ -412,8 +413,6 @@
 <style>
 	.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}
 	.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.08em}.heading h1{margin:4px 0;font-size:30px}.heading span{color:var(--muted)}
-	.primary,.secondary{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:4px;font-size:12.5px;font-weight:500;line-height:1}
-	.primary{background:#1abb9c!important;border-color:#169f85;color:#fff!important}.secondary{background:var(--surface)!important;color:var(--text-secondary)!important}
 	.notice{color:var(--muted);font-size:12px}.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:11px}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}
 	.asset-detail-body{display:grid;flex:1;min-height:0;align-content:start;gap:16px;overflow-y:auto;padding:16px 24px 24px;background:var(--bg)}
 	.detail-section{min-width:0;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:5px}.detail-section h3{margin:0 0 14px;color:var(--text);font-size:14px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0}.detail-grid>div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;font-weight:600}.detail-grid dd{margin:4px 0 0;color:var(--text);font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}

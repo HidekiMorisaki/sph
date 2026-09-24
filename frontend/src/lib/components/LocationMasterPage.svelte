@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
+	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import '$lib/styles/add-button.css';
 	type Branch={id:number;code:string;name:string;notes:string|null};
@@ -25,6 +27,7 @@
 	const modalTitle=$derived(`${editingId===null?'Add':'Edit'} ${resourceLabel}`);
 	const submitLabel=$derived(editingId===null?addLabel:'Save changes');
 	const formErrorTitle=$derived(`Unable to ${editingId===null?'add':'save'} ${resourceLabel}`);
+	const minTableWidth=$derived(tab==='branches'?720:tab==='rooms'?820:980);
 	function reset(){editingId=null;formOpen=false;errors={};formError='';form={code:'',name:'',branchId:branches[0]?String(branches[0].id):'',roomId:rooms[0]?String(rooms[0].id):'',notes:''};message='';}
 	async function load(){const session=await fetch('/v1/auth/session');if(!session.ok){message='Please sign in to continue.';return;}role=(await apiData<{user:{role:string}}>(session)).user.role;const responses=await Promise.all([fetch('/v1/branches?limit=500'),fetch('/v1/rooms?limit=500')]);if(responses.some((response)=>!response.ok)){message='Unable to load location data.';return;}[branches,rooms]=await Promise.all([apiData<Branch[]>(responses[0]),apiData<Room[]>(responses[1])]);if(!editingId)reset();}
 	function edit(item:Branch|Room|Location,trigger:HTMLButtonElement|null){returnFocus=trigger;editingId=item.id;formOpen=true;errors={};formError='';form={code:item.code,name:item.name,branchId:'branchId' in item?String(item.branchId):'',roomId:'roomId' in item?String(item.roomId):'',notes:item.notes??''};void tick().then(()=>formElement?.querySelector<HTMLInputElement>('[name="code"]')?.focus());}
@@ -37,6 +40,8 @@
 	onMount(()=>{void load()});
 </script>
 
+{#snippet headerActions()}{#if canManage}<AddButton bind:element={addButton} label={addLabel} onclick={add} />{/if}{/snippet}
+
 {#snippet locationFields()}
 	<label><span>Code <span class="required">*</span></span><input name="code" bind:value={form.code} maxlength="64" class:invalid={!!errors.code} aria-invalid={!!errors.code} aria-describedby={errors.code?'location-code-error':undefined} oninput={()=>clearError('code')}/>{#if errors.code}<small id="location-code-error" class="field-error">{errors.code}</small>{/if}</label>
 	<label><span>Name <span class="required">*</span></span><input name="name" bind:value={form.name} maxlength="128" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name?'location-name-error':undefined} oninput={()=>clearError('name')}/>{#if errors.name}<small id="location-name-error" class="field-error">{errors.name}</small>{/if}</label>
@@ -46,10 +51,10 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 <AssetManagementShell {title} active="">
-	<div class="heading"><div><p>LOCATION HIERARCHY</p><h1>{title}</h1><span>Maintain {tab==='branches'?'branches':tab==='rooms'?'rooms':'storage positions'} used by assets.</span></div>{#if canManage}<button bind:this={addButton} class="app-add-button" type="button" onclick={add}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2v12M2 8h12" /></svg>{addLabel}</button>{/if}</div>
+	<MasterPageHeader eyebrow="LOCATION CONFIGURATION" {title} description={`Maintain ${tab==='branches'?'branches':tab==='rooms'?'rooms':'storage positions'} used by assets.`} actions={headerActions} />
 	{#if message}<p class="notice">{message}</p>{/if}
 	<section class="panel">
-		<MasterList bind:this={list} {endpoint} {columns} {title} {canManage} onEdit={(item,trigger)=>edit(item as Branch|Room|Location,trigger)} onDelete={(item)=>remove(item as Branch|Room|Location)} />
+		<MasterList bind:this={list} {endpoint} {columns} {title} {canManage} {minTableWidth} onEdit={(item,trigger)=>edit(item as Branch|Room|Location,trigger)} onDelete={(item)=>remove(item as Branch|Room|Location)} />
 	</section>
 </AssetManagementShell>
 
@@ -58,9 +63,9 @@
 		<header><h2 id="location-dialog-title">{modalTitle}</h2><button class="app-modal-close" type="button" aria-label={`Close ${modalTitle} dialog`} disabled={saving} onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form bind:this={formElement} class="app-modal-form" novalidate onsubmit={(event)=>{event.preventDefault();void save();}}>
 			<div class="location-form-body app-modal-form-body">{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{formErrorTitle}</strong><span>{formError}</span></div>{/if}<h3>Basic information</h3>{@render locationFields()}</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>Cancel</button><button class="primary" type="submit" disabled={saving}>{saving?(editingId===null?'Adding...':'Saving...'):submitLabel}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving?(editingId===null?'Adding...':'Saving...'):submitLabel}</button></footer>
 		</form>
 	</dialog></div>
 {/if}
 
-<style>.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700}.heading h1{margin:4px 0;font-size:30px}.heading span{color:var(--muted);font-size:13px}.notice{color:#d63939}.panel{width:100%;min-width:0;box-sizing:border-box}.primary{background:#066fd1}.secondary{background:#6c757d}.location-dialog{width:min(calc(100% - 32px),560px)}.location-form-body{grid-template-columns:repeat(2,minmax(0,1fr))}.notes-field{grid-column:1/-1}.required{color:#d63939}.field-error{color:#d63939;font-size:11px}@media(max-width:700px){.heading{align-items:stretch;flex-direction:column}.location-form-body{grid-template-columns:1fr}}</style>
+<style>.notice{margin:0 0 14px;color:var(--danger);font-size:13px}.panel{width:100%;min-width:0;box-sizing:border-box}.location-dialog{width:min(calc(100% - 32px),560px)}.location-form-body{grid-template-columns:repeat(2,minmax(0,1fr))}.notes-field{grid-column:1/-1}.required{color:var(--danger)}.field-error{color:var(--danger);font-size:11px}@media(max-width:700px){.location-form-body{grid-template-columns:1fr}}</style>

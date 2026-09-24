@@ -6,7 +6,7 @@
 	type Row = { id: number; [key: string]: any };
 	type Permission = boolean | ((item: Row) => boolean);
 	type Column = { key: string; label: string; value?: (item: any) => string | number | null | undefined; cell?: Snippet<[any]>; width?: number; primary?: boolean; sortable?: boolean };
-	let { endpoint, columns, title, listHeading, description = 'Sortable, searchable, paginated.', initialSortBy = 'code', pageSizeStorageKey, minTableWidth = 720, actionWidth = 5, searchParam = 'search', edgePagination = false, canManage = false, canDetail, canEdit, canDelete, actionLabel, headerActions, loadingLabel = 'Loading...', emptyLabel = 'No items found.', onDetail, onEdit, onDelete }: {
+	let { endpoint, columns, title, listHeading, description = 'Sortable, searchable, paginated.', initialSortBy = 'code', pageSizeStorageKey, minTableWidth = 720, actionWidth = 5, searchParam = 'search', edgePagination = true, canManage = false, canDetail, canEdit, canDelete, actionLabel, headerActions, loadingLabel = 'Loading...', emptyLabel = 'No items found.', onDetail, onEdit, onDelete }: {
 		endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; minTableWidth?: number; actionWidth?: number; searchParam?: string; edgePagination?: boolean; canManage?: boolean; canDetail?: Permission; canEdit?: Permission; canDelete?: Permission; actionLabel?: (item: Row) => string; headerActions?: Snippet; loadingLabel?: string; emptyLabel?: string;
 		onDetail?: (item: Row, trigger: HTMLButtonElement | null) => void;
 		onEdit?: (item: Row, trigger: HTMLButtonElement | null) => void;
@@ -157,5 +157,5 @@
 	.master-footer button[aria-current='page']{background:#1abb9c!important;color:#fff!important;border-color:#169f85}
 	.master-footer button:disabled{cursor:not-allowed;opacity:.5}
 	.master-footer button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
-	@media(max-width:700px){.master-list{max-height:calc(100dvh - 180px)}.master-header,.master-toolbar,.master-footer{align-items:stretch;flex-direction:column}.master-header-actions,.search-box{width:100%}}
+	@media(max-width:700px){.master-list{max-height:calc(100dvh - 280px)}.master-header,.master-toolbar,.master-footer{align-items:stretch;flex-direction:column}.master-header-actions,.search-box{width:100%}}
 </style>

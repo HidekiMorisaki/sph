@@ -1,6 +1,6 @@
 export type Link = { text: string; href: string };
 export type Item = { text: string; icon: string; href?: string; children?: Link[]; badge?: string };
-export type MenuGroup = { label: string; items: Item[]; managerOnly?: boolean };
+export type MenuGroup = { label: string; items: Item[]; managerOnly?: boolean; systemAdministratorOnly?: boolean };
 export type Breadcrumb = { label: string; href?: string };
 	export const menus: MenuGroup[] = [
 		{ label: 'GENERAL', items: [{ text: 'Dashboards', icon: 'dashboard', children: [{ text: 'Operations', href: '/' }, { text: 'Analytics', href: '/analytics' }, { text: 'Sales', href: '/sales' }, { text: 'System health', href: '/system-health' }] }] },
@@ -9,20 +9,28 @@ export type Breadcrumb = { label: string; href?: string };
 			{ text: 'Employees', icon: 'table', href: '/employees' },
 			{ text: 'IT Assets', icon: 'dashboard', href: '/it-assets' }
 		] },
-		{ label: 'MASTER MANAGEMENT', managerOnly: true, items: [
-			{ text: 'Departments', icon: 'list', href: '/employee-masters/departments' },
-			{ text: 'Groups', icon: 'list', href: '/employee-masters/employee-groups' },
-			{ text: 'Positions', icon: 'list', href: '/employee-masters/positions' },
-			{ text: 'Employment types', icon: 'list', href: '/employee-masters/employment-types' },
-			{ text: 'Branches', icon: 'list', href: '/branches' },
-			{ text: 'Rooms', icon: 'list', href: '/rooms' },
-			{ text: 'Storages', icon: 'list', href: '/storages' },
-			{ text: 'IT asset types', icon: 'list', href: '/it-asset-masters/it-asset-types' },
-			{ text: 'Manufacturers', icon: 'list', href: '/it-asset-masters/manufacturers' },
-			{ text: 'CPU types', icon: 'list', href: '/it-asset-masters/cpu-types' },
-			{ text: 'Operating systems', icon: 'list', href: '/it-asset-masters/operating-systems' },
-			{ text: 'IT asset statuses', icon: 'list', href: '/it-asset-masters/it-asset-statuses' },
+		{ label: 'SITE MANAGEMENT', managerOnly: true, items: [
 			{ text: 'System settings', icon: 'settings', href: '/system-settings' }
+		] },
+		{ label: 'MASTER MANAGEMENT', managerOnly: true, items: [
+			{ text: 'Employment', icon: 'list', children: [
+				{ text: 'Departments', href: '/employee-masters/departments' },
+				{ text: 'Groups', href: '/employee-masters/employee-groups' },
+				{ text: 'Positions', href: '/employee-masters/positions' },
+				{ text: 'Types', href: '/employee-masters/employment-types' }
+			] },
+			{ text: 'Locations', icon: 'list', children: [
+				{ text: 'Branches', href: '/branches' },
+				{ text: 'Rooms', href: '/rooms' },
+				{ text: 'Storages', href: '/storages' }
+			] },
+			{ text: 'IT ASSETS', icon: 'list', children: [
+				{ text: 'Asset types', href: '/it-asset-masters/it-asset-types' },
+				{ text: 'Manufacturers', href: '/it-asset-masters/manufacturers' },
+				{ text: 'CPU types', href: '/it-asset-masters/cpu-types' },
+				{ text: 'Operating systems', href: '/it-asset-masters/operating-systems' },
+				{ text: 'Asset statuses', href: '/it-asset-masters/it-asset-statuses' }
+			] }
 		] }
 	];
 

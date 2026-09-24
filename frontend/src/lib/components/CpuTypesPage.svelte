@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import AddButton from '$lib/components/AddButton.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import { apiData } from '$lib/api';
 
@@ -156,17 +158,19 @@
 	onMount(() => { void initialize(); });
 </script>
 
+{#snippet headerActions()}{#if canManage}<AddButton bind:element={addButton} label="Add CPU type" ariaLabel="Add CPU type" onclick={() => openModal('add')} />{/if}{/snippet}
+
 <svelte:window onkeydown={handleWindowKeydown} />
 <AssetManagementShell title="CPU types" active="">
 	<div class="cpu-page">
-		<header class="heading"><div><p>IT ASSET CONFIGURATION</p><h1>CPU types</h1><span>Manage CPU models available to IT assets.</span></div>{#if canManage}<button bind:this={addButton} class="app-add-button" type="button" aria-label="+ Add cpu type" onclick={() => openModal('add')}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h8M8 4v8" /></svg>Add cpu type</button>{/if}</header>
+		<MasterPageHeader eyebrow="IT ASSET CONFIGURATION" title="CPU types" description="Manage CPU models available to IT assets." actions={headerActions} />
 		{#if notice}<p class="notice" role="status">{notice}</p>{/if}
 		<MasterList bind:this={list} endpoint="/v1/cpu-types" title="CPU types" listHeading="All CPU types" description="Search and manage CPU models." {columns} {canManage} initialSortBy="displayName" pageSizeStorageKey="cpu-types-page-size" minTableWidth={760} onDetail={(item, trigger) => openModal('detail', item as CpuType, trigger)} onEdit={(item, trigger) => openModal('edit', item as CpuType, trigger)} onDelete={(item) => remove(item as CpuType)} />
 	</div>
 </AssetManagementShell>
 
 {#if mode}
-	<div class="backdrop app-modal-backdrop" role="presentation"><dialog bind:this={dialogElement} class={mode === 'detail' ? 'cpu-dialog app-modal app-modal--compact' : 'cpu-dialog app-modal'} open aria-modal="true" aria-labelledby="cpu-dialog-title">
+	<div class="backdrop app-modal-backdrop" role="presentation"><dialog bind:this={dialogElement} class="cpu-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="cpu-dialog-title">
 		<header><h2 id="cpu-dialog-title">{mode === 'add' ? 'Add cpu type' : mode === 'edit' ? 'Edit cpu type' : 'CPU type details'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close CPU type dialog" onclick={closeModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		{#if mode === 'detail' && selected}{@const officialUrl = officialUrlHref(selected.officialUrl)}<dl class="dialog-body detail-grid"><div><dt>Display name</dt><dd>{selected.displayName}</dd></div><div><dt>Manufacturer</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>Series</dt><dd>{selected.series}</dd></div><div><dt>Model number</dt><dd>{selected.modelNumber}</dd></div><div><dt>Code</dt><dd>{selected.code}</dd></div><div><dt>Sort order</dt><dd>{selected.sortOrder}</dd></div><div><dt>Official URL</dt><dd>{#if officialUrl}<a href={officialUrl} target="_blank" rel="noopener noreferrer">{selected.officialUrl}</a>{:else}{selected.officialUrl ?? ''}{/if}</dd></div><div><dt>Source checked</dt><dd>{selected.sourceCheckedOn?.slice(0, 10) ?? ''}</dd></div></dl><footer class="app-modal-footer"><button class="secondary" type="button" onclick={closeModal}>Close</button></footer>
 		{:else}<form id="cpu-form" class="cpu-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
@@ -183,13 +187,13 @@
 				<label><span>Official URL</span><input name="officialUrl" type="url" value={form.officialUrl} maxlength="1000" class:invalid={Boolean(errors.officialUrl)} aria-invalid={Boolean(errors.officialUrl)} aria-describedby={errors.officialUrl ? 'officialUrl-error' : undefined} oninput={(event) => updateField('officialUrl', event.currentTarget.value)} />{#if errors.officialUrl}<span class="field-error" id="officialUrl-error" role="alert">{errors.officialUrl}</span>{/if}</label>
 				<DatePicker label="Source checked" field="sourceCheckedOn" value={form.sourceCheckedOn} error={errors.sourceCheckedOn ?? ''} above={sourceDateAbove} open={sourceDateOpen} onToggle={toggleSourceDate} onSelect={(value) => { updateField('sourceCheckedOn', value); sourceDateOpen = false; }} />
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeModal}>Cancel</button><button class="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : mode === 'add' ? 'Add cpu type' : 'Save changes'}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeModal}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : mode === 'add' ? 'Add cpu type' : 'Save changes'}</button></footer>
 		</form>{/if}
 	</dialog></div>
 {/if}
 
 <style>
-	.cpu-page{display:flex;min-width:0;width:100%;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.08em}.heading h1{margin:4px 0;color:var(--text);font-size:30px}.heading span{color:var(--muted);font-size:13px}.notice{margin:0 0 14px;color:var(--text-secondary);font-size:13px}
+	.cpu-page{display:flex;min-width:0;width:100%;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.notice{margin:0 0 14px;color:var(--text-secondary);font-size:13px}
 	.dialog-body{min-height:0;overflow-y:auto;padding:20px 24px;background:var(--bg)}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0}.detail-grid div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}.detail-grid dd{margin:4px 0 0;color:var(--text);font-size:13px;overflow-wrap:anywhere}.detail-grid a{color:#337ab7;text-decoration:underline;text-underline-offset:2px}:global(html[data-theme='dark']) .detail-grid a{color:#77b9f0}
-	button:focus-visible,input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}@media(max-width:700px){.heading{align-items:stretch;flex-direction:column}.dialog-body{padding:16px}.detail-grid{grid-template-columns:1fr}}
+	input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}@media(max-width:700px){.dialog-body{padding:16px}.detail-grid{grid-template-columns:1fr}}
 </style>
