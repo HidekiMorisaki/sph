@@ -6,19 +6,25 @@ import type { ListQuery } from '$lib/server/api/query';
 export const employeeMasterResources = ['departments', 'employee-groups', 'positions', 'employment-types', 'branches'] as const;
 export type EmployeeMasterResource = (typeof employeeMasterResources)[number];
 export const masterSortFields = ['id', 'code', 'name', 'createdAt', 'updatedAt'] as const;
-export type MasterSortField = (typeof masterSortFields)[number];
+export const branchSortFields = [...masterSortFields, 'notes'] as const;
+export type MasterSortField = (typeof branchSortFields)[number];
+export type EmployeeMasterInput = { code: string; name: string; notes?: string | null };
 
 export function isEmployeeMasterResource(resource: string): resource is EmployeeMasterResource {
 	return employeeMasterResources.includes(resource as EmployeeMasterResource);
 }
 
-export function masterInput(value: unknown): { code: string; name: string } | null {
+export function masterInput(resource: EmployeeMasterResource, value: unknown): EmployeeMasterInput | null {
 	if (!value || typeof value !== 'object') return null;
 	const body = value as Record<string, unknown>;
 	if (typeof body.code !== 'string' || typeof body.name !== 'string') return null;
 	const code = body.code.trim();
 	const name = body.name.trim();
-	return code && name && code.length <= 64 && name.length <= 128 ? { code, name } : null;
+	if (!code || !name || code.length > 64 || name.length > 128) return null;
+	if (resource !== 'branches') return { code, name };
+	if (body.notes !== undefined && body.notes !== null && typeof body.notes !== 'string') return null;
+	const notes = typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null;
+	return notes && notes.length > 5000 ? null : { code, name, notes };
 }
 
 export async function listMasters(resource: EmployeeMasterResource, query: ListQuery<MasterSortField>, search = '') {
@@ -58,43 +64,44 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 			return { total, items };
 		}
 		case 'branches': {
+			const where: Prisma.BranchWhereInput = { deletedAt: null, ...(search ? { OR: [{ code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }] } : {}) };
 			const [total, items] = await db.$transaction([
-				db.branch.count({ where: page.where }),
-				db.branch.findMany({ ...page, orderBy: orderBy as Prisma.BranchOrderByWithRelationInput[] })
+				db.branch.count({ where }),
+				db.branch.findMany({ where, skip: query.offset, take: query.limit, orderBy: orderBy as Prisma.BranchOrderByWithRelationInput[] })
 			]);
 			return { total, items };
 		}
 	}
 }
 
-export async function createMaster(resource: EmployeeMasterResource, data: { code: string; name: string }, actorId: number) {
+export async function createMaster(resource: EmployeeMasterResource, data: EmployeeMasterInput, actorId: number) {
 	return getPrisma().$transaction(async (tx) => {
-		let item: { id: number; code: string; name: string };
+		let item: { id: number; code: string; name: string; notes?: string | null };
 		switch (resource) {
-			case 'departments': item = await tx.department.create({ data }); break;
-			case 'employee-groups': item = await tx.employeeGroup.create({ data }); break;
-			case 'positions': item = await tx.position.create({ data }); break;
-			case 'employment-types': item = await tx.employmentType.create({ data }); break;
-			case 'branches': item = await tx.branch.create({ data }); break;
+			case 'departments': item = await tx.department.create({ data: { code: data.code, name: data.name } }); break;
+			case 'employee-groups': item = await tx.employeeGroup.create({ data: { code: data.code, name: data.name } }); break;
+			case 'positions': item = await tx.position.create({ data: { code: data.code, name: data.name } }); break;
+			case 'employment-types': item = await tx.employmentType.create({ data: { code: data.code, name: data.name } }); break;
+			case 'branches': item = await tx.branch.create({ data: { code: data.code, name: data.name, notes: data.notes ?? null } }); break;
 		}
 		await writeAuditLog(tx, actorId, 'create', resource, item.id);
 		return item;
 	});
 }
 
-export async function updateMaster(resource: EmployeeMasterResource, id: number, data: { code: string; name: string }, actorId: number) {
+export async function updateMaster(resource: EmployeeMasterResource, id: number, data: EmployeeMasterInput, actorId: number) {
 	return getPrisma().$transaction(async (tx) => {
 		let result: { count: number };
 		switch (resource) {
-			case 'departments': result = await tx.department.updateMany({ where: { id, deletedAt: null }, data }); break;
-			case 'employee-groups': result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data }); break;
-			case 'positions': result = await tx.position.updateMany({ where: { id, deletedAt: null }, data }); break;
-			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data }); break;
-			case 'branches': result = await tx.branch.updateMany({ where: { id, deletedAt: null }, data }); break;
+			case 'departments': result = await tx.department.updateMany({ where: { id, deletedAt: null }, data: { code: data.code, name: data.name } }); break;
+			case 'employee-groups': result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data: { code: data.code, name: data.name } }); break;
+			case 'positions': result = await tx.position.updateMany({ where: { id, deletedAt: null }, data: { code: data.code, name: data.name } }); break;
+			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data: { code: data.code, name: data.name } }); break;
+			case 'branches': result = await tx.branch.updateMany({ where: { id, deletedAt: null }, data: { code: data.code, name: data.name, notes: data.notes ?? null } }); break;
 		}
 		if (result.count !== 1) return null;
 		await writeAuditLog(tx, actorId, 'update', resource, id);
-		return { id, ...data };
+		return { id, code: data.code, name: data.name, ...(resource === 'branches' ? { notes: data.notes ?? null } : {}) };
 	});
 }
 

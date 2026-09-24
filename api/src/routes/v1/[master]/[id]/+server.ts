@@ -1,6 +1,6 @@
 import { requireAdminApi } from '$lib/server/api/admin';
 import { duplicateField, parseId } from '$lib/server/api/database';
-import { isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster } from '$lib/server/api/employee-masters';
+import { isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
 import { cpuTypeConflictField, deleteItAssetMaster, isItAssetMasterResource, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
 import { failure, success, throwApiError } from '$lib/server/api/response';
 
@@ -13,10 +13,10 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 	const actor = requireAdminApi(locals.user);
 	const id = parseId(params.id);
 	const selected = resource(params.master); const value = await request.json().catch(() => null);
-	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(value);
+	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(selected, value);
 	if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	try {
-		const item = isItAssetMasterResource(selected) ? await updateItAssetMaster(selected, id, data, actor.id) : await updateMaster(selected, id, data as { code: string; name: string }, actor.id);
+		const item = isItAssetMasterResource(selected) ? await updateItAssetMaster(selected, id, data, actor.id) : await updateMaster(selected, id, data as EmployeeMasterInput, actor.id);
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
 	} catch (error) {
 		const field = selected === 'cpu-types' ? cpuTypeConflictField(error) : duplicateField(error);

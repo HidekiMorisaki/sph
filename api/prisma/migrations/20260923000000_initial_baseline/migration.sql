@@ -157,6 +157,7 @@ CREATE TABLE public.branches (
     code text NOT NULL,
     name text NOT NULL,
     address text,
+    notes text,
     created_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     deleted_at timestamp(3) with time zone
@@ -960,7 +961,7 @@ CREATE TABLE public.rooms (
     id integer NOT NULL,
     code text NOT NULL,
     name text NOT NULL,
-    floor text,
+    notes text,
     branch_id integer NOT NULL,
     created_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -1035,7 +1036,7 @@ CREATE TABLE public.storage_locations (
     created_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     deleted_at timestamp(3) with time zone,
-    kind text,
+    notes text,
     room_id integer NOT NULL
 );
 
@@ -2454,15 +2455,15 @@ INSERT INTO "branches" ("id", "code", "name", "address") VALUES ('3', 'TOKYO', '
 SELECT setval(pg_get_serial_sequence('"branches"', 'id'), (SELECT MAX(id) FROM "branches"), true);
 
 -- rooms (3 rows)
-INSERT INTO "rooms" ("id", "code", "name", "floor", "branch_id") VALUES ('1', 'HEAD_1F_MEETING', '1F Meeting Room', '1F', '1');
-INSERT INTO "rooms" ("id", "code", "name", "floor", "branch_id") VALUES ('2', 'NAGASAKI_SECURE', 'Secure Area', NULL, '2');
-INSERT INTO "rooms" ("id", "code", "name", "floor", "branch_id") VALUES ('3', 'TOKYO_MEETING_B', 'Meeting Room B', NULL, '3');
+INSERT INTO "rooms" ("id", "code", "name", "notes", "branch_id") VALUES ('1', 'HEAD_1F_MEETING', '1F Meeting Room', NULL, '1');
+INSERT INTO "rooms" ("id", "code", "name", "notes", "branch_id") VALUES ('2', 'NAGASAKI_SECURE', 'Secure Area', NULL, '2');
+INSERT INTO "rooms" ("id", "code", "name", "notes", "branch_id") VALUES ('3', 'TOKYO_MEETING_B', 'Meeting Room B', NULL, '3');
 SELECT setval(pg_get_serial_sequence('"rooms"', 'id'), (SELECT MAX(id) FROM "rooms"), true);
 
 -- storage_locations (3 rows)
-INSERT INTO "storage_locations" ("id", "code", "name", "kind", "room_id") VALUES ('1', 'HEAD_1F_MEETING_GENERAL', 'General placement', 'ROOM', '1');
-INSERT INTO "storage_locations" ("id", "code", "name", "kind", "room_id") VALUES ('2', 'NAGASAKI_SECURE_GENERAL', 'General placement', 'SECURE_AREA', '2');
-INSERT INTO "storage_locations" ("id", "code", "name", "kind", "room_id") VALUES ('3', 'TOKYO_MEETING_B_GENERAL', 'General placement', 'ROOM', '3');
+INSERT INTO "storage_locations" ("id", "code", "name", "notes", "room_id") VALUES ('1', 'HEAD_1F_MEETING_GENERAL', 'General placement', NULL, '1');
+INSERT INTO "storage_locations" ("id", "code", "name", "notes", "room_id") VALUES ('2', 'NAGASAKI_SECURE_GENERAL', 'General placement', NULL, '2');
+INSERT INTO "storage_locations" ("id", "code", "name", "notes", "room_id") VALUES ('3', 'TOKYO_MEETING_B_GENERAL', 'General placement', NULL, '3');
 SELECT setval(pg_get_serial_sequence('"storage_locations"', 'id'), (SELECT MAX(id) FROM "storage_locations"), true);
 
 -- it_asset_types (8 rows)

@@ -1,5 +1,5 @@
 import { requireAdminApi, requireAuthenticatedApi } from '$lib/server/api/admin';
-import { createMaster, isEmployeeMasterResource, listMasters, masterInput, masterSortFields } from '$lib/server/api/employee-masters';
+import { branchSortFields, createMaster, isEmployeeMasterResource, listMasters, masterInput, masterSortFields, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
 import { cpuTypeConflictField, cpuTypeSortFields, createItAssetMaster, isItAssetMasterResource, listItAssetMasters, parseItAssetMasterInput } from '$lib/server/api/it-asset-masters';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
 import { duplicateField } from '$lib/server/api/database';
@@ -24,7 +24,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 		const { items, total } = await listItAssetMasters(selected, query, search);
 		return success(items, 200, listMeta(query, items.length, total));
 	}
-	const query = parseListQuery(url, masterSortFields, 'code');
+	const query = parseListQuery(url, selected === 'branches' ? branchSortFields : masterSortFields, 'code');
 	const { items, total } = await listMasters(selected, query, search);
 	return success(items, 200, listMeta(query, items.length, total));
 }
@@ -32,10 +32,10 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 export async function POST({ params, request, locals }: import('./$types').RequestEvent) {
 	const actor = requireAdminApi(locals.user);
 	const selected = resource(params.master); const value = await request.json().catch(() => null);
-	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(value);
+	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(selected, value);
 	if (!data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	try {
-		return success(isItAssetMasterResource(selected) ? await createItAssetMaster(selected, data, actor.id) : await createMaster(selected, data as { code: string; name: string }, actor.id), 201);
+		return success(isItAssetMasterResource(selected) ? await createItAssetMaster(selected, data, actor.id) : await createMaster(selected, data as EmployeeMasterInput, actor.id), 201);
 	} catch (error) {
 		const field = selected === 'cpu-types' ? cpuTypeConflictField(error) : duplicateField(error);
 		if (field) return failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]);

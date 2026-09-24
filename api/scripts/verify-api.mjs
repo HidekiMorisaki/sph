@@ -139,7 +139,7 @@ try {
 	const employmentTypeResponse = await request('/v1/employment-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `TYPE_${suffix}`, name: `Employee type ${suffix}` }) });
 	if (employmentTypeResponse.status !== 201) throw new Error(`Employment type verification failed (${employmentTypeResponse.status}).`);
 	const employmentType = (await payload(employmentTypeResponse)).data;
-	const employeeBranchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `EBR_${suffix}`, name: `Employee branch ${suffix}` }) });
+	const employeeBranchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `EBR_${suffix}`, name: `Employee branch ${suffix}`, notes: 'Employee API verification branch' }) });
 	if (employeeBranchResponse.status !== 201) throw new Error(`Employee branch verification failed (${employeeBranchResponse.status}).`);
 	const employeeBranch = (await payload(employeeBranchResponse)).data;
 	const employeeCode = `EMP${suffix}`;
@@ -331,13 +331,13 @@ try {
 	const removedEmployeeBranch = await request(`/v1/branches/${employeeBranch.id}`, { method: 'DELETE' });
 	if (removedEmployeeBranch.status !== 200) throw new Error(`Employee branch soft-delete verification failed (${removedEmployeeBranch.status}).`);
 
-	const branchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `BR_${suffix}`, name: `Branch ${suffix}` }) });
+	const branchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `BR_${suffix}`, name: `Branch ${suffix}`, notes: 'Asset API verification branch' }) });
 	if (branchResponse.status !== 201) throw new Error(`Branch verification failed (${branchResponse.status}).`);
 	const branch = (await payload(branchResponse)).data;
-	const roomResponse = await request('/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `ROOM_${suffix}`, name: `Room ${suffix}`, branchId: branch.id }) });
+	const roomResponse = await request('/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `ROOM_${suffix}`, name: `Room ${suffix}`, branchId: branch.id, notes: 'Asset API verification room' }) });
 	if (roomResponse.status !== 201) throw new Error(`Room verification failed (${roomResponse.status}).`);
 	const room = (await payload(roomResponse)).data;
-	const locationResponse = await request('/v1/storage-locations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `LOC_${suffix}`, name: `Location ${suffix}`, roomId: room.id, kind: 'VERIFY' }) });
+	const locationResponse = await request('/v1/storage-locations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `LOC_${suffix}`, name: `Location ${suffix}`, roomId: room.id, notes: 'Asset API verification storage' }) });
 	if (locationResponse.status !== 201) throw new Error(`Location verification failed (${locationResponse.status}).`);
 	const location = (await payload(locationResponse)).data;
 	const [typesResponse, statusesResponse] = await Promise.all([request('/v1/it-asset-types?limit=500'), request('/v1/it-asset-statuses?limit=500')]);

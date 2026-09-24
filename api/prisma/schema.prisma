@@ -167,7 +167,7 @@ model StorageLocation {
   id        Int       @id @default(autoincrement())
   code      String    @unique
   name      String
-  kind      String?
+  notes     String?
   roomId    Int       @map("room_id")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -187,6 +187,7 @@ model Branch {
   code      String     @unique
   name      String     @unique
   address   String?
+  notes     String?
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime?  @map("deleted_at") @db.Timestamptz(3)
@@ -200,7 +201,7 @@ model Room {
   id        Int               @id @default(autoincrement())
   code      String            @unique
   name      String
-  floor     String?
+  notes     String?
   branchId  Int               @map("branch_id")
   createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)

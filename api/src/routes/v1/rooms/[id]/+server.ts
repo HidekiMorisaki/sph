@@ -7,7 +7,9 @@ function input(value: unknown) {
 	if (!value || typeof value !== 'object') return null; const body = value as Record<string, unknown>;
 	const code = typeof body.code === 'string' ? body.code.trim() : ''; const name = typeof body.name === 'string' ? body.name.trim() : '';
 	const branchId = typeof body.branchId === 'number' ? body.branchId : typeof body.branchId === 'string' && /^\d+$/.test(body.branchId) ? Number(body.branchId) : 0;
-	return code && name && branchId > 0 ? { code, name, branchId, floor: typeof body.floor === 'string' && body.floor.trim() ? body.floor.trim() : null } : null;
+	if (body.notes !== undefined && body.notes !== null && typeof body.notes !== 'string') return null;
+	const notes = typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null;
+	return code && name && branchId > 0 && (!notes || notes.length <= 5000) ? { code, name, branchId, notes } : null;
 }
 export async function PATCH({ params, locals, request }: import('./$types').RequestEvent) {
 	const actor = requireAdminApi(locals.user); const id = parseId(params.id); const data = input(await request.json().catch(() => null)); if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');

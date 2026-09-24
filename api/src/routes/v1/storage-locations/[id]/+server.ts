@@ -3,11 +3,12 @@ import { duplicateField, parseId } from '$lib/server/api/database';
 import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
-function input(value: unknown): { code: string; name: string; kind: string | null; roomId: number } | null {
-	if (!value || typeof value !== 'object') return null; const { code, name, kind, roomId } = value as Record<string, unknown>;
+function input(value: unknown): { code: string; name: string; notes: string | null; roomId: number } | null {
+	if (!value || typeof value !== 'object') return null; const { code, name, notes, roomId } = value as Record<string, unknown>;
 	if (typeof code !== 'string' || typeof name !== 'string') return null; const parsedRoomId = typeof roomId === 'number' ? roomId : typeof roomId === 'string' && /^\d+$/.test(roomId) ? Number(roomId) : 0;
-	const result = { code: code.trim(), name: name.trim(), kind: typeof kind === 'string' && kind.trim() ? kind.trim() : null, roomId: parsedRoomId };
-	return result.code && result.name && result.roomId > 0 && result.code.length <= 64 && result.name.length <= 128 ? result : null;
+	if (notes !== undefined && notes !== null && typeof notes !== 'string') return null;
+	const result = { code: code.trim(), name: name.trim(), notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null, roomId: parsedRoomId };
+	return result.code && result.name && result.roomId > 0 && result.code.length <= 64 && result.name.length <= 128 && (!result.notes || result.notes.length <= 5000) ? result : null;
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {

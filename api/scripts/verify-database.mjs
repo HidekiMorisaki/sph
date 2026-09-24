@@ -69,6 +69,16 @@ try {
 		SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'employees'
 			AND column_name IN ('work_email', 'login_email', 'personal_email')
 	`);
+	const locationNotesColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage_locations')
+			AND column_name = 'notes' AND data_type = 'text' AND is_nullable = 'YES'
+	`);
+	const removedLocationClassificationColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public'
+			AND ((table_name = 'rooms' AND column_name = 'floor') OR (table_name = 'storage_locations' AND column_name = 'kind'))
+	`);
 	const requiredEmployeeReferences = await count(`
 		SELECT count(*) FROM information_schema.referential_constraints
 		WHERE constraint_schema = 'public' AND delete_rule = 'RESTRICT'
@@ -91,9 +101,9 @@ try {
 			)
 	`);
 	const removedUsersTable = await count("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
-	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
+	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, removedLocationClassificationColumns, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
 	console.log(JSON.stringify(result));
-	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || softDeletedSessions < 1 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
+	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || removedLocationClassificationColumns !== 0 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || softDeletedSessions < 1 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
 		process.exitCode = 1;
 	}
 } finally {
