@@ -39,8 +39,8 @@
 
 <style>
   .shell{min-height:100vh;background:var(--bg);color:var(--text)}
-  .workspace{min-height:100vh;margin-left:252px;transition:margin-left .22s}
-  main{padding:88px 28px 36px}
-  .collapsed .workspace{margin-left:64px}
-  @media(max-width:760px){.workspace{margin-left:64px}main{padding:78px 16px 24px}}
+  .workspace{width:calc(100% - 252px);min-height:100vh;margin-left:252px;transition:margin-left .22s}
+  main{min-width:0;padding:88px 28px 36px}
+  .collapsed .workspace{width:calc(100% - 64px);margin-left:64px}
+  @media(max-width:760px){.workspace{width:calc(100% - 64px);margin-left:64px}main{padding:78px 16px 24px}}
 </style>

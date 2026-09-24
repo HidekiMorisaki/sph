@@ -1,5 +1,5 @@
 import { requireAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { parseId } from '$lib/server/api/database';
+import { duplicateField, parseId } from '$lib/server/api/database';
 import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
@@ -20,7 +20,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 			await writeAuditLog(tx, actor.id, 'update', 'storage_location', id); return { id, ...data };
 		});
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
-	} catch { return failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
+	} catch (error) { const field=duplicateField(error);return field?failure(409,'DUPLICATE_VALUE','This value already exists.',[{field,reason:'DUPLICATE_VALUE'}]):failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {

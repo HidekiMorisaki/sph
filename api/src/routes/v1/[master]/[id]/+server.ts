@@ -1,7 +1,7 @@
 import { requireAdminApi } from '$lib/server/api/admin';
-import { parseId } from '$lib/server/api/database';
+import { duplicateField, parseId } from '$lib/server/api/database';
 import { isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster } from '$lib/server/api/employee-masters';
-import { deleteItAssetMaster, isItAssetMasterResource, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
+import { cpuTypeConflictField, deleteItAssetMaster, isItAssetMasterResource, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
 import { failure, success, throwApiError } from '$lib/server/api/response';
 
 function resource(value: string) {
@@ -18,7 +18,9 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 	try {
 		const item = isItAssetMasterResource(selected) ? await updateItAssetMaster(selected, id, data, actor.id) : await updateMaster(selected, id, data as { code: string; name: string }, actor.id);
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
-	} catch {
+	} catch (error) {
+		const field = selected === 'cpu-types' ? cpuTypeConflictField(error) : duplicateField(error);
+		if (field) return failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]);
 		return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	}
 }

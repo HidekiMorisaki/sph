@@ -1,8 +1,9 @@
 import { requireAdminApi, requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
+import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
+import { duplicateField } from '$lib/server/api/database';
 
 function input(value: unknown): { code: string; name: string; kind: string | null; roomId: number } | null {
 	if (!value || typeof value !== 'object') return null;
@@ -13,15 +14,18 @@ function input(value: unknown): { code: string; name: string; kind: string | nul
 	return result.code && result.name && result.roomId > 0 && result.code.length <= 64 && result.name.length <= 128 ? result : null;
 }
 
-const sortFields = ['id', 'code', 'name', 'createdAt', 'updatedAt'] as const;
+const sortFields = ['id', 'code', 'name', 'branch', 'room', 'kind', 'createdAt', 'updatedAt'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	requireAuthenticatedApi(locals.user);
 	const query = parseListQuery(url, sortFields, 'code');
-	const orderBy = [{ [query.sortBy]: query.sortOrder }, ...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])] as Prisma.StorageLocationOrderByWithRelationInput[];
+	const search = parseSearch(url);
+	const where: Prisma.StorageLocationWhereInput = { deletedAt: null, ...(search ? { OR: [{ code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } }, { kind: { contains: search, mode: 'insensitive' } }, { room: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }, { room: { is: { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } } } }] } : {}) };
+	const first = query.sortBy === 'branch' ? { room: { branch: { name: query.sortOrder } } } : query.sortBy === 'room' ? { room: { name: query.sortOrder } } : { [query.sortBy]: query.sortOrder };
+	const orderBy = [first, ...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])] as Prisma.StorageLocationOrderByWithRelationInput[];
 	const [total, items] = await getPrisma().$transaction([
-		getPrisma().storageLocation.count({ where: { deletedAt: null } }),
-		getPrisma().storageLocation.findMany({ where: { deletedAt: null }, include: { room: { include: { branch: true } } }, orderBy, skip: query.offset, take: query.limit })
+		getPrisma().storageLocation.count({ where }),
+		getPrisma().storageLocation.findMany({ where, include: { room: { include: { branch: true } } }, orderBy, skip: query.offset, take: query.limit })
 	]);
 	return success(items, 200, listMeta(query, items.length, total));
 }
@@ -35,5 +39,5 @@ export async function POST({ request, locals }: import('./$types').RequestEvent)
 			const created = await tx.storageLocation.create({ data: value }); await writeAuditLog(tx, actor.id, 'create', 'storage_location', created.id); return created;
 		});
 		return success(item, 201);
-	} catch { return failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
+	} catch (error) { const field=duplicateField(error);return field?failure(409,'DUPLICATE_VALUE','This value already exists.',[{field,reason:'DUPLICATE_VALUE'}]):failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
 }

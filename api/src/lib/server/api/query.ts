@@ -3,6 +3,16 @@ import { throwApiError } from './response';
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 500;
 
+export function parseSearch(url: URL): string {
+	const search = (url.searchParams.get('search') ?? '').trim();
+	if (search.length > 255) {
+		throwApiError(422, 'INVALID_SEARCH', 'Search must be 255 characters or fewer.', [
+			{ field: 'search', reason: 'OUT_OF_RANGE' }
+		]);
+	}
+	return search;
+}
+
 export type SortOrder = 'asc' | 'desc';
 
 export type ListQuery<TSort extends string> = {

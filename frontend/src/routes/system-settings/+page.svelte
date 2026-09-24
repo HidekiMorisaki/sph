@@ -7,7 +7,7 @@
 
 <AssetManagementShell title="System settings">
 	<div class="preview">
-		<p>ADMIN · DEMO</p>
+		<p>MASTER MANAGEMENT</p>
 		<h1>System settings</h1>
 		<section aria-labelledby="preview-heading">
 			<h2 id="preview-heading">System configuration</h2>
@@ -17,9 +17,9 @@
 </AssetManagementShell>
 
 <style>
-	.preview>p{margin:0 0 5px;color:var(--primary);font-size:11px;font-weight:700;letter-spacing:.09em}
-	.preview h1{margin:0 0 26px;font-size:28px}
-	.preview section{max-width:720px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:7px;box-shadow:var(--shadow)}
-	.preview h2{margin:0 0 8px;font-size:17px}
+	.preview>p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.3px}
+	.preview h1{margin:4px 0 24px;font-size:30px}
+	.preview section{width:100%;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
+	.preview h2{margin:0 0 8px;font-size:14px}
 	.preview section p{margin:0;color:var(--muted);font-size:13px}
 </style>

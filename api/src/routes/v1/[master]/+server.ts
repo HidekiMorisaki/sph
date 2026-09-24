@@ -1,7 +1,8 @@
 import { requireAdminApi, requireAuthenticatedApi } from '$lib/server/api/admin';
 import { createMaster, isEmployeeMasterResource, listMasters, masterInput, masterSortFields } from '$lib/server/api/employee-masters';
-import { createItAssetMaster, isItAssetMasterResource, itAssetMasterSortFields, listItAssetMasters, parseItAssetMasterInput } from '$lib/server/api/it-asset-masters';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
+import { cpuTypeConflictField, cpuTypeSortFields, createItAssetMaster, isItAssetMasterResource, listItAssetMasters, parseItAssetMasterInput } from '$lib/server/api/it-asset-masters';
+import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
+import { duplicateField } from '$lib/server/api/database';
 import { failure, success, throwApiError } from '$lib/server/api/response';
 
 function resource(value: string) {
@@ -12,13 +13,19 @@ function resource(value: string) {
 export async function GET({ params, locals, url }: import('./$types').RequestEvent) {
 	requireAuthenticatedApi(locals.user);
 	const selected = resource(params.master);
+	const search = parseSearch(url);
 	if (isItAssetMasterResource(selected)) {
-		const query = parseListQuery(url, itAssetMasterSortFields, 'sortOrder');
-		const { items, total } = await listItAssetMasters(selected, query);
+		const fields = selected === 'cpu-types' ? cpuTypeSortFields
+			: selected === 'it-asset-types' ? ['id', 'code', 'name', 'managementCodePrefix', 'sortOrder', 'createdAt', 'updatedAt'] as const
+			: selected === 'manufacturers' ? ['id', 'code', 'name', 'officialUrl', 'sortOrder', 'createdAt', 'updatedAt'] as const
+			: selected === 'operating-systems' ? ['id', 'code', 'displayName', 'vendor', 'product', 'version', 'sortOrder', 'createdAt', 'updatedAt'] as const
+			: ['id', 'code', 'name', 'disposalDatePolicy', 'sortOrder', 'createdAt', 'updatedAt'] as const;
+		const query = parseListQuery(url, fields, 'sortOrder');
+		const { items, total } = await listItAssetMasters(selected, query, search);
 		return success(items, 200, listMeta(query, items.length, total));
 	}
 	const query = parseListQuery(url, masterSortFields, 'code');
-	const { items, total } = await listMasters(selected, query);
+	const { items, total } = await listMasters(selected, query, search);
 	return success(items, 200, listMeta(query, items.length, total));
 }
 
@@ -29,7 +36,9 @@ export async function POST({ params, request, locals }: import('./$types').Reque
 	if (!data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	try {
 		return success(isItAssetMasterResource(selected) ? await createItAssetMaster(selected, data, actor.id) : await createMaster(selected, data as { code: string; name: string }, actor.id), 201);
-	} catch {
+	} catch (error) {
+		const field = selected === 'cpu-types' ? cpuTypeConflictField(error) : duplicateField(error);
+		if (field) return failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]);
 		return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	}
 }

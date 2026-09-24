@@ -21,13 +21,13 @@ export function masterInput(value: unknown): { code: string; name: string } | nu
 	return code && name && code.length <= 64 && name.length <= 128 ? { code, name } : null;
 }
 
-export async function listMasters(resource: EmployeeMasterResource, query: ListQuery<MasterSortField>) {
+export async function listMasters(resource: EmployeeMasterResource, query: ListQuery<MasterSortField>, search = '') {
 	const db = getPrisma();
 	const orderBy = [
 		{ [query.sortBy]: query.sortOrder },
 		...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])
 	];
-	const page = { where: { deletedAt: null }, skip: query.offset, take: query.limit } as const;
+	const page = { where: { deletedAt: null, ...(search ? { OR: [{ code: { contains: search, mode: 'insensitive' as const } }, { name: { contains: search, mode: 'insensitive' as const } }] } : {}) }, skip: query.offset, take: query.limit } as const;
 	switch (resource) {
 		case 'departments': {
 			const [total, items] = await db.$transaction([

@@ -5,8 +5,19 @@ import { getPrisma } from '$lib/server/prisma';
 
 export const itAssetMasterResources = ['it-asset-types', 'manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'] as const;
 export type ItAssetMasterResource = (typeof itAssetMasterResources)[number];
-export const itAssetMasterSortFields = ['id', 'code', 'sortOrder', 'createdAt', 'updatedAt'] as const;
+export const itAssetMasterSortFields = ['id', 'code', 'name', 'displayName', 'managementCodePrefix', 'vendor', 'product', 'version', 'officialUrl', 'disposalDatePolicy', 'sortOrder', 'createdAt', 'updatedAt'] as const;
 export type ItAssetMasterSortField = (typeof itAssetMasterSortFields)[number];
+export const cpuTypeSortFields = ['id', 'code', 'sortOrder', 'createdAt', 'updatedAt', 'displayName', 'manufacturer', 'series', 'modelNumber'] as const;
+export type CpuTypeSortField = (typeof cpuTypeSortFields)[number];
+
+export function cpuTypeConflictField(error: unknown): 'code' | 'displayName' | 'modelNumber' | null {
+	if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'P2002') return null;
+	const target = 'meta' in error && error.meta && typeof error.meta === 'object' && 'target' in error.meta ? error.meta.target : null;
+	const columns = Array.isArray(target) ? target.map(String).join(' ') : String(target ?? '');
+	if (columns.includes('display_name') || columns.includes('displayName')) return 'displayName';
+	if (columns.includes('model_number') || columns.includes('modelNumber')) return 'modelNumber';
+	return columns.includes('code') ? 'code' : null;
+}
 
 export function isItAssetMasterResource(value: string): value is ItAssetMasterResource {
 	return itAssetMasterResources.includes(value as ItAssetMasterResource);
@@ -61,14 +72,28 @@ export function parseItAssetMasterInput(resource: ItAssetMasterResource, value: 
 	}
 }
 
-export async function listItAssetMasters(resource: ItAssetMasterResource, query: ListQuery<ItAssetMasterSortField>) {
-	const where = { deletedAt: null }; const orderBy = [{ [query.sortBy]: query.sortOrder }, ...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])]; const page = { where, skip: query.offset, take: query.limit }; const db = getPrisma();
+export async function listItAssetMasters(resource: ItAssetMasterResource, query: ListQuery<ItAssetMasterSortField | CpuTypeSortField>, search = '') {
+	const match = (field: string) => ({ [field]: { contains: search, mode: 'insensitive' as const } });
+	const searched = (fields: string[]) => ({ deletedAt: null, ...(search ? { OR: fields.map(match) } : {}) });
+	const orderBy = [{ [query.sortBy]: query.sortOrder }, ...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])]; const db = getPrisma();
 	switch (resource) {
-		case 'it-asset-types': return { total: await db.itAssetType.count({ where }), items: await db.itAssetType.findMany({ ...page, orderBy: orderBy as Prisma.ItAssetTypeOrderByWithRelationInput[] }) };
-		case 'manufacturers': return { total: await db.manufacturer.count({ where }), items: await db.manufacturer.findMany({ ...page, orderBy: orderBy as Prisma.ManufacturerOrderByWithRelationInput[] }) };
-		case 'cpu-types': return { total: await db.cpuType.count({ where }), items: await db.cpuType.findMany({ ...page, include: { manufacturer: true }, orderBy: orderBy as Prisma.CpuTypeOrderByWithRelationInput[] }) };
-		case 'operating-systems': return { total: await db.operatingSystem.count({ where }), items: await db.operatingSystem.findMany({ ...page, orderBy: orderBy as Prisma.OperatingSystemOrderByWithRelationInput[] }) };
-		case 'it-asset-statuses': return { total: await db.itAssetStatus.count({ where }), items: await db.itAssetStatus.findMany({ ...page, orderBy: orderBy as Prisma.ItAssetStatusOrderByWithRelationInput[] }) };
+		case 'it-asset-types': { const where = searched(['code', 'name', 'managementCodePrefix']); return { total: await db.itAssetType.count({ where }), items: await db.itAssetType.findMany({ where, skip: query.offset, take: query.limit, orderBy: orderBy as Prisma.ItAssetTypeOrderByWithRelationInput[] }) }; }
+		case 'manufacturers': { const where = searched(['code', 'name', 'officialUrl']); return { total: await db.manufacturer.count({ where }), items: await db.manufacturer.findMany({ where, skip: query.offset, take: query.limit, orderBy: orderBy as Prisma.ManufacturerOrderByWithRelationInput[] }) }; }
+		case 'cpu-types': {
+			const cpuWhere: Prisma.CpuTypeWhereInput = { deletedAt: null, ...(search ? { OR: [
+				{ displayName: { contains: search, mode: 'insensitive' } },
+				{ series: { contains: search, mode: 'insensitive' } },
+				{ modelNumber: { contains: search, mode: 'insensitive' } },
+				{ manufacturer: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }
+			] } : {}) };
+			const cpuOrderBy: Prisma.CpuTypeOrderByWithRelationInput[] = [
+				query.sortBy === 'manufacturer' ? { manufacturer: { name: query.sortOrder } } : { [query.sortBy]: query.sortOrder },
+				...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])
+			];
+			return { total: await db.cpuType.count({ where: cpuWhere }), items: await db.cpuType.findMany({ where: cpuWhere, skip: query.offset, take: query.limit, include: { manufacturer: true }, orderBy: cpuOrderBy }) };
+		}
+		case 'operating-systems': { const where = searched(['code', 'displayName', 'vendor', 'product', 'version']); return { total: await db.operatingSystem.count({ where }), items: await db.operatingSystem.findMany({ where, skip: query.offset, take: query.limit, orderBy: orderBy as Prisma.OperatingSystemOrderByWithRelationInput[] }) }; }
+		case 'it-asset-statuses': { const where = searched(['code', 'name', 'disposalDatePolicy']); return { total: await db.itAssetStatus.count({ where }), items: await db.itAssetStatus.findMany({ where, skip: query.offset, take: query.limit, orderBy: orderBy as Prisma.ItAssetStatusOrderByWithRelationInput[] }) }; }
 	}
 }
 

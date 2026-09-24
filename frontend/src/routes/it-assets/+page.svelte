@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import DatePicker from '$lib/components/DatePicker.svelte';
 
 	type Named = { id: number; code?: string; name: string; displayName?: string; managementCodePrefix?: string; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
 	type Branch = Named;
@@ -13,13 +14,12 @@
 	type DateField = 'purchasedOn' | 'disposalOn';
 	type SelectField = 'typeId' | 'statusId' | 'manufacturerId' | 'cpuTypeId' | 'operatingSystemId' | 'branchId' | 'roomId' | 'locationId' | 'assignEmployeeId';
 	type SelectOption = { value: string; label: string; searchTerms?: string[] };
-	type SearchableSelectField = 'typeId' | 'manufacturerId' | 'operatingSystemId' | 'assignEmployeeId';
+	type SearchableSelectField = 'typeId' | 'statusId' | 'manufacturerId' | 'cpuTypeId' | 'operatingSystemId' | 'branchId' | 'roomId' | 'locationId' | 'assignEmployeeId';
 	type ChangeDetail = { field: string; before: string | null; after: string | null };
 	type ChangeHistory = { id: number; changedAt: string; actorName: string; action: string; changes: ChangeDetail[] };
 	const historyFields: Record<string, string> = { assetTag: 'Management code', typeId: 'Type', manufacturerId: 'Manufacturer', modelNumber: 'Model number', serialNumber: 'Serial number', cpuTypeId: 'CPU type', ramGb: 'RAM (GB)', operatingSystemId: 'Operating system', loginUsername: 'Login username', locationId: 'Storage location', statusId: 'Status', purchasedOn: 'Purchase date', disposalOn: 'Disposal date', notes: 'Notes', assigneeId: 'Employee' };
 	const historyActions: Record<string, string> = { create: 'Created', update: 'Updated', delete: 'Deleted', assign: 'Assigned', return: 'Returned' };
 	type FormField = keyof ReturnType<typeof blank>;
-	type CalendarDay = { day: number; iso: string; inMonth: boolean };
 	type SortKey = 'assetTag' | 'type' | 'manufacturer' | 'branch' | 'room' | 'storageLocation' | 'user' | 'status';
 	type SortOrder = 'asc' | 'desc';
 	type ListPayload = { data: Asset[]; meta: { total: number } };
@@ -39,12 +39,8 @@
 		}
 	}
 	const iso = (value: string | null) => value ? value.slice(0, 10) : '';
-	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-	const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 	const employeeName = (employee: Assignee) => [employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ');
 	const assigneeName = (assignment: Assignment | undefined) => assignment ? employeeName(assignment.employee) : 'Unassigned';
-	const now = new Date();
 
 	let items = $state<Asset[]>([]);
 	let types = $state<Named[]>([]);
@@ -77,7 +73,7 @@
 	let fieldErrors = $state<Record<string, string>>({});
 	let activeSelectField = $state<SelectField | null>(null);
 	let selectAbove = $state(false);
-	let selectSearch = $state<Record<SearchableSelectField, string>>({ typeId: '', manufacturerId: '', operatingSystemId: '', assignEmployeeId: '' });
+	let selectSearch = $state<Record<SearchableSelectField, string>>({ typeId: '', statusId: '', manufacturerId: '', cpuTypeId: '', operatingSystemId: '', branchId: '', roomId: '', locationId: '', assignEmployeeId: '' });
 	let search = $state('');
 	let page = $state(1);
 	let pageSize = $state(10);
@@ -98,8 +94,6 @@
 	let dialogElement = $state<HTMLDialogElement>();
 	let returnFocus: HTMLElement | null = null;
 	let activeDateField = $state<DateField | null>(null);
-	let calendarYear = $state(now.getFullYear());
-	let calendarMonth = $state(now.getMonth());
 
 	const selectedType = $derived(types.find((item) => String(item.id) === form.typeId));
 	const selectedStatus = $derived(statuses.find((item) => String(item.id) === form.statusId));
@@ -180,7 +174,7 @@
 		branchId = '';
 		roomId = '';
 		assignEmployeeId = '';
-		selectSearch = { typeId: '', manufacturerId: '', operatingSystemId: '', assignEmployeeId: '' };
+		selectSearch = { typeId: '', statusId: '', manufacturerId: '', cpuTypeId: '', operatingSystemId: '', branchId: '', roomId: '', locationId: '', assignEmployeeId: '' };
 		formError = '';
 		fieldErrors = {};
 		activeSelectField = null;
@@ -198,7 +192,7 @@
 		previewRequestId++;
 		codeLoading = false;
 		assignEmployeeId = item.assignments[0] ? String(item.assignments[0].employee.id) : '';
-		selectSearch = { typeId: '', manufacturerId: '', operatingSystemId: '', assignEmployeeId: '' };
+		selectSearch = { typeId: '', statusId: '', manufacturerId: '', cpuTypeId: '', operatingSystemId: '', branchId: '', roomId: '', locationId: '', assignEmployeeId: '' };
 		formError = '';
 		fieldErrors = {};
 		activeSelectField = null;
@@ -296,26 +290,6 @@
 		message = response.ok ? 'IT asset deleted.' : 'The IT asset could not be deleted.';
 		if (response.ok) await load();
 	}
-	function calendarDays(year: number, month: number): CalendarDay[] {
-		const start = new Date(year, month, 1 - new Date(year, month, 1).getDay());
-		return Array.from({ length: 42 }, (_, index) => {
-			const date = new Date(start);
-			date.setDate(start.getDate() + index);
-			return { day: date.getDate(), iso: dateIso(date), inMonth: date.getMonth() === month };
-		});
-	}
-	function openCalendar(field: DateField, value: string) {
-		if (activeDateField === field) { activeDateField = null; return; }
-		const date = value ? new Date(`${value}T00:00:00`) : new Date();
-		calendarYear = date.getFullYear();
-		calendarMonth = date.getMonth();
-		activeDateField = field;
-	}
-	function moveMonth(offset: number) {
-		const date = new Date(calendarYear, calendarMonth + offset, 1);
-		calendarYear = date.getFullYear();
-		calendarMonth = date.getMonth();
-	}
 	function chooseDate(field: DateField, value: string) {
 		form[field] = value;
 		clearFieldError(field);
@@ -349,10 +323,6 @@
 		selectAbove = below < Math.min(count * 28 + 8, 200) + 4 && rect.top - (bounds?.top ?? 0) > below;
 		activeDateField = null;
 		activeSelectField = field;
-	}
-	function toggleFormSelect(event: MouseEvent, field: SelectField, count: number) {
-		if (activeSelectField === field) { activeSelectField = null; return; }
-		openFormSelect(event.currentTarget as HTMLButtonElement, field, count);
 	}
 	function selectedValue(field: SelectField) { return field === 'assignEmployeeId' ? assignEmployeeId : field === 'branchId' ? branchId : field === 'roomId' ? roomId : form[field]; }
 	function chooseFormSelect(field: SelectField, value: string) {
@@ -442,7 +412,7 @@
 			return;
 		}
 		if (!open) return;
-		if (event.key === 'Escape') { event.preventDefault(); if (activeSelectField) { const field = activeSelectField; activeSelectField = null; void tick().then(() => focusField(field)); } else if (activeDateField) activeDateField = null; else closeForm(); return; }
+		if (event.key === 'Escape') { event.preventDefault(); if (activeSelectField) { const field = activeSelectField; activeSelectField = null; void tick().then(() => focusField(field)); } else if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusField(field)); } else closeForm(); return; }
 		if (event.key === 'Tab') trapDialogTab(event, dialogElement);
 	}
 
@@ -454,25 +424,15 @@
 {#snippet sortIndicator(field: SortKey)}<span class="sort-indicator" class:ascending={sortBy === field && sortOrder === 'asc'} class:descending={sortBy === field && sortOrder === 'desc'} aria-hidden="true"></span>{/snippet}
 
 {#snippet dateInput(label: string, field: DateField, value: string, above = false, required = false, inactive = false)}
-	<div class="custom-date" class:above data-field={field}><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><button class="date-trigger" class:invalid={Boolean(fieldErrors[field])} type="button" role="combobox" disabled={role === '' || inactive} aria-label={`${label}${required ? ' (required)' : ''}: ${value || 'yyyy-mm-dd'}`} aria-invalid={Boolean(fieldErrors[field])} aria-describedby={fieldErrors[field] ? `${field}-error` : undefined} aria-controls={`${field}-calendar`} aria-haspopup="dialog" aria-expanded={activeDateField === field} onclick={() => openCalendar(field, value)}><span class:placeholder={!value}>{value || 'yyyy-mm-dd'}</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg></button>
-		{#if activeDateField === field}<div id={`${field}-calendar`} class="calendar-panel" role="dialog" aria-label={`${label} calendar`}><div class="calendar-head"><button type="button" aria-label="Previous month" onclick={() => moveMonth(-1)}>‹</button><strong>{monthNames[calendarMonth]} {calendarYear}</strong><button type="button" aria-label="Next month" onclick={() => moveMonth(1)}>›</button></div><div class="weekdays">{#each weekDays as day}<span>{day}</span>{/each}</div><div class="calendar-grid">{#each calendarDays(calendarYear, calendarMonth) as date}<button type="button" class:outside={!date.inMonth} class:today={date.iso === dateIso(now)} class:selected={date.iso === value} aria-label={date.iso} aria-pressed={date.iso === value} onclick={() => chooseDate(field, date.iso)}>{date.day}</button>{/each}</div><div class="calendar-actions">{#if !required}<button type="button" onclick={() => chooseDate(field, '')}>Clear</button>{/if}<button type="button" onclick={() => chooseDate(field, dateIso(new Date()))}>Today</button></div></div>{/if}
-		{#if fieldErrors[field]}<span id={`${field}-error`} class="field-error" role="alert">{fieldErrors[field]}</span>{/if}
-	</div>
+	<DatePicker {label} {field} {value} {above} {required} disabled={role === '' || inactive} error={fieldErrors[field] ?? ''} open={activeDateField === field} onToggle={() => activeDateField = activeDateField === field ? null : field} onSelect={(selected) => chooseDate(field, selected)} />
 {/snippet}
 
-{#snippet searchableSelect(label: string, field: SearchableSelectField, options: SelectOption[], required = false)}
+{#snippet searchableSelect(label: string, field: SearchableSelectField, options: SelectOption[], required = false, inactive = false)}
 	{@const filtered = searchOptions(options, field)}
 	<div class="form-select-field"><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><div class="form-select-picker searchable-select" class:above={activeSelectField === field && selectAbove} data-field={field} onfocusout={(event) => formSelectFocusout(event, field)}>
-		<input class="form-select-search" class:unselected={!selectedValue(field) && activeSelectField !== field && options.some((option) => option.value === '' && option.label === '-')} class:invalid={Boolean(fieldErrors[field])} type="text" role="combobox" autocomplete="off" disabled={role === ''} value={searchSelectValue(field, options)} placeholder="Type to filter..." aria-label={`${label}${required ? ' (required)' : ''}`} aria-required={required} aria-invalid={Boolean(fieldErrors[field])} aria-describedby={fieldErrors[field] ? `${field}-error` : undefined} aria-controls={`${field}-options`} aria-haspopup="listbox" aria-expanded={activeSelectField === field} onfocus={(event) => event.currentTarget.select()} onclick={(event) => openSearchSelect(event, field, options.length)} oninput={(event) => updateSearchSelect(event, field, options.length)} onkeydown={(event) => searchSelectKeydown(event, field, filtered, options)} />
+		<input class="form-select-search" class:unselected={!selectedValue(field) && activeSelectField !== field && options.some((option) => option.value === '' && option.label === '-')} class:invalid={Boolean(fieldErrors[field])} type="text" role="combobox" autocomplete="off" disabled={role === '' || inactive} value={searchSelectValue(field, options)} placeholder="Type to filter..." aria-label={`${label}${required ? ' (required)' : ''}`} aria-required={required} aria-invalid={Boolean(fieldErrors[field])} aria-describedby={fieldErrors[field] ? `${field}-error` : undefined} aria-controls={`${field}-options`} aria-haspopup="listbox" aria-expanded={activeSelectField === field} onfocus={(event) => event.currentTarget.select()} onclick={(event) => openSearchSelect(event, field, options.length)} oninput={(event) => updateSearchSelect(event, field, options.length)} onkeydown={(event) => searchSelectKeydown(event, field, filtered, options)} />
 		<svg class="search-chevron" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg>
 		{#if activeSelectField === field}<div id={`${field}-options`} class="form-select-options" role="listbox" aria-label={label}>{#each filtered as option, index}<button type="button" role="option" tabindex="-1" aria-selected={selectedValue(field) === option.value} class:selected={selectedValue(field) === option.value} onpointerdown={(event) => event.preventDefault()} onclick={() => chooseSearchSelect(field, option.value)} onkeydown={(event) => formSelectOptionKeydown(event, field, index, filtered.length)}>{option.label}</button>{:else}<p class="form-select-empty">No matching options.</p>{/each}</div>{/if}
-	</div>{#if fieldErrors[field]}<span id={`${field}-error`} class="field-error" role="alert">{fieldErrors[field]}</span>{/if}</div>
-{/snippet}
-
-{#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false, wide = false, inactive = false)}
-	<div class="form-select-field" class:wide><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><div class="form-select-picker" class:above={activeSelectField === field && selectAbove} data-field={field} onfocusout={(event) => formSelectFocusout(event, field)}>
-		<button class="form-select-trigger" class:unselected={!selectedValue(field)} class:invalid={Boolean(fieldErrors[field])} type="button" role="combobox" disabled={role === '' || inactive} aria-label={`${label}${required ? ' (required)' : ''}`} aria-invalid={Boolean(fieldErrors[field])} aria-describedby={fieldErrors[field] ? `${field}-error` : undefined} aria-controls={`${field}-options`} aria-haspopup="listbox" aria-expanded={activeSelectField === field} onclick={(event) => toggleFormSelect(event, field, options.length)} onkeydown={(event) => formSelectTriggerKeydown(event, field, options)}><span>{options.find(option => option.value === selectedValue(field))?.label ?? '-'}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>
-		{#if activeSelectField === field}<div id={`${field}-options`} class="form-select-options" role="listbox" aria-label={label}>{#each options as option, index}<button type="button" role="option" tabindex="-1" aria-selected={selectedValue(field) === option.value} class:selected={selectedValue(field) === option.value} onclick={() => chooseFormSelect(field, option.value)} onkeydown={(event) => formSelectOptionKeydown(event, field, index, options.length)}>{option.label}</button>{/each}</div>{/if}
 	</div>{#if fieldErrors[field]}<span id={`${field}-error`} class="field-error" role="alert">{fieldErrors[field]}</span>{/if}</div>
 {/snippet}
 
@@ -483,7 +443,7 @@
 <AssetManagementShell title="IT Assets" active="IT Assets">
 	<div class="heading">
 		<div><p>ASSET INVENTORY</p><h1>IT Assets</h1><span>Track computers, servers, network appliances, power equipment and peripherals.</span></div>
-		{#if role !== ''}<button class="primary add-button" type="button" onclick={create}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h8M8 4v8" /></svg>Add IT asset</button>{/if}
+		{#if role !== ''}<button class="app-add-button" type="button" onclick={create}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h8M8 4v8" /></svg>Add IT asset</button>{/if}
 	</div>
 	{#if message}<p class="notice">{message}</p>{/if}
 	<section class="list-card">
@@ -496,45 +456,45 @@
 	</section>
 	{#if actionAsset}<div class="menu-popover" role="menu" style:top={`${menuTop}px`} style:left={`${menuLeft}px`}><button type="button" role="menuitem" onclick={() => showDetail(actionAsset!)}>Detail</button>{#if role !== ''}<button type="button" role="menuitem" onclick={() => { const item = actionAsset!; const trigger = menuTrigger; closeMenu(); edit(item, trigger); }}>Edit</button><div class="menu-separator"></div><button class="delete-item" type="button" role="menuitem" onclick={() => { const item = actionAsset!; closeMenu(); void remove(item); }}>Delete</button>{/if}</div>{/if}
 	{#if open}
-		<div class="backdrop" role="presentation">
-			<dialog bind:this={dialogElement} class="asset-dialog" open aria-modal="true" aria-labelledby="asset-form-title">
-				<header><h2 id="asset-form-title">{editing ? (role !== '' ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close" type="button" aria-label="Close IT asset form" onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
-				<form class="asset-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
-					<div class="asset-form-body">
-						{#if formError}<div class="form-error-summary wide" role="alert"><strong>Unable to save IT asset</strong><span>{formError}</span></div>{/if}
+		<div class="backdrop app-modal-backdrop" role="presentation">
+			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
+				<header><h2 id="asset-form-title">{editing ? (role !== '' ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset form" onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<form class="asset-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
+					<div class="asset-form-body app-modal-form-body">
+						{#if formError}<div class="form-error-summary app-modal-error-summary wide" role="alert"><strong>Unable to save IT asset</strong><span>{formError}</span></div>{/if}
 						<h3>Basic information</h3>
 						{@render searchableSelect('Type', 'typeId', types.map(item => ({ value: String(item.id), label: item.name, searchTerms: [item.code ?? ''] })), true)}
 						<label><span>Management code <span class="required" aria-hidden="true">*</span></span><input name="assetTag" value={form.assetTag} readonly class:invalid={Boolean(fieldErrors.assetTag)} aria-invalid={Boolean(fieldErrors.assetTag)} aria-describedby={fieldErrors.assetTag ? 'assetTag-error' : undefined} placeholder={codeLoading ? 'Preparing code…' : 'Select a type'} disabled={role === ''}/>{#if fieldErrors.assetTag}<span id="assetTag-error" class="field-error" role="alert">{fieldErrors.assetTag}</span>{/if}</label>
-						{@render formSelect('Status', 'statusId', [{ value: '', label: '-' }, ...statuses.map(item => ({ value: String(item.id), label: item.name }))], true)}
+						{@render searchableSelect('Status', 'statusId', [{ value: '', label: '-' }, ...statuses.map(item => ({ value: String(item.id), label: item.name }))], true)}
 						{@render searchableSelect('Manufacturer', 'manufacturerId', [{ value: '', label: '-' }, ...manufacturers.map(item => ({ value: String(item.id), label: item.name }))])}
 						<label>Model number<input bind:value={form.modelNumber} placeholder="e.g. Latitude 7450" disabled={role === ''}/></label>
 						<label>Serial number<input name="serialNumber" value={form.serialNumber} oninput={(event) => updateField('serialNumber', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.serialNumber)} aria-invalid={Boolean(fieldErrors.serialNumber)} aria-describedby={fieldErrors.serialNumber ? 'serialNumber-error' : undefined} placeholder="e.g. ABC123456" disabled={role === ''}/>{#if fieldErrors.serialNumber}<span id="serialNumber-error" class="field-error" role="alert">{fieldErrors.serialNumber}</span>{/if}</label>
 						{#if selectedType?.code !== 'UTM' && selectedType?.code !== 'UPS' && (selectedType?.supportsCpu || selectedType?.supportsRam || selectedType?.supportsOs || selectedType?.supportsLoginUsername)}
 							<h3>Hardware and software</h3>
-							{#if selectedType?.supportsCpu}{@render formSelect('CPU type', 'cpuTypeId', [{ value: '', label: '-' }, ...cpus.map(item => ({ value: String(item.id), label: item.displayName ?? item.name }))])}{/if}
+							{#if selectedType?.supportsCpu}{@render searchableSelect('CPU type', 'cpuTypeId', [{ value: '', label: '-' }, ...cpus.map(item => ({ value: String(item.id), label: item.displayName ?? item.name }))])}{/if}
 							{#if selectedType?.supportsRam}<label>RAM (GB)<input name="ramGb" value={form.ramGb} oninput={(event) => updateField('ramGb', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.ramGb)} aria-invalid={Boolean(fieldErrors.ramGb)} aria-describedby={fieldErrors.ramGb ? 'ramGb-error' : undefined} type="number" placeholder="e.g. 16" disabled={role === ''}/>{#if fieldErrors.ramGb}<span id="ramGb-error" class="field-error" role="alert">{fieldErrors.ramGb}</span>{/if}</label>{/if}
 							{#if selectedType?.supportsOs}{@render searchableSelect('Operating system', 'operatingSystemId', [{ value: '', label: '-' }, ...systems.map(item => ({ value: String(item.id), label: item.displayName ?? item.name }))])}{/if}
 							{#if selectedType?.supportsLoginUsername}<label>Login username<input bind:value={form.loginUsername} autocomplete="off" placeholder="e.g. j.smith" disabled={role === ''}/></label>{/if}
 						{/if}
 						<h3>Location and lifecycle</h3>
-						{@render formSelect('Branch', 'branchId', [{ value: '', label: '-' }, ...branches.map(item => ({ value: String(item.id), label: item.name }))], true)}
-						{@render formSelect('Room', 'roomId', [{ value: '', label: '-' }, ...availableRooms.map(item => ({ value: String(item.id), label: item.name }))], true, false, !branchId)}
-						{@render formSelect('Storage location', 'locationId', [{ value: '', label: '-' }, ...availableLocations.map(item => ({ value: String(item.id), label: item.name }))], true, false, !roomId)}
+						{@render searchableSelect('Branch', 'branchId', [{ value: '', label: '-' }, ...branches.map(item => ({ value: String(item.id), label: item.name }))], true)}
+						{@render searchableSelect('Room', 'roomId', [{ value: '', label: '-' }, ...availableRooms.map(item => ({ value: String(item.id), label: item.name }))], true, !branchId)}
+						{@render searchableSelect('Storage location', 'locationId', [{ value: '', label: '-' }, ...availableLocations.map(item => ({ value: String(item.id), label: item.name }))], true, !roomId)}
 						{@render dateInput('Purchase date', 'purchasedOn', form.purchasedOn, false, true)}
 						{@render dateInput('Disposal date', 'disposalOn', form.disposalOn, true, selectedStatus?.disposalDatePolicy === 'required', selectedStatus?.disposalDatePolicy === 'prohibited')}
 						<label class="wide">Notes<textarea bind:value={form.notes} placeholder="e.g. Asset details or maintenance notes" disabled={role === ''}></textarea></label>
 						<h3>Assign to employee</h3>
 						{@render searchableSelect('Employee', 'assignEmployeeId', [{ value: '', label: 'Unassigned' }, ...employees.map(employee => ({ value: String(employee.id), label: employeeName(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName] }))])}
 					</div>
-					<footer class="asset-form-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="primary save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : 'Save IT asset'}</button>{/if}</footer>
+					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="primary save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : 'Save IT asset'}</button>{/if}</footer>
 				</form>
 			</dialog>
 		</div>
 	{/if}
 	{#if detailAsset}
-		<div class="backdrop" role="presentation">
-			<dialog bind:this={detailDialogElement} class="asset-dialog" open aria-modal="true" aria-labelledby="asset-detail-title">
-				<header><h2 id="asset-detail-title">IT asset detail</h2><button class="modal-close" type="button" aria-label="Close IT asset detail" onclick={closeDetail}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<div class="backdrop app-modal-backdrop" role="presentation">
+			<dialog bind:this={detailDialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-detail-title">
+				<header><h2 id="asset-detail-title">IT asset detail</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset detail" onclick={closeDetail}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 				<div class="asset-detail-body">
 					<section class="detail-section"><h3>Basic information</h3><dl class="detail-grid">
 						{@render detailField('Management code', detailAsset.assetTag)}
@@ -570,7 +530,7 @@
 						</article>{/each}{/if}
 					</div></section>
 				</div>
-				<footer class="asset-form-footer"><button class="secondary" type="button" onclick={closeDetail}>Close</button></footer>
+				<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeDetail}>Close</button></footer>
 			</dialog>
 		</div>
 	{/if}
@@ -579,36 +539,16 @@
 <style>
 	.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}
 	.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.08em}.heading h1{margin:4px 0;font-size:30px}.heading span{color:var(--muted)}
-	button{font:inherit}
 	.primary,.secondary{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:4px;font-size:12.5px;font-weight:500;line-height:1}
 	.primary{background:#1abb9c!important;border-color:#169f85;color:#fff!important}.secondary{background:var(--surface)!important;color:var(--text-secondary)!important}
-	.add-button{gap:5px;white-space:nowrap;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms}.add-button:hover{background:#169f85!important}.add-button svg{width:14px;height:14px}.add-button:focus{outline:none}.add-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
-	.notice{color:var(--muted);font-size:12px}.list-card{display:flex;min-height:0;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-light)}.card-header h2{margin:0;color:var(--text);font-size:14px}.card-header p{margin:1px 0 0;color:var(--muted);font-size:11.5px}.table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-light)}.search-box{position:relative;display:block;width:240px}.search-box svg{position:absolute;top:50%;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none;transform:translateY(-50%)}.search-box input{width:100%;height:32px;padding:0 10px 0 32px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none}.search-box input::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .search-box input::placeholder{color:#5a6473}.search-box input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.page-size{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.page-size-picker{position:relative}.page-size-trigger{display:flex;align-items:center;justify-content:space-between;width:62px;height:32px;padding:0 8px;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:6px;font-size:12px}.page-size-trigger:focus-visible,.page-size-trigger[aria-expanded='true']{border-color:#1abb9c;outline:0;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.page-size-trigger svg{width:10px;height:6px;fill:none;stroke:var(--muted);stroke-width:1.5}.page-size-trigger[aria-expanded='true'] svg{transform:rotate(180deg)}.page-size-options{position:absolute;top:calc(100% + 4px);right:0;z-index:20;width:62px;padding:3px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 18px rgba(15,23,42,.12)}.page-size-options button{display:block;width:100%;height:28px;padding:0 7px;background:transparent!important;color:var(--text)!important;border:0;border-radius:3px;text-align:left;font-size:12px}.page-size-options button:hover,.page-size-options button:focus-visible{background:var(--surface-secondary)!important;outline:0}.page-size-options button.selected{background:#1abb9c!important;color:#fff!important}.table-responsive{max-height:min(62vh,700px);overflow:auto}table{width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse;box-shadow:none;font-size:13px}.code-column{width:15%}.type-column{width:10%}.maker-column{width:17%}.branch-column{width:11%}.room-column{width:10%}.location-column{width:12%}.user-column{width:12%}.status-column{width:9%}.actions-width-column{width:4%}th{position:sticky;top:0;z-index:2;padding:8px 12px;background:var(--surface-secondary);color:var(--muted);text-align:left;font-size:11px;font-weight:700;letter-spacing:.3px}td{padding:9px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border-light);vertical-align:middle;overflow-wrap:anywhere}tbody tr:hover{background:var(--surface-secondary)}tbody tr:last-child td{border-bottom:0}td strong{color:var(--text);font-weight:600}td small{display:block;color:var(--muted);font-size:11px}.sort-button{display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent!important;color:var(--muted)!important;border:0;border-radius:2px;text-align:left;font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:uppercase}.sort-button:focus-visible{outline:2px solid #1abb9c;outline-offset:3px}.sort-indicator{position:relative;flex:none;width:10px;height:14px;opacity:.75}.sort-indicator::before,.sort-indicator::after{position:absolute;left:1px;width:0;height:0;content:'';border-right:4px solid transparent;border-left:4px solid transparent}.sort-indicator::before{top:1px;border-bottom:4px solid var(--muted)}.sort-indicator::after{bottom:1px;border-top:4px solid var(--muted)}.sort-indicator.ascending::before{border-bottom-color:#1abb9c}.sort-indicator.ascending::after{opacity:.3}.sort-indicator.descending::before{opacity:.3}.sort-indicator.descending::after{border-top-color:#1abb9c}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}.actions-column{width:48px}.actions-cell{text-align:right}.empty{height:96px;color:var(--muted);text-align:center}.table-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border-light)}.table-footer p{margin:0;color:var(--muted);font-size:12px}.pagination{display:flex;align-items:center;gap:4px}.pagination button{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:12px}.pagination button:hover:not(:disabled):not(.current){background:var(--surface-secondary)!important;color:var(--text)!important}.pagination button.current{background:#1abb9c!important;color:#fff!important;border-color:#169f85}.pagination button:disabled{cursor:not-allowed;opacity:.5}.pagination span{padding:0 4px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+	.notice{color:var(--muted);font-size:12px}.list-card{display:flex;min-height:0;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-light)}.card-header h2{margin:0;color:var(--text);font-size:14px}.card-header p{margin:1px 0 0;color:var(--muted);font-size:11.5px}.table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-light)}.search-box{position:relative;display:block;width:240px}.search-box svg{position:absolute;top:50%;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none;transform:translateY(-50%)}.search-box input{width:100%;height:32px;padding:0 10px 0 32px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none}.search-box input::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .search-box input::placeholder{color:#5a6473}.search-box input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.table-responsive{max-height:min(62vh,700px);overflow:auto}table{width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse;box-shadow:none;font-size:13px}.code-column{width:15%}.type-column{width:10%}.maker-column{width:17%}.branch-column{width:11%}.room-column{width:10%}.location-column{width:12%}.user-column{width:12%}.status-column{width:9%}.actions-width-column{width:4%}th{position:sticky;top:0;z-index:2;padding:8px 12px;background:var(--surface-secondary);color:var(--muted);text-align:left;font-size:11px;font-weight:700;letter-spacing:.3px}td{padding:9px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border-light);vertical-align:middle;overflow-wrap:anywhere}tbody tr:hover{background:var(--surface-secondary)}tbody tr:last-child td{border-bottom:0}td strong{color:var(--text);font-weight:600}td small{display:block;color:var(--muted);font-size:11px}.sort-button{display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent!important;color:var(--muted)!important;border:0;border-radius:2px;text-align:left;font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:uppercase}.sort-button:focus-visible{outline:2px solid #1abb9c;outline-offset:3px}.sort-indicator{position:relative;flex:none;width:10px;height:14px;opacity:.75}.sort-indicator::before,.sort-indicator::after{position:absolute;left:1px;width:0;height:0;content:'';border-right:4px solid transparent;border-left:4px solid transparent}.sort-indicator::before{top:1px;border-bottom:4px solid var(--muted)}.sort-indicator::after{bottom:1px;border-top:4px solid var(--muted)}.sort-indicator.ascending::before{border-bottom-color:#1abb9c}.sort-indicator.ascending::after{opacity:.3}.sort-indicator.descending::before{opacity:.3}.sort-indicator.descending::after{border-top-color:#1abb9c}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}.actions-column{width:48px}.actions-cell{text-align:right}.empty{height:96px;color:var(--muted);text-align:center}.table-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border-light)}.table-footer p{margin:0;color:var(--muted);font-size:12px}.pagination{display:flex;align-items:center;gap:4px}.pagination button{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:12px}.pagination button:hover:not(:disabled):not(.current){background:var(--surface-secondary)!important;color:var(--text)!important}.pagination button.current{background:#1abb9c!important;color:#fff!important;border-color:#169f85}.pagination button:disabled{cursor:not-allowed;opacity:.5}.pagination span{padding:0 4px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 	.table-responsive table{min-width:1080px}
-	.backdrop{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:20px;background:#0f162666}
-	.asset-dialog{display:flex;flex-direction:column;width:min(100%,900px);height:min(90vh,760px);padding:0;overflow:hidden;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px}
-	.asset-dialog>header{display:flex;flex:none;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid var(--border)}.asset-dialog h2{margin:0}
-	.modal-close{display:grid;place-items:center;width:34px;height:34px;margin:0;padding:7px;background:transparent!important;color:var(--muted)!important;border:0;border-radius:4px}.modal-close:hover{background:var(--bg)!important}.modal-close svg{width:18px;height:18px}
-	.asset-form{display:flex;flex:1;min-height:0;flex-direction:column;gap:0;overflow:hidden;padding:0;background:var(--surface)}
-	.asset-form-body{display:grid;flex:1;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;align-items:start;gap:16px;overflow-y:auto;padding:16px 24px 24px;background:var(--bg)}
-	.asset-form-body h3{grid-column:1/-1;margin:8px 0 0;font-size:14px}
 	.asset-detail-body{display:grid;flex:1;min-height:0;align-content:start;gap:16px;overflow-y:auto;padding:16px 24px 24px;background:var(--bg)}
 	.detail-section{min-width:0;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:5px}.detail-section h3{margin:0 0 14px;color:var(--text);font-size:14px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0}.detail-grid>div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;font-weight:600}.detail-grid dd{margin:4px 0 0;color:var(--text);font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}
-	.asset-form label{display:grid;align-content:start;gap:6px;min-width:0;color:var(--text);font-size:12px;font-weight:500}.required{margin-left:2px;color:var(--danger)}
-	.asset-form input,.asset-form textarea{display:block;width:100%;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-size:13px;font-weight:400;outline:none;transition:border-color 150ms,box-shadow 150ms}
-	.asset-form textarea{height:auto;min-height:90px;padding:8px 12px;line-height:1.5;resize:vertical}.asset-form input::placeholder,.asset-form textarea::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .asset-form input::placeholder,:global(html[data-theme='dark']) .asset-form textarea::placeholder{color:#5a6473}
-	.asset-form input:hover:not(:focus),.asset-form textarea:hover:not(:focus){border-color:var(--muted)}.asset-form input:focus,.asset-form textarea:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.asset-form :is(input,textarea):disabled{cursor:not-allowed;opacity:.7}
-	.form-select-field{display:grid;gap:6px;min-width:0;color:var(--text);font-size:12px;font-weight:500}.form-select-picker{position:relative;min-width:0}
-	.form-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:36px;margin:0;padding:0 12px;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:4px;text-align:left;font-size:13px;font-weight:400;transition:border-color 150ms,box-shadow 150ms}.form-select-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.form-select-trigger.unselected{color:#c0c7cf!important}:global(html[data-theme='dark']) .form-select-trigger.unselected{color:#5a6473!important}.form-select-trigger:hover:not(:focus){border-color:var(--muted)}.form-select-trigger:focus,.form-select-trigger:focus-visible,.form-select-trigger[aria-expanded='true']{border-color:#1abb9c;outline:0;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.form-select-trigger:disabled{cursor:not-allowed;opacity:.7}.form-select-trigger svg{flex:none;width:10px;height:6px;fill:none;stroke:#9ba5b1;stroke-width:1.5}.form-select-trigger[aria-expanded='true'] svg{transform:rotate(180deg)}
-	.form-select-options{position:absolute;top:calc(100% + 4px);left:0;z-index:30;width:100%;max-height:200px;overflow-y:auto;padding:3px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 18px rgba(15,23,42,.12)}.form-select-picker.above .form-select-options{top:auto;bottom:calc(100% + 4px)}.form-select-options button{display:block;width:100%;min-height:28px;margin:0;padding:5px 7px;background:transparent!important;color:var(--text)!important;border:0;border-radius:3px;text-align:left;font-size:12px;line-height:18px}.form-select-options button:hover,.form-select-options button:focus-visible{background:var(--surface-secondary)!important;outline:0}.form-select-options button.selected{background:#1abb9c!important;color:#fff!important}
 	.form-select-search{padding-right:34px!important}.form-select-search.unselected{color:#c0c7cf!important}:global(html[data-theme='dark']) .form-select-search.unselected{color:#5a6473!important}.search-chevron{position:absolute;top:50%;right:13px;width:10px;height:6px;fill:none;stroke:var(--muted);stroke-width:1.5;pointer-events:none;transform:translateY(-50%)}.searchable-select:has(input[aria-expanded='true']) .search-chevron{transform:translateY(-50%) rotate(180deg)}.form-select-empty{margin:0;padding:8px 7px;color:var(--muted);font-size:12px}
-	.field-error{display:block;color:var(--danger);font-size:11px;line-height:1.35}.asset-form .invalid,.asset-form .invalid:hover:not(:focus){border-color:var(--danger)!important}.asset-form .invalid:focus{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(214,57,57,.14)!important}
-	.custom-date{position:relative;display:block;min-width:0;color:var(--text);font-size:12px;font-weight:500}.custom-date>span{display:block;margin-bottom:6px}.date-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;height:36px;margin:0;padding:0 12px;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:4px;text-align:left;font-size:13px;font-weight:400;transition:border-color 150ms,box-shadow 150ms}.date-trigger .placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .date-trigger .placeholder{color:#5a6473}.date-trigger svg{width:17px;height:17px;fill:none;stroke:var(--muted);stroke-width:1.5}.date-trigger:hover:not(:focus){border-color:var(--muted)}.date-trigger:focus-visible,.date-trigger[aria-expanded='true']{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14);outline:none}.date-trigger:disabled{cursor:not-allowed;opacity:.7}
-	.calendar-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:280px;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:0 14px 36px rgba(0,0,0,.38)}.above .calendar-panel{top:auto;bottom:calc(100% + 6px)}.calendar-head{display:grid;grid-template-columns:30px 1fr 30px;align-items:center;margin-bottom:8px}.calendar-head strong{text-align:center;font-size:13px;font-weight:600}.calendar-head button,.calendar-actions button{margin:0;padding:0;background:transparent!important;color:var(--muted)!important}.calendar-head button{height:30px;font-size:22px}.weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.weekdays span{padding:5px 0;color:var(--muted);font-size:10px;font-weight:600;text-align:center}.calendar-grid button{height:31px;margin:0;padding:0;background:transparent!important;color:var(--text)!important;border:1px solid transparent;border-radius:4px;font-size:12px}.calendar-grid button:hover{background:var(--surface-secondary)!important;border-color:var(--border)}.calendar-grid button.outside{color:var(--muted)!important;opacity:.55}.calendar-grid button.today{border-color:#1abb9c}.calendar-grid button.selected{background:#1abb9c!important;color:#fff!important;border-color:#1abb9c}.calendar-actions{display:flex;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}.calendar-actions button{font-size:11px}.calendar-head button:hover,.calendar-actions button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.calendar-panel button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
-	.wide{grid-column:1/-1}.form-error-summary{display:grid;gap:3px;padding:10px 12px;background:rgba(214,57,57,.08);color:var(--danger);border:1px solid rgba(214,57,57,.35);border-radius:5px;font-size:12px}.form-error-summary strong{font-size:12px}.form-error-summary span{color:var(--text-secondary)}
+	.wide{grid-column:1/-1}
 	.history{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:5px}.history p{margin:0;padding:12px;color:var(--muted);font-size:12px}.history table{width:100%;min-width:420px;font-size:12px}.history th,.history td{position:static;padding:8px 12px}
 	.history-event{padding:12px;border-bottom:1px solid var(--border)}.history-event:last-child{border-bottom:0}.history-event-heading{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px;margin-bottom:8px}.history-event-heading span{color:var(--muted)}.history-event table{border-collapse:collapse}.history-event th,.history-event td{text-align:left;vertical-align:top;border-top:1px solid var(--border);overflow-wrap:anywhere}.history-event th{font-weight:600}
-	.asset-form-footer{display:flex;flex:none;justify-content:flex-end;gap:8px;margin:0;padding:16px 24px;border-top:1px solid var(--border-light);background:var(--surface)}.asset-form-footer button{margin:0;white-space:nowrap;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms}.asset-form-footer .secondary{box-shadow:var(--shadow)}.asset-form-footer .secondary:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.asset-form-footer .save-button{background:#337ab7!important;border-color:#286090}.asset-form-footer .save-button:hover{background:#286090!important}.asset-form-footer button:disabled{cursor:wait;opacity:.65}.asset-form-footer button:focus-visible,.modal-close:focus-visible{outline:2px solid #337ab7;outline-offset:2px}
-	@media(max-width:700px){.heading,.table-toolbar,.table-footer{align-items:stretch;flex-direction:column}.heading .primary{width:100%}.search-box{width:100%}.page-size{justify-content:flex-end}.pagination{flex-wrap:wrap}.asset-form-body,.asset-detail-body{grid-template-columns:1fr;padding:16px}.detail-grid{grid-template-columns:1fr 1fr}.asset-form-footer{padding:12px 16px}}
+	@media(max-width:700px){.heading,.table-toolbar,.table-footer{align-items:stretch;flex-direction:column}.search-box{width:100%}.pagination{flex-wrap:wrap}.asset-detail-body{grid-template-columns:1fr;padding:16px}.detail-grid{grid-template-columns:1fr 1fr}}
 	@media(max-width:450px){.detail-grid{grid-template-columns:1fr}}
 </style>
