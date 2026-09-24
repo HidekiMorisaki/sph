@@ -3,6 +3,7 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import { apiData } from '$lib/api';
 
 	type Manufacturer = { id: number; name: string };
@@ -20,8 +21,6 @@
 	let role = $state('');
 	let list = $state<MasterList>();
 	let manufacturers = $state<Manufacturer[]>([]);
-	let manufacturerSearch=$state('');
-	let filteredManufacturers=$derived(manufacturers.filter((item)=>item.name.toLocaleLowerCase().includes(manufacturerSearch.toLocaleLowerCase())));
 	let notice = $state('');
 	let mode = $state<ModalMode>(null);
 	let selected = $state<CpuType | null>(null);
@@ -31,8 +30,6 @@
 	let saving = $state(false);
 	let removing = $state(false);
 	let dialogElement = $state<HTMLDialogElement>();
-	let manufacturerOpen = $state(false);
-	let manufacturerAbove = $state(false);
 	let sourceDateOpen = $state(false);
 	let sourceDateAbove = $state(false);
 	let addButton = $state<HTMLButtonElement>();
@@ -56,13 +53,11 @@
 		form = item ? { code: item.code, displayName: item.displayName, manufacturerId: String(item.manufacturerId), series: item.series, modelNumber: item.modelNumber, sortOrder: String(item.sortOrder), officialUrl: item.officialUrl ?? '', sourceCheckedOn: item.sourceCheckedOn?.slice(0, 10) ?? '' } : { ...emptyForm(), manufacturerId: manufacturers[0] ? String(manufacturers[0].id) : '' };
 		errors = {};
 		formError = '';
-		manufacturerOpen = false;
 		sourceDateOpen = false;
 		void tick().then(() => dialogElement?.querySelector<HTMLElement>(next === 'detail' ? '.modal-close' : '[name="displayName"]')?.focus());
 	}
 	function closeModal() {
 		if (saving || removing) return;
-		manufacturerOpen = false;
 		sourceDateOpen = false;
 		mode = null;
 		selected = null;
@@ -72,50 +67,6 @@
 		form[field] = value;
 		if (errors[field]) { const next = { ...errors }; delete next[field]; errors = next; }
 		if (!Object.keys(errors).length) formError = '';
-	}
-	function toggleManufacturer(event: MouseEvent) {
-		event.stopPropagation();
-		if (manufacturerOpen) { manufacturerOpen = false; return; }
-		const trigger = event.currentTarget as HTMLButtonElement;
-		const body = trigger.closest('.app-modal-form-body');
-		const bounds = body?.getBoundingClientRect();
-		const rect = trigger.getBoundingClientRect();
-		const listHeight = Math.min(manufacturers.length * 28 + 8, 200);
-		manufacturerAbove = Boolean(bounds && bounds.bottom - rect.bottom < listHeight + 4 && rect.top - bounds.top > bounds.bottom - rect.bottom);
-		sourceDateOpen = false;
-		manufacturerOpen = true;
-		manufacturerSearch='';
-		void tick().then(()=>dialogElement?.querySelector<HTMLInputElement>('.manufacturer-search')?.focus());
-	}
-	function chooseManufacturer(value: number) {
-		updateField('manufacturerId', String(value));
-		manufacturerOpen = false;
-		void tick().then(() => dialogElement?.querySelector<HTMLButtonElement>('[name="manufacturerId"]')?.focus());
-	}
-	function focusManufacturerOption(index: number) {
-		void tick().then(() => dialogElement?.querySelectorAll<HTMLButtonElement>('.form-select-options button')[index]?.focus());
-	}
-	function manufacturerTriggerKeydown(event: KeyboardEvent) {
-		if(event.key.length===1&&!event.ctrlKey&&!event.altKey&&!event.metaKey){event.preventDefault();manufacturerSearch=event.key;manufacturerOpen=true;sourceDateOpen=false;void tick().then(()=>dialogElement?.querySelector<HTMLInputElement>('.manufacturer-search')?.focus());return;}
-		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-		if (!manufacturers.length) return;
-		event.preventDefault();
-		if (!manufacturerOpen) { manufacturerOpen = true; manufacturerSearch=''; sourceDateOpen = false; }
-		const index = filteredManufacturers.findIndex((item) => String(item.id) === form.manufacturerId);
-		focusManufacturerOption(event.key === 'ArrowDown' ? Math.min(index + 1, filteredManufacturers.length - 1) : Math.max(index - 1, 0));
-	}
-	function manufacturerOptionKeydown(event: KeyboardEvent, index: number) {
-		if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-		event.preventDefault();
-		focusManufacturerOption(event.key === 'Home' ? 0 : event.key === 'End' ? filteredManufacturers.length - 1 : event.key === 'ArrowDown' ? Math.min(index + 1, filteredManufacturers.length - 1) : Math.max(index - 1, 0));
-	}
-	function manufacturerSearchKeydown(event: KeyboardEvent){
-		if(event.key==='ArrowDown'){event.preventDefault();focusManufacturerOption(0);}
-		else if(event.key==='Enter'&&filteredManufacturers[0]){event.preventDefault();chooseManufacturer(filteredManufacturers[0].id);}
-		else if(event.key==='Escape'){event.preventDefault();manufacturerOpen=false;void tick().then(()=>dialogElement?.querySelector<HTMLButtonElement>('[name="manufacturerId"]')?.focus());}
-	}
-	function manufacturerFocusout(event: FocusEvent) {
-		if (manufacturerOpen && !(event.relatedTarget instanceof Node && (event.currentTarget as HTMLElement).contains(event.relatedTarget))) manufacturerOpen = false;
 	}
 	function toggleSourceDate() {
 		if (!sourceDateOpen) {
@@ -127,7 +78,6 @@
 				sourceDateAbove = bounds.bottom - rect.bottom < 340 && rect.top - bounds.top > bounds.bottom - rect.bottom;
 			}
 		}
-		manufacturerOpen = false;
 		sourceDateOpen = !sourceDateOpen;
 	}
 	function officialUrlHref(value: string | null): string | null {
@@ -188,11 +138,11 @@
 		finally { removing = false; }
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.defaultPrevented) return;
 		if (!mode || !dialogElement) return;
 		if (event.key === 'Escape') {
 			event.preventDefault();
-			if (manufacturerOpen) { manufacturerOpen = false; dialogElement.querySelector<HTMLButtonElement>('[name="manufacturerId"]')?.focus(); }
-			else if (sourceDateOpen) { sourceDateOpen = false; dialogElement.querySelector<HTMLButtonElement>('[data-field="sourceCheckedOn"] .date-trigger')?.focus(); }
+			if (sourceDateOpen) { sourceDateOpen = false; dialogElement.querySelector<HTMLButtonElement>('[data-field="sourceCheckedOn"] .date-trigger')?.focus(); }
 			else closeModal();
 			return;
 		}
@@ -224,7 +174,7 @@
 				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save CPU type</strong><span>{formError}</span></div>{/if}
 				<h3>Basic information</h3>
 				<label><span>Display name <span class="required" aria-hidden="true">*</span></span><input name="displayName" value={form.displayName} required maxlength="255" class:invalid={Boolean(errors.displayName)} aria-invalid={Boolean(errors.displayName)} aria-describedby={errors.displayName ? 'displayName-error' : undefined} oninput={(event) => updateField('displayName', event.currentTarget.value)} />{#if errors.displayName}<span class="field-error" id="displayName-error" role="alert">{errors.displayName}</span>{/if}</label>
-				<div class="form-select-field"><span>Manufacturer <span class="required" aria-hidden="true">*</span></span><div class="form-select-picker" class:above={manufacturerAbove && manufacturerOpen} data-field="manufacturerId" onfocusout={manufacturerFocusout}><button class="form-select-trigger" class:unselected={!form.manufacturerId} class:invalid={Boolean(errors.manufacturerId)} name="manufacturerId" type="button" role="combobox" disabled={!manufacturers.length} aria-label="Manufacturer (required)" aria-required="true" aria-invalid={Boolean(errors.manufacturerId)} aria-describedby={errors.manufacturerId ? 'manufacturerId-error' : undefined} aria-controls="manufacturer-options" aria-haspopup="listbox" aria-expanded={manufacturerOpen} onclick={toggleManufacturer} onkeydown={manufacturerTriggerKeydown}><span>{manufacturers.find((item) => String(item.id) === form.manufacturerId)?.name ?? '-'}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>{#if manufacturerOpen}<div id="manufacturer-options" class="form-select-options" role="listbox" aria-label="Manufacturer"><input class="manufacturer-search" type="search" value={manufacturerSearch} placeholder="Search..." aria-label="Search manufacturers" oninput={(event)=>manufacturerSearch=event.currentTarget.value} onkeydown={manufacturerSearchKeydown}/>{#each filteredManufacturers as manufacturer, index}<button type="button" role="option" tabindex="-1" aria-selected={String(manufacturer.id) === form.manufacturerId} class:selected={String(manufacturer.id) === form.manufacturerId} onclick={() => chooseManufacturer(manufacturer.id)} onkeydown={(event) => manufacturerOptionKeydown(event, index)}>{manufacturer.name}</button>{:else}<p>No options found.</p>{/each}</div>{/if}</div>{#if errors.manufacturerId}<span class="field-error" id="manufacturerId-error" role="alert">{errors.manufacturerId}</span>{/if}</div>
+				<SearchSelect label="Manufacturer" field="manufacturerId" name="manufacturerId" value={form.manufacturerId} options={manufacturers.map((item) => ({ value: String(item.id), label: item.name }))} required disabled={!manufacturers.length} error={errors.manufacturerId ?? ''} onOpen={() => sourceDateOpen = false} onSelect={(value) => updateField('manufacturerId', value)} />
 				<label><span>Series <span class="required" aria-hidden="true">*</span></span><input name="series" value={form.series} required maxlength="128" class:invalid={Boolean(errors.series)} aria-invalid={Boolean(errors.series)} aria-describedby={errors.series ? 'series-error' : undefined} oninput={(event) => updateField('series', event.currentTarget.value)} />{#if errors.series}<span class="field-error" id="series-error" role="alert">{errors.series}</span>{/if}</label>
 				<label><span>Model number <span class="required" aria-hidden="true">*</span></span><input name="modelNumber" value={form.modelNumber} required maxlength="128" class:invalid={Boolean(errors.modelNumber)} aria-invalid={Boolean(errors.modelNumber)} aria-describedby={errors.modelNumber ? 'modelNumber-error' : undefined} oninput={(event) => updateField('modelNumber', event.currentTarget.value)} />{#if errors.modelNumber}<span class="field-error" id="modelNumber-error" role="alert">{errors.modelNumber}</span>{/if}</label>
 				<label><span>Code <span class="required" aria-hidden="true">*</span></span><input name="code" value={form.code} required maxlength="64" class:invalid={Boolean(errors.code)} aria-invalid={Boolean(errors.code)} aria-describedby={errors.code ? 'code-error' : undefined} oninput={(event) => updateField('code', event.currentTarget.value)} />{#if errors.code}<span class="field-error" id="code-error" role="alert">{errors.code}</span>{/if}</label>
@@ -242,4 +192,4 @@
 	.cpu-page{display:flex;min-width:0;width:100%;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.08em}.heading h1{margin:4px 0;color:var(--text);font-size:30px}.heading span{color:var(--muted);font-size:13px}.notice{margin:0 0 14px;color:var(--text-secondary);font-size:13px}
 	.dialog-body{min-height:0;overflow-y:auto;padding:20px 24px;background:var(--bg)}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0}.detail-grid div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}.detail-grid dd{margin:4px 0 0;color:var(--text);font-size:13px;overflow-wrap:anywhere}.detail-grid a{color:#337ab7;text-decoration:underline;text-underline-offset:2px}:global(html[data-theme='dark']) .detail-grid a{color:#77b9f0}
 	button:focus-visible,input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}@media(max-width:700px){.heading{align-items:stretch;flex-direction:column}.dialog-body{padding:16px}.detail-grid{grid-template-columns:1fr}}
-.manufacturer-search{width:100%;height:30px;margin-bottom:3px;padding:0 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px}.manufacturer-search:focus{outline:2px solid #1abb9c}.form-select-options p{margin:6px;color:var(--muted);font-size:12px}</style>
+</style>

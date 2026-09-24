@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run prepare
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["sh", "-c", "npm run prepare && npm run dev -- --host 0.0.0.0"]
 
 FROM development AS build
 RUN npm run build

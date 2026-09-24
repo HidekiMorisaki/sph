@@ -3,6 +3,8 @@
 	import { apiData } from '$lib/api';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
+	import MasterList from '$lib/components/MasterList.svelte';
+	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import { en as messages } from '$lib/ui/messages';
 
 	type Master = { id: number; code: string; name: string };
@@ -20,11 +22,9 @@
 	type ExportColumn = { key: string; columnName: string; comment: string | null };
 	type ListMeta = { offset: number; limit: number; returned: number; total: number; hasMore: boolean; search: string; calculatedAsOf: string; sort: { field: string; order: 'asc' | 'desc' }; columns?: ExportColumn[] };
 	type ApiListPayload = { status: 'success'; responseCode: number; data: Employee[]; meta: ListMeta };
-	type SortKey = 'employee' | 'age' | 'lengthOfService' | 'department' | 'group' | 'position' | 'employmentType' | 'branch' | 'roles';
-	type SortOrder = 'asc' | 'desc';
 	type DateField = 'birthDate' | 'hiredAt' | 'retiredAt';
 	type SelectField = 'gender' | 'bloodType' | 'departmentId' | 'groupId' | 'positionId' | 'employmentTypeId' | 'branchId';
-	type SelectOption = { value: string; label: string };
+	type SelectOption = { value: string; label: string; searchTerms?: string[] };
 	type ApiErrorDetail = { field?: string; reason: string };
 	type ApiErrorPayload = { error?: { code?: string; message?: string; details?: ApiErrorDetail[] } };
 
@@ -32,15 +32,13 @@
 	const genders = [['female', 'Female'], ['male', 'Male'], ['unspecified', 'Unspecified']] as const;
 	const bloodTypes = ['A', 'B', 'AB', 'O'];
 	const requiredPickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'] as const;
-	const pageSizeOptions = [10, 20, 30, 40, 50] as const;
-	const pageSizeStorageKey = 'employees-page-size';
 	const blank = () => ({
 		employeeCode: '', firstName: '', middleName: '', lastName: '', nameKana: '', birthDate: '', gender: '', bloodType: '',
 		postalCode: '', prefecture: '', city: '', streetAddress: '', buildingName: '', mobilePhone: '', email: '',
 		hiredAt: '', departmentId: '', groupId: '', positionId: '', employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleCodes: [] as string[]
 	});
 
-	let items = $state<Employee[]>([]);
+	let employeeList = $state<MasterList>();
 	let form = $state(blank());
 	let editing = $state<Employee | null>(null);
 	let detailEmployee = $state<Employee | null>(null);
@@ -61,30 +59,7 @@
 	let currentUserRoles = $state<string[]>([]);
 	let canManageEmployees = $derived(currentUserRoles.includes('system_administrator') || currentUserRoles.includes('business_administrator'));
 	let activeDateField = $state<DateField | null>(null);
-	let activeSelectField = $state<SelectField | null>(null);
-	let selectSearch=$state('');
-	const filteredFormOptions=(options:SelectOption[])=>options.length>=10&&selectSearch?options.filter((option)=>option.label.toLocaleLowerCase().includes(selectSearch.toLocaleLowerCase())):options;
-	let selectAbove = $state(false);
-	let search = $state('');
-	let page = $state(1);
-	let pageSize = $state<number>(10);
-	let pageSizeOpen = $state(false);
-	let total = $state(0);
-	let sortBy = $state<SortKey>('employee');
-	let sortOrder = $state<SortOrder>('asc');
-	let loading = $state(false);
 	let exporting = $state(false);
-	let actionEmployee = $state<Employee | null>(null);
-	let menuTop = $state(0);
-	let menuLeft = $state(0);
-	let menuTrigger: HTMLButtonElement | null = null;
-	let pageSizeTrigger: HTMLButtonElement | null = null;
-	let searchTimer: number | undefined;
-	let listController: AbortController | null = null;
-
-	let pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
-	let firstVisible = $derived(total === 0 ? 0 : (page - 1) * pageSize + 1);
-	let lastVisible = $derived(Math.min(page * pageSize, total));
 
 	const iso = (value: string | null) => value ? value.slice(0, 10) : '';
 	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -103,53 +78,6 @@
 	function updateTextField(field: Exclude<keyof ReturnType<typeof blank>, 'roleCodes'>, value: string) { form[field] = value; clearFieldError(field); }
 
 	function chooseDate(field: DateField, value: string) { form[field] = value; clearFieldError(field); activeDateField = null; }
-	function openFormSelect(trigger: HTMLButtonElement, field: SelectField, count: number) {
-		const body = trigger.closest('.employee-form-body');
-		const room = body?.getBoundingClientRect().bottom ?? window.innerHeight;
-		const rect = trigger.getBoundingClientRect();
-		const listHeight = Math.min(count * 28 + 8, 200);
-		selectAbove = room - rect.bottom < listHeight + 4 && rect.top - (body?.getBoundingClientRect().top ?? 0) > room - rect.bottom;
-		activeDateField = null;
-		activeSelectField = field;
-		selectSearch='';
-		if(count>=10)void tick().then(()=>document.querySelector<HTMLInputElement>(`.form-select-picker[data-field="${field}"] .form-select-search`)?.focus());
-	}
-	function toggleFormSelect(event: MouseEvent, field: SelectField, count: number) {
-		event.stopPropagation();
-		if (activeSelectField === field) { activeSelectField = null; return; }
-		openFormSelect(event.currentTarget as HTMLButtonElement, field, count);
-	}
-	function chooseFormSelect(field: SelectField, value: string) {
-		form[field] = value;
-		clearFieldError(field);
-		activeSelectField = null;
-		document.querySelector<HTMLButtonElement>(`.form-select-picker[data-field="${field}"] .form-select-trigger`)?.focus();
-	}
-	function focusFormSelectOption(field: SelectField, index: number) {
-		void tick().then(() => document.querySelectorAll<HTMLButtonElement>(`.form-select-picker[data-field="${field}"] .form-select-options button`)[index]?.focus());
-	}
-	function formSelectTriggerKeydown(event: KeyboardEvent, field: SelectField, options: SelectOption[]) {
-		if(options.length>=10&&event.key.length===1&&!event.ctrlKey&&!event.altKey&&!event.metaKey){event.preventDefault();openFormSelect(event.currentTarget as HTMLButtonElement,field,options.length);selectSearch=event.key;return;}
-		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-		event.preventDefault();
-		if (activeSelectField !== field) openFormSelect(event.currentTarget as HTMLButtonElement, field, options.length);
-		const visible=filteredFormOptions(options);const selected=visible.findIndex((option) => option.value === form[field]);
-		focusFormSelectOption(field, event.key === 'ArrowDown' ? Math.min(selected + 1, visible.length - 1) : Math.max(selected - 1, 0));
-	}
-	function formSelectSearchKeydown(event:KeyboardEvent,field:SelectField,options:SelectOption[]){const visible=filteredFormOptions(options);if(event.key==='ArrowDown'){event.preventDefault();focusFormSelectOption(field,0);}else if(event.key==='Enter'&&visible[0]){event.preventDefault();chooseFormSelect(field,visible[0].value);}else if(event.key==='Escape'){event.preventDefault();activeSelectField=null;document.querySelector<HTMLButtonElement>(`.form-select-picker[data-field="${field}"] .form-select-trigger`)?.focus();}}
-	function formSelectOptionKeydown(event: KeyboardEvent, field: SelectField, index: number, count: number) {
-		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-			event.preventDefault();
-			focusFormSelectOption(field, event.key === 'ArrowDown' ? Math.min(index + 1, count - 1) : Math.max(index - 1, 0));
-		} else if (event.key === 'Home' || event.key === 'End') {
-			event.preventDefault(); focusFormSelectOption(field, event.key === 'Home' ? 0 : count - 1);
-		}
-	}
-	function formSelectFocusout(event: FocusEvent, field: SelectField) {
-		const next = event.relatedTarget;
-		if (activeSelectField === field && !(next instanceof Node && (event.currentTarget as HTMLElement).contains(next))) activeSelectField = null;
-	}
-
 	async function loadMasters() {
 		const responses = await Promise.all(resources.map((resource) => fetch(`/v1/${resource}?limit=500`)));
 		masters = Object.fromEntries(await Promise.all(responses.map(async (response, index) => [resources[index], response.ok ? await apiData<Master[]>(response) : []])));
@@ -159,28 +87,12 @@
 		if (roleResponse.ok) roles = await apiData<Role[]>(roleResponse);
 		if (sessionResponse.ok) currentUserRoles = (await apiData<{ user: { roles: string[] } }>(sessionResponse)).user.roles;
 	}
-	async function loadEmployees() {
-		listController?.abort();
-		const controller = new AbortController(); listController = controller; loading = true;
-		const params = new URLSearchParams({ offset: String((page - 1) * pageSize), limit: String(pageSize), sortBy, sortOrder });
-		if (search.trim()) params.set('search', search.trim());
-		try {
-			const response = await fetch(`/v1/employees?${params}`, { signal: controller.signal });
-			if (!response.ok) { message = 'Unable to load employees.'; return; }
-			const payload = await response.json() as ApiListPayload;
-			items = payload.data; total = payload.meta.total;
-			const maximumPage = Math.max(1, Math.ceil(total / pageSize));
-			if (page > maximumPage) { page = maximumPage; await loadEmployees(); }
-		} catch (error) {
-			if (!(error instanceof DOMException && error.name === 'AbortError')) message = 'Unable to load employees.';
-		} finally { if (listController === controller) loading = false; }
-	}
 	function focusEmployeeForm() { void tick().then(() => { if (formOpen) document.querySelector<HTMLInputElement>('.employee-form [name="employeeCode"]')?.focus(); }); }
 	function resetFormErrors() { missingFields = []; fieldErrors = {}; formError = ''; }
-	function create() { if (!canManageEmployees) return; closeMenu(); editing = null; form = blank(); resetFormErrors(); activeDateField = null; activeSelectField = null; formOpen = true; focusEmployeeForm(); }
+	function create() { if (!canManageEmployees) return; editing = null; form = blank(); resetFormErrors(); activeDateField = null; formOpen = true; focusEmployeeForm(); }
 	function edit(item: Employee) {
 		if (!canManageEmployees) return;
-		closeMenu(); editing = item;
+		editing = item;
 		form = {
 			employeeCode: item.employeeCode, firstName: item.firstName, middleName: item.middleName ?? '', lastName: item.lastName,
 			nameKana: item.nameKana ?? '', birthDate: iso(item.birthDate), gender: item.gender ?? '', bloodType: item.bloodType ?? '',
@@ -190,7 +102,7 @@
 			positionId: item.positionId === null ? '' : String(item.positionId), employmentTypeId: item.employmentTypeId === null ? '' : String(item.employmentTypeId),
 			branchId: item.branchId === null ? '' : String(item.branchId), retiredAt: iso(item.retiredAt), notes: item.notes ?? '', roleCodes: item.roles.map((role) => role.code)
 		};
-		resetFormErrors(); activeDateField = null; activeSelectField = null; formOpen = true; focusEmployeeForm();
+		resetFormErrors(); activeDateField = null; formOpen = true; focusEmployeeForm();
 	}
 	function roleIsLocked(roleCode: string) { return roleCode === 'system_administrator' && !currentUserRoles.includes('system_administrator'); }
 	function toggleRole(roleCode: string) {
@@ -198,7 +110,7 @@
 		form.roleCodes = form.roleCodes.includes(roleCode) ? form.roleCodes.filter((code) => code !== roleCode) : [...form.roleCodes, roleCode];
 		clearFieldError('roleCodes');
 	}
-	function showDetail(item: Employee) { closeMenu(); detailEmployee = item; detailOpen = true; }
+	function showDetail(item: Employee) { detailEmployee = item; detailOpen = true; }
 	function showInvitation(payload: InvitationPayload, email: string) {
 		const url = new URL(payload.invitationUrl, window.location.origin);
 		if (url.origin !== window.location.origin || url.pathname !== '/account-setup') throw new Error('Invalid invitation URL.');
@@ -250,7 +162,7 @@
 			const saved = await apiData<Employee & Partial<InvitationPayload>>(response);
 			formOpen = false; message = editing ? 'Employee updated.' : 'Employee created.';
 			if (!editing && saved.invitationUrl && saved.invitationExpiresAt) showInvitation({ invitationUrl: saved.invitationUrl, invitationExpiresAt: saved.invitationExpiresAt }, saved.email);
-			await loadEmployees();
+			await employeeList?.refresh();
 		} catch {
 			formError = 'Unable to save the employee. Check your connection and try again.';
 		} finally { saving = false; }
@@ -261,69 +173,15 @@
 	}
 	async function remove(item: Employee) {
 		if (!canManageEmployees) return;
-		closeMenu(); if (!confirm(`Delete ${fullName(item)}?`)) return;
+		if (!confirm(`Delete ${fullName(item)}?`)) return;
 		const response = await fetch(`/v1/employees/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { message = 'Unable to delete the employee.'; return; }
-		message = 'Employee deleted.'; await loadEmployees();
+		message = 'Employee deleted.'; await employeeList?.refresh();
 	}
-	function changeSort(field: SortKey) {
-		if (sortBy === field) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; else { sortBy = field; sortOrder = 'asc'; }
-		page = 1; void loadEmployees();
-	}
-	function searchChanged() { page = 1; window.clearTimeout(searchTimer); searchTimer = window.setTimeout(() => void loadEmployees(), 350); }
-	function pageSizeChanged() {
-		if (!pageSizeOptions.includes(pageSize as typeof pageSizeOptions[number])) pageSize = 10;
-		localStorage.setItem(pageSizeStorageKey, String(pageSize)); page = 1; void loadEmployees();
-	}
-	function togglePageSize(event: MouseEvent) {
-		event.stopPropagation(); closeMenu(); pageSizeOpen = !pageSizeOpen;
-	}
-	function choosePageSize(size: number) {
-		pageSize = size; pageSizeOpen = false; pageSizeChanged(); pageSizeTrigger?.focus();
-	}
-	function focusPageSizeOption(index: number) {
-		pageSizeOpen = true;
-		void tick().then(() => document.querySelectorAll<HTMLButtonElement>('.page-size-options button')[index]?.focus());
-	}
-	function pageSizeTriggerKeydown(event: KeyboardEvent) {
-		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-		event.preventDefault();
-		const selectedIndex = pageSizeOptions.indexOf(pageSize as typeof pageSizeOptions[number]);
-		focusPageSizeOption(event.key === 'ArrowDown' ? Math.min(selectedIndex + 1, pageSizeOptions.length - 1) : Math.max(selectedIndex - 1, 0));
-	}
-	function pageSizeOptionKeydown(event: KeyboardEvent, index: number) {
-		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-			event.preventDefault();
-			focusPageSizeOption(event.key === 'ArrowDown' ? Math.min(index + 1, pageSizeOptions.length - 1) : Math.max(index - 1, 0));
-		} else if (event.key === 'Home' || event.key === 'End') {
-			event.preventDefault(); focusPageSizeOption(event.key === 'Home' ? 0 : pageSizeOptions.length - 1);
-		}
-	}
-	function goToPage(target: number) { if (target < 1 || target > pageCount || target === page) return; page = target; closeMenu(); void loadEmployees(); }
-	function paginationItems(): Array<number | 'ellipsis'> {
-		if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1);
-		const values: Array<number | 'ellipsis'> = [1];
-		if (page > 4) values.push('ellipsis');
-		for (let value = Math.max(2, page - 1); value <= Math.min(pageCount - 1, page + 1); value += 1) values.push(value);
-		if (page < pageCount - 3) values.push('ellipsis');
-		values.push(pageCount); return values;
-	}
-	function toggleMenu(event: MouseEvent, item: Employee) {
-		event.stopPropagation(); if (actionEmployee?.id === item.id) { closeMenu(); return; }
-		menuTrigger = event.currentTarget as HTMLButtonElement;
-		const rect = menuTrigger.getBoundingClientRect(); const menuWidth = 160; const menuHeight = 126;
-		menuLeft = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
-		menuTop = rect.bottom + 6 + menuHeight > window.innerHeight - 8 ? rect.top - menuHeight - 6 : rect.bottom + 6; actionEmployee = item;
-		void tick().then(() => document.querySelector<HTMLButtonElement>('.menu-popover button')?.focus());
-	}
-	function closeMenu() { actionEmployee = null; menuTrigger = null; }
-	function closePopovers() { closeMenu(); pageSizeOpen = false; activeSelectField = null; }
 	function windowKeydown(event: KeyboardEvent) {
+		if (event.defaultPrevented) return;
 		if (event.key !== 'Escape') return;
 		if (invitation) closeInvitation();
-		else if (pageSizeOpen) { pageSizeOpen = false; pageSizeTrigger?.focus(); }
-		else if (actionEmployee) { const trigger = menuTrigger; closeMenu(); trigger?.focus(); }
-		else if (activeSelectField) { const field = activeSelectField; activeSelectField = null; document.querySelector<HTMLButtonElement>(`.form-select-picker[data-field="${field}"] .form-select-trigger`)?.focus(); }
 		else if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => document.querySelector<HTMLButtonElement>(`.custom-date[data-field="${field}"] .date-trigger`)?.focus()); }
 		else if (detailOpen) detailOpen = false; else if (formOpen) formOpen = false;
 	}
@@ -334,7 +192,7 @@
 	}
 	async function exportCsv() {
 		if (!canManageEmployees) return;
-		closeMenu(); exporting = true; message = '';
+		exporting = true; message = '';
 		try {
 			const rows: Employee[] = []; let columns: ExportColumn[] = []; let offset = 0; let exportTotal = 0;
 			do {
@@ -354,57 +212,41 @@
 		} catch { message = 'Unable to export employees.'; } finally { exporting = false; }
 	}
 	onMount(() => {
-		const savedPageSize = Number(localStorage.getItem(pageSizeStorageKey));
-		if (pageSizeOptions.includes(savedPageSize as typeof pageSizeOptions[number])) pageSize = savedPageSize;
-		void Promise.all([loadMasters(), loadRoleOptions(), loadEmployees()]);
-		return () => { window.clearTimeout(searchTimer); listController?.abort(); };
+		void Promise.all([loadMasters(), loadRoleOptions()]);
 	});
 </script>
 
-<svelte:window onclick={closePopovers} onkeydown={windowKeydown} onscroll={closePopovers} onresize={closePopovers} />
+<svelte:window onkeydown={windowKeydown} />
 
 {#snippet dateInput(label: string, field: DateField, value: string, above = false, required = false)}
 	<DatePicker {label} {field} {value} {above} {required} error={fieldError(field)} open={activeDateField === field} onToggle={() => activeDateField = activeDateField === field ? null : field} onSelect={(selected) => chooseDate(field, selected)} />
 {/snippet}
 {#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false)}
-	<div class="form-select-field"><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><div class="form-select-picker" class:above={activeSelectField === field && selectAbove} data-field={field} onfocusout={(event) => formSelectFocusout(event, field)}>
-		<button class="form-select-trigger" class:unselected={!form[field]} type="button" aria-label={`${label}${required ? ' (required)' : ''}`} aria-describedby={fieldError(field) ? `${field}-error` : undefined} class:invalid={Boolean(fieldError(field))} aria-haspopup="listbox" aria-expanded={activeSelectField === field} onclick={(event) => toggleFormSelect(event, field, options.length)} onkeydown={(event) => formSelectTriggerKeydown(event, field, options)}><span>{options.find((option) => option.value === form[field])?.label ?? '-'}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>
-		{#if activeSelectField === field}<div class="form-select-options" role="listbox" aria-label={label}>{#if options.length>=10}<input class="form-select-search" type="search" value={selectSearch} placeholder="Search..." aria-label={`Search ${label}`} oninput={(event)=>selectSearch=event.currentTarget.value} onkeydown={(event)=>formSelectSearchKeydown(event,field,options)}/>{/if}{#each filteredFormOptions(options) as option, index}<button type="button" role="option" tabindex="-1" aria-selected={form[field] === option.value} class:selected={form[field] === option.value} onclick={() => chooseFormSelect(field, option.value)} onkeydown={(event) => formSelectOptionKeydown(event, field, index, filteredFormOptions(options).length)}>{option.label}</button>{:else}<p class="form-select-empty">No options found.</p>{/each}</div>{/if}
-	</div>{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</div>
+	<SearchSelect {label} {field} value={form[field]} {options} {required} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => { form[field] = value; clearFieldError(field); }} />
 {/snippet}
 {#snippet textInput(label: string, field: Exclude<keyof ReturnType<typeof blank>, 'roleCodes'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
-{#snippet sortIndicator(field: SortKey)}<span class="sort-indicator" class:ascending={sortBy === field && sortOrder === 'asc'} class:descending={sortBy === field && sortOrder === 'desc'} aria-hidden="true"></span>{/snippet}
+{#snippet employeeCell(item: Employee)}<div class="employee-cell"><span class="avatar">{initials(item)}</span><div><strong>{fullName(item)}</strong><small>{item.employeeCode}</small></div></div>{/snippet}
+{#snippet rolesCell(item: Employee)}<div class="role-badges">{#each item.roles as role}<span>{role.name}</span>{/each}</div>{/snippet}
+{#snippet exportAction()}<button class="export-button" type="button" disabled={exporting || !canManageEmployees} onclick={() => void exportCsv()}>{exporting ? 'Exporting…' : 'Export CSV'}</button>{/snippet}
 
 <AssetManagementShell title="Employees" active="Employees">
 	<div class="employees-page">
 	<div class="heading"><div><p>PEOPLE DIRECTORY</p><h1>Employees</h1></div><button class="app-add-button" type="button" disabled={!canManageEmployees} onclick={create}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 8h8M8 4v8" /></svg>Add employee</button></div>
 	{#if message}<p class="notice">{message}</p>{/if}
-	<section class="list-card">
-		<header class="card-header"><div><h2>All employees</h2><p>Sortable, searchable, paginated.</p></div><button class="export-button" type="button" disabled={exporting || !canManageEmployees} onclick={() => void exportCsv()}>{exporting ? 'Exporting…' : 'Export CSV'}</button></header>
-		<div class="table-toolbar"><label class="search-box"><span class="sr-only">Search employees</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg><input bind:value={search} type="search" placeholder="Search..." oninput={searchChanged} /></label><div class="page-size">Show <div class="page-size-picker"><button bind:this={pageSizeTrigger} class="page-size-trigger" type="button" aria-haspopup="listbox" aria-expanded={pageSizeOpen} onclick={togglePageSize} onkeydown={pageSizeTriggerKeydown}><span>{pageSize}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>{#if pageSizeOpen}<div class="page-size-options" role="listbox" aria-label="Entries per page">{#each pageSizeOptions as size, index}<button type="button" role="option" aria-selected={pageSize === size} class:selected={pageSize === size} onclick={() => choosePageSize(size)} onkeydown={(event) => pageSizeOptionKeydown(event, index)}>{size}</button>{/each}</div>{/if}</div> entries</div></div>
-		<div class="table-responsive" onscroll={closeMenu}><table class="employee-table"><colgroup><col class="employee-column" /><col class="age-column" /><col class="service-column" /><col class="department-column" /><col class="group-column" /><col class="position-column" /><col class="employment-type-column" /><col class="branch-column" /><col class="roles-column" /><col class="actions-width-column" /></colgroup><thead><tr>
-			<th aria-sort={sortBy === 'employee' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('employee')}>Employee {@render sortIndicator('employee')}</button></th>
-			<th aria-sort={sortBy === 'age' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('age')}>{messages.employee.age} {@render sortIndicator('age')}</button></th>
-			<th aria-sort={sortBy === 'lengthOfService' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('lengthOfService')}>{messages.employee.lengthOfService} {@render sortIndicator('lengthOfService')}</button></th>
-			<th aria-sort={sortBy === 'department' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('department')}>Department {@render sortIndicator('department')}</button></th>
-			<th aria-sort={sortBy === 'group' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('group')}>Group {@render sortIndicator('group')}</button></th>
-			<th aria-sort={sortBy === 'position' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('position')}>Position {@render sortIndicator('position')}</button></th>
-			<th aria-sort={sortBy === 'employmentType' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('employmentType')}>Employment type {@render sortIndicator('employmentType')}</button></th>
-			<th aria-sort={sortBy === 'branch' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('branch')}>Branch {@render sortIndicator('branch')}</button></th>
-			<th aria-sort={sortBy === 'roles' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}><button class="sort-button" type="button" onclick={() => changeSort('roles')}>Roles {@render sortIndicator('roles')}</button></th>
-			<th class="actions-column"><span class="sr-only">Actions</span></th>
-		</tr></thead><tbody>
-			{#if loading && items.length === 0}<tr><td class="empty" colspan="10">Loading employees…</td></tr>
-			{:else if items.length === 0}<tr><td class="empty" colspan="10">No matches found</td></tr>
-			{:else}{#each items as item (item.id)}<tr><td><div class="employee-cell"><span class="avatar">{initials(item)}</span><div><strong>{fullName(item)}</strong><small>{item.employeeCode}</small></div></div></td><td>{item.age}</td><td>{formatLengthOfService(item.lengthOfService)}</td><td>{item.departmentRef?.name ?? ''}</td><td>{item.group?.name ?? ''}</td><td>{item.position?.name ?? ''}</td><td>{item.employmentType?.name ?? ''}</td><td>{item.branch?.name ?? ''}</td><td><div class="role-badges">{#each item.roles as role}<span>{role.name}</span>{/each}</div></td><td class="actions-cell"><button class="kebab-button" type="button" aria-label={`Actions for ${fullName(item)}`} aria-haspopup="menu" aria-expanded={actionEmployee?.id === item.id} onclick={(event) => toggleMenu(event, item)}><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="13" cy="8" r="1.4" /></svg></button></td></tr>{/each}{/if}
-		</tbody></table></div>
-		<footer class="table-footer"><p>Showing {firstVisible}–{lastVisible} of {total}</p><nav class="pagination" aria-label="Employee table pages"><button type="button" disabled={page === 1} aria-label="First page" onclick={() => goToPage(1)}>&lt;&lt;</button><button type="button" disabled={page === 1} aria-label="Previous page" onclick={() => goToPage(page - 1)}>&lt;</button>{#each paginationItems() as value}{#if value === 'ellipsis'}<span>…</span>{:else}<button type="button" class:current={value === page} aria-current={value === page ? 'page' : undefined} onclick={() => goToPage(value)}>{value}</button>{/if}{/each}<button type="button" disabled={page === pageCount} aria-label="Next page" onclick={() => goToPage(page + 1)}>&gt;</button><button type="button" disabled={page === pageCount} aria-label="Last page" onclick={() => goToPage(pageCount)}>&gt;&gt;</button></nav></footer>
-	</section>
+	<MasterList bind:this={employeeList} endpoint="/v1/employees" title="Employees" listHeading="All employees" description="Sortable, searchable, paginated." initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={canManageEmployees} canDelete={canManageEmployees} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} loadingLabel="Loading employees…" emptyLabel="No matches found" columns={[
+		{ key: 'employee', label: 'Employee', width: 18, cell: employeeCell },
+		{ key: 'age', label: messages.employee.age, width: 6, value: (item) => (item as Employee).age },
+		{ key: 'lengthOfService', label: messages.employee.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService) },
+		{ key: 'department', label: 'Department', width: 10, value: (item) => (item as Employee).departmentRef?.name },
+		{ key: 'group', label: 'Group', width: 9, value: (item) => (item as Employee).group?.name },
+		{ key: 'position', label: 'Position', width: 9, value: (item) => (item as Employee).position?.name },
+		{ key: 'employmentType', label: 'Employment type', width: 11, value: (item) => (item as Employee).employmentType?.name },
+		{ key: 'branch', label: 'Branch', width: 9, value: (item) => (item as Employee).branch?.name },
+		{ key: 'roles', label: 'Roles', width: 11, cell: rolesCell }
+	]} onDetail={(item) => showDetail(item as Employee)} onEdit={(item) => edit(item as Employee)} onDelete={(item) => remove(item as Employee)} />
 	</div>
-
-	{#if actionEmployee}<div class="menu-popover" role="menu" tabindex="-1" style:top={`${menuTop}px`} style:left={`${menuLeft}px`}><button type="button" role="menuitem" onclick={() => showDetail(actionEmployee!)}>Detail</button><button type="button" role="menuitem" disabled={!canManageEmployees} onclick={() => edit(actionEmployee!)}>Edit</button><div class="menu-separator"></div><button class="delete-item" type="button" role="menuitem" disabled={!canManageEmployees} onclick={() => void remove(actionEmployee!)}>Delete</button></div>{/if}
 
 	{#if formOpen}<div class="backdrop app-modal-backdrop" role="presentation"><dialog class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title"><header><h2 id="employee-form-title">{editing ? 'Edit employee' : 'Add employee'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close employee form" onclick={() => formOpen = false}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><form class="employee-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}><div class="employee-form-body app-modal-form-body">
 		{#if formError}<div class="form-error-summary app-modal-error-summary wide" role="alert"><strong>Unable to save employee</strong><span>{formError}</span></div>{/if}
@@ -424,27 +266,12 @@
 </AssetManagementShell>
 
 <style>
-	.employee-table{table-layout:fixed}
-	.employee-table{min-width:1450px}
-	.employee-column{width:18%}
-	.age-column{width:6%}
-	.service-column{width:12%}
-	.department-column{width:10%}
-	.group-column{width:9%}
-	.position-column{width:9%}
-	.employment-type-column{width:11%}
-	.branch-column{width:9%}
-	.roles-column{width:11%}
-	.actions-width-column{width:5%}
-	.employee-table td{overflow-wrap:anywhere}
 	.employee-cell>div{min-width:0}
 	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:10px;font-weight:600;line-height:1.2}
-	.employees-page{display:flex;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.heading{display:flex;flex:none;align-items:flex-start;justify-content:space-between;margin-bottom:24px}.heading p,.dialog-pretitle{margin:0;color:#1abb9c;font-size:11px;font-weight:700}.heading h1{margin:4px 0;font-size:30px}.primary,.secondary,.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:4px;font-size:12.5px;font-weight:500;line-height:1}.primary{background:#1abb9c!important;border-color:#169f85;color:#fff!important}.secondary,.export-button{background:var(--surface)!important;color:var(--text-secondary)!important}.export-button{box-shadow:var(--shadow);transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.notice{flex:none;margin:0 0 14px;color:#169f85}.list-card{display:flex;min-height:0;flex:0 1 auto;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.card-header{display:flex;flex:none;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-light)}.card-header h2{margin:0;color:var(--text);font-size:14px}.card-header p{margin:1px 0 0;color:var(--muted);font-size:11.5px}.table-toolbar{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-light)}.search-box{position:relative;display:block;width:220px}.search-box svg{position:absolute;top:50%;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none;transform:translateY(-50%)}.search-box input{width:100%;height:32px;padding:0 10px 0 32px;font-size:13px;background:var(--bg);outline:none;transition:border-color 150ms,box-shadow 150ms}.search-box input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.table-responsive{min-height:0;flex:0 1 auto;overflow:auto}table{min-width:720px;overflow:visible;border-radius:0;box-shadow:none;font-size:13px}th{position:sticky;top:0;z-index:2;padding:8px 16px;background:var(--surface-secondary);font-size:11px;font-weight:700;letter-spacing:.3px}td{padding:8px 16px;color:var(--text-secondary);vertical-align:middle;border-bottom-color:var(--border-light)}tbody tr{transition:background 80ms}tbody tr:hover{background:var(--surface-secondary)}tbody tr:last-child td{border-bottom:0}.sort-button{display:inline-flex;align-items:center;gap:6px;margin:0;padding:0;background:transparent!important;color:var(--muted)!important;border-radius:2px;font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:uppercase}.sort-button:focus-visible{outline:2px solid #1abb9c;outline-offset:3px}.sort-indicator{position:relative;width:10px;height:14px;opacity:.75}.sort-indicator::before,.sort-indicator::after{position:absolute;left:1px;width:0;height:0;content:'';border-right:4px solid transparent;border-left:4px solid transparent}.sort-indicator::before{top:1px;border-bottom:4px solid var(--muted)}.sort-indicator::after{bottom:1px;border-top:4px solid var(--muted)}.sort-indicator.ascending::before{border-bottom-color:#1abb9c}.sort-indicator.ascending::after{opacity:.3}.sort-indicator.descending::before{opacity:.3}.sort-indicator.descending::after{border-top-color:#1abb9c}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:9px;font-weight:600}.employee-cell strong{display:block;color:var(--text);font-weight:500}.employee-cell small{display:block;color:var(--muted);font-size:11px}.actions-column{width:48px}.actions-cell{text-align:right}.empty{height:96px;color:var(--muted);text-align:center}.table-footer{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border-light)}.table-footer p{margin:0;color:var(--muted);font-size:12px}.pagination{display:flex;align-items:center;gap:4px}.pagination button{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;margin:0;padding:0 8px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:500}.pagination button:hover:not(:disabled):not(.current){background:var(--surface-secondary)!important;color:var(--text)!important}.pagination button.current{background:#1abb9c!important;color:#fff!important;border-color:#169f85}.pagination button:disabled{cursor:not-allowed;opacity:.5}.pagination span{padding:0 4px;color:var(--muted)}.dialog-pretitle{margin-bottom:3px}.wide{grid-column:1/-1}.detail-body{flex:1;min-height:0;overflow-y:auto;padding:8px 24px 28px;background:var(--bg)}.detail-body section{margin-top:16px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:6px}.detail-body h3{margin:0 0 14px;font-size:14px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 24px;margin:0}.detail-grid div{min-width:0}.detail-grid dt{margin-bottom:3px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}.detail-grid dd{margin:0;overflow-wrap:anywhere;color:var(--text-secondary);font-size:13px}.notes-value{white-space:pre-wrap}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:700px){.heading,.card-header,.table-toolbar,.table-footer{align-items:stretch;flex-direction:column}.export-button{width:100%}.search-box{width:100%}.pagination{flex-wrap:wrap}.detail-grid{grid-template-columns:1fr}}
+	.employees-page{display:flex;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.heading{display:flex;flex:none;align-items:flex-start;justify-content:space-between;margin-bottom:24px}.heading p,.dialog-pretitle{margin:0;color:#1abb9c;font-size:11px;font-weight:700}.heading h1{margin:4px 0;font-size:30px}.primary,.secondary,.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:4px;font-size:12.5px;font-weight:500;line-height:1}.primary{background:#1abb9c!important;border-color:#169f85;color:#fff!important}.secondary,.export-button{background:var(--surface)!important;color:var(--text-secondary)!important}.export-button{box-shadow:var(--shadow);transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.notice{flex:none;margin:0 0 14px;color:#169f85}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:9px;font-weight:600}.employee-cell strong{display:block;color:var(--text);font-weight:500}.employee-cell small{display:block;color:var(--muted);font-size:11px}.dialog-pretitle{margin-bottom:3px}.wide{grid-column:1/-1}.detail-body{flex:1;min-height:0;overflow-y:auto;padding:8px 24px 28px;background:var(--bg)}.detail-body section{margin-top:16px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:6px}.detail-body h3{margin:0 0 14px;font-size:14px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 24px;margin:0}.detail-grid div{min-width:0}.detail-grid dt{margin-bottom:3px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}.detail-grid dd{margin:0;overflow-wrap:anywhere;color:var(--text-secondary);font-size:13px}.notes-value{white-space:pre-wrap}@media(max-width:700px){.heading{align-items:stretch;flex-direction:column}.export-button{width:100%}.detail-grid{grid-template-columns:1fr}}
 	/* Keep the actions visible while the fields scroll. */
-	.search-box input::placeholder{color:#c0c7cf}
-	:global(html[data-theme='dark']) .search-box input::placeholder{color:#5a6473}
 	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:13px}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px}.invitation-warning{color:var(--danger)!important}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:12px}
 	.invite-footer .primary,.invitation-dialog .primary{background:#337ab7!important;border-color:#286090}
 	.roles-field{display:grid;gap:8px;margin:0;padding:12px;border:1px solid var(--border);border-radius:5px}.roles-field.invalid{border-color:var(--danger)}.roles-field legend{padding:0 4px;color:var(--text);font-size:12px;font-weight:500}.roles-field>small{color:var(--muted);font-size:11px}.role-options{display:flex;flex-wrap:wrap;gap:8px 18px}.role-options label{display:flex;align-items:center;gap:7px;color:var(--text-secondary);font-size:12px;font-weight:400}.role-options label.locked{color:var(--muted)}.role-options input{width:15px;height:15px;margin:0;accent-color:#1abb9c}.role-options input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
 	.export-button:disabled{cursor:not-allowed;opacity:.5}
-.form-select-search{width:100%;height:30px;margin-bottom:3px;padding:0 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px}.form-select-search:focus{outline:2px solid #1abb9c}.form-select-empty{margin:6px;color:var(--muted);font-size:12px}</style>
+</style>
