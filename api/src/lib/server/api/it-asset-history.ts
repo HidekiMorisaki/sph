@@ -14,7 +14,7 @@ const date = (value: Date | null) => value?.toISOString().slice(0, 10) ?? null;
 export async function readAssetFields(tx: Prisma.TransactionClient, assetId: number): Promise<AssetFields> {
 	const asset = await tx.itAsset.findUniqueOrThrow({ where: { id: assetId }, include: itAssetInclude });
 	const assignee = asset.assignments[0]?.employee;
-	const location = asset.location;
+	const storage = asset.storage;
 	return {
 		assetTag: field(asset.assetTag),
 		typeId: field(asset.typeId, asset.type.name),
@@ -25,7 +25,7 @@ export async function readAssetFields(tx: Prisma.TransactionClient, assetId: num
 		ramGb: field(asset.ramGb),
 		operatingSystemId: field(asset.operatingSystemId, asset.operatingSystem?.displayName ?? null),
 		loginUsername: field(asset.loginUsername),
-		locationId: field(asset.locationId, `${location.room.branch.name} / ${location.room.name} / ${location.name}`),
+		storageId: field(asset.storageId, `${storage.room.branch.name} / ${storage.room.name} / ${storage.name}`),
 		statusId: field(asset.statusId, asset.status.name),
 		purchasedOn: field(date(asset.purchasedOn)),
 		disposalOn: field(date(asset.disposalOn)),

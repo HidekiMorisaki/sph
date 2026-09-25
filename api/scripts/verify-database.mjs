@@ -2,17 +2,16 @@ import { Client } from 'pg';
 
 const tables = [
 	'employees', 'roles', 'employee_roles', 'departments', 'employee_groups', 'positions', 'employment_types',
-	'storage_locations', 'branches', 'rooms', 'desks', 'it_assets', 'it_asset_types', 'manufacturers',
-	'cpu_types', 'operating_systems', 'it_asset_statuses', 'chairs', 'desk_assignments',
-	'it_asset_assignments', 'it_asset_change_history', 'chair_assignments', 'audit_logs', 'sessions', 'password_reset_tokens', 'account_invitations'
+	'storage', 'branches', 'rooms', 'it_assets', 'it_asset_types', 'manufacturers',
+	'cpu_types', 'operating_systems', 'it_asset_statuses', 'it_asset_assignments',
+	'it_asset_change_history', 'audit_logs', 'sessions', 'password_reset_tokens', 'account_invitations'
 ];
 const naturalKeyIndexes = [
-	'employees_employee_code_key', 'employees_email_key', 'roles_code_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'departments_code_key', 'employee_groups_code_key',
-	'positions_code_key', 'employment_types_code_key', 'storage_locations_code_key', 'branches_code_key', 'rooms_code_key',
-	'desks_asset_tag_key', 'it_assets_asset_tag_key', 'it_asset_types_code_key', 'manufacturers_code_key',
-	'cpu_types_code_key', 'operating_systems_code_key', 'it_asset_statuses_code_key', 'chairs_asset_tag_key',
-	'desk_assignments_desk_id_assigned_at_key', 'it_asset_assignments_asset_id_assigned_at_key',
-	'chair_assignments_chair_id_assigned_at_key', 'it_asset_change_history_event_key_key', 'audit_logs_event_key_key',
+	'employees_employee_code_key', 'employees_email_key', 'roles_code_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'departments_name_key', 'employee_groups_code_key',
+	'positions_name_key', 'employment_types_name_key', 'storage_branch_id_room_id_name_key', 'branches_name_key', 'rooms_branch_id_name_key',
+	'it_assets_asset_tag_key', 'it_asset_types_name_key', 'manufacturers_name_key',
+	'cpu_types_display_name_key', 'operating_systems_display_name_key', 'it_asset_statuses_name_key',
+	'it_asset_assignments_asset_id_assigned_at_key', 'it_asset_change_history_event_key_key', 'audit_logs_event_key_key',
 	'sessions_token_hash_key', 'password_reset_tokens_token_hash_key', 'account_invitations_token_hash_key'
 ];
 const client = new Client({ connectionString: process.env.DATABASE_URL });
@@ -71,23 +70,61 @@ try {
 	`);
 	const locationNotesColumns = await count(`
 		SELECT count(*) FROM information_schema.columns
-		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage_locations')
+		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage')
 			AND column_name = 'notes' AND data_type = 'text' AND is_nullable = 'YES'
+	`);
+	const branchContactColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'branches' AND is_nullable = 'YES'
+			AND ((column_name IN ('phone_number_1', 'phone_number_2', 'fax_number_1', 'fax_number_2') AND character_maximum_length = 32)
+				OR (column_name IN ('phone_number_1_label', 'phone_number_2_label', 'fax_number_1_label', 'fax_number_2_label') AND character_maximum_length = 128))
+	`);
+	const branchResponsibilityColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'branches' AND is_nullable = 'YES' AND data_type = 'integer'
+			AND column_name IN ('manager_employee_id', 'deputy_manager_employee_id')
+	`);
+	const branchResponsibilityForeignKeys = await count(`
+		SELECT count(*) FROM information_schema.referential_constraints
+		WHERE constraint_schema = 'public' AND delete_rule = 'RESTRICT'
+			AND constraint_name IN ('branches_manager_employee_id_fkey', 'branches_deputy_manager_employee_id_fkey')
+	`);
+	const branchResponsibilityIndexes = await count(`
+		SELECT count(*) FROM unnest(ARRAY['branches_manager_employee_id_idx', 'branches_deputy_manager_employee_id_idx']) AS key(name)
+		WHERE to_regclass('public.' || key.name) IS NOT NULL
 	`);
 	const removedLocationClassificationColumns = await count(`
 		SELECT count(*) FROM information_schema.columns
 		WHERE table_schema = 'public'
-			AND ((table_name = 'rooms' AND column_name = 'floor') OR (table_name = 'storage_locations' AND column_name = 'kind'))
+			AND ((table_name = 'rooms' AND column_name = 'floor') OR (table_name = 'storage' AND column_name = 'kind'))
 	`);
+	const removedCodeColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage', 'positions', 'departments', 'employment_types', 'it_asset_types', 'it_asset_statuses', 'manufacturers', 'cpu_types', 'operating_systems') AND column_name = 'code'
+	`);
+	const retainedRoleCodeColumn = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'roles' AND column_name = 'code' AND is_nullable = 'NO'
+	`);
+	const removedAssetTables = await count(`
+		SELECT count(*) FROM information_schema.tables
+		WHERE table_schema = 'public' AND table_name IN ('chairs', 'chair_assignments', 'desks', 'desk_assignments', 'storage_locations')
+	`);
+	const storageReferenceColumns = await count(`
+		SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public'
+		AND ((table_name = 'storage' AND column_name IN ('branch_id', 'room_id')) OR (table_name = 'it_assets' AND column_name = 'storage_id'))
+	`);
+	const oldItAssetLocationColumn = await count(`SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'it_assets' AND column_name = 'location_id'`);
+	const storageRoomForeignKey = await count(`SELECT count(*) FROM information_schema.referential_constraints WHERE constraint_schema = 'public' AND constraint_name = 'storage_branch_id_room_id_fkey'`);
 	const requiredEmployeeReferences = await count(`
 		SELECT count(*) FROM information_schema.referential_constraints
 		WHERE constraint_schema = 'public' AND delete_rule = 'RESTRICT'
 			AND constraint_name IN ('employees_employment_type_id_fkey', 'employees_branch_id_fkey')
 	`);
 	const softDeletedSessions = await count('SELECT count(*) FROM sessions WHERE deleted_at IS NOT NULL');
-	await client.query(`UPDATE departments SET name = name WHERE code = 'GENERAL'`);
+	await client.query(`UPDATE departments SET name = name WHERE name = 'General Affairs'`);
 	const updatedAtTriggerVerified = await count(`
-		SELECT count(*) FROM departments WHERE code = 'GENERAL' AND updated_at >= created_at
+		SELECT count(*) FROM departments WHERE name = 'General Affairs' AND updated_at >= created_at
 	`);
 	const activeAccounts = await count("SELECT count(*) FROM employees WHERE account_status = 'active' AND deleted_at IS NULL");
 	const roles = await count("SELECT count(*) FROM roles WHERE code IN ('system_administrator', 'business_administrator', 'general_user') AND deleted_at IS NULL");
@@ -101,9 +138,9 @@ try {
 			)
 	`);
 	const removedUsersTable = await count("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
-	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, removedLocationClassificationColumns, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
+	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, branchContactColumns, branchResponsibilityColumns, branchResponsibilityForeignKeys, branchResponsibilityIndexes, removedLocationClassificationColumns, removedCodeColumns, retainedRoleCodeColumn, removedAssetTables, storageReferenceColumns, oldItAssetLocationColumn, storageRoomForeignKey, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
 	console.log(JSON.stringify(result));
-	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || removedLocationClassificationColumns !== 0 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || softDeletedSessions < 1 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
+	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || branchContactColumns !== 8 || branchResponsibilityColumns !== 2 || branchResponsibilityForeignKeys !== 2 || branchResponsibilityIndexes !== 2 || removedLocationClassificationColumns !== 0 || removedCodeColumns !== 0 || retainedRoleCodeColumn !== 1 || removedAssetTables !== 0 || storageReferenceColumns !== 3 || oldItAssetLocationColumn !== 0 || storageRoomForeignKey !== 1 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
 		process.exitCode = 1;
 	}
 } finally {

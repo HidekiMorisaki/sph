@@ -5,16 +5,18 @@
 	import { apiData } from '$lib/api';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import '$lib/styles/add-button.css';
 
-	type Item = { id: number; code: string; name: string };
+	type Item = { id: number; code?: string; name: string };
 	const labels: Record<string, string> = { departments: 'Departments', 'employee-groups': 'Groups', positions: 'Positions', 'employment-types': 'Types', branches: 'Branches' };
 	const singularLabels: Record<string, string> = { departments: 'department', 'employee-groups': 'group', positions: 'position', 'employment-types': 'type', branches: 'branch' };
 	const employmentResources = new Set(['departments', 'employee-groups', 'positions', 'employment-types']);
-	const columns = [{ key: 'code', label: 'Code', value: (item: Item) => item.code }, { key: 'name', label: 'Name', value: (item: Item) => item.name }];
 	let resource = $derived(page.params.resource ?? '');
+	let usesCode = $derived(resource === 'employee-groups');
+	let columns = $derived(usesCode ? [{ key: 'code', label: 'Code', value: (item: Item) => item.code ?? '' }, { key: 'name', label: 'Name', value: (item: Item) => item.name }] : [{ key: 'name', label: 'Name', value: (item: Item) => item.name }]);
 	let title = $derived(labels[resource] ?? 'Employee masters');
 	let addLabel = $derived(`Add ${singularLabels[resource] ?? 'item'}`);
 	let eyebrow = $derived(employmentResources.has(resource) ? 'EMPLOYMENT CONFIGURATION' : 'CONFIGURATION');
@@ -38,12 +40,12 @@
 	function resetForm() { editing = null; code = ''; name = ''; errors = {}; formError = ''; formOpen = false; }
 	function edit(item: Item, trigger: HTMLButtonElement | null) {
 		returnFocus = trigger;
-		editing = item; code = item.code; name = item.name; errors = {}; formError = ''; formOpen = true;
-		void tick().then(() => codeInput?.focus());
+		editing = item; code = item.code ?? ''; name = item.name; errors = {}; formError = ''; formOpen = true;
+		void tick().then(() => (usesCode ? codeInput : nameInput)?.focus());
 	}
 	function add() {
 		returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null;
-		resetForm(); formOpen = true; void tick().then(() => codeInput?.focus());
+		resetForm(); formOpen = true; void tick().then(() => (usesCode ? codeInput : nameInput)?.focus());
 	}
 	function closeForm() {
 		if (saving) return;
@@ -51,16 +53,16 @@
 	}
 	async function save() {
 		if (saving) return;
-		errors = { ...(!code.trim() ? { code: 'Code is required.' } : {}), ...(!name.trim() ? { name: 'Name is required.' } : {}) };
+		errors = { ...(usesCode && !code.trim() ? { code: 'Code is required.' } : {}), ...(!name.trim() ? { name: 'Name is required.' } : {}) };
 		if (Object.keys(errors).length) { formError = 'Correct the highlighted fields.'; await tick(); (errors.code ? codeInput : nameInput)?.focus(); return; }
 		saving = true; formError = '';
 		try {
-			const response = await fetch(endpoint + (editing ? '/' + editing.id : ''), { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, name }) });
+			const response = await fetch(endpoint + (editing ? '/' + editing.id : ''), { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(usesCode ? { code, name } : { name }) });
 			if (!response.ok) {
 				const payload = await response.json().catch(() => null) as { error?: { details?: { field?: string }[] } } | null;
 				const field = payload?.error?.details?.[0]?.field;
 				if (field === 'code' || field === 'name') { errors = { [field]: `${field === 'code' ? 'Code' : 'Name'} already exists.` }; formError = 'Correct the highlighted field.'; await tick(); (field === 'code' ? codeInput : nameInput)?.focus(); }
-				else formError = response.status === 403 ? 'You do not have permission to save this item.' : 'Unable to save this item. Check the code and name.';
+				else formError = response.status === 403 ? 'You do not have permission to save this item.' : `Unable to save this item. Check the ${usesCode ? 'code and name' : 'name'}.`;
 				return;
 			}
 			const focusTarget = returnFocus; resetForm(); await list?.refresh(); void tick().then(() => focusTarget?.focus());
@@ -97,7 +99,7 @@
 <AssetManagementShell {title} active="">
 	<MasterPageHeader {eyebrow} {title} description="Maintain the controlled values used by employee records." actions={headerActions} />
 	{#if message}<p class="notice" role="alert">{message}</p>{/if}
-	<section class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} {canManage} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
+	<section class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} {canManage} initialSortBy={usesCode ? 'code' : 'name'} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
 </AssetManagementShell>
 
 {#if canManage && formOpen}
@@ -106,9 +108,10 @@
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="master-form-body app-modal-form-body">
 				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save item</strong><span>{formError}</span></div>{/if}
-				<h3>Basic information</h3>
-				<label><span>Code <span class="required" aria-hidden="true">*</span></span><input bind:this={codeInput} bind:value={code} maxlength="64" placeholder="e.g. CODE001" class:invalid={!!errors.code} aria-invalid={!!errors.code} aria-describedby={errors.code ? 'code-error' : undefined} oninput={() => { errors.code = undefined; formError = ''; }} />{#if errors.code}<small id="code-error" class="field-error">{errors.code}</small>{/if}</label>
+				<FormSection title="Basic information" columns={2} framed>
+				{#if usesCode}<label><span>Code <span class="required" aria-hidden="true">*</span></span><input bind:this={codeInput} bind:value={code} maxlength="64" placeholder="e.g. CODE001" class:invalid={!!errors.code} aria-invalid={!!errors.code} aria-describedby={errors.code ? 'code-error' : undefined} oninput={() => { errors.code = undefined; formError = ''; }} />{#if errors.code}<small id="code-error" class="field-error">{errors.code}</small>{/if}</label>{/if}
 				<label><span>Name <span class="required" aria-hidden="true">*</span></span><input bind:this={nameInput} bind:value={name} maxlength="128" placeholder="e.g. Example name" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} oninput={() => { errors.name = undefined; formError = ''; }} />{#if errors.name}<small id="name-error" class="field-error">{errors.name}</small>{/if}</label>
+				</FormSection>
 			</div>
 			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : 'Add item'}</button></footer>
 		</form>

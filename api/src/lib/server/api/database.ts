@@ -13,7 +13,7 @@ export function duplicateField(error: unknown): string | null {
 	if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'P2002') return null;
 	const meta = 'meta' in error && error.meta && typeof error.meta === 'object' ? error.meta : null;
 	const target = meta && 'target' in meta ? meta.target : null;
-	const columns = Array.isArray(target) ? target.map(String).join(' ') : String(target ?? '');
+	const columns = `${Array.isArray(target) ? target.map(String).join(' ') : String(target ?? '')} ${String(error)}`;
 	for (const [column, field] of [
 		['management_code_prefix', 'managementCodePrefix'],
 		['display_name', 'displayName'],

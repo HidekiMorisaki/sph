@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import type { Snippet } from 'svelte';
   import { apiData } from '$lib/api';
+  import { employeeFullName, type EmployeeProfile } from '$lib/employees';
   import AppHeader from './AppHeader.svelte';
   import AppSidebar from './AppSidebar.svelte';
   import { breadcrumbsForPath } from './sidebarNavigation';
@@ -19,6 +20,9 @@
     await fetch('/v1/auth/logout', { method: 'POST' });
     window.location.assign('/');
   }
+  function profileSaved(profile: EmployeeProfile) {
+    if (user) user = { ...user, name: employeeFullName(profile) };
+  }
   onMount(() => {
     collapsed = localStorage.getItem('asset-sidebar-collapsed') === 'true';
     document.documentElement.dataset.assetSidebarCollapsed = String(collapsed);
@@ -30,7 +34,7 @@
 </script>
 
 <div class:collapsed class="shell">
-  <AppSidebar {collapsed} {user} currentPath={page.url.pathname} onLogout={logout} />
+  <AppSidebar {collapsed} {user} currentPath={page.url.pathname} onLogout={logout} onProfileSaved={profileSaved} />
   <section class="workspace">
     <AppHeader {collapsed} onToggleSidebar={toggle} breadcrumbs={breadcrumbsForPath(page.url.pathname, title)} />
     <main>{@render children()}</main>

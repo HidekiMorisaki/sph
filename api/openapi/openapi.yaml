@@ -157,10 +157,10 @@ paths:
         - $ref: '#/components/parameters/SortOrder'
         - name: sortBy
           in: query
+          description: Allowed values depend on the selected master. Only employee groups use code; departments, positions, employment types, manufacturers, CPU types, operating systems, IT asset types, and statuses use their documented name or display-name fields.
           schema:
             type: string
-            enum: [id, code, name, sortOrder, createdAt, updatedAt]
-            default: code
+            enum: [id, code, name, displayName, managementCodePrefix, vendor, product, version, officialUrl, disposalDatePolicy, sortOrder, createdAt, updatedAt]
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '422': { $ref: '#/components/responses/Error' }
@@ -193,10 +193,10 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
-  /v1/storage-locations:
+  /v1/storage:
     get:
       tags: [Locations]
-      operationId: listStorageLocations
+      operationId: listStorage
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -206,25 +206,25 @@ paths:
           in: query
           schema:
             type: string
-            enum: [id, code, name, createdAt, updatedAt]
-            default: code
+            enum: [id, name, branch, room, notes, createdAt, updatedAt]
+            default: name
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [Locations]
-      operationId: createStorageLocation
+      operationId: createStorage
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/JsonResource' }
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/Error' }
-  /v1/storage-locations/{id}:
+  /v1/storage/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
     patch:
       tags: [Locations]
-      operationId: updateStorageLocation
+      operationId: updateStorage
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/JsonResource' }
       responses:
@@ -233,7 +233,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     delete:
       tags: [Locations]
-      operationId: deleteStorageLocation
+      operationId: deleteStorage
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
@@ -274,10 +274,6 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
-  /v1/desks:
-    $ref: '#/components/pathItems/AssetCollection'
-  /v1/desks/{id}:
-    $ref: '#/components/pathItems/AssetItem'
   /v1/it-assets:
     get:
       tags: [Assets]
@@ -291,7 +287,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [id, assetTag, modelNumber, serialNumber, ramGb, purchasedOn, disposalOn, createdAt, updatedAt]
+            enum: [id, assetTag, type, manufacturer, modelNumber, serialNumber, branch, room, storage, user, status, ramGb, purchasedOn, disposalOn, createdAt, updatedAt]
             default: assetTag
         - name: q
           in: query
@@ -305,7 +301,7 @@ paths:
         - name: statusId
           in: query
           schema: { type: integer, minimum: 1 }
-        - name: locationId
+        - name: storageId
           in: query
           schema: { type: integer, minimum: 1 }
       responses:
@@ -396,10 +392,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '404': { $ref: '#/components/responses/Error' }
-  /v1/chairs:
-    $ref: '#/components/pathItems/AssetCollection'
-  /v1/chairs/{id}:
-    $ref: '#/components/pathItems/AssetItem'
 components:
   securitySchemes:
     sessionCookie:
@@ -587,7 +579,7 @@ components:
         - { type: string, maxLength: 0 }
     ItAssetWrite:
       type: object
-      required: [assetTag, typeId, locationId, statusId]
+      required: [assetTag, typeId, storageId, statusId]
       properties:
         assetTag:
           type: string
@@ -620,7 +612,7 @@ components:
           type: [string, 'null']
           maxLength: 255
           description: Allowed only when the selected IT asset type supports a login username.
-        locationId: { $ref: '#/components/schemas/PositiveIdInput' }
+        storageId: { $ref: '#/components/schemas/PositiveIdInput' }
         statusId: { $ref: '#/components/schemas/PositiveIdInput' }
         purchasedOn:
           description: Optional purchase date. Null or an empty string means unset.

@@ -8,15 +8,15 @@ import { failure, success } from '$lib/server/api/response';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 
-const sortFields = ['id', 'assetTag', 'type', 'manufacturer', 'modelNumber', 'serialNumber', 'branch', 'room', 'storageLocation', 'user', 'status', 'ramGb', 'purchasedOn', 'disposalOn', 'createdAt', 'updatedAt'] as const;
+const sortFields = ['id', 'assetTag', 'type', 'manufacturer', 'modelNumber', 'serialNumber', 'branch', 'room', 'storage', 'user', 'status', 'ramGb', 'purchasedOn', 'disposalOn', 'createdAt', 'updatedAt'] as const;
 type SortField = (typeof sortFields)[number];
 function assetOrderBy(field: SortField, direction: 'asc' | 'desc'): Prisma.ItAssetOrderByWithRelationInput[] {
 	switch (field) {
 		case 'type': return [{ type: { name: direction } }, { id: 'asc' }];
 		case 'manufacturer': return [{ manufacturer: { name: direction } }, { modelNumber: direction }, { id: 'asc' }];
-		case 'branch': return [{ location: { room: { branch: { name: direction } } } }, { id: 'asc' }];
-		case 'room': return [{ location: { room: { name: direction } } }, { id: 'asc' }];
-		case 'storageLocation': return [{ location: { name: direction } }, { id: 'asc' }];
+		case 'branch': return [{ storage: { room: { branch: { name: direction } } } }, { id: 'asc' }];
+		case 'room': return [{ storage: { room: { name: direction } } }, { id: 'asc' }];
+		case 'storage': return [{ storage: { name: direction } }, { id: 'asc' }];
 		case 'status': return [{ status: { name: direction } }, { id: 'asc' }];
 		default: return [{ [field]: direction }, { id: 'asc' }];
 	}
@@ -25,13 +25,13 @@ const filterId = (url: URL, key: string) => { const raw = url.searchParams.get(k
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	requireAuthenticatedApi(locals.user); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
 	const contains = search ? { contains: search, mode: 'insensitive' as const } : undefined;
-	const where: Prisma.ItAssetWhereInput = { deletedAt: null, ...(filterId(url, 'typeId') ? { typeId: filterId(url, 'typeId') } : {}), ...(filterId(url, 'manufacturerId') ? { manufacturerId: filterId(url, 'manufacturerId') } : {}), ...(filterId(url, 'statusId') ? { statusId: filterId(url, 'statusId') } : {}), ...(filterId(url, 'locationId') ? { locationId: filterId(url, 'locationId') } : {}), ...(contains ? { OR: [{ assetTag: contains }, { modelNumber: contains }, { serialNumber: contains }, { manufacturer: { name: contains } }, { type: { name: contains } }, { location: { name: contains } }, { location: { room: { name: contains } } }, { location: { room: { branch: { name: contains } } } }, { status: { name: contains } }, { assignments: { some: { returnedAt: null, deletedAt: null, employee: { OR: [{ firstName: contains }, { lastName: contains }] } } } }] } : {}) };
+	const where: Prisma.ItAssetWhereInput = { deletedAt: null, ...(filterId(url, 'typeId') ? { typeId: filterId(url, 'typeId') } : {}), ...(filterId(url, 'manufacturerId') ? { manufacturerId: filterId(url, 'manufacturerId') } : {}), ...(filterId(url, 'statusId') ? { statusId: filterId(url, 'statusId') } : {}), ...(filterId(url, 'storageId') ? { storageId: filterId(url, 'storageId') } : {}), ...(contains ? { OR: [{ assetTag: contains }, { modelNumber: contains }, { serialNumber: contains }, { manufacturer: { name: contains } }, { type: { name: contains } }, { storage: { name: contains } }, { storage: { room: { name: contains } } }, { storage: { room: { branch: { name: contains } } } }, { status: { name: contains } }, { assignments: { some: { returnedAt: null, deletedAt: null, employee: { OR: [{ firstName: contains }, { lastName: contains }] } } } }] } : {}) };
 	const prisma = getPrisma();
 	const [total, items] = await prisma.$transaction(async tx => {
 		const total = await tx.itAsset.count({ where });
 		if (query.sortBy !== 'user') return [total, await tx.itAsset.findMany({ where, include: itAssetInclude, orderBy: assetOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit })] as const;
 		const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`];
-		for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['locationId', Prisma.sql`asset.location_id`]] as const) {
+		for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
 			const value = filterId(url, field);
 			if (value) conditions.push(Prisma.sql`${column} = ${value}`);
 		}
@@ -51,7 +51,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 			SELECT asset.id FROM it_assets asset
 			JOIN it_asset_types type ON type.id = asset.type_id
 			LEFT JOIN manufacturers manufacturer ON manufacturer.id = asset.manufacturer_id
-			JOIN storage_locations location ON location.id = asset.location_id
+			JOIN storage location ON location.id = asset.storage_id
 			JOIN rooms room ON room.id = location.room_id
 			JOIN branches branch ON branch.id = room.branch_id
 			JOIN it_asset_statuses status ON status.id = asset.status_id

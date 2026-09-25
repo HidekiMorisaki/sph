@@ -15,8 +15,8 @@ export function parseItAssetInput(value: unknown) {
 	const body: Body = value && typeof value === 'object' && !Array.isArray(value) ? value as Body : {};
 	const details: ApiErrorDetail[] = [];
 	const assetTag = '';
-	const ids = Object.fromEntries(['typeId', 'manufacturerId', 'cpuTypeId', 'operatingSystemId', 'locationId', 'statusId'].map(key => [key, parseId(body[key])])) as Record<string, number | null>;
-	for (const key of ['typeId', 'locationId', 'statusId']) if (ids[key] === null) details.push({ field: key, reason: 'Select a value.' });
+	const ids = Object.fromEntries(['typeId', 'manufacturerId', 'cpuTypeId', 'operatingSystemId', 'storageId', 'statusId'].map(key => [key, parseId(body[key])])) as Record<string, number | null>;
+	for (const key of ['typeId', 'storageId', 'statusId']) if (ids[key] === null) details.push({ field: key, reason: 'Select a value.' });
 	for (const [key, id] of Object.entries(ids)) if (Number.isNaN(id)) details.push({ field: key, reason: 'Select a valid value.' });
 	const purchasedOn = parseDate(body.purchasedOn);
 	const assigneeId = Object.hasOwn(body, 'assigneeId') ? parseId(body.assigneeId) : undefined;
@@ -30,17 +30,17 @@ export function parseItAssetInput(value: unknown) {
 	const ramGb = rawRam === '' || rawRam === null || rawRam === undefined ? null : typeof rawRam === 'number' ? rawRam : typeof rawRam === 'string' && /^\d+$/.test(rawRam) ? Number(rawRam) : NaN;
 	if (ramGb !== null && (!Number.isSafeInteger(ramGb) || ramGb < 1)) details.push({ field: 'ramGb', reason: 'Enter a whole number greater than zero.' });
 	if (details.length) return { data: null, details, assigneeId };
-	return { data: { assetTag: assetTag!, typeId: ids.typeId!, manufacturerId: ids.manufacturerId, modelNumber: nullableText(body, 'modelNumber', 255), serialNumber: nullableText(body, 'serialNumber', 255), cpuTypeId: ids.cpuTypeId, ramGb, operatingSystemId: ids.operatingSystemId, loginUsername: nullableText(body, 'loginUsername', 255), locationId: ids.locationId!, statusId: ids.statusId!, purchasedOn: purchasedOn!, disposalOn: disposalOn!, notes: nullableText(body, 'notes') }, details, assigneeId };
+	return { data: { assetTag: assetTag!, typeId: ids.typeId!, manufacturerId: ids.manufacturerId, modelNumber: nullableText(body, 'modelNumber', 255), serialNumber: nullableText(body, 'serialNumber', 255), cpuTypeId: ids.cpuTypeId, ramGb, operatingSystemId: ids.operatingSystemId, loginUsername: nullableText(body, 'loginUsername', 255), storageId: ids.storageId!, statusId: ids.statusId!, purchasedOn: purchasedOn!, disposalOn: disposalOn!, notes: nullableText(body, 'notes') }, details, assigneeId };
 }
 
 type ItAssetData = NonNullable<ReturnType<typeof parseItAssetInput>['data']>;
 export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data: ItAssetData): Promise<ApiErrorDetail[]> {
-	const [type, manufacturer, cpu, os, location, status] = await Promise.all([
+	const [type, manufacturer, cpu, os, storage, status] = await Promise.all([
 		tx.itAssetType.findFirst({ where: { id: data.typeId, deletedAt: null } }),
 		data.manufacturerId === null ? true : tx.manufacturer.count({ where: { id: data.manufacturerId, deletedAt: null } }).then(Boolean),
 		data.cpuTypeId === null ? true : tx.cpuType.count({ where: { id: data.cpuTypeId, deletedAt: null } }).then(Boolean),
 		data.operatingSystemId === null ? true : tx.operatingSystem.count({ where: { id: data.operatingSystemId, deletedAt: null } }).then(Boolean),
-		tx.storageLocation.count({ where: { id: data.locationId, deletedAt: null, room: { deletedAt: null, branch: { deletedAt: null } } } }).then(Boolean),
+		tx.storage.count({ where: { id: data.storageId, deletedAt: null, room: { deletedAt: null, branch: { deletedAt: null } } } }).then(Boolean),
 		tx.itAssetStatus.findFirst({ where: { id: data.statusId, deletedAt: null } })
 	]);
 	const details: ApiErrorDetail[] = [];
@@ -48,13 +48,12 @@ export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data:
 	if (!manufacturer) details.push({ field: 'manufacturerId', reason: 'Select an existing manufacturer.' });
 	if (!cpu) details.push({ field: 'cpuTypeId', reason: 'Select an existing CPU type.' });
 	if (!os) details.push({ field: 'operatingSystemId', reason: 'Select an existing operating system.' });
-	if (!location) details.push({ field: 'locationId', reason: 'Select an existing storage location.' });
+	if (!storage) details.push({ field: 'storageId', reason: 'Select an existing storage.' });
 	if (!status) details.push({ field: 'statusId', reason: 'Select an existing status.' });
 	if (type && !type.supportsCpu && data.cpuTypeId !== null) details.push({ field: 'cpuTypeId', reason: 'This type does not support a CPU type.' });
 	if (type && !type.supportsRam && data.ramGb !== null) details.push({ field: 'ramGb', reason: 'This type does not support RAM.' });
 	if (type && !type.supportsOs && data.operatingSystemId !== null) details.push({ field: 'operatingSystemId', reason: 'This type does not support an operating system.' });
 	if (type && !type.supportsLoginUsername && data.loginUsername !== null) details.push({ field: 'loginUsername', reason: 'This type does not support a login username.' });
-	if (type && (type.code === 'UTM' || type.code === 'UPS') && (data.cpuTypeId !== null || data.ramGb !== null || data.operatingSystemId !== null || data.loginUsername !== null)) details.push({ field: 'typeId', reason: 'This type does not use hardware and software details.' });
 	if (status?.disposalDatePolicy === 'required' && !data.disposalOn) details.push({ field: 'disposalOn', reason: 'Select a disposal date for this status.' });
 	if (status?.disposalDatePolicy === 'prohibited' && data.disposalOn) details.push({ field: 'disposalOn', reason: 'This status does not allow a disposal date.' });
 	return details;
@@ -62,6 +61,6 @@ export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data:
 
 export const itAssetInclude = {
 	type: true, manufacturer: true, cpuType: true, operatingSystem: true, status: true,
-	location: { include: { room: { include: { branch: true } } } },
+	storage: { include: { room: { include: { branch: true } } } },
 	assignments: { where: { returnedAt: null, deletedAt: null }, include: { employee: { select: { id: true, employeeCode: true, firstName: true, middleName: true, lastName: true } } }, take: 1 }
 } as const;

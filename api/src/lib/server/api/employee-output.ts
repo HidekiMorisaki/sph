@@ -30,11 +30,11 @@ export const employeeSafeSelect = {
 	createdAt: true,
 	updatedAt: true,
 	deletedAt: true,
-	departmentRef: { select: { id: true, code: true, name: true } },
+	departmentRef: { select: { id: true, name: true } },
 	group: { select: { id: true, code: true, name: true } },
-	position: { select: { id: true, code: true, name: true } },
-	employmentType: { select: { id: true, code: true, name: true } },
-	branch: { select: { id: true, code: true, name: true } },
+	position: { select: { id: true, name: true } },
+	employmentType: { select: { id: true, name: true } },
+	branch: { select: { id: true, name: true } },
 	roleGrants: {
 		where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
 		select: { role: { select: { code: true, name: true } } }

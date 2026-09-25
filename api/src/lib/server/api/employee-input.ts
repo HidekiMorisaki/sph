@@ -18,8 +18,17 @@ type EmployeeInput = {
 	roleCodes: EmployeeRoleCode[];
 };
 
+export type EmployeeSelfInput = Pick<EmployeeInput['employee'],
+	'firstName' | 'middleName' | 'lastName' | 'nameKana' | 'birthDate' | 'gender' | 'bloodType' |
+	'postalCode' | 'prefecture' | 'city' | 'streetAddress' | 'buildingName' | 'mobilePhone' | 'email'
+>;
+
 export type EmployeeInputResult =
 	| { success: true; data: EmployeeInput }
+	| { success: false; errors: ApiErrorDetail[] };
+
+export type EmployeeSelfInputResult =
+	| { success: true; data: EmployeeSelfInput }
 	| { success: false; errors: ApiErrorDetail[] };
 
 function invalid(errors: ApiErrorDetail[], field: string, reason: string) {
@@ -132,5 +141,47 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 			employee: { employeeCode, firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase(), hiredAt, departmentId, groupId, positionId, employmentTypeId, branchId, retiredAt, notes },
 			roleCodes
 		}
+	};
+}
+
+const selfEditableFields = new Set([
+	'firstName', 'middleName', 'lastName', 'nameKana', 'birthDate', 'gender', 'bloodType',
+	'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'mobilePhone', 'email'
+]);
+
+export function parseEmployeeSelfInput(value: unknown): EmployeeSelfInputResult {
+	const errors: ApiErrorDetail[] = [];
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return { success: false, errors: [{ reason: 'Enter a valid employee profile object.' }] };
+	}
+	const body = value as Record<string, unknown>;
+	for (const field of Object.keys(body)) {
+		if (!selfEditableFields.has(field)) invalid(errors, field, 'This field cannot be changed in your profile.');
+	}
+
+	const firstName = readText(body, 'firstName', 128, true, errors);
+	const middleName = readText(body, 'middleName', 128, false, errors);
+	const lastName = readText(body, 'lastName', 128, true, errors);
+	const nameKana = readText(body, 'nameKana', 255, false, errors);
+	const birthDate = readDate(body, 'birthDate', true, errors);
+	const gender = readText(body, 'gender', 16, true, errors);
+	if (gender && !genders.has(gender)) invalid(errors, 'gender', 'Select a valid gender.');
+	const bloodType = readText(body, 'bloodType', 2, false, errors);
+	if (bloodType && !bloodTypes.has(bloodType)) invalid(errors, 'bloodType', 'Select a valid blood type.');
+	const postalCode = readText(body, 'postalCode', 8, false, errors);
+	if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) invalid(errors, 'postalCode', 'Use a Japanese postal code such as 100-0001.');
+	const prefecture = readText(body, 'prefecture', 64, false, errors);
+	const city = readText(body, 'city', 128, false, errors);
+	const streetAddress = readText(body, 'streetAddress', 255, false, errors);
+	const buildingName = readText(body, 'buildingName', 255, false, errors);
+	const mobilePhone = readText(body, 'mobilePhone', 32, false, errors);
+	if (mobilePhone && !/^[+0-9][0-9 ()-]{6,31}$/.test(mobilePhone)) invalid(errors, 'mobilePhone', 'Enter a valid phone number.');
+	const email = readText(body, 'email', 254, true, errors);
+	if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalid(errors, 'email', 'Enter a valid email address.');
+
+	if (errors.length || !firstName || !lastName || !birthDate || !gender || !email) return { success: false, errors };
+	return {
+		success: true,
+		data: { firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase() }
 	};
 }

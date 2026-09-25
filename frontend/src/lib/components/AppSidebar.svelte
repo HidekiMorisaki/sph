@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { apiData } from '$lib/api';
 	import { productName } from '$lib/brand';
+	import type { EmployeeProfile } from '$lib/employees';
+	import EmployeeFormModal from './EmployeeFormModal.svelte';
 	import { icons, isExpandableMenu, menus, parentMenuForPath, roleLabels, type Item } from './sidebarNavigation';
 
 	type User = { username: string; name: string | null; role: string };
-	let { collapsed, user, currentPath = '', home = false, onLogout }: { collapsed: boolean; user: User | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void> } = $props();
+	let { collapsed, user, currentPath = '', home = false, onLogout, onProfileSaved }: { collapsed: boolean; user: User | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void>; onProfileSaved?: (profile: EmployeeProfile) => void } = $props();
 	let canManageMasters = $derived(user?.role === 'system_administrator' || user?.role === 'business_administrator');
 	const openMenuStorageKey = 'asset-sidebar-open-menu';
 	let chosenMenu = $state<string | null>(null);
@@ -12,9 +15,17 @@
 	let previousPath = '';
 	let railFlyout = $state('');
 	let railFlyoutTop = $state(0);
+	let railLabel = $state('');
+	let railLabelTop = $state(0);
 	let userMenuOpen = $state(false);
 	let compact = $state(false);
 	let animateMenu = $state(false);
+	let profile = $state<EmployeeProfile | null>(null);
+	let profileLoading = $state(false);
+	let profileError = $state('');
+	let profileButton = $state<HTMLButtonElement>();
+	let profileName = $state<string | null>(null);
+	let sidebarUser = $state<HTMLDivElement>();
 	let animationTimer: ReturnType<typeof setTimeout> | undefined;
 	function stopMenuAnimation() {
 		clearTimeout(animationTimer);
@@ -24,8 +35,18 @@
 		chosenMenu = text;
 		localStorage.setItem(openMenuStorageKey, text);
 	}
+	function showRailLabel(text: string, event: Event) {
+		if (!(collapsed || compact) || !(event.currentTarget instanceof HTMLElement)) return;
+		const rect = event.currentTarget.getBoundingClientRect();
+		railLabel = text;
+		railLabelTop = rect.top + rect.height / 2;
+	}
+	function hideRailLabel(text: string) {
+		if (railLabel === text) railLabel = '';
+	}
 	function toggle(item: Item, event: MouseEvent) {
 		if (collapsed || compact) {
+			railLabel = '';
 			const triggerTop = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect().top : 0;
 			const flyoutHeight = Math.min(window.innerHeight - 16, (item.children?.length ?? 0) * 34 + 14);
 			railFlyoutTop = Math.max(8, Math.min(triggerTop, window.innerHeight - flyoutHeight - 8));
@@ -37,6 +58,27 @@
 		rememberOpenMenu(openMenu === item.text ? '' : item.text);
 		animationTimer = setTimeout(() => animateMenu = false, 220);
 	}
+	async function openProfile() {
+		if (profileLoading) return;
+		profileLoading = true;
+		profileError = '';
+		try {
+			const response = await fetch('/v1/employees/me');
+			if (!response.ok) { profileError = 'Unable to load your profile.'; return; }
+			profile = await apiData<EmployeeProfile>(response);
+			userMenuOpen = false;
+		} catch { profileError = 'Unable to load your profile.'; }
+		finally { profileLoading = false; }
+	}
+	function profileSaved(saved: EmployeeProfile) {
+		profileName = [saved.firstName, saved.middleName, saved.lastName].filter(Boolean).join(' ');
+		onProfileSaved?.(saved);
+	}
+	function closeProfile() {
+		profile = null;
+		userMenuOpen = true;
+		void tick().then(() => profileButton?.focus());
+	}
 	$effect(() => {
 		const path = currentPath;
 		if (path === previousPath) return;
@@ -45,6 +87,12 @@
 		const parent = parentMenuForPath(path);
 		if (parent) rememberOpenMenu(parent);
 	});
+	$effect(() => {
+		if (!collapsed && !compact) {
+			railLabel = '';
+			railFlyout = '';
+		}
+	});
 	onMount(() => {
 		const saved = localStorage.getItem(openMenuStorageKey);
 		const fallback = saved === '' || (saved !== null && isExpandableMenu(saved)) ? saved : '';
@@ -52,44 +100,56 @@
 		localStorage.removeItem('home-masters-open');
 		const query = matchMedia('(max-width: 760px)');
 		compact = query.matches;
-		const update = () => { compact = query.matches; railFlyout = ''; };
+		const update = () => { compact = query.matches; railFlyout = ''; railLabel = ''; };
+		const closeMenusOutside = (event: MouseEvent) => {
+			if (event.target instanceof Node && !sidebarUser?.contains(event.target)) userMenuOpen = false;
+			if (!(event.target instanceof Element) || !event.target.closest('.rail-flyout,.nav-toggle')) railFlyout = '';
+		};
 		query.addEventListener('change', update);
-		return () => { query.removeEventListener('change', update); clearTimeout(animationTimer); };
+		document.addEventListener('click', closeMenusOutside);
+		return () => {
+			query.removeEventListener('change', update);
+			document.removeEventListener('click', closeMenusOutside);
+			clearTimeout(animationTimer);
+		};
 	});
 </script>
 
 <aside class="app-sidebar" class:collapsed aria-label="Primary navigation">
 	{#if home}<div class="brand"><span class="brand-icon">S</span><strong>{productName}</strong></div>{:else}<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>{/if}
-	<nav class="sidebar-nav" onscroll={() => railFlyout = ''}>
+	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each menus as group}
 			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.role === 'system_administrator')}
 			<div class="nav-group"><p class="nav-label">{group.label}</p>
 				{#each group.items as item}
 					{#if item.children}
 						<div class:open={openMenu === item.text} class:animate={animateMenu} class="nav-tree">
-							<button class="nav-link nav-toggle" type="button" data-rail-label={item.text} aria-expanded={collapsed || compact ? railFlyout === item.text : openMenu === item.text} onclick={(event) => toggle(item, event)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}<i class="nav-chev">›</i></button>
+							<button class="nav-link nav-toggle" type="button" aria-expanded={collapsed || compact ? railFlyout === item.text : openMenu === item.text} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)} onclick={(event) => toggle(item, event)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}<i class="nav-chev">›</i></button>
 							<div class="nav-sub"><div class="nav-sub-inner">{#each item.children as child}<a class:active={currentPath === child.href} class="nav-sublink" href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div></div>
 							{#if (collapsed || compact) && railFlyout === item.text}<div class="rail-flyout" style:top="{railFlyoutTop}px">{#each item.children as child}<a href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div>{/if}
 						</div>
-					{:else}<a class:active={currentPath === item.href} class="nav-link" data-rail-label={item.text} href={item.href}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}</a>{/if}
+					{:else}<a class:active={currentPath === item.href} class="nav-link" href={item.href} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}</a>{/if}
 				{/each}
 			</div>
 			{/if}
 		{/each}
 	</nav>
+	{#if (collapsed || compact) && railLabel}<div class="rail-label" style:top="{railLabelTop}px" role="tooltip">{railLabel}</div>{/if}
 	{#if user}
 		<div class="sidebar-footer">
-			<div class="sidebar-user">
+			<div class="sidebar-user" bind:this={sidebarUser}>
 				<button class="account-trigger" type="button" aria-label={userMenuOpen ? 'Close account menu' : 'Open account menu'} aria-haspopup="menu" aria-expanded={userMenuOpen} onclick={() => userMenuOpen = !userMenuOpen}>
 					<span class="avatar">{user.username.slice(0, 1).toUpperCase()}<i></i></span>
-					<span class="sidebar-user-info"><b>{user.name ?? user.username}</b><small>{roleLabels[user.role] ?? user.role}</small></span>
+					<span class="sidebar-user-info"><b>{profileName ?? user.name ?? user.username}</b><small>{roleLabels[user.role] ?? user.role}</small></span>
 					<span class="more-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg></span>
 				</button>
-				{#if userMenuOpen}<div class="user-menu" role="menu"><a href="/settings">Account Settings</a><button type="button" onclick={onLogout}>Sign out</button></div>{/if}
+				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><button bind:this={profileButton} type="button" role="menuitem" disabled={profileLoading} onclick={() => void openProfile()}>{profileLoading ? 'Loading profile…' : 'Profile'}</button><button type="button" role="menuitem" onclick={onLogout}>Sign out</button>{#if profileError}<small role="alert">{profileError}</small>{/if}</div>{/if}
 			</div>
 		</div>
 	{/if}
 </aside>
+
+{#if profile}<EmployeeFormModal mode="self-edit" employee={profile} onClose={closeProfile} onSaved={profileSaved} />{/if}
 
 <style>
 	aside{position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;width:252px;overflow:hidden;background:var(--sidebar);color:#fff;z-index:60;transition:width .22s}
@@ -108,16 +168,16 @@
 	.sidebar-user-info b{display:block;overflow:hidden;color:#fff;font-size:13px;font-weight:500;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
 	.sidebar-user-info small{display:block;margin-top:2px;color:var(--sidebar-muted, #7b8fa3);font-size:12px;line-height:1.2}
 	.more-icon{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-left:auto;color:var(--sidebar-muted, #7b8fa3)}
-	.user-menu{position:absolute;right:8px;bottom:58px;z-index:70;display:grid;width:188px;padding:6px;background:var(--sidebar);border:1px solid #ffffff14;border-radius:6px;box-shadow:var(--shadow)}.user-menu a,.user-menu button{padding:8px;background:transparent;border:0;color:var(--sidebar-muted, #7b8fa3);font-size:14px;text-align:left;text-decoration:none;cursor:pointer}.user-menu a:hover,.user-menu button:hover{background:#ffffff0c;color:#fff}.user-menu a:focus-visible,.user-menu button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+	.user-menu{position:absolute;right:8px;bottom:58px;z-index:70;width:188px}
+	.user-menu button:disabled{cursor:wait;opacity:.65}.user-menu small{padding:6px 8px;color:#f87171;font-size:11px;line-height:1.35}
 	.rail-flyout{position:fixed;left:72px;z-index:100;display:grid;min-width:180px;max-height:calc(100dvh - 16px);overflow-y:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:5px;box-shadow:var(--shadow)}.rail-flyout a{padding:8px;color:var(--text);font-size:12px;text-decoration:none}.rail-flyout a:hover{background:var(--bg)}
+	.rail-label{position:fixed;left:76px;z-index:110;padding:5px 9px;border-radius:4px;background:#182230;color:#fff;font-size:12px;line-height:1.4286;pointer-events:none;transform:translateY(-50%);white-space:nowrap}
 	aside.collapsed{width:64px;overflow:visible}
 	aside.collapsed .sidebar-nav{overflow-y:auto}
 	aside.collapsed .brand strong,aside.collapsed .nav-label,aside.collapsed .nav-text,aside.collapsed .badge,aside.collapsed .nav-chev,aside.collapsed .nav-sub,aside.collapsed .sidebar-user-info,aside.collapsed .more-icon{display:none}
 	aside.collapsed .nav-link{justify-content:center;gap:0;padding:8px}
 	aside.collapsed .account-trigger{justify-content:center;padding:8px}
 	aside.collapsed .user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
-	aside.collapsed .nav-link[data-rail-label]::after{position:absolute;left:calc(100% + 12px);top:50%;z-index:110;padding:5px 9px;border-radius:4px;background:#182230;color:#fff;content:attr(data-rail-label);font-size:12px;opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-4px);transition:opacity .12s,transform .12s;white-space:nowrap}
-	aside.collapsed .nav-link[data-rail-label]:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
 	@media(max-width:760px){
 		aside{width:64px;overflow:visible}
 		.brand strong,.nav-label,.nav-text,.badge,.nav-chev,.nav-sub,.sidebar-user-info,.more-icon{display:none}
@@ -127,7 +187,6 @@
 		.account-trigger{justify-content:center;padding:8px}
 		.user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
 	}
-	aside button.nav-link,aside button.account-trigger,aside .user-menu button{background:transparent}
+	aside button.nav-link,aside button.account-trigger{background:transparent}
 	aside button.nav-link:hover,aside button.account-trigger:hover{background:#ffffff0c}
-	aside .user-menu button:hover{background:#ffffff0c;color:#fff}
 </style>

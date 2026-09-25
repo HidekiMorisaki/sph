@@ -3,18 +3,20 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import DetailModal from '$lib/components/DetailModal.svelte';
+	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import { apiData } from '$lib/api';
 
 	type Manufacturer = { id: number; name: string };
-	type CpuType = { id: number; code: string; displayName: string; manufacturerId: number; manufacturer: Manufacturer; series: string; modelNumber: string; sortOrder: number; officialUrl: string | null; sourceCheckedOn: string | null };
+	type CpuType = { id: number; displayName: string; manufacturerId: number; manufacturer: Manufacturer; series: string; modelNumber: string; sortOrder: number; officialUrl: string | null; sourceCheckedOn: string | null };
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
-	type FormField = 'code' | 'displayName' | 'manufacturerId' | 'series' | 'modelNumber' | 'sortOrder' | 'officialUrl' | 'sourceCheckedOn';
-	const emptyForm = () => ({ code: '', displayName: '', manufacturerId: '', series: '', modelNumber: '', sortOrder: '0', officialUrl: '', sourceCheckedOn: '' });
+	type FormField = 'displayName' | 'manufacturerId' | 'series' | 'modelNumber' | 'sortOrder' | 'officialUrl' | 'sourceCheckedOn';
+	const emptyForm = () => ({ displayName: '', manufacturerId: '', series: '', modelNumber: '', sortOrder: '0', officialUrl: '', sourceCheckedOn: '' });
 	const columns = [
-		{ key: 'displayName', label: 'Display Name', width: 30, primary: true, value: (item: CpuType) => item.displayName },
+		{ key: 'displayName', label: 'Display Name', width: 30, value: (item: CpuType) => item.displayName },
 		{ key: 'manufacturer', label: 'Manufacturer', width: 25, value: (item: CpuType) => item.manufacturer?.name ?? '' },
 		{ key: 'series', label: 'Series', width: 20, value: (item: CpuType) => item.series },
 		{ key: 'modelNumber', label: 'Model number', width: 20, value: (item: CpuType) => item.modelNumber }
@@ -35,7 +37,7 @@
 	let sourceDateOpen = $state(false);
 	let sourceDateAbove = $state(false);
 	let addButton = $state<HTMLButtonElement>();
-	let returnFocus: HTMLElement | null = null;
+	let returnFocus = $state<HTMLElement | null>(null);
 	let canManage = $derived(role === 'system_administrator' || role === 'business_administrator');
 
 	async function initialize() {
@@ -52,11 +54,15 @@
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : addButton ?? null);
 		selected = item;
 		mode = next;
-		form = item ? { code: item.code, displayName: item.displayName, manufacturerId: String(item.manufacturerId), series: item.series, modelNumber: item.modelNumber, sortOrder: String(item.sortOrder), officialUrl: item.officialUrl ?? '', sourceCheckedOn: item.sourceCheckedOn?.slice(0, 10) ?? '' } : { ...emptyForm(), manufacturerId: manufacturers[0] ? String(manufacturers[0].id) : '' };
+		form = item ? { displayName: item.displayName, manufacturerId: String(item.manufacturerId), series: item.series, modelNumber: item.modelNumber, sortOrder: String(item.sortOrder), officialUrl: item.officialUrl ?? '', sourceCheckedOn: item.sourceCheckedOn?.slice(0, 10) ?? '' } : { ...emptyForm(), manufacturerId: manufacturers[0] ? String(manufacturers[0].id) : '' };
 		errors = {};
 		formError = '';
 		sourceDateOpen = false;
-		void tick().then(() => dialogElement?.querySelector<HTMLElement>(next === 'detail' ? '.modal-close' : '[name="displayName"]')?.focus());
+		if (next !== 'detail') void tick().then(() => dialogElement?.querySelector<HTMLElement>('[name="displayName"]')?.focus());
+	}
+	function closeDetail() {
+		mode = null;
+		selected = null;
 	}
 	function closeModal() {
 		if (saving || removing) return;
@@ -91,7 +97,7 @@
 	}
 	function validate(): boolean {
 		const next: Partial<Record<FormField, string>> = {};
-		for (const field of ['code', 'displayName', 'series', 'modelNumber'] as const) if (!form[field].trim()) next[field] = 'This field is required.';
+		for (const field of ['displayName', 'series', 'modelNumber'] as const) if (!form[field].trim()) next[field] = 'This field is required.';
 		if (!manufacturers.some((item) => String(item.id) === form.manufacturerId)) next.manufacturerId = 'Select a manufacturer.';
 		if (!/^\d+$/.test(form.sortOrder) || !Number.isSafeInteger(Number(form.sortOrder))) next.sortOrder = 'Enter a non-negative whole number.';
 		if (form.officialUrl) { try { const url = new URL(form.officialUrl); if (!['http:', 'https:'].includes(url.protocol)) next.officialUrl = 'Enter a valid URL.'; } catch { next.officialUrl = 'Enter a valid URL.'; } }
@@ -112,7 +118,7 @@
 			if (!response.ok) {
 				const payload = await response.json().catch(() => null) as { error?: { details?: { field?: string; reason: string }[] } } | null;
 				const field = payload?.error?.details?.[0]?.field;
-				if (response.status === 409 && field && ['code', 'displayName', 'modelNumber'].includes(field)) {
+				if (response.status === 409 && field && ['displayName', 'modelNumber'].includes(field)) {
 					errors = { [field]: 'This value is already in use.' };
 					formError = 'Correct the highlighted field.';
 					void tick().then(() => dialogElement?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus());
@@ -141,7 +147,7 @@
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
 		if (event.defaultPrevented) return;
-		if (!mode || !dialogElement) return;
+		if (!mode || mode === 'detail' || !dialogElement) return;
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			if (sourceDateOpen) { sourceDateOpen = false; dialogElement.querySelector<HTMLButtonElement>('[data-field="sourceCheckedOn"] .date-trigger')?.focus(); }
@@ -169,31 +175,37 @@
 	</div>
 </AssetManagementShell>
 
-{#if mode}
+{#if mode === 'detail' && selected}
+	{@const officialUrl = officialUrlHref(selected.officialUrl)}
+	<DetailModal title="CPU type details" titleId="cpu-detail-title" closeLabel="Close CPU type details" {returnFocus} compact dialogClass="cpu-dialog" onClose={closeDetail}>
+		<section class="app-detail-section"><h3>Basic information</h3><dl class="app-detail-grid"><div><dt>Display name</dt><dd>{selected.displayName}</dd></div><div><dt>Manufacturer</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>Series</dt><dd>{selected.series}</dd></div><div><dt>Model number</dt><dd>{selected.modelNumber}</dd></div><div><dt>Sort order</dt><dd>{selected.sortOrder}</dd></div></dl></section>
+		<section class="app-detail-section"><h3>Reference information</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>Official URL</dt><dd>{#if officialUrl}<a class="detail-link" href={officialUrl} target="_blank" rel="noopener noreferrer">{selected.officialUrl}</a>{:else}{selected.officialUrl ?? ''}{/if}</dd></div><div><dt>Source checked</dt><dd>{selected.sourceCheckedOn?.slice(0, 10) ?? ''}</dd></div></dl></section>
+	</DetailModal>
+{:else if mode}
 	<div class="backdrop app-modal-backdrop" role="presentation"><dialog bind:this={dialogElement} class="cpu-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="cpu-dialog-title">
-		<header><h2 id="cpu-dialog-title">{mode === 'add' ? 'Add cpu type' : mode === 'edit' ? 'Edit cpu type' : 'CPU type details'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close CPU type dialog" onclick={closeModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
-		{#if mode === 'detail' && selected}{@const officialUrl = officialUrlHref(selected.officialUrl)}<dl class="dialog-body detail-grid"><div><dt>Display name</dt><dd>{selected.displayName}</dd></div><div><dt>Manufacturer</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>Series</dt><dd>{selected.series}</dd></div><div><dt>Model number</dt><dd>{selected.modelNumber}</dd></div><div><dt>Code</dt><dd>{selected.code}</dd></div><div><dt>Sort order</dt><dd>{selected.sortOrder}</dd></div><div><dt>Official URL</dt><dd>{#if officialUrl}<a href={officialUrl} target="_blank" rel="noopener noreferrer">{selected.officialUrl}</a>{:else}{selected.officialUrl ?? ''}{/if}</dd></div><div><dt>Source checked</dt><dd>{selected.sourceCheckedOn?.slice(0, 10) ?? ''}</dd></div></dl><footer class="app-modal-footer"><button class="secondary" type="button" onclick={closeModal}>Close</button></footer>
-		{:else}<form id="cpu-form" class="cpu-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
+		<header><h2 id="cpu-dialog-title">{mode === 'add' ? 'Add cpu type' : 'Edit cpu type'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close CPU type dialog" onclick={closeModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<form id="cpu-form" class="cpu-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="cpu-form-body app-modal-form-body">
 				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save CPU type</strong><span>{formError}</span></div>{/if}
-				<h3>Basic information</h3>
+				<FormSection title="Basic information" framed>
 				<label><span>Display name <span class="required" aria-hidden="true">*</span></span><input name="displayName" value={form.displayName} required maxlength="255" class:invalid={Boolean(errors.displayName)} aria-invalid={Boolean(errors.displayName)} aria-describedby={errors.displayName ? 'displayName-error' : undefined} oninput={(event) => updateField('displayName', event.currentTarget.value)} />{#if errors.displayName}<span class="field-error" id="displayName-error" role="alert">{errors.displayName}</span>{/if}</label>
 				<SearchSelect label="Manufacturer" field="manufacturerId" name="manufacturerId" value={form.manufacturerId} options={manufacturers.map((item) => ({ value: String(item.id), label: item.name }))} required disabled={!manufacturers.length} error={errors.manufacturerId ?? ''} onOpen={() => sourceDateOpen = false} onSelect={(value) => updateField('manufacturerId', value)} />
 				<label><span>Series <span class="required" aria-hidden="true">*</span></span><input name="series" value={form.series} required maxlength="128" class:invalid={Boolean(errors.series)} aria-invalid={Boolean(errors.series)} aria-describedby={errors.series ? 'series-error' : undefined} oninput={(event) => updateField('series', event.currentTarget.value)} />{#if errors.series}<span class="field-error" id="series-error" role="alert">{errors.series}</span>{/if}</label>
 				<label><span>Model number <span class="required" aria-hidden="true">*</span></span><input name="modelNumber" value={form.modelNumber} required maxlength="128" class:invalid={Boolean(errors.modelNumber)} aria-invalid={Boolean(errors.modelNumber)} aria-describedby={errors.modelNumber ? 'modelNumber-error' : undefined} oninput={(event) => updateField('modelNumber', event.currentTarget.value)} />{#if errors.modelNumber}<span class="field-error" id="modelNumber-error" role="alert">{errors.modelNumber}</span>{/if}</label>
-				<label><span>Code <span class="required" aria-hidden="true">*</span></span><input name="code" value={form.code} required maxlength="64" class:invalid={Boolean(errors.code)} aria-invalid={Boolean(errors.code)} aria-describedby={errors.code ? 'code-error' : undefined} oninput={(event) => updateField('code', event.currentTarget.value)} />{#if errors.code}<span class="field-error" id="code-error" role="alert">{errors.code}</span>{/if}</label>
 				<label><span>Sort order <span class="required" aria-hidden="true">*</span></span><input name="sortOrder" type="number" min="0" step="1" value={form.sortOrder} required class:invalid={Boolean(errors.sortOrder)} aria-invalid={Boolean(errors.sortOrder)} aria-describedby={errors.sortOrder ? 'sortOrder-error' : undefined} oninput={(event) => updateField('sortOrder', event.currentTarget.value)} />{#if errors.sortOrder}<span class="field-error" id="sortOrder-error" role="alert">{errors.sortOrder}</span>{/if}</label>
-				<h3>Reference information</h3>
+				</FormSection>
+				<FormSection title="Reference information" framed>
 				<label><span>Official URL</span><input name="officialUrl" type="url" value={form.officialUrl} maxlength="1000" class:invalid={Boolean(errors.officialUrl)} aria-invalid={Boolean(errors.officialUrl)} aria-describedby={errors.officialUrl ? 'officialUrl-error' : undefined} oninput={(event) => updateField('officialUrl', event.currentTarget.value)} />{#if errors.officialUrl}<span class="field-error" id="officialUrl-error" role="alert">{errors.officialUrl}</span>{/if}</label>
 				<DatePicker label="Source checked" field="sourceCheckedOn" value={form.sourceCheckedOn} error={errors.sourceCheckedOn ?? ''} above={sourceDateAbove} open={sourceDateOpen} onToggle={toggleSourceDate} onSelect={(value) => { updateField('sourceCheckedOn', value); sourceDateOpen = false; }} />
+				</FormSection>
 			</div>
 			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeModal}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : mode === 'add' ? 'Add cpu type' : 'Save changes'}</button></footer>
-		</form>{/if}
+		</form>
 	</dialog></div>
 {/if}
 
 <style>
 	.cpu-page{display:flex;min-width:0;width:100%;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.notice{margin:0 0 14px;color:var(--text-secondary);font-size:13px}
-	.dialog-body{min-height:0;overflow-y:auto;padding:20px 24px;background:var(--bg)}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0}.detail-grid div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}.detail-grid dd{margin:4px 0 0;color:var(--text);font-size:13px;overflow-wrap:anywhere}.detail-grid a{color:#337ab7;text-decoration:underline;text-underline-offset:2px}:global(html[data-theme='dark']) .detail-grid a{color:#77b9f0}
-	input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}@media(max-width:700px){.dialog-body{padding:16px}.detail-grid{grid-template-columns:1fr}}
+	.detail-link{color:#337ab7;text-decoration:underline;text-underline-offset:2px}:global(html[data-theme='dark']) .detail-link{color:#77b9f0}
+	input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}
 </style>

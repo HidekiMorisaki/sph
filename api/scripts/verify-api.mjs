@@ -65,6 +65,25 @@ function hasEmployeeDerivedFields(employee) {
 		Number.isInteger(employee.lengthOfService?.months) && employee.lengthOfService.months >= 0 && employee.lengthOfService.months <= 11;
 }
 
+function selfProfileInput(employee) {
+	return {
+		firstName: employee.firstName,
+		middleName: employee.middleName,
+		lastName: employee.lastName,
+		nameKana: employee.nameKana,
+		birthDate: employee.birthDate.slice(0, 10),
+		gender: employee.gender,
+		bloodType: employee.bloodType,
+		postalCode: employee.postalCode,
+		prefecture: employee.prefecture,
+		city: employee.city,
+		streetAddress: employee.streetAddress,
+		buildingName: employee.buildingName,
+		mobilePhone: employee.mobilePhone,
+		email: employee.email
+	};
+}
+
 function wholeCalendarMonths(startValue, endValue) {
 	const start = new Date(`${startValue.slice(0, 10)}T00:00:00.000Z`);
 	const end = new Date(`${endValue.slice(0, 10)}T00:00:00.000Z`);
@@ -96,6 +115,12 @@ try {
 	const unauthenticatedEmployees = await request('/v1/employees');
 	if (unauthenticatedEmployees.status !== 401) throw new Error(`Unauthenticated employee read guard failed (${unauthenticatedEmployees.status}).`);
 	await payload(unauthenticatedEmployees);
+	const unauthenticatedProfile = await request('/v1/employees/me');
+	if (unauthenticatedProfile.status !== 401) throw new Error(`Unauthenticated employee profile guard failed (${unauthenticatedProfile.status}).`);
+	await payload(unauthenticatedProfile);
+	const unauthenticatedProfileUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{}' });
+	if (unauthenticatedProfileUpdate.status !== 401) throw new Error(`Unauthenticated employee profile update guard failed (${unauthenticatedProfileUpdate.status}).`);
+	await payload(unauthenticatedProfileUpdate);
 	const unauthenticatedCodePreview = await request('/v1/it-asset-code-previews?typeId=1');
 	if (unauthenticatedCodePreview.status !== 401) throw new Error(`Management code preview guard failed (${unauthenticatedCodePreview.status}).`);
 	await payload(unauthenticatedCodePreview);
@@ -117,18 +142,17 @@ try {
 	}
 
 	const suffix = randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
-	const code = `VERIFY_${suffix}`;
-	const created = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, name: `Verification ${suffix}` }) });
+	const created = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Verification ${suffix}` }) });
 	if (created.status !== 201) throw new Error(`Create verification failed (${created.status}).`);
 	const item = (await payload(created)).data;
-	const updated = await request(`/v1/departments/${item.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, name: `Verified ${suffix}` }) });
+	const updated = await request(`/v1/departments/${item.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Verified ${suffix}` }) });
 	if (updated.status !== 200) throw new Error(`Update verification failed (${updated.status}).`);
 	const removed = await request(`/v1/departments/${item.id}`, { method: 'DELETE' });
 	if (removed.status !== 200) throw new Error(`Delete verification failed (${removed.status}).`);
 	await payload(removed);
 	const removedAgain = await request(`/v1/departments/${item.id}`, { method: 'DELETE' });
 	if (removedAgain.status !== 404) throw new Error(`Repeated delete verification failed (${removedAgain.status}).`);
-	const listed = await request('/v1/departments?sortBy=code&sortOrder=DESC&offset=0&limit=10');
+	const listed = await request('/v1/departments?sortBy=name&sortOrder=DESC&offset=0&limit=10');
 	const listedPayload = await payload(listed);
 	if (listed.status !== 200 || listedPayload.data.some((entry) => entry.id === item.id) || listedPayload.meta.limit !== 10 || listedPayload.meta.sort.order !== 'desc') throw new Error('The list API contract verification failed.');
 	const invalidLimit = await request('/v1/departments?limit=0');
@@ -136,10 +160,10 @@ try {
 	const databaseResult = await client.query('SELECT deleted_at IS NOT NULL AS deleted FROM departments WHERE id = $1', [item.id]);
 	if (databaseResult.rowCount !== 1 || !databaseResult.rows[0].deleted) throw new Error('The record was not retained as soft-deleted data.');
 
-	const employmentTypeResponse = await request('/v1/employment-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `TYPE_${suffix}`, name: `Employee type ${suffix}` }) });
+	const employmentTypeResponse = await request('/v1/employment-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Employee type ${suffix}` }) });
 	if (employmentTypeResponse.status !== 201) throw new Error(`Employment type verification failed (${employmentTypeResponse.status}).`);
 	const employmentType = (await payload(employmentTypeResponse)).data;
-	const employeeBranchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `EBR_${suffix}`, name: `Employee branch ${suffix}`, notes: 'Employee API verification branch' }) });
+	const employeeBranchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Employee branch ${suffix}`, notes: 'Employee API verification branch' }) });
 	if (employeeBranchResponse.status !== 201) throw new Error(`Employee branch verification failed (${employeeBranchResponse.status}).`);
 	const employeeBranch = (await payload(employeeBranchResponse)).data;
 	const employeeCode = `EMP${suffix}`;
@@ -324,6 +348,27 @@ try {
 	if (invalidEmployeeSearch.status !== 422 || (await payload(invalidEmployeeSearch)).error.code !== 'INVALID_SEARCH') throw new Error('Employee search length guard verification failed.');
 	const invalidColumnMetadata = await request('/v1/employees?includeColumns=yes');
 	if (invalidColumnMetadata.status !== 422 || (await payload(invalidColumnMetadata)).error.code !== 'INVALID_INCLUDE_COLUMNS') throw new Error('Employee column metadata guard verification failed.');
+	const branchContactInput = { name: employeeBranch.name, phoneNumber1: '0000-00-0000', phoneNumber1Label: `Main ${suffix}`, phoneNumber2: '0000-00-1111', phoneNumber2Label: 'Development', faxNumber1: '0000-00-2222', faxNumber1Label: 'Main', faxNumber2: '0000-00-3333', faxNumber2Label: 'Development', managerEmployeeId: employee.id, deputyManagerEmployeeId: employeeId, notes: 'Employee API verification branch' };
+	const branchContactUpdate = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(branchContactInput) });
+	const updatedBranch = (await payload(branchContactUpdate)).data;
+	if (branchContactUpdate.status !== 200 || updatedBranch.phoneNumber2 !== branchContactInput.phoneNumber2 || updatedBranch.faxNumber2Label !== branchContactInput.faxNumber2Label || updatedBranch.manager?.id !== employee.id || updatedBranch.deputyManager?.id !== employeeId) throw new Error('Branch contact and responsibility update failed.');
+	const branchSearch = await request(`/v1/branches?search=${encodeURIComponent(branchContactInput.phoneNumber1Label)}`);
+	if (branchSearch.status !== 200 || !(await payload(branchSearch)).data.some((entry) => entry.id === employeeBranch.id)) throw new Error('Branch contact search failed.');
+	const invalidBranchManager = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: 2147483647 }) });
+	if (invalidBranchManager.status !== 400 || (await payload(invalidBranchManager)).error.details[0]?.field !== 'managerEmployeeId') throw new Error('Branch manager reference guard failed.');
+	for (const input of [
+		{ ...branchContactInput, managerEmployeeId: null },
+		{ ...branchContactInput, deputyManagerEmployeeId: employee.id },
+		{ ...branchContactInput, phoneNumber1: null },
+		{ ...branchContactInput, faxNumber1: null }
+	]) {
+		const invalidBranch = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
+		if (invalidBranch.status !== 400 || (await payload(invalidBranch)).error.code !== 'INVALID_REQUEST') throw new Error('Branch responsibility or contact order guard failed.');
+	}
+	const responsibleEmployeeDelete = await request(`/v1/employees/${employee.id}`, { method: 'DELETE' });
+	if (responsibleEmployeeDelete.status !== 409 || (await payload(responsibleEmployeeDelete)).error.code !== 'RESOURCE_IN_USE') throw new Error('Branch responsible employee delete guard failed.');
+	const clearedBranchManager = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: null, deputyManagerEmployeeId: null }) });
+	if (clearedBranchManager.status !== 200) throw new Error('Branch manager could not be cleared.');
 	const removedEmployee = await request(`/v1/employees/${employee.id}`, { method: 'DELETE' });
 	if (removedEmployee.status !== 200) throw new Error(`Employee soft-delete verification failed (${removedEmployee.status}).`);
 	const removedEmploymentType = await request(`/v1/employment-types/${employmentType.id}`, { method: 'DELETE' });
@@ -331,41 +376,65 @@ try {
 	const removedEmployeeBranch = await request(`/v1/branches/${employeeBranch.id}`, { method: 'DELETE' });
 	if (removedEmployeeBranch.status !== 200) throw new Error(`Employee branch soft-delete verification failed (${removedEmployeeBranch.status}).`);
 
-	const branchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `BR_${suffix}`, name: `Branch ${suffix}`, notes: 'Asset API verification branch' }) });
+	const branchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Branch ${suffix}`, notes: 'Asset API verification branch' }) });
 	if (branchResponse.status !== 201) throw new Error(`Branch verification failed (${branchResponse.status}).`);
 	const branch = (await payload(branchResponse)).data;
-	const roomResponse = await request('/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `ROOM_${suffix}`, name: `Room ${suffix}`, branchId: branch.id, notes: 'Asset API verification room' }) });
+	const roomResponse = await request('/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Room ${suffix}`, branchId: branch.id, notes: 'Asset API verification room' }) });
 	if (roomResponse.status !== 201) throw new Error(`Room verification failed (${roomResponse.status}).`);
 	const room = (await payload(roomResponse)).data;
-	const locationResponse = await request('/v1/storage-locations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `LOC_${suffix}`, name: `Location ${suffix}`, roomId: room.id, notes: 'Asset API verification storage' }) });
-	if (locationResponse.status !== 201) throw new Error(`Location verification failed (${locationResponse.status}).`);
-	const location = (await payload(locationResponse)).data;
+	const storageResponse = await request('/v1/storage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Storage ${suffix}`, branchId: branch.id, roomId: room.id, notes: 'Asset API verification storage' }) });
+	if (storageResponse.status !== 201) throw new Error(`Storage verification failed (${storageResponse.status}).`);
+	const storage = (await payload(storageResponse)).data;
+	const oldStorageEndpoint = await request('/v1/storage-locations');
+	if (oldStorageEndpoint.status !== 404) throw new Error('Removed storage-locations endpoint is still available.');
 	const [typesResponse, statusesResponse] = await Promise.all([request('/v1/it-asset-types?limit=500'), request('/v1/it-asset-statuses?limit=500')]);
 	const types = (await payload(typesResponse)).data;
 	const statuses = (await payload(statusesResponse)).data;
-	const type = types.find((entry) => entry.code === 'LAPTOP') ?? types[0];
-	const displayType = types.find((entry) => entry.code === 'DISPLAY');
-	const status = statuses.find((entry) => entry.code === 'NORMAL') ?? statuses[0];
+	const type = types.find((entry) => entry.name === 'Laptop') ?? types[0];
+	const displayType = types.find((entry) => entry.name === 'Display');
+	const status = statuses.find((entry) => entry.name === 'Normal') ?? statuses[0];
 	if (!type || !status || !displayType || displayType.managementCodePrefix !== 'DSP') throw new Error('IT asset reference masters are unavailable.');
 	const verificationPrefix = 'T' + [...suffix.slice(0, 4)].map(value => String.fromCharCode(65 + parseInt(value, 16))).join('');
-	const invalidType = await request('/v1/it-asset-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `CODE_INVALID_${suffix}`, name: `Invalid prefix ${suffix}`, managementCodePrefix: 'AB' }) });
+	const invalidType = await request('/v1/it-asset-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Invalid prefix ${suffix}`, managementCodePrefix: 'AB' }) });
 	if (invalidType.status !== 400) throw new Error('IT asset type prefix validation failed.');
-	const codeTypeResponse = await request('/v1/it-asset-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `CODE_VERIFY_${suffix}`, name: `Code verification ${suffix}`, managementCodePrefix: verificationPrefix }) });
+	const codeTypeResponse = await request('/v1/it-asset-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Code verification ${suffix}`, managementCodePrefix: verificationPrefix }) });
 	if (codeTypeResponse.status !== 201) throw new Error(`IT asset type creation failed (${codeTypeResponse.status}).`);
 	const codeType = (await payload(codeTypeResponse)).data;
 	await client.query('UPDATE it_asset_types SET next_management_number = 10000 WHERE id = $1', [codeType.id]);
 	await expectItAssetError(await request(`/v1/it-asset-code-previews?typeId=${codeType.id}`), 409, 'IT_ASSET_CODE_EXHAUSTED', 'assetTag');
-	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ typeId: codeType.id, statusId: status.id, locationId: location.id, purchasedOn: '2026-09-01' }) }), 409, 'IT_ASSET_CODE_EXHAUSTED', 'assetTag');
+	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ typeId: codeType.id, statusId: status.id, storageId: storage.id, purchasedOn: '2026-09-01' }) }), 409, 'IT_ASSET_CODE_EXHAUSTED', 'assetTag');
 	const removedCodeType = await request(`/v1/it-asset-types/${codeType.id}`, { method: 'DELETE' });
 	if (removedCodeType.status !== 200) throw new Error(`IT asset type cleanup failed (${removedCodeType.status}).`);
-	const manufacturerResponse = await request('/v1/manufacturers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `MAKE_${suffix}`, name: `Manufacturer ${suffix}` }) });
+	const manufacturerResponse = await request('/v1/manufacturers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Manufacturer ${suffix}` }) });
 	if (manufacturerResponse.status !== 201) throw new Error(`Manufacturer verification failed (${manufacturerResponse.status}).`);
 	const manufacturer = (await payload(manufacturerResponse)).data;
-	const assetInput = { typeId: type.id, statusId: status.id, locationId: location.id, purchasedOn: '2026-09-01', manufacturerId: manufacturer.id, serialNumber: `SER_${suffix}` };
+	if (Object.hasOwn(manufacturer, 'code')) throw new Error('Manufacturer response still exposes the removed code field.');
+	const cpuTypeInput = { manufacturerId: manufacturer.id, series: 'Verification', modelNumber: `CPU-${suffix}`, displayName: `CPU verification ${suffix}`, sortOrder: 900 };
+	const cpuTypeResponse = await request('/v1/cpu-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cpuTypeInput) });
+	if (cpuTypeResponse.status !== 201) throw new Error(`CPU type verification failed (${cpuTypeResponse.status}).`);
+	const cpuType = (await payload(cpuTypeResponse)).data;
+	if (Object.hasOwn(cpuType, 'code')) throw new Error('CPU type response still exposes the removed code field.');
+	const duplicateCpuType = await request('/v1/cpu-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cpuTypeInput, modelNumber: `CPU-DUP-${suffix}` }) });
+	const duplicateCpuPayload = await payload(duplicateCpuType);
+	if (duplicateCpuType.status !== 409 || duplicateCpuPayload.error?.details?.[0]?.field !== 'displayName') throw new Error(`CPU type display-name natural key verification failed (${duplicateCpuType.status}/${duplicateCpuPayload.error?.details?.[0]?.field ?? 'none'}).`);
+	const operatingSystemInput = { vendor: 'Verification vendor', product: 'Verification OS', version: suffix, displayName: `Operating system verification ${suffix}`, sortOrder: 900 };
+	const operatingSystemResponse = await request('/v1/operating-systems', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(operatingSystemInput) });
+	if (operatingSystemResponse.status !== 201) throw new Error(`Operating system verification failed (${operatingSystemResponse.status}).`);
+	const operatingSystem = (await payload(operatingSystemResponse)).data;
+	if (Object.hasOwn(operatingSystem, 'code')) throw new Error('Operating system response still exposes the removed code field.');
+	const duplicateOperatingSystem = await request('/v1/operating-systems', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...operatingSystemInput, version: `${suffix}-duplicate` }) });
+	const duplicateOperatingSystemPayload = await payload(duplicateOperatingSystem);
+	if (duplicateOperatingSystem.status !== 409 || duplicateOperatingSystemPayload.error?.details?.[0]?.field !== 'displayName') throw new Error(`Operating system display-name natural key verification failed (${duplicateOperatingSystem.status}/${duplicateOperatingSystemPayload.error?.details?.[0]?.field ?? 'none'}).`);
+	for (const [path, expectedSort] of [['/v1/manufacturers?q=Manufacturer&sortBy=name', 'name'], ['/v1/cpu-types?q=CPU%20verification&sortBy=displayName', 'displayName'], ['/v1/operating-systems?q=Operating%20system%20verification&sortBy=displayName', 'displayName']]) {
+		const response = await request(path);
+		const result = await payload(response);
+		if (response.status !== 200 || result.meta.sort.field !== expectedSort || !result.data.length) throw new Error(`Code-free master list verification failed (${path}).`);
+	}
+	const assetInput = { typeId: type.id, statusId: status.id, storageId: storage.id, purchasedOn: '2026-09-01', manufacturerId: manufacturer.id, serialNumber: `SER_${suffix}` };
 	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, purchasedOn: '' }) }), 400, 'VALIDATION_ERROR', 'purchasedOn');
 	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, typeId: '' }) }), 400, 'VALIDATION_ERROR', 'typeId');
-	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, locationId: 0 }) }), 400, 'VALIDATION_ERROR', 'locationId');
-	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, locationId: 2147483647 }) }), 400, 'VALIDATION_ERROR', 'locationId');
+	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, storageId: 0 }) }), 400, 'VALIDATION_ERROR', 'storageId');
+	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, storageId: 2147483647 }) }), 400, 'VALIDATION_ERROR', 'storageId');
 	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, purchasedOn: '2026-02-30' }) }), 400, 'VALIDATION_ERROR', 'purchasedOn');
 	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, purchasedOn: '2026-03-02', disposalOn: '2026-03-01' }) }), 400, 'VALIDATION_ERROR', 'disposalOn');
 	await expectItAssetError(await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, ramGb: 0 }) }), 400, 'VALIDATION_ERROR', 'ramGb');
@@ -393,7 +462,7 @@ try {
 	const createdHistory = await payload(await request(`/v1/it-assets/${thirdAsset.id}/history`));
 	if (createdHistory.meta.total !== 1 || createdHistory.data[0]?.action !== 'create' ||
 		!createdHistory.data[0].changes.some(change => change.field === 'assigneeId' && change.after)) throw new Error('Initial IT asset change history did not retain its assignee.');
-	const brokenStatus = statuses.find((entry) => entry.code === 'BROKEN');
+	const brokenStatus = statuses.find((entry) => entry.name === 'Broken');
 	if (!brokenStatus) throw new Error('Broken status is unavailable.');
 	const brokenResponse = await request(`/v1/it-assets/${secondAsset.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...secondInput, statusId: brokenStatus.id, assigneeId: employeeId }) });
 	if (brokenResponse.status !== 200 || (await payload(brokenResponse)).data.assignments[0]?.employee.id !== employeeId) throw new Error('Atomic IT asset status and assignment update failed.');
@@ -407,7 +476,7 @@ try {
 	const unassignThird = await request(`/v1/it-assets/${thirdAsset.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...thirdInput, assigneeId: null }) });
 	if (unassignThird.status !== 200) throw new Error('IT asset creation assignment cleanup failed.');
 	if (new Set([asset.assetTag, secondAsset.assetTag, thirdAsset.assetTag]).size !== 3) throw new Error('Concurrent management codes are not unique.');
-	for (const field of ['type', 'manufacturer', 'branch', 'room', 'storageLocation', 'user', 'status']) {
+	for (const field of ['type', 'manufacturer', 'branch', 'room', 'storage', 'user', 'status']) {
 		for (const order of ['asc', 'desc']) {
 			const response = await request(`/v1/it-assets?sortBy=${field}&sortOrder=${order}&offset=0&limit=2`);
 			if (response.status !== 200) throw new Error(`IT asset ${field} sort failed (${response.status}).`);
@@ -445,10 +514,23 @@ try {
 	const removedAfterDelete = await request(`/v1/it-assets/${afterDeleteAsset.id}`, { method: 'DELETE' });
 	if (removedAfterDelete.status !== 200) throw new Error(`Post-delete IT asset cleanup failed (${removedAfterDelete.status}).`);
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.general_user, roleGrantId]);
-	const forbidden = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `DENIED_${suffix}`, name: 'Denied' }) });
+	const forbidden = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Denied ${suffix}` }) });
 	if (forbidden.status !== 403 || (await payload(forbidden)).error.code !== 'ADMIN_REQUIRED') throw new Error('Employee role guard verification failed.');
 	const generalEmployeeList = await request('/v1/employees?limit=1');
 	if (generalEmployeeList.status !== 200 || (await payload(generalEmployeeList)).meta.total < 1) throw new Error('General user employee read verification failed.');
+	const profileResponse = await request('/v1/employees/me');
+	if (profileResponse.status !== 200) throw new Error(`Employee self-profile read failed (${profileResponse.status}).`);
+	const originalProfile = (await payload(profileResponse)).data;
+	if (originalProfile.id !== employeeId || Object.hasOwn(originalProfile, 'employeeCode') || Object.hasOwn(originalProfile, 'roles')) throw new Error('Employee self-profile response exposed non-profile fields.');
+	const profileInput = selfProfileInput(originalProfile);
+	const selfUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...profileInput, firstName: 'Self Updated' }) });
+	if (selfUpdate.status !== 200 || (await payload(selfUpdate)).data.firstName !== 'Self Updated') throw new Error('General user self-profile update failed.');
+	const forbiddenSelfUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...profileInput, employeeCode: 'FORBIDDEN01', roleCodes: ['system_administrator'] }) });
+	await expectEmployeeError(forbiddenSelfUpdate, 400, 'VALIDATION_ERROR', 'employeeCode');
+	const unchangedProfile = await request('/v1/employees/me');
+	if (unchangedProfile.status !== 200 || (await payload(unchangedProfile)).data.firstName !== 'Self Updated') throw new Error('Forbidden self-profile fields changed employee data.');
+	const restoredProfile = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profileInput) });
+	if (restoredProfile.status !== 200) throw new Error('Employee self-profile could not be restored.');
 	for (const [path, method] of [['/v1/employees', 'POST'], [`/v1/employees/${employee.id}`, 'PATCH'], [`/v1/employees/${employee.id}`, 'DELETE']]) {
 		const response = await request(path, { method, ...(method === 'DELETE' ? {} : { headers: { 'content-type': 'application/json' }, body: '{}' }) });
 		if (response.status !== 403 || (await payload(response)).error.code !== 'ADMIN_REQUIRED') throw new Error(`General user employee ${method} guard failed.`);
@@ -460,6 +542,10 @@ try {
 	const readableMasters = await request('/v1/departments');
 	if (readableMasters.status !== 200) throw new Error(`General user master read verification failed (${readableMasters.status}).`);
 	await payload(readableMasters);
+	for (const [path, expectedCode, body] of [['/v1/branches', 'SYSTEM_ADMIN_REQUIRED', { name: `General branch ${suffix}` }], ['/v1/rooms', 'ADMIN_REQUIRED', { name: `General room ${suffix}`, branchId: branch.id }], ['/v1/storage', 'ADMIN_REQUIRED', { name: `General storage ${suffix}`, branchId: branch.id, roomId: room.id }]]) {
+		const response = await request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+		if (response.status !== 403 || (await payload(response)).error.code !== expectedCode) throw new Error(`General user location write guard failed for ${path}.`);
+	}
 	const generalAssetResponse = await request('/v1/it-assets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...assetInput, serialNumber: `USER_SER_${suffix}` }) });
 	if (generalAssetResponse.status !== 201) throw new Error(`General user asset write verification failed (${generalAssetResponse.status}).`);
 	const generalAsset = (await payload(generalAssetResponse)).data;
@@ -476,26 +562,41 @@ try {
 	if (!assignmentHistory.data.some(entry => entry.action === 'assign' && entry.changes.some(change => change.field === 'assigneeId' && change.after)) ||
 		!assignmentHistory.data.some(entry => entry.action === 'return' && entry.changes.some(change => change.field === 'assigneeId' && change.after === null))) throw new Error('Standalone assignment history was not recorded.');
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.business_administrator, roleGrantId]);
-	const businessMaster = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: `BIZ_${suffix}`, name: `Business administrator ${suffix}` }) });
+	const businessMaster = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business administrator ${suffix}` }) });
 	if (businessMaster.status !== 201) throw new Error(`Business administrator master write verification failed (${businessMaster.status}).`);
 	const businessItem = (await payload(businessMaster)).data;
 	const removedBusinessMaster = await request(`/v1/departments/${businessItem.id}`, { method: 'DELETE' });
 	if (removedBusinessMaster.status !== 200) throw new Error(`Business administrator master delete verification failed (${removedBusinessMaster.status}).`);
 	await payload(removedBusinessMaster);
+	for (const [path, method] of [['/v1/branches', 'POST'], [`/v1/branches/${branch.id}`, 'PATCH'], [`/v1/branches/${branch.id}`, 'DELETE']]) {
+		const forbiddenBusinessBranch = await request(path, { method, ...(method === 'DELETE' ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business branch ${suffix}` }) }) });
+		if (forbiddenBusinessBranch.status !== 403 || (await payload(forbiddenBusinessBranch)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`Business administrator branch ${method} guard failed.`);
+	}
+	const businessRoomResponse = await request('/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business room ${suffix}`, branchId: branch.id }) });
+	if (businessRoomResponse.status !== 201) throw new Error(`Business administrator room create failed (${businessRoomResponse.status}).`);
+	const businessRoom = (await payload(businessRoomResponse)).data;
+	const businessStorageResponse = await request('/v1/storage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business storage ${suffix}`, branchId: branch.id, roomId: businessRoom.id }) });
+	if (businessStorageResponse.status !== 201) throw new Error(`Business administrator storage create failed (${businessStorageResponse.status}).`);
+	const businessStorage = (await payload(businessStorageResponse)).data;
+	if ((await request(`/v1/storage/${businessStorage.id}`, { method: 'DELETE' })).status !== 200 || (await request(`/v1/rooms/${businessRoom.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Business administrator location cleanup failed.');
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [originalRole, roleGrantId]);
-	const referencedLocation = await request(`/v1/storage-locations/${location.id}`, { method: 'DELETE' });
-	if (referencedLocation.status !== 409) throw new Error(`Reference guard verification failed (${referencedLocation.status}).`);
+	const referencedStorage = await request(`/v1/storage/${storage.id}`, { method: 'DELETE' });
+	if (referencedStorage.status !== 409) throw new Error(`Reference guard verification failed (${referencedStorage.status}).`);
 	const removedAsset = await request(`/v1/it-assets/${asset.id}`, { method: 'DELETE' });
 	if (removedAsset.status !== 200) throw new Error(`IT asset soft-delete verification failed (${removedAsset.status}).`);
+	const removedCpuType = await request(`/v1/cpu-types/${cpuType.id}`, { method: 'DELETE' });
+	if (removedCpuType.status !== 200) throw new Error(`CPU type soft-delete verification failed (${removedCpuType.status}).`);
+	const removedOperatingSystem = await request(`/v1/operating-systems/${operatingSystem.id}`, { method: 'DELETE' });
+	if (removedOperatingSystem.status !== 200) throw new Error(`Operating system soft-delete verification failed (${removedOperatingSystem.status}).`);
 	const removedManufacturer = await request(`/v1/manufacturers/${manufacturer.id}`, { method: 'DELETE' });
 	if (removedManufacturer.status !== 200) throw new Error(`Manufacturer soft-delete verification failed (${removedManufacturer.status}).`);
-	const removedLocation = await request(`/v1/storage-locations/${location.id}`, { method: 'DELETE' });
-	if (removedLocation.status !== 200) throw new Error(`Location soft-delete verification failed (${removedLocation.status}).`);
+	const removedStorage = await request(`/v1/storage/${storage.id}`, { method: 'DELETE' });
+	if (removedStorage.status !== 200) throw new Error(`Storage soft-delete verification failed (${removedStorage.status}).`);
 	const removedRoom = await request(`/v1/rooms/${room.id}`, { method: 'DELETE' });
 	if (removedRoom.status !== 200) throw new Error(`Room soft-delete verification failed (${removedRoom.status}).`);
 	const removedBranch = await request(`/v1/branches/${branch.id}`, { method: 'DELETE' });
 	if (removedBranch.status !== 200) throw new Error(`Branch soft-delete verification failed (${removedBranch.status}).`);
-	const retainedAssets = await client.query('SELECT (SELECT deleted_at IS NOT NULL FROM storage_locations WHERE id = $1) AND (SELECT deleted_at IS NOT NULL FROM rooms WHERE id = $2) AND (SELECT deleted_at IS NOT NULL FROM branches WHERE id = $3) AND (SELECT deleted_at IS NOT NULL FROM it_assets WHERE id = $4) AS deleted', [location.id, room.id, branch.id, asset.id]);
+	const retainedAssets = await client.query('SELECT (SELECT deleted_at IS NOT NULL FROM storage WHERE id = $1) AND (SELECT deleted_at IS NOT NULL FROM rooms WHERE id = $2) AND (SELECT deleted_at IS NOT NULL FROM branches WHERE id = $3) AND (SELECT deleted_at IS NOT NULL FROM it_assets WHERE id = $4) AS deleted', [storage.id, room.id, branch.id, asset.id]);
 	if (!retainedAssets.rows[0]?.deleted) throw new Error('Related records were not retained as soft-deleted data.');
 	const lastSystemAdminDelete = await request(`/v1/employees/${employeeId}`, { method: 'DELETE' });
 	if (lastSystemAdminDelete.status !== 409 || (await payload(lastSystemAdminDelete)).error.code !== 'LAST_SYSTEM_ADMINISTRATOR') throw new Error('Last system administrator guard verification failed.');
@@ -549,7 +650,7 @@ try {
 	const changedPasswordLogout = await request('/v1/auth/logout', { method: 'POST' });
 	if (changedPasswordLogout.status !== 200) throw new Error(`Changed password logout verification failed (${changedPasswordLogout.status}).`);
 	await payload(changedPasswordLogout);
-	console.log(JSON.stringify({ unauthenticated: 401, forbidden: 403, login: 200, create: 201, update: 200, delete: 200, repeatedDelete: 404, list: 200, invalidLimit: 422, employeeContract: true, referenceGuard: 409, itAssetAssignmentGuard: 409, relatedSoftDelete: true, logout: 200, softDeleteVerified: true }));
+	console.log(JSON.stringify({ unauthenticated: 401, forbidden: 403, login: 200, create: 201, update: 200, delete: 200, repeatedDelete: 404, list: 200, invalidLimit: 422, employeeContract: true, selfProfileContract: true, referenceGuard: 409, itAssetAssignmentGuard: 409, relatedSoftDelete: true, logout: 200, softDeleteVerified: true }));
 } finally {
 	if (employeeId !== undefined && originalMustChange !== undefined && originalRole !== undefined && originalPasswordHash !== undefined) {
 		await client.query('UPDATE employees SET must_change_credentials = $1, password_hash = $2 WHERE id = $3', [originalMustChange, originalPasswordHash, employeeId]).catch(() => undefined);
