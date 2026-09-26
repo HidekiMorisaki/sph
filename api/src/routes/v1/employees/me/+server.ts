@@ -1,5 +1,6 @@
 import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
+import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
 import { parseEmployeeSelfInput } from '$lib/server/api/employee-input';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
@@ -45,10 +46,12 @@ export async function PATCH({ request, locals }: import('./$types').RequestEvent
 		const result = await getPrisma().$transaction(async (tx) => {
 			const previous = await tx.employee.findFirst({ where: { id: actor.id, deletedAt: null }, select: { email: true } });
 			if (!previous) return null;
+			const before = await readEmployeeFields(tx, actor.id);
 			const profile = await tx.employee.update({ where: { id: actor.id }, data: parsed.data, select: employeeProfileSelect });
 			if (previous.email !== parsed.data.email) {
 				await tx.accountInvitation.updateMany({ where: { employeeId: actor.id, usedAt: null, deletedAt: null }, data: { deletedAt: new Date() } });
 			}
+			await recordEmployeeChange(tx, actor.id, actor.id, 'update', before, await readEmployeeFields(tx, actor.id));
 			await writeAuditLog(tx, actor.id, 'update_self_profile', 'employee', actor.id);
 			return profile;
 		}, { isolationLevel: 'Serializable' });

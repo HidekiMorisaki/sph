@@ -5,64 +5,82 @@
 	import { apiData } from '$lib/api';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import ModalHeader from '$lib/components/ModalHeader.svelte';
+	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import type { EmployeeMaster } from '$lib/employees';
+	import { formSnapshot } from '$lib/modalForm';
 	import '$lib/styles/add-button.css';
 
-	type Item = { id: number; code?: string; name: string };
+	type Item = EmployeeMaster;
 	const labels: Record<string, string> = { departments: 'Departments', 'employee-groups': 'Groups', positions: 'Positions', 'employment-types': 'Types', branches: 'Branches' };
-	const singularLabels: Record<string, string> = { departments: 'department', 'employee-groups': 'group', positions: 'position', 'employment-types': 'type', branches: 'branch' };
-	const employmentResources = new Set(['departments', 'employee-groups', 'positions', 'employment-types']);
+	const singularLabels: Record<string, string> = { departments: 'department', 'employee-groups': 'group', positions: 'position', 'employment-types': 'employment type', branches: 'branch' };
 	let resource = $derived(page.params.resource ?? '');
-	let usesCode = $derived(resource === 'employee-groups');
-	let columns = $derived(usesCode ? [{ key: 'code', label: 'Code', value: (item: Item) => item.code ?? '' }, { key: 'name', label: 'Name', value: (item: Item) => item.name }] : [{ key: 'name', label: 'Name', value: (item: Item) => item.name }]);
+	let columns = $derived(resource === 'employee-groups'
+		? [{ key: 'department', label: 'Department', value: (item: Item) => item.department?.name }, { key: 'name', label: 'Name', value: (item: Item) => item.name }]
+		: [{ key: 'name', label: 'Name', value: (item: Item) => item.name }]);
 	let title = $derived(labels[resource] ?? 'Employee masters');
-	let addLabel = $derived(`Add ${singularLabels[resource] ?? 'item'}`);
-	let eyebrow = $derived(employmentResources.has(resource) ? 'EMPLOYMENT CONFIGURATION' : 'CONFIGURATION');
+	let itemLabel = $derived(singularLabels[resource] ?? 'item');
+	let addLabel = $derived(`Add ${itemLabel}`);
 	let endpoint = $derived('/v1/' + resource);
 	let canManage = $state(false);
 	let list = $state<MasterList>();
-	let code = $state('');
 	let name = $state('');
+	let departmentId = $state('');
+	let departments = $state<EmployeeMaster[]>([]);
 	let editing = $state<Item | null>(null);
+	let modalTitle = $derived(`${editing ? 'Edit' : 'Add'} ${itemLabel}`);
 	let formOpen = $state(false);
 	let saving = $state(false);
 	let message = $state('');
 	let formError = $state('');
-	let errors = $state<{ code?: string; name?: string }>({});
-	let codeInput = $state<HTMLInputElement>();
+	let errors = $state<{ name?: string; departmentId?: string }>({});
 	let nameInput = $state<HTMLInputElement>();
 	let dialogElement = $state<HTMLDialogElement>();
 	let addButton = $state<HTMLButtonElement>();
 	let returnFocus: HTMLElement | null = null;
+	let initialSnapshot = $state('');
+	let confirmingDiscard = $state(false);
 
-	function resetForm() { editing = null; code = ''; name = ''; errors = {}; formError = ''; formOpen = false; }
+	let isGroup = $derived(resource === 'employee-groups');
+	let hasUnsavedChanges = $derived(Boolean(editing) && initialSnapshot !== '' && formSnapshot({ name, departmentId }) !== initialSnapshot);
+	function focusFirstField() {
+		if (isGroup) dialogElement?.querySelector<HTMLButtonElement>('[data-field="departmentId"] .form-select-trigger')?.focus();
+		else nameInput?.focus();
+	}
+	function resetForm() { editing = null; name = ''; departmentId = ''; errors = {}; formError = ''; formOpen = false; initialSnapshot = ''; confirmingDiscard = false; }
 	function edit(item: Item, trigger: HTMLButtonElement | null) {
 		returnFocus = trigger;
-		editing = item; code = item.code ?? ''; name = item.name; errors = {}; formError = ''; formOpen = true;
-		void tick().then(() => (usesCode ? codeInput : nameInput)?.focus());
+		editing = item; name = item.name; departmentId = item.departmentId == null ? '' : String(item.departmentId); errors = {}; formError = ''; formOpen = true; initialSnapshot = formSnapshot({ name, departmentId }); confirmingDiscard = false;
+		void tick().then(focusFirstField);
 	}
 	function add() {
 		returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null;
-		resetForm(); formOpen = true; void tick().then(() => (usesCode ? codeInput : nameInput)?.focus());
+		resetForm(); formOpen = true; void tick().then(focusFirstField);
 	}
-	function closeForm() {
+	function closeFormImmediately() {
 		if (saving) return;
 		const focusTarget = returnFocus; resetForm(); void tick().then(() => focusTarget?.focus());
 	}
+	function requestCloseForm() { if (saving) return; if (hasUnsavedChanges) { confirmingDiscard = true; return; } closeFormImmediately(); }
 	async function save() {
 		if (saving) return;
-		errors = { ...(usesCode && !code.trim() ? { code: 'Code is required.' } : {}), ...(!name.trim() ? { name: 'Name is required.' } : {}) };
-		if (Object.keys(errors).length) { formError = 'Correct the highlighted fields.'; await tick(); (errors.code ? codeInput : nameInput)?.focus(); return; }
+		errors = { ...(!name.trim() ? { name: 'Name is required.' } : {}), ...(isGroup && !departmentId ? { departmentId: 'Department is required.' } : {}) };
+		if (Object.keys(errors).length) { formError = 'Correct the highlighted fields.'; await tick(); if (errors.departmentId) focusFirstField(); else nameInput?.focus(); return; }
 		saving = true; formError = '';
 		try {
-			const response = await fetch(endpoint + (editing ? '/' + editing.id : ''), { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(usesCode ? { code, name } : { name }) });
+			const response = await fetch(endpoint + (editing ? '/' + editing.id : ''), { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(isGroup ? { name, departmentId } : { name }) });
 			if (!response.ok) {
-				const payload = await response.json().catch(() => null) as { error?: { details?: { field?: string }[] } } | null;
+				const payload = await response.json().catch(() => null) as { error?: { code?: string; details?: { field?: string }[] } } | null;
 				const field = payload?.error?.details?.[0]?.field;
-				if (field === 'code' || field === 'name') { errors = { [field]: `${field === 'code' ? 'Code' : 'Name'} already exists.` }; formError = 'Correct the highlighted field.'; await tick(); (field === 'code' ? codeInput : nameInput)?.focus(); }
-				else formError = response.status === 403 ? 'You do not have permission to save this item.' : `Unable to save this item. Check the ${usesCode ? 'code and name' : 'name'}.`;
+				if (field === 'name') { errors = { name: 'Name already exists.' }; formError = 'Correct the highlighted field.'; await tick(); nameInput?.focus(); }
+				else if (field === 'departmentId') { errors = { departmentId: 'Select an active department.' }; formError = 'Correct the highlighted field.'; await tick(); focusFirstField(); }
+				else if (payload?.error?.code === 'RESOURCE_IN_USE') formError = 'This group is used by employees in another department.';
+				else formError = response.status === 403 ? 'You do not have permission to save this item.' : 'Unable to save this item. Check the name.';
 				return;
 			}
 			const focusTarget = returnFocus; resetForm(); await list?.refresh(); void tick().then(() => focusTarget?.focus());
@@ -76,8 +94,8 @@
 		message = ''; await list?.refresh();
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || !formOpen || !dialogElement) return;
-		if (event.key === 'Escape') { event.preventDefault(); closeForm(); return; }
+		if (event.defaultPrevented || confirmingDiscard || !formOpen || !dialogElement) return;
+		if (event.key === 'Escape') { event.preventDefault(); requestCloseForm(); return; }
 		if (event.key !== 'Tab') return;
 		const focusable = [...dialogElement.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled])')];
 		if (!focusable.length) return;
@@ -87,7 +105,14 @@
 	}
 	afterNavigate(() => {
 		resetForm(); message = '';
-		void (async () => { const response = await fetch('/v1/auth/session'); if (response.ok) { const session = await apiData<{ user: { role: string } }>(response); canManage = ['system_administrator', 'business_administrator'].includes(session.user.role); } })();
+		void (async () => {
+			const [sessionResponse, departmentResponse] = await Promise.all([
+				fetch('/v1/auth/session'),
+				isGroup ? fetch('/v1/departments?sortBy=name&sortOrder=asc&limit=500') : Promise.resolve(null)
+			]);
+			if (sessionResponse.ok) { const session = await apiData<{ user: { role: string } }>(sessionResponse); canManage = ['system_administrator', 'business_administrator'].includes(session.user.role); }
+			departments = departmentResponse?.ok ? await apiData<EmployeeMaster[]>(departmentResponse) : [];
+		})();
 	});
 </script>
 
@@ -97,25 +122,26 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 <AssetManagementShell {title} active="">
-	<MasterPageHeader {eyebrow} {title} description="Maintain the controlled values used by employee records." actions={headerActions} />
+	<MasterPageHeader {title} description="Maintain the controlled values used by employee records." actions={headerActions} />
 	{#if message}<p class="notice" role="alert">{message}</p>{/if}
-	<section class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} {canManage} initialSortBy={usesCode ? 'code' : 'name'} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
+	<section class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} {canManage} initialSortBy="name" onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
 </AssetManagementShell>
 
 {#if canManage && formOpen}
-	<div class="app-modal-backdrop" role="presentation"><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="employee-master-dialog-title">
-		<header><h2 id="employee-master-dialog-title">{editing ? 'Edit item' : 'Add item'}</h2><button class="app-modal-close" type="button" aria-label="Close item form" disabled={saving} onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+	<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="employee-master-dialog-title">
+		<ModalHeader title={modalTitle} titleId="employee-master-dialog-title" closeLabel={`Close ${itemLabel} form`} disabled={saving} onClose={requestCloseForm} />
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="master-form-body app-modal-form-body">
 				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save item</strong><span>{formError}</span></div>{/if}
 				<FormSection title="Basic information" columns={2} framed>
-				{#if usesCode}<label><span>Code <span class="required" aria-hidden="true">*</span></span><input bind:this={codeInput} bind:value={code} maxlength="64" placeholder="e.g. CODE001" class:invalid={!!errors.code} aria-invalid={!!errors.code} aria-describedby={errors.code ? 'code-error' : undefined} oninput={() => { errors.code = undefined; formError = ''; }} />{#if errors.code}<small id="code-error" class="field-error">{errors.code}</small>{/if}</label>{/if}
+				{#if isGroup}<SearchSelect label="Department" field="departmentId" value={departmentId} options={[{ value: '', label: '-' }, ...departments.map((item) => ({ value: String(item.id), label: item.name }))]} required error={errors.departmentId ?? ''} onSelect={(value) => { departmentId = value; errors.departmentId = undefined; formError = ''; }} />{/if}
 				<label><span>Name <span class="required" aria-hidden="true">*</span></span><input bind:this={nameInput} bind:value={name} maxlength="128" placeholder="e.g. Example name" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} oninput={() => { errors.name = undefined; formError = ''; }} />{#if errors.name}<small id="name-error" class="field-error">{errors.name}</small>{/if}</label>
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : 'Add item'}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : addLabel}</button></footer>
 		</form>
-	</dialog></div>
+	</dialog></ModalBackdrop>
+	{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}
 {/if}
 
 <style>

@@ -1,4 +1,9 @@
-export type EmployeeMaster = { id: number; code?: string; name: string };
+export type EmployeeMaster = {
+	id: number;
+	name: string;
+	departmentId?: number | null;
+	department?: { id: number; name: string } | null;
+};
 export type EmployeeRole = { code: string; name: string };
 
 export type EmployeeProfile = {

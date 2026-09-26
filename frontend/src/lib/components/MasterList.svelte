@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, untrack, type Snippet } from 'svelte';
+	import SearchInput from '$lib/components/SearchInput.svelte';
 	import '$lib/styles/page-size-picker.css';
 	import '$lib/styles/action-menu.css';
 
@@ -76,8 +77,8 @@
 			if (!(cause instanceof DOMException && cause.name === 'AbortError')) error = cause instanceof Error?cause.message:'Unable to load data.';
 		} finally { if (controller === current) loading = false; }
 	}
-	function searchChanged(event: Event) {
-		search = (event.currentTarget as HTMLInputElement).value;
+	function searchChanged(value: string) {
+		search = value;
 		clearTimeout(timer);
 		timer = window.setTimeout(() => { appliedSearch = search.trim(); page = 1; void refresh(); }, 350);
 	}
@@ -100,7 +101,7 @@
 <div class="master-list">
 <header class="master-header"><div><h2>{listHeading ?? `All ${title.toLowerCase()}`}</h2><p>{description}</p></div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>
 <div class="master-toolbar">
-	<label class="search-box"><span class="sr-only">Search {endpoint.split('/').at(-1)}</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg><input type="search" value={search} placeholder="Search..." oninput={searchChanged} /></label>
+	<SearchInput label={`Search ${endpoint.split('/').at(-1)}`} value={search} onValueChange={searchChanged} />
 	<div class="page-size">Show <div class="page-size-picker"><button bind:this={sizeTrigger} class="page-size-trigger" type="button" aria-haspopup="listbox" aria-expanded={sizeOpen} onclick={() => sizeOpen = !sizeOpen} onkeydown={sizeTriggerKeydown}><span>{pageSize}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>{#if sizeOpen}<div class="page-size-options" role="listbox" aria-label="Entries per page">{#each sizes as size,index}<button type="button" role="option" aria-selected={pageSize === size} class:selected={pageSize === size} onclick={() => changeSize(size)} onkeydown={(event)=>sizeOptionKeydown(event,index)}>{size}</button>{/each}</div>{/if}</div> entries</div>
 </div>
 <div class="master-scroll" onscroll={() => closeMenu()}>
@@ -122,12 +123,6 @@
 	.master-header p{margin:1px 0 0;color:var(--muted);font-size:11.5px}
 	.master-header-actions{display:flex;align-items:center;gap:8px}
 	.master-toolbar{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-light)}
-	.search-box{position:relative;display:block;width:220px}
-	.search-box svg{position:absolute;top:50%;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none;transform:translateY(-50%)}
-	.search-box input{width:100%;height:32px;padding:0 10px 0 32px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none}
-	.search-box input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}
-	.search-box input::placeholder{color:#c0c7cf}
-	:global(html[data-theme='dark']) .search-box input::placeholder{color:#5a6473}
 	.master-scroll{min-height:0;overflow:auto}
 	table{width:100%;min-width:720px;table-layout:fixed;border-collapse:collapse;font-size:13px}
 	th{position:sticky;top:0;z-index:2;padding:8px 16px;background:var(--surface-secondary);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.3px;text-align:left;text-transform:uppercase}
@@ -156,5 +151,5 @@
 	.master-footer button[aria-current='page']{background:#1abb9c!important;color:#fff!important;border-color:#169f85}
 	.master-footer button:disabled{cursor:not-allowed;opacity:.5}
 	.master-footer button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
-	@media(max-width:700px){.master-list{max-height:calc(100dvh - 280px)}.master-header,.master-toolbar,.master-footer{align-items:stretch;flex-direction:column}.master-header-actions,.search-box{width:100%}}
+	@media(max-width:700px){.master-list{max-height:calc(100dvh - 280px)}.master-header,.master-toolbar,.master-footer{align-items:stretch;flex-direction:column}.master-header-actions{width:100%}}
 </style>

@@ -6,16 +6,20 @@
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import CpuTypesPage from '$lib/components/CpuTypesPage.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
+	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import ModalHeader from '$lib/components/ModalHeader.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import { formSnapshot } from '$lib/modalForm';
 	import '$lib/styles/add-button.css';
 
 	type Resource = 'it-asset-types' | 'manufacturers' | 'cpu-types' | 'operating-systems' | 'it-asset-statuses';
 	type Item = { id: number; name?: string; managementCodePrefix?: string; displayName?: string; sortOrder: number; manufacturerId?: number; series?: string; modelNumber?: string; vendor?: string; product?: string; version?: string; edition?: string | null; architecture?: string | null; officialUrl?: string | null; sourceCheckedOn?: string | null; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
 	const labels: Record<Resource, string> = { 'it-asset-types': 'Asset types', manufacturers: 'Manufacturers', 'cpu-types': 'CPU types', 'operating-systems': 'Operating systems', 'it-asset-statuses': 'Asset statuses' };
-	const singularLabels: Record<Resource, string> = { 'it-asset-types': 'asset types', manufacturers: 'manufacturer', 'cpu-types': 'CPU type', 'operating-systems': 'operating system', 'it-asset-statuses': 'asset status' };
+	const singularLabels: Record<Resource, string> = { 'it-asset-types': 'asset type', manufacturers: 'manufacturer', 'cpu-types': 'CPU type', 'operating-systems': 'operating system', 'it-asset-statuses': 'asset status' };
 	const allowed = new Set(Object.keys(labels));
 	const normalizeResource = (value: string): Resource => allowed.has(value) ? value as Resource : 'it-asset-types';
 	const blank = () => ({ name: '', managementCodePrefix: '', displayName: '', sortOrder: '0', manufacturerId: '', series: '', modelNumber: '', vendor: '', product: '', version: '', edition: '', architecture: '', officialUrl: '', sourceCheckedOn: '', supportsCpu: false, supportsRam: false, supportsOs: false, supportsLoginUsername: false, disposalDatePolicy: 'prohibited' });
@@ -23,10 +27,12 @@
 	let { data }: { data: { resource: string } } = $props();
 	const resource = $derived(normalizeResource(data.resource));
 	const title = $derived(labels[resource]);
-	const addLabel = $derived(`Add ${singularLabels[resource]}`);
+	const itemLabel = $derived(singularLabels[resource]);
+	const addLabel = $derived(`Add ${itemLabel}`);
 	let role = $state('');
 	let manufacturers = $state<Item[]>([]);
 	let editing = $state<Item | null>(null);
+	let modalTitle = $derived(`${editing ? 'Edit' : 'Add'} ${itemLabel}`);
 	let message = $state('');
 	let form = $state(blank());
 	let list = $state<MasterList>();
@@ -39,7 +45,10 @@
 	let addButton = $state<HTMLButtonElement>();
 	let returnFocus: HTMLElement | null = null;
 	let sourceDateOpen = $state(false);
+	let initialSnapshot = $state('');
+	let confirmingDiscard = $state(false);
 	let canManage = $derived(role === 'system_administrator' || role === 'business_administrator');
+	let hasUnsavedChanges = $derived(Boolean(editing) && initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 	let initialSortBy = $derived(resource === 'operating-systems' ? 'displayName' : resource === 'manufacturers' ? 'name' : 'sortOrder');
 	let minTableWidth = $derived(resource === 'operating-systems' ? 920 : resource === 'it-asset-types' || resource === 'manufacturers' ? 780 : 720);
 	let columns = $derived(resource === 'it-asset-types'
@@ -50,7 +59,7 @@
 				? [{ key: 'displayName', label: 'Name', value: (item: Item) => item.displayName }, { key: 'vendor', label: 'Vendor', value: (item: Item) => item.vendor }, { key: 'product', label: 'Product', value: (item: Item) => item.product }, { key: 'version', label: 'Version', value: (item: Item) => item.version }]
 				: [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'disposalDatePolicy', label: 'Disposal date', value: (item: Item) => item.disposalDatePolicy }]);
 
-	function resetForm() { editing = null; formOpen = false; sourceDateOpen = false; errors = {}; formError = ''; form = blank(); form.manufacturerId = manufacturers[0] ? String(manufacturers[0].id) : ''; }
+	function resetForm() { editing = null; formOpen = false; sourceDateOpen = false; errors = {}; formError = ''; form = blank(); form.manufacturerId = manufacturers[0] ? String(manufacturers[0].id) : ''; initialSnapshot = ''; confirmingDiscard = false; }
 	async function load() {
 		const session = await fetch('/v1/auth/session');
 		if (!session.ok) { message = 'Please sign in to continue.'; return; }
@@ -62,10 +71,12 @@
 	function edit(item: Item, trigger: HTMLButtonElement | null) {
 		returnFocus = trigger; editing = item; formOpen = true; errors = {}; formError = '';
 		form = { name: item.name ?? '', managementCodePrefix: item.managementCodePrefix ?? '', displayName: item.displayName ?? '', sortOrder: String(item.sortOrder), manufacturerId: item.manufacturerId ? String(item.manufacturerId) : '', series: item.series ?? '', modelNumber: item.modelNumber ?? '', vendor: item.vendor ?? '', product: item.product ?? '', version: item.version ?? '', edition: item.edition ?? '', architecture: item.architecture ?? '', officialUrl: item.officialUrl ?? '', sourceCheckedOn: item.sourceCheckedOn?.slice(0, 10) ?? '', supportsCpu: item.supportsCpu ?? false, supportsRam: item.supportsRam ?? false, supportsOs: item.supportsOs ?? false, supportsLoginUsername: item.supportsLoginUsername ?? false, disposalDatePolicy: item.disposalDatePolicy ?? 'prohibited' };
+		initialSnapshot = formSnapshot(form); confirmingDiscard = false;
 		void tick().then(() => formElement?.querySelector<HTMLInputElement>(resource === 'operating-systems' ? '[name="vendor"]' : '[name="name"]')?.focus());
 	}
 	function add() { returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null; resetForm(); formOpen = true; void tick().then(() => formElement?.querySelector<HTMLInputElement>(resource === 'operating-systems' ? '[name="vendor"]' : '[name="name"]')?.focus()); }
-	function closeForm() { if (saving) return; const focusTarget = returnFocus; resetForm(); void tick().then(() => focusTarget?.focus()); }
+	function closeFormImmediately() { if (saving) return; const focusTarget = returnFocus; resetForm(); void tick().then(() => focusTarget?.focus()); }
+	function requestCloseForm() { if (saving) return; sourceDateOpen = false; if (hasUnsavedChanges) { confirmingDiscard = true; return; } closeFormImmediately(); }
 	function clearError(field: string) { errors[field] = ''; formError = ''; }
 	async function save() {
 		if (saving) return;
@@ -97,8 +108,8 @@
 		message = ''; await load(); resetForm(); await list?.refresh();
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || !formOpen || !dialogElement) return;
-		if (event.key === 'Escape') { event.preventDefault(); if (sourceDateOpen) { sourceDateOpen = false; void tick().then(() => dialogElement?.querySelector<HTMLButtonElement>('[data-field="master-source-checked"] .date-trigger')?.focus()); } else closeForm(); return; }
+		if (event.defaultPrevented || confirmingDiscard || !formOpen || !dialogElement) return;
+		if (event.key === 'Escape') { event.preventDefault(); if (sourceDateOpen) { sourceDateOpen = false; void tick().then(() => dialogElement?.querySelector<HTMLButtonElement>('[data-field="master-source-checked"] .date-trigger')?.focus()); } else requestCloseForm(); return; }
 		if (event.key !== 'Tab') return;
 		const focusable = [...dialogElement.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled])')];
 		if (!focusable.length) return;
@@ -116,14 +127,14 @@
 	<CpuTypesPage />
 {:else}
 	<AssetManagementShell {title} active="">
-		<MasterPageHeader eyebrow="IT ASSET CONFIGURATION" {title} description="Maintain the controlled values used by IT asset records." actions={headerActions} />
+		<MasterPageHeader {title} description="Maintain the controlled values used by IT asset records." actions={headerActions} />
 		{#if message}<p class="notice" role="alert">{message}</p>{/if}
 		<section class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} {canManage} {minTableWidth} {initialSortBy} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
 	</AssetManagementShell>
 
 	{#if canManage && formOpen}
-		<div class="app-modal-backdrop" role="presentation"><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="it-master-dialog-title">
-			<header><h2 id="it-master-dialog-title">{editing ? 'Edit item' : 'Add item'}</h2><button class="app-modal-close" type="button" aria-label="Close item form" disabled={saving} onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="it-master-dialog-title">
+			<ModalHeader title={modalTitle} titleId="it-master-dialog-title" closeLabel={`Close ${itemLabel} form`} disabled={saving} onClose={requestCloseForm} />
 			<form bind:this={formElement} class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 				<div class="master-form-body app-modal-form-body">
 					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save item</strong><span>{formError}</span></div>{/if}
@@ -151,9 +162,10 @@
 						<FormSection title="Supported fields" framed><fieldset class="supported-fields"><legend class="visually-hidden">Supported fields</legend><label><input bind:checked={form.supportsCpu} type="checkbox" />CPU</label><label><input bind:checked={form.supportsRam} type="checkbox" />RAM</label><label><input bind:checked={form.supportsOs} type="checkbox" />OS</label><label><input bind:checked={form.supportsLoginUsername} type="checkbox" />Login username</label></fieldset></FormSection>
 					{/if}
 				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : 'Add item'}</button></footer>
+				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : addLabel}</button></footer>
 			</form>
-		</dialog></div>
+		</dialog></ModalBackdrop>
+		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}
 	{/if}
 {/if}
 

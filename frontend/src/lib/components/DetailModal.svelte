@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, type Snippet } from 'svelte';
+	import ModalBackdrop from './ModalBackdrop.svelte';
 
 	let {
 		title,
@@ -65,7 +66,7 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<div class="app-modal-backdrop" role="presentation">
+<ModalBackdrop onDismiss={close}>
 	<dialog bind:this={dialogElement} class={`app-modal app-detail-modal ${dialogClass}`} class:app-modal--compact={compact} open aria-modal="true" aria-labelledby={titleId}>
 		<header>
 			<div>
@@ -79,4 +80,4 @@
 		<div class="app-detail-body">{@render children()}</div>
 		{#if actions}<footer class="app-modal-footer app-detail-actions">{@render actions()}</footer>{/if}
 	</dialog>
-</div>
+</ModalBackdrop>

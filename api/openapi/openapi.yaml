@@ -14,6 +14,7 @@ tags:
   - name: Employee masters
   - name: Assets
   - name: Locations
+  - name: Work calendars
 paths:
   /v1/health:
     get:
@@ -22,6 +23,196 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Success'
+  /v1/work-calendars:
+    get:
+      tags: [Work calendars]
+      operationId: listWorkCalendars
+      description: Available to every authenticated role.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [id, code, name, createdAt, updatedAt], default: name } }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Work calendars]
+      operationId: createWorkCalendar
+      description: System administrator only.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/WorkCalendarWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/work-calendars/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Work calendars]
+      operationId: getWorkCalendar
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Work calendars]
+      operationId: updateWorkCalendar
+      description: System administrator only.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/WorkCalendarWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Work calendars]
+      operationId: deleteWorkCalendar
+      description: System administrator only. Soft-deletes the calendar and its entries, and clears employee assignments.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/work-calendars/{id}/entries:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Work calendars]
+      operationId: listWorkCalendarEntries
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - { name: sortBy, in: query, schema: { type: string, enum: [workDate, entryType, title, createdAt, updatedAt], default: workDate } }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Work calendars]
+      operationId: createWorkCalendarEntry
+      description: System administrator only.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/WorkCalendarEntryWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/work-calendars/{id}/entries/{entryId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: entryId, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    patch:
+      tags: [Work calendars]
+      operationId: updateWorkCalendarEntry
+      description: System administrator only.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/WorkCalendarEntryWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Work calendars]
+      operationId: deleteWorkCalendarEntry
+      description: System administrator only; performs a soft delete.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/calendar-date-attributes:
+    get:
+      tags: [Work calendars]
+      operationId: listCalendarDateAttributes
+      description: Returns stored weekend and public-holiday attributes from 2011 onward. Available to every authenticated role.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - { name: from, in: query, required: true, schema: { type: string, format: date, minimum: '2011-01-01' } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [calendarDate, kind, name], default: calendarDate } }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/calendar-holiday-imports:
+    get:
+      tags: [Work calendars]
+      operationId: listCalendarHolidayImports
+      description: Available to every authenticated role.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - { name: sortBy, in: query, schema: { type: string, enum: [completedAt, status, createdAt], default: completedAt } }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Work calendars]
+      operationId: importCalendarHolidays
+      description: System administrator only. Imports Cabinet Office public holidays from 2011 onward and keeps existing data when the source fails.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /v1/work-calendars/{id}/employees:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Work calendars]
+      operationId: listWorkCalendarEmployees
+      description: Available to every authenticated role.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - { name: sortBy, in: query, schema: { type: string, enum: [employee, employeeCode], default: employee } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [Work calendars]
+      operationId: replaceWorkCalendarEmployees
+      description: System administrator only. Each employee is assigned to at most one work calendar.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/WorkCalendarEmployeesWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/auth/login:
     post:
       tags: [Authentication]
@@ -157,16 +348,17 @@ paths:
         - $ref: '#/components/parameters/SortOrder'
         - name: sortBy
           in: query
-          description: Allowed values depend on the selected master. Only employee groups use code; departments, positions, employment types, manufacturers, CPU types, operating systems, IT asset types, and statuses use their documented name or display-name fields.
+          description: Allowed values depend on the selected master. Employee groups additionally allow department. Branches additionally allow openedOn and closedOn. Employee groups, departments, positions, employment types, manufacturers, IT asset types, and statuses use name; CPU types and operating systems use displayName.
           schema:
             type: string
-            enum: [id, code, name, displayName, managementCodePrefix, vendor, product, version, officialUrl, disposalDatePolicy, sortOrder, createdAt, updatedAt]
+            enum: [id, department, name, openedOn, closedOn, displayName, managementCodePrefix, vendor, product, version, officialUrl, disposalDatePolicy, sortOrder, createdAt, updatedAt]
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [Employee masters]
       operationId: createEmployeeMaster
+      description: Employee groups require name and departmentId. For branches, the request follows BranchWrite. A branch created with closedOn is immediately soft-deleted and omitted from active lists.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/JsonResource' }
       responses:
@@ -179,12 +371,14 @@ paths:
     patch:
       tags: [Employee masters]
       operationId: updateEmployeeMaster
+      description: Employee groups require name and departmentId; changing the department is rejected when it conflicts with assigned employees. For branches, the request follows BranchWrite. Setting closedOn soft-deletes the branch using the same database transaction time for updatedAt and deletedAt. A referenced branch cannot be closed.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/JsonResource' }
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '400': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
     delete:
       tags: [Employee masters]
       operationId: deleteEmployeeMaster
@@ -426,6 +620,28 @@ components:
       description: Case-insensitive sort direction. Responses normalize the value to lowercase.
       schema: { type: string, enum: [asc, desc, ASC, DESC], default: asc }
   requestBodies:
+    WorkCalendarWrite:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/WorkCalendarWrite' }
+    WorkCalendarEntryWrite:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/WorkCalendarEntryWrite' }
+    WorkCalendarEmployeesWrite:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [employeeIds]
+            properties:
+              employeeIds:
+                type: array
+                uniqueItems: true
+                items: { $ref: '#/components/schemas/PositiveIdInput' }
     EmployeeWrite:
       required: true
       content:
@@ -516,6 +732,44 @@ components:
                   details:
                     - { field: serialNumber, reason: This manufacturer and serial number combination is already in use. }
   schemas:
+    WorkCalendarWrite:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        name: { type: string, minLength: 1, maxLength: 128 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+    WorkCalendarEntryWrite:
+      type: object
+      required: [workDate, entryType, title]
+      properties:
+        workDate: { type: string, format: date }
+        entryType: { type: string, enum: [working_day, company_holiday] }
+        title: { type: string, minLength: 1, maxLength: 128 }
+        note: { type: [string, 'null'], maxLength: 5000 }
+    BranchWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
+        openedOn: { type: [string, 'null'], format: date }
+        closedOn: { type: [string, 'null'], format: date, description: Must not be before openedOn. A non-null value soft-deletes the branch. }
+        postalCode: { type: [string, 'null'], maxLength: 8, pattern: '^\d{3}-?\d{4}$' }
+        prefecture: { type: [string, 'null'], maxLength: 64 }
+        city: { type: [string, 'null'], maxLength: 128 }
+        streetAddress: { type: [string, 'null'], maxLength: 255 }
+        buildingName: { type: [string, 'null'], maxLength: 255 }
+        phoneNumber1: { type: [string, 'null'], maxLength: 32 }
+        phoneNumber1Label: { type: [string, 'null'], maxLength: 128 }
+        phoneNumber2: { type: [string, 'null'], maxLength: 32 }
+        phoneNumber2Label: { type: [string, 'null'], maxLength: 128 }
+        faxNumber1: { type: [string, 'null'], maxLength: 32 }
+        faxNumber1Label: { type: [string, 'null'], maxLength: 128 }
+        faxNumber2: { type: [string, 'null'], maxLength: 32 }
+        faxNumber2Label: { type: [string, 'null'], maxLength: 128 }
+        managerEmployeeId: { $ref: '#/components/schemas/OptionalPositiveIdInput' }
+        deputyManagerEmployeeId: { $ref: '#/components/schemas/OptionalPositiveIdInput' }
+        notes: { type: [string, 'null'], maxLength: 5000 }
     Role:
       type: object
       required: [code, name]
@@ -555,7 +809,7 @@ components:
         email: { type: string, format: email, maxLength: 254, description: Must be unique among employees. }
         hiredAt: { type: string, format: date }
         departmentId: { type: [integer, 'null'], minimum: 1 }
-        groupId: { type: [integer, 'null'], minimum: 1 }
+        groupId: { type: [integer, 'null'], minimum: 1, description: When provided, the group must belong to departmentId. }
         positionId: { type: [integer, 'null'], minimum: 1 }
         employmentTypeId: { type: integer, minimum: 1 }
         branchId: { type: integer, minimum: 1 }

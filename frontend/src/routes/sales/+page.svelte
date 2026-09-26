@@ -1,2 +1,5 @@
-<script lang="ts">import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';</script>
-<AssetManagementShell title="Sales" active=""><div><h1>Sales</h1><p>Sales dashboard is available for future reporting data.</p></div></AssetManagementShell>
+<script lang="ts">
+	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+</script>
+<AssetManagementShell title="Sales" active=""><MasterPageHeader title="Sales" description="Sales dashboard is available for future reporting data." /></AssetManagementShell>

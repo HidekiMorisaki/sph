@@ -21,55 +21,127 @@ enum DisposalDatePolicy {
 }
 
 model Employee {
-  id                    Int                    @id @default(autoincrement())
-  employeeCode          String                 @unique @map("employee_code")
-  firstName             String                 @map("first_name")
-  middleName            String?                @map("middle_name")
-  lastName              String                 @map("last_name")
-  nameKana              String?                @map("name_kana")
-  birthDate             DateTime               @map("birth_date") @db.Date
-  gender                String
-  bloodType             String?                @map("blood_type")
-  postalCode            String?                @map("postal_code") @db.VarChar(8)
-  prefecture            String?                @db.VarChar(64)
-  city                  String?                @db.VarChar(128)
-  streetAddress         String?                @map("street_address") @db.VarChar(255)
-  buildingName          String?                @map("building_name") @db.VarChar(255)
-  mobilePhone           String?                @map("mobile_phone")
-  email                 String                 @unique
-  hiredAt               DateTime               @map("hired_at") @db.Date
-  departmentId          Int?                   @map("department_id")
-  groupId               Int?                   @map("group_id")
-  positionId            Int?                   @map("position_id")
-  employmentTypeId      Int                    @map("employment_type_id")
-  branchId              Int                    @map("branch_id")
-  retiredAt             DateTime?              @map("retired_at") @db.Date
-  notes                 String?
-  username              String?                @unique
-  passwordHash          String?                @map("password_hash")
-  accountStatus         AccountStatus          @default(unprovisioned) @map("account_status")
-  mustChangeCredentials Boolean                @default(false) @map("must_change_credentials")
-  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz(3)
-  itAssetAssignments    ItAssetAssignment[]
-  itAssetChangeHistory  ItAssetChangeHistory[]
-  accountInvitations    AccountInvitation[]    @relation("InvitationRecipient")
-  issuedInvitations     AccountInvitation[]    @relation("InvitationIssuer")
-  sessions              Session[]
-  passwordResetTokens   PasswordResetToken[]
-  auditLogs             AuditLog[]
-  roleGrants            EmployeeRole[]         @relation("Grantee")
-  scopedGrants          EmployeeRole[]         @relation("ScopeEmployee")
-  managedBranches       Branch[]               @relation("BranchManager")
-  deputyManagedBranches Branch[]               @relation("BranchDeputyManager")
-  departmentRef         Department?            @relation(fields: [departmentId], references: [id])
-  group                 EmployeeGroup?         @relation(fields: [groupId], references: [id])
-  position              Position?              @relation(fields: [positionId], references: [id])
-  employmentType        EmploymentType         @relation(fields: [employmentTypeId], references: [id], onDelete: Restrict)
-  branch                Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  id                      Int                     @id @default(autoincrement())
+  employeeCode            String                  @unique @map("employee_code")
+  firstName               String                  @map("first_name")
+  middleName              String?                 @map("middle_name")
+  lastName                String                  @map("last_name")
+  nameKana                String?                 @map("name_kana")
+  birthDate               DateTime                @map("birth_date") @db.Date
+  gender                  String
+  bloodType               String?                 @map("blood_type")
+  postalCode              String?                 @map("postal_code") @db.VarChar(8)
+  prefecture              String?                 @db.VarChar(64)
+  city                    String?                 @db.VarChar(128)
+  streetAddress           String?                 @map("street_address") @db.VarChar(255)
+  buildingName            String?                 @map("building_name") @db.VarChar(255)
+  mobilePhone             String?                 @map("mobile_phone")
+  email                   String                  @unique
+  hiredAt                 DateTime                @map("hired_at") @db.Date
+  departmentId            Int?                    @map("department_id")
+  groupId                 Int?                    @map("group_id")
+  positionId              Int?                    @map("position_id")
+  employmentTypeId        Int                     @map("employment_type_id")
+  branchId                Int                     @map("branch_id")
+  workCalendarId          Int?                    @map("work_calendar_id")
+  retiredAt               DateTime?               @map("retired_at") @db.Date
+  notes                   String?
+  username                String?                 @unique
+  passwordHash            String?                 @map("password_hash")
+  accountStatus           AccountStatus           @default(unprovisioned) @map("account_status")
+  mustChangeCredentials   Boolean                 @default(false) @map("must_change_credentials")
+  createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt               DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  itAssetAssignments      ItAssetAssignment[]
+  itAssetChangeHistory    ItAssetChangeHistory[]
+  employeeChangeHistory   EmployeeChangeHistory[] @relation("EmployeeHistorySubject")
+  recordedEmployeeChanges EmployeeChangeHistory[] @relation("EmployeeHistoryActor")
+  accountInvitations      AccountInvitation[]     @relation("InvitationRecipient")
+  issuedInvitations       AccountInvitation[]     @relation("InvitationIssuer")
+  sessions                Session[]
+  passwordResetTokens     PasswordResetToken[]
+  auditLogs               AuditLog[]
+  roleGrants              EmployeeRole[]          @relation("Grantee")
+  scopedGrants            EmployeeRole[]          @relation("ScopeEmployee")
+  managedBranches         Branch[]                @relation("BranchManager")
+  deputyManagedBranches   Branch[]                @relation("BranchDeputyManager")
+  departmentRef           Department?             @relation(fields: [departmentId], references: [id])
+  group                   EmployeeGroup?          @relation(fields: [groupId], references: [id])
+  position                Position?               @relation(fields: [positionId], references: [id])
+  employmentType          EmploymentType          @relation(fields: [employmentTypeId], references: [id], onDelete: Restrict)
+  branch                  Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  workCalendar            WorkCalendar?           @relation(fields: [workCalendarId], references: [id], onDelete: Restrict)
 
+  @@index([workCalendarId])
   @@map("employees")
+}
+
+model WorkCalendar {
+  id                         Int               @id @default(autoincrement())
+  name                       String            @unique @db.VarChar(128)
+  calendarYear               Int               @map("calendar_year")
+  scheduledWorkMinutesPerDay Int               @default(465) @map("scheduled_work_minutes_per_day")
+  description                String?           @db.VarChar(1000)
+  createdAt                  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                  DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  employees                  Employee[]
+  entries                    WorkCalendarDay[]
+
+  @@index([calendarYear])
+  @@map("work_calendars")
+}
+
+model WorkCalendarDay {
+  id         Int          @id @default(autoincrement())
+  calendarId Int          @map("calendar_id")
+  workDate   DateTime     @map("work_date") @db.Date
+  entryType  String       @default("working_day") @map("entry_type") @db.VarChar(32)
+  title      String       @db.VarChar(128)
+  note       String?      @db.VarChar(5000)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  calendar   WorkCalendar @relation(fields: [calendarId], references: [id], onDelete: Restrict)
+
+  @@unique([calendarId, workDate])
+  @@index([calendarId])
+  @@map("work_calendar_days")
+}
+
+model CalendarDateAttribute {
+  id           Int       @id @default(autoincrement())
+  calendarDate DateTime  @map("calendar_date") @db.Date
+  kind         String    @db.VarChar(32)
+  name         String    @db.VarChar(128)
+  source       String    @db.VarChar(32)
+  sourceUrl    String?   @map("source_url") @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@unique([calendarDate, kind])
+  @@index([calendarDate])
+  @@map("calendar_date_attributes")
+}
+
+model CalendarHolidayImport {
+  id            Int       @id @default(autoincrement())
+  importKey     String    @unique @default(dbgenerated("gen_random_uuid()")) @map("import_key") @db.Uuid
+  sourceUrl     String    @map("source_url") @db.VarChar(500)
+  rangeStart    DateTime? @map("range_start") @db.Date
+  rangeEnd      DateTime? @map("range_end") @db.Date
+  importedCount Int       @default(0) @map("imported_count")
+  status        String    @db.VarChar(20)
+  errorMessage  String?   @map("error_message") @db.VarChar(500)
+  completedAt   DateTime  @default(now()) @map("completed_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([completedAt])
+  @@map("calendar_holiday_imports")
 }
 
 model Role {
@@ -108,26 +180,29 @@ model EmployeeRole {
 }
 
 model Department {
-  id         Int            @id @default(autoincrement())
-  name       String         @unique
-  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt  DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  id         Int             @id @default(autoincrement())
+  name       String          @unique
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?       @map("deleted_at") @db.Timestamptz(3)
   employees  Employee[]
+  groups     EmployeeGroup[]
   roleGrants EmployeeRole[]
 
   @@map("departments")
 }
 
 model EmployeeGroup {
-  id        Int        @id @default(autoincrement())
-  code      String     @unique
-  name      String     @unique
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt DateTime?  @map("deleted_at") @db.Timestamptz(3)
-  employees Employee[]
+  id           Int         @id @default(autoincrement())
+  departmentId Int?        @map("department_id")
+  name         String
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  employees    Employee[]
 
+  @@unique([departmentId, name])
   @@map("employee_groups")
 }
 
@@ -173,6 +248,8 @@ model Storage {
 model Branch {
   id                      Int        @id @default(autoincrement())
   name                    String     @unique
+  openedOn                DateTime?  @map("opened_on") @db.Date
+  closedOn                DateTime?  @map("closed_on") @db.Date
   postalCode              String?    @map("postal_code") @db.VarChar(8)
   prefecture              String?    @db.VarChar(64)
   city                    String?    @db.VarChar(128)
@@ -377,6 +454,25 @@ model ItAssetChangeHistory {
   @@index([assetId, changedAt])
   @@index([actorId])
   @@map("it_asset_change_history")
+}
+
+model EmployeeChangeHistory {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  employeeId Int       @map("employee_id")
+  actorId    Int       @map("actor_id")
+  action     String    @db.VarChar(20)
+  changes    Json
+  changedAt  DateTime  @default(now()) @map("changed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation("EmployeeHistorySubject", fields: [employeeId], references: [id], onDelete: Restrict)
+  actor      Employee  @relation("EmployeeHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, changedAt])
+  @@index([actorId])
+  @@map("employee_change_history")
 }
 
 model AuditLog {

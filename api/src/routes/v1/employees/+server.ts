@@ -3,6 +3,7 @@ import { requireAdminApi, requireAuthenticatedApi, writeAuditLog } from '$lib/se
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
 import { employeeReferenceDate } from '$lib/server/api/employee-derived';
+import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
 import { employeeOutput, employeeSafeSelect } from '$lib/server/api/employee-output';
 import { employeeReferenceErrors } from '$lib/server/api/employee-references';
 import { canAssignRequestedRoles, createGlobalRoleGrants } from '$lib/server/api/employee-roles';
@@ -259,6 +260,7 @@ export async function POST({ request, locals, url }: import('./$types').RequestE
 			const created = await tx.employee.create({ data: input.employee, select: { id: true } });
 			if (!await createGlobalRoleGrants(tx, created.id, input.roleCodes)) throw new Error('role unavailable');
 			const invitation = actor.roles.includes('system_administrator') ? await issueInvitation(tx, created.id, actor.id, input.employee.email) : null;
+			await recordEmployeeChange(tx, created.id, actor.id, 'create', null, await readEmployeeFields(tx, created.id));
 			await writeAuditLog(tx, actor.id, 'create', 'employee', created.id);
 			await writeAuditLog(tx, actor.id, 'update_roles', 'employee', created.id);
 			return { status: 'created' as const, item: await tx.employee.findUniqueOrThrow({ where: { id: created.id }, select: employeeSafeSelect }), invitation };

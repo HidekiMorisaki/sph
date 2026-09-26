@@ -8,7 +8,7 @@
 
 <AssetManagementShell title="System settings">
 	<div class="preview">
-		<MasterPageHeader eyebrow="SITE MANAGEMENT" title="System settings" description="Review system-wide configuration." />
+		<MasterPageHeader title="System settings" description="Review system-wide configuration." />
 		<section aria-labelledby="preview-heading">
 			<h2 id="preview-heading">System configuration</h2>
 			<p>System-wide settings will be available here.</p>

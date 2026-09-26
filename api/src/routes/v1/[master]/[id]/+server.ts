@@ -1,6 +1,6 @@
 import { requireAdminApi, requireSystemAdminApi } from '$lib/server/api/admin';
 import { duplicateField, parseId } from '$lib/server/api/database';
-import { BranchEmployeeReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
+import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
 import { cpuTypeConflictField, deleteItAssetMaster, isItAssetMasterResource, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
 import { failure, success, throwApiError } from '$lib/server/api/response';
 
@@ -21,6 +21,9 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
 	} catch (error) {
 		if (error instanceof BranchEmployeeReferenceError) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', [{ field: error.field, reason: 'Select an existing employee.' }]);
+		if (error instanceof BranchInUseError) return failure(409, 'RESOURCE_IN_USE', 'The branch is still referenced.');
+		if (error instanceof EmployeeGroupDepartmentReferenceError) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', [{ field: 'departmentId', reason: 'Select an active department.' }]);
+		if (error instanceof EmployeeGroupDepartmentConflictError) return failure(409, 'RESOURCE_IN_USE', 'The group is referenced by employees in another department.');
 		const field = selected === 'cpu-types' ? cpuTypeConflictField(error) : duplicateField(error);
 		if (field) return failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]);
 		return failure(400, 'INVALID_REQUEST', 'Invalid request.');

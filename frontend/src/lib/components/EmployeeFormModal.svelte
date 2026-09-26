@@ -2,8 +2,11 @@
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import type { Employee, EmployeeMaster, EmployeeProfile, EmployeeRole } from '$lib/employees';
+	import { formSnapshot } from '$lib/modalForm';
 	import DatePicker from './DatePicker.svelte';
+	import DiscardChangesDialog from './DiscardChangesDialog.svelte';
 	import FormSection from './FormSection.svelte';
+	import ModalBackdrop from './ModalBackdrop.svelte';
 	import SearchSelect from './SearchSelect.svelte';
 
 	type Mode = 'create' | 'admin-edit' | 'self-edit';
@@ -50,7 +53,11 @@
 	let formError = $state('');
 	let saving = $state(false);
 	let activeDateField = $state<DateField | null>(null);
+	let initialSnapshot = $state('');
+	let confirmingDiscard = $state(false);
 	let selfEdit = $derived(mode === 'self-edit');
+	let availableGroups = $derived((masters['employee-groups'] ?? []).filter((item) => item.departmentId != null && String(item.departmentId) === form.departmentId));
+	let hasUnsavedChanges = $derived(mode !== 'create' && initialSnapshot !== '' && formSnapshot(selfEdit ? selfPayload() : form) !== initialSnapshot);
 
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
 	const fieldError = (field: string) => fieldErrors[field] ?? (missingFields.includes(field) ? (field === 'roleCodes' ? 'Select at least one role.' : 'This field is required.') : '');
@@ -66,6 +73,7 @@
 			positionId: full?.positionId == null ? '' : String(full.positionId), employmentTypeId: full?.employmentTypeId == null ? '' : String(full.employmentTypeId),
 			branchId: full?.branchId == null ? '' : String(full.branchId), retiredAt: iso(full?.retiredAt), notes: full?.notes ?? '', roleCodes: full?.roles.map((role) => role.code) ?? []
 		};
+		if (!availableGroups.some((group) => String(group.id) === form.groupId)) form.groupId = '';
 	}
 	function clearFieldError(field: string) {
 		if (fieldErrors[field]) { const next = { ...fieldErrors }; delete next[field]; fieldErrors = next; }
@@ -73,6 +81,13 @@
 		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = '';
 	}
 	function updateTextField(field: Exclude<keyof Form, 'roleCodes'>, value: string) { form[field] = value; clearFieldError(field); }
+	function chooseSelect(field: SelectField, value: string) {
+		form[field] = value;
+		clearFieldError(field);
+		if (field !== 'departmentId') return;
+		if (!availableGroups.some((group) => String(group.id) === form.groupId)) form.groupId = '';
+		clearFieldError('groupId');
+	}
 	function chooseDate(field: DateField, value: string) { form[field] = value; clearFieldError(field); activeDateField = null; }
 	function roleIsLocked(roleCode: string) { return roleCode === 'system_administrator' && !currentUserRoles.includes('system_administrator'); }
 	function toggleRole(roleCode: string) {
@@ -80,10 +95,17 @@
 		form.roleCodes = form.roleCodes.includes(roleCode) ? form.roleCodes.filter((code) => code !== roleCode) : [...form.roleCodes, roleCode];
 		clearFieldError('roleCodes');
 	}
-	function close() {
+	function closeImmediately() {
+		confirmingDiscard = false;
 		if (saving) return;
 		onClose();
 		void tick().then(() => returnFocus?.focus());
+	}
+	function requestClose() {
+		if (saving) return;
+		activeDateField = null;
+		if (hasUnsavedChanges) { confirmingDiscard = true; return; }
+		closeImmediately();
 	}
 	function focusFormField(field: string) {
 		const selector = field === 'roleCodes' ? '.roles-field input:not(:disabled)' : field === 'birthDate' || field === 'hiredAt' || field === 'retiredAt' ? `.custom-date[data-field="${field}"] .date-trigger` : ['gender', 'bloodType', 'departmentId', 'groupId', 'positionId', 'employmentTypeId', 'branchId'].includes(field) ? `.form-select-picker[data-field="${field}"] .form-select-trigger` : `[name="${field}"]`;
@@ -123,13 +145,14 @@
 		finally { saving = false; }
 	}
 	function windowKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || event.key !== 'Escape') return;
+		if (event.defaultPrevented || confirmingDiscard || event.key !== 'Escape') return;
 		if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusFormField(field)); return; }
-		close();
+		requestClose();
 	}
 
 	onMount(() => {
 		initializeForm();
+		initialSnapshot = formSnapshot(selfEdit ? selfPayload() : form);
 		void tick().then(() => dialogElement?.querySelector<HTMLInputElement>(selfEdit ? '[name="firstName"]' : '[name="employeeCode"]')?.focus());
 	});
 </script>
@@ -139,16 +162,16 @@
 {#snippet dateInput(label: string, field: DateField, value: string, above = false, required = false)}
 	<DatePicker {label} {field} {value} {above} {required} error={fieldError(field)} open={activeDateField === field} onToggle={() => activeDateField = activeDateField === field ? null : field} onSelect={(selected) => chooseDate(field, selected)} />
 {/snippet}
-{#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false)}
-	<SearchSelect {label} {field} value={form[field]} {options} {required} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => { form[field] = value; clearFieldError(field); }} />
+{#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false, disabled = false)}
+	<SearchSelect {label} {field} value={form[field]} {options} {required} {disabled} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => chooseSelect(field, value)} />
 {/snippet}
 {#snippet textInput(label: string, field: Exclude<keyof Form, 'roleCodes'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
-<div class="app-modal-backdrop" role="presentation">
+<ModalBackdrop onDismiss={requestClose} disabled={saving}>
 	<dialog bind:this={dialogElement} class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title">
-		<header><h2 id="employee-form-title">{mode === 'create' ? 'Add employee' : selfEdit ? 'Profile' : 'Edit employee'}</h2><button class="app-modal-close" type="button" aria-label="Close employee form" disabled={saving} onclick={close}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="employee-form-title">{mode === 'create' ? 'Add employee' : selfEdit ? 'Profile' : 'Edit employee'}</h2><button class="app-modal-close" type="button" aria-label="Close employee form" disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form class="employee-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body">
 				{#if formError}<div class="app-modal-error-summary wide" role="alert"><strong>Unable to save employee</strong><span>{formError}</span></div>{/if}
@@ -161,7 +184,7 @@
 				</FormSection>
 				{#if !selfEdit}
 					<FormSection title="Employment" framed>
-						{@render dateInput('Hire date', 'hiredAt', form.hiredAt, false, true)}{@render formSelect('Department', 'departmentId', [{ value: '', label: '-' }, ...(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))])}{@render formSelect('Group', 'groupId', [{ value: '', label: '-' }, ...(masters['employee-groups'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))])}{@render formSelect('Position', 'positionId', [{ value: '', label: '-' }, ...(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))])}{@render formSelect('Employment type', 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect('Branch', 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput('Retirement date', 'retiredAt', form.retiredAt, true)}
+						{@render dateInput('Hire date', 'hiredAt', form.hiredAt, false, true)}{@render formSelect('Department', 'departmentId', [{ value: '', label: '-' }, ...(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))])}{@render formSelect('Group', 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.departmentId)}{@render formSelect('Position', 'positionId', [{ value: '', label: '-' }, ...(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))])}{@render formSelect('Employment type', 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect('Branch', 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput('Retirement date', 'retiredAt', form.retiredAt, true)}
 					</FormSection>
 					<FormSection title="Additional information" framed>
 						<label class="wide">Notes<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder="e.g. Notes about this employee" oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
@@ -171,10 +194,11 @@
 					</FormSection>
 				{/if}
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={close}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : mode === 'create' ? 'Add employee' : 'Save changes'}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : mode === 'create' ? 'Add employee' : 'Save changes'}</button></footer>
 		</form>
 	</dialog>
-</div>
+</ModalBackdrop>
+{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeImmediately} />{/if}
 
 <style>
 	.wide{grid-column:1/-1}

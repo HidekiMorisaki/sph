@@ -4,15 +4,18 @@ const tables = [
 	'employees', 'roles', 'employee_roles', 'departments', 'employee_groups', 'positions', 'employment_types',
 	'storage', 'branches', 'rooms', 'it_assets', 'it_asset_types', 'manufacturers',
 	'cpu_types', 'operating_systems', 'it_asset_statuses', 'it_asset_assignments',
-	'it_asset_change_history', 'audit_logs', 'sessions', 'password_reset_tokens', 'account_invitations'
+	'it_asset_change_history', 'employee_change_history', 'audit_logs', 'sessions', 'password_reset_tokens', 'account_invitations',
+	'work_calendars', 'work_calendar_days', 'calendar_date_attributes', 'calendar_holiday_imports'
 ];
 const naturalKeyIndexes = [
-	'employees_employee_code_key', 'employees_email_key', 'roles_code_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'departments_name_key', 'employee_groups_code_key',
+	'employees_employee_code_key', 'employees_email_key', 'roles_code_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'departments_name_key', 'employee_groups_department_id_name_key', 'employee_groups_unassigned_name_key',
 	'positions_name_key', 'employment_types_name_key', 'storage_branch_id_room_id_name_key', 'branches_name_key', 'rooms_branch_id_name_key',
 	'it_assets_asset_tag_key', 'it_asset_types_name_key', 'manufacturers_name_key',
 	'cpu_types_display_name_key', 'operating_systems_display_name_key', 'it_asset_statuses_name_key',
-	'it_asset_assignments_asset_id_assigned_at_key', 'it_asset_change_history_event_key_key', 'audit_logs_event_key_key',
-	'sessions_token_hash_key', 'password_reset_tokens_token_hash_key', 'account_invitations_token_hash_key'
+	'it_asset_assignments_asset_id_assigned_at_key', 'it_asset_change_history_event_key_key', 'employee_change_history_event_key_key', 'audit_logs_event_key_key',
+	'sessions_token_hash_key', 'password_reset_tokens_token_hash_key', 'account_invitations_token_hash_key',
+	'work_calendars_name_key', 'work_calendar_days_calendar_id_work_date_key',
+	'calendar_date_attributes_calendar_date_kind_key', 'calendar_holiday_imports_import_key_key'
 ];
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 
@@ -84,6 +87,16 @@ try {
 		WHERE table_schema = 'public' AND table_name = 'branches' AND is_nullable = 'YES' AND data_type = 'integer'
 			AND column_name IN ('manager_employee_id', 'deputy_manager_employee_id')
 	`);
+	const branchDateColumns = await count(`
+		SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'branches' AND is_nullable = 'YES' AND data_type = 'date'
+			AND column_name IN ('opened_on', 'closed_on')
+	`);
+	const branchDateOrderConstraint = await count(`
+		SELECT count(*) FROM information_schema.table_constraints
+		WHERE constraint_schema = 'public' AND table_name = 'branches'
+			AND constraint_name = 'branches_date_order' AND constraint_type = 'CHECK'
+	`);
 	const branchResponsibilityForeignKeys = await count(`
 		SELECT count(*) FROM information_schema.referential_constraints
 		WHERE constraint_schema = 'public' AND delete_rule = 'RESTRICT'
@@ -100,7 +113,7 @@ try {
 	`);
 	const removedCodeColumns = await count(`
 		SELECT count(*) FROM information_schema.columns
-		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage', 'positions', 'departments', 'employment_types', 'it_asset_types', 'it_asset_statuses', 'manufacturers', 'cpu_types', 'operating_systems') AND column_name = 'code'
+		WHERE table_schema = 'public' AND table_name IN ('branches', 'rooms', 'storage', 'positions', 'departments', 'employee_groups', 'employment_types', 'it_asset_types', 'it_asset_statuses', 'manufacturers', 'cpu_types', 'operating_systems', 'work_calendars') AND column_name = 'code'
 	`);
 	const retainedRoleCodeColumn = await count(`
 		SELECT count(*) FROM information_schema.columns
@@ -138,9 +151,9 @@ try {
 			)
 	`);
 	const removedUsersTable = await count("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
-	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, branchContactColumns, branchResponsibilityColumns, branchResponsibilityForeignKeys, branchResponsibilityIndexes, removedLocationClassificationColumns, removedCodeColumns, retainedRoleCodeColumn, removedAssetTables, storageReferenceColumns, oldItAssetLocationColumn, storageRoomForeignKey, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
+	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, branchContactColumns, branchResponsibilityColumns, branchDateColumns, branchDateOrderConstraint, branchResponsibilityForeignKeys, branchResponsibilityIndexes, removedLocationClassificationColumns, removedCodeColumns, retainedRoleCodeColumn, removedAssetTables, storageReferenceColumns, oldItAssetLocationColumn, storageRoomForeignKey, requiredEmployeeColumns, requiredEmployeeReferences, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
 	console.log(JSON.stringify(result));
-	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || branchContactColumns !== 8 || branchResponsibilityColumns !== 2 || branchResponsibilityForeignKeys !== 2 || branchResponsibilityIndexes !== 2 || removedLocationClassificationColumns !== 0 || removedCodeColumns !== 0 || retainedRoleCodeColumn !== 1 || removedAssetTables !== 0 || storageReferenceColumns !== 3 || oldItAssetLocationColumn !== 0 || storageRoomForeignKey !== 1 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
+	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || branchContactColumns !== 8 || branchResponsibilityColumns !== 2 || branchDateColumns !== 2 || branchDateOrderConstraint !== 1 || branchResponsibilityForeignKeys !== 2 || branchResponsibilityIndexes !== 2 || removedLocationClassificationColumns !== 0 || removedCodeColumns !== 0 || retainedRoleCodeColumn !== 1 || removedAssetTables !== 0 || storageReferenceColumns !== 3 || oldItAssetLocationColumn !== 0 || storageRoomForeignKey !== 1 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
 		process.exitCode = 1;
 	}
 } finally {

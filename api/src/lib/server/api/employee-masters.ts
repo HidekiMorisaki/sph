@@ -5,11 +5,13 @@ import type { ListQuery } from '$lib/server/api/query';
 
 export const employeeMasterResources = ['departments', 'employee-groups', 'positions', 'employment-types', 'branches'] as const;
 export type EmployeeMasterResource = (typeof employeeMasterResources)[number];
-export const masterSortFields = ['id', 'code', 'name', 'createdAt', 'updatedAt'] as const;
 export const namedMasterSortFields = ['id', 'name', 'createdAt', 'updatedAt'] as const;
-export const branchSortFields = ['id', 'name', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'faxNumber1', 'notes', 'createdAt', 'updatedAt'] as const;
-export type MasterSortField = (typeof masterSortFields)[number] | (typeof namedMasterSortFields)[number] | (typeof branchSortFields)[number];
+export const employeeGroupSortFields = ['id', 'department', 'name', 'createdAt', 'updatedAt'] as const;
+export const branchSortFields = ['id', 'name', 'openedOn', 'closedOn', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'faxNumber1', 'notes', 'createdAt', 'updatedAt'] as const;
+export type MasterSortField = (typeof namedMasterSortFields)[number] | (typeof employeeGroupSortFields)[number] | (typeof branchSortFields)[number];
 type BranchContactInput = {
+	openedOn: Date | null;
+	closedOn: Date | null;
 	postalCode: string | null;
 	prefecture: string | null;
 	city: string | null;
@@ -26,7 +28,7 @@ type BranchContactInput = {
 	managerEmployeeId: number | null;
 	deputyManagerEmployeeId: number | null;
 };
-export type EmployeeMasterInput = { code?: string; name: string; notes?: string | null } & Partial<BranchContactInput>;
+export type EmployeeMasterInput = { name: string; departmentId?: number; notes?: string | null } & Partial<BranchContactInput>;
 
 function optionalText(body: Record<string, unknown>, key: string, maximum: number): string | null | undefined {
 	const raw = body[key];
@@ -43,14 +45,45 @@ function optionalId(body: Record<string, unknown>, key: string): number | null |
 	return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+function optionalDate(body: Record<string, unknown>, key: string): Date | null | undefined {
+	const raw = body[key];
+	if (raw === undefined || raw === null || raw === '') return null;
+	if (typeof raw !== 'string') return undefined;
+	const value = raw.trim();
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+	const parsed = new Date(`${value}T00:00:00.000Z`);
+	return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value ? parsed : undefined;
+}
+
 const branchEmployeeSelect = { id: true, employeeCode: true, firstName: true, middleName: true, lastName: true } as const;
 const branchRelations = {
 	manager: { select: branchEmployeeSelect },
 	deputyManager: { select: branchEmployeeSelect }
 } as const;
+const employeeGroupRelations = { department: { select: { id: true, name: true } } } as const;
 
 export class BranchEmployeeReferenceError extends Error {
 	constructor(readonly field: 'managerEmployeeId' | 'deputyManagerEmployeeId') { super('Invalid branch employee reference.'); }
+}
+
+export class BranchInUseError extends Error {
+	constructor() { super('The branch is still referenced.'); }
+}
+
+export class EmployeeGroupDepartmentReferenceError extends Error {
+	constructor() { super('Invalid employee group department reference.'); }
+}
+
+export class EmployeeGroupDepartmentConflictError extends Error {
+	constructor() { super('The employee group is referenced by employees in another department.'); }
+}
+
+async function branchReferenceCount(tx: Prisma.TransactionClient, id: number) {
+	const [employees, rooms] = await Promise.all([
+		tx.employee.count({ where: { branchId: id, deletedAt: null } }),
+		tx.room.count({ where: { branchId: id, deletedAt: null } })
+	]);
+	return employees + rooms;
 }
 
 async function validateBranchEmployees(tx: Prisma.TransactionClient, data: EmployeeMasterInput) {
@@ -70,6 +103,8 @@ async function validateBranchEmployees(tx: Prisma.TransactionClient, data: Emplo
 function branchData(data: EmployeeMasterInput) {
 	return {
 		name: data.name,
+		openedOn: data.openedOn ?? null,
+		closedOn: data.closedOn ?? null,
 		postalCode: data.postalCode ?? null,
 		prefecture: data.prefecture ?? null,
 		city: data.city ?? null,
@@ -97,12 +132,16 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 	if (!value || typeof value !== 'object') return null;
 	const body = value as Record<string, unknown>;
 	if (typeof body.name !== 'string') return null;
-	const code = typeof body.code === 'string' ? body.code.trim() : '';
 	const name = body.name.trim();
-	const usesCode = resource === 'employee-groups';
-	if ((usesCode && !code) || !name || code.length > 64 || name.length > 128) return null;
-	if (resource !== 'branches') return usesCode ? { code, name } : { name };
+	if (!name || name.length > 128) return null;
+	if (resource === 'employee-groups') {
+		const departmentId = optionalId(body, 'departmentId');
+		return typeof departmentId === 'number' ? { name, departmentId } : null;
+	}
+	if (resource !== 'branches') return { name };
 	const values = {
+		openedOn: optionalDate(body, 'openedOn'),
+		closedOn: optionalDate(body, 'closedOn'),
 		postalCode: optionalText(body, 'postalCode', 8),
 		prefecture: optionalText(body, 'prefecture', 64),
 		city: optionalText(body, 'city', 128),
@@ -121,6 +160,7 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 		notes: optionalText(body, 'notes', 5000)
 	};
 	if (Object.values(values).some((value) => value === undefined)) return null;
+	if (values.openedOn && values.closedOn && values.closedOn < values.openedOn) return null;
 	if (values.postalCode && !/^\d{3}-?\d{4}$/.test(values.postalCode)) return null;
 	const phonePattern = /^[+0-9][0-9 ()-]{6,31}$/;
 	for (const number of [values.phoneNumber1, values.phoneNumber2, values.faxNumber1, values.faxNumber2]) if (number && !phonePattern.test(number)) return null;
@@ -137,7 +177,6 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 		{ [query.sortBy]: query.sortOrder },
 		...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])
 	];
-	const codedPage = { where: { deletedAt: null, ...(search ? { OR: [{ code: { contains: search, mode: 'insensitive' as const } }, { name: { contains: search, mode: 'insensitive' as const } }] } : {}) }, skip: query.offset, take: query.limit } as const;
 	const namedPage = { where: { deletedAt: null, ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}) }, skip: query.offset, take: query.limit } as const;
 	switch (resource) {
 		case 'departments': {
@@ -148,9 +187,19 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 			return { total, items };
 		}
 		case 'employee-groups': {
+			const where: Prisma.EmployeeGroupWhereInput = {
+				deletedAt: null,
+				...(search ? { OR: [
+					{ name: { contains: search, mode: 'insensitive' } },
+					{ department: { is: { deletedAt: null, name: { contains: search, mode: 'insensitive' } } } }
+				] } : {})
+			};
+			const groupOrderBy = query.sortBy === 'department'
+				? [{ department: { name: query.sortOrder } }, { id: 'asc' as const }]
+				: orderBy as Prisma.EmployeeGroupOrderByWithRelationInput[];
 			const [total, items] = await db.$transaction([
-				db.employeeGroup.count({ where: codedPage.where }),
-				db.employeeGroup.findMany({ ...codedPage, orderBy: orderBy as Prisma.EmployeeGroupOrderByWithRelationInput[] })
+				db.employeeGroup.count({ where }),
+				db.employeeGroup.findMany({ where, skip: query.offset, take: query.limit, orderBy: groupOrderBy, include: employeeGroupRelations })
 			]);
 			return { total, items };
 		}
@@ -199,15 +248,29 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 
 export async function createMaster(resource: EmployeeMasterResource, data: EmployeeMasterInput, actorId: number) {
 	return getPrisma().$transaction(async (tx) => {
-		let item: { id: number; name: string; code?: string; notes?: string | null };
+		let item: { id: number; name: string; notes?: string | null };
 		switch (resource) {
 			case 'departments': item = await tx.department.create({ data: { name: data.name } }); break;
-			case 'employee-groups': item = await tx.employeeGroup.create({ data: { code: data.code!, name: data.name } }); break;
+			case 'employee-groups': {
+				const departmentId = data.departmentId!;
+				if (await tx.department.count({ where: { id: departmentId, deletedAt: null } }) !== 1) throw new EmployeeGroupDepartmentReferenceError();
+				item = await tx.employeeGroup.create({ data: { name: data.name, departmentId }, include: employeeGroupRelations });
+				break;
+			}
 			case 'positions': item = await tx.position.create({ data: { name: data.name } }); break;
 			case 'employment-types': item = await tx.employmentType.create({ data: { name: data.name } }); break;
-			case 'branches': await validateBranchEmployees(tx, data); item = await tx.branch.create({ data: branchData(data), include: branchRelations }); break;
+			case 'branches': {
+				await validateBranchEmployees(tx, data);
+				const branch = branchData(data);
+				if (data.closedOn) {
+					const [{ now }] = await tx.$queryRaw<Array<{ now: Date }>>`SELECT CURRENT_TIMESTAMP AS now`;
+					item = await tx.branch.create({ data: { ...branch, updatedAt: now, deletedAt: now }, include: branchRelations });
+				} else item = await tx.branch.create({ data: branch, include: branchRelations });
+				break;
+			}
 		}
 		await writeAuditLog(tx, actorId, 'create', resource, item.id);
+		if (resource === 'branches' && data.closedOn) await writeAuditLog(tx, actorId, 'delete', resource, item.id);
 		return item;
 	}, { isolationLevel: 'Serializable' });
 }
@@ -217,16 +280,34 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 		let result: { count: number };
 		switch (resource) {
 			case 'departments': result = await tx.department.updateMany({ where: { id, deletedAt: null }, data: { name: data.name } }); break;
-			case 'employee-groups': result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data: { code: data.code!, name: data.name } }); break;
+			case 'employee-groups': {
+				const departmentId = data.departmentId!;
+				if (await tx.department.count({ where: { id: departmentId, deletedAt: null } }) !== 1) throw new EmployeeGroupDepartmentReferenceError();
+				const conflictingEmployees = await tx.employee.count({
+					where: { groupId: id, deletedAt: null, OR: [{ departmentId: null }, { departmentId: { not: departmentId } }] }
+				});
+				if (conflictingEmployees > 0) throw new EmployeeGroupDepartmentConflictError();
+				result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, departmentId } });
+				break;
+			}
 			case 'positions': result = await tx.position.updateMany({ where: { id, deletedAt: null }, data: { name: data.name } }); break;
 			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data: { name: data.name } }); break;
-			case 'branches': await validateBranchEmployees(tx, data); result = await tx.branch.updateMany({ where: { id, deletedAt: null }, data: branchData(data) }); break;
+			case 'branches': {
+				await validateBranchEmployees(tx, data);
+				if (data.closedOn && await branchReferenceCount(tx, id) > 0) throw new BranchInUseError();
+				const branch = branchData(data);
+				if (data.closedOn) {
+					const [{ now }] = await tx.$queryRaw<Array<{ now: Date }>>`SELECT CURRENT_TIMESTAMP AS now`;
+					result = await tx.branch.updateMany({ where: { id, deletedAt: null }, data: { ...branch, updatedAt: now, deletedAt: now } });
+				} else result = await tx.branch.updateMany({ where: { id, deletedAt: null }, data: branch });
+				break;
+			}
 		}
 		if (result.count !== 1) return null;
-		await writeAuditLog(tx, actorId, 'update', resource, id);
-		return resource === 'branches'
-			? tx.branch.findUniqueOrThrow({ where: { id }, include: branchRelations })
-			: { id, ...(data.code ? { code: data.code } : {}), name: data.name };
+		await writeAuditLog(tx, actorId, resource === 'branches' && data.closedOn ? 'delete' : 'update', resource, id);
+		if (resource === 'branches') return tx.branch.findUniqueOrThrow({ where: { id }, include: branchRelations });
+		if (resource === 'employee-groups') return tx.employeeGroup.findUniqueOrThrow({ where: { id }, include: employeeGroupRelations });
+		return { id, name: data.name };
 	}, { isolationLevel: 'Serializable' });
 }
 
@@ -234,11 +315,16 @@ export async function softDeleteMaster(resource: EmployeeMasterResource, id: num
 	return getPrisma().$transaction(async (tx) => {
 		let referenced = 0;
 		switch (resource) {
-			case 'departments': referenced = await tx.employee.count({ where: { departmentId: id, deletedAt: null } }); break;
+			case 'departments': {
+				const employees = await tx.employee.count({ where: { departmentId: id, deletedAt: null } });
+				const groups = await tx.employeeGroup.count({ where: { departmentId: id, deletedAt: null } });
+				referenced = employees + groups;
+				break;
+			}
 			case 'employee-groups': referenced = await tx.employee.count({ where: { groupId: id, deletedAt: null } }); break;
 			case 'positions': referenced = await tx.employee.count({ where: { positionId: id, deletedAt: null } }); break;
 			case 'employment-types': referenced = await tx.employee.count({ where: { employmentTypeId: id, deletedAt: null } }); break;
-			case 'branches': referenced = await tx.employee.count({ where: { branchId: id, deletedAt: null } }) + await tx.room.count({ where: { branchId: id, deletedAt: null } }); break;
+			case 'branches': referenced = await branchReferenceCount(tx, id); break;
 		}
 		if (referenced > 0) return 'referenced';
 		const now = new Date();

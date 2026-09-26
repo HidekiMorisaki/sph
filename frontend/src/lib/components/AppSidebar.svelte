@@ -4,12 +4,11 @@
 	import { productName } from '$lib/brand';
 	import type { EmployeeProfile } from '$lib/employees';
 	import EmployeeFormModal from './EmployeeFormModal.svelte';
-	import { icons, isExpandableMenu, menus, parentMenuForPath, roleLabels, type Item } from './sidebarNavigation';
+	import { icons, menus, parentMenuForPath, roleLabels, type Item } from './sidebarNavigation';
 
 	type User = { username: string; name: string | null; role: string };
 	let { collapsed, user, currentPath = '', home = false, onLogout, onProfileSaved }: { collapsed: boolean; user: User | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void>; onProfileSaved?: (profile: EmployeeProfile) => void } = $props();
 	let canManageMasters = $derived(user?.role === 'system_administrator' || user?.role === 'business_administrator');
-	const openMenuStorageKey = 'asset-sidebar-open-menu';
 	let chosenMenu = $state<string | null>(null);
 	let openMenu = $derived(chosenMenu ?? parentMenuForPath(currentPath) ?? '');
 	let previousPath = '';
@@ -31,9 +30,8 @@
 		clearTimeout(animationTimer);
 		animateMenu = false;
 	}
-	function rememberOpenMenu(text: string) {
+	function setOpenMenu(text: string) {
 		chosenMenu = text;
-		localStorage.setItem(openMenuStorageKey, text);
 	}
 	function showRailLabel(text: string, event: Event) {
 		if (!(collapsed || compact) || !(event.currentTarget instanceof HTMLElement)) return;
@@ -55,7 +53,7 @@
 		}
 		stopMenuAnimation();
 		animateMenu = true;
-		rememberOpenMenu(openMenu === item.text ? '' : item.text);
+		setOpenMenu(openMenu === item.text ? '' : item.text);
 		animationTimer = setTimeout(() => animateMenu = false, 220);
 	}
 	async function openProfile() {
@@ -84,8 +82,9 @@
 		if (path === previousPath) return;
 		previousPath = path;
 		stopMenuAnimation();
-		const parent = parentMenuForPath(path);
-		if (parent) rememberOpenMenu(parent);
+		setOpenMenu(parentMenuForPath(path) ?? '');
+		railFlyout = '';
+		railLabel = '';
 	});
 	$effect(() => {
 		if (!collapsed && !compact) {
@@ -94,9 +93,7 @@
 		}
 	});
 	onMount(() => {
-		const saved = localStorage.getItem(openMenuStorageKey);
-		const fallback = saved === '' || (saved !== null && isExpandableMenu(saved)) ? saved : '';
-		rememberOpenMenu(parentMenuForPath(currentPath) ?? fallback);
+		localStorage.removeItem('asset-sidebar-open-menu');
 		localStorage.removeItem('home-masters-open');
 		const query = matchMedia('(max-width: 760px)');
 		compact = query.matches;

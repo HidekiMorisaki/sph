@@ -1,13 +1,19 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
+	import type { ChangeHistoryEntry } from '$lib/change-history';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import ChangeHistorySection from '$lib/components/ChangeHistorySection.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import { formSnapshot } from '$lib/modalForm';
 
 	type Named = { id: number; code?: string; name: string; displayName?: string; managementCodePrefix?: string; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
 	type Branch = Named;
@@ -19,8 +25,6 @@
 	type DateField = 'purchasedOn' | 'disposalOn';
 	type SelectField = 'typeId' | 'statusId' | 'manufacturerId' | 'cpuTypeId' | 'operatingSystemId' | 'branchId' | 'roomId' | 'storageId' | 'assignEmployeeId';
 	type SelectOption = { value: string; label: string; searchTerms?: string[] };
-	type ChangeDetail = { field: string; before: string | null; after: string | null };
-	type ChangeHistory = { id: number; changedAt: string; actorName: string; action: string; changes: ChangeDetail[] };
 	const historyFields: Record<string, string> = { assetTag: 'Management code', typeId: 'Type', manufacturerId: 'Manufacturer', modelNumber: 'Model number', serialNumber: 'Serial number', cpuTypeId: 'CPU type', ramGb: 'RAM (GB)', operatingSystemId: 'Operating system', loginUsername: 'Login username', storageId: 'Storage', statusId: 'Status', purchasedOn: 'Purchase date', disposalOn: 'Disposal date', notes: 'Notes', assigneeId: 'Employee' };
 	const historyActions: Record<string, string> = { create: 'Created', update: 'Updated', delete: 'Deleted', assign: 'Assigned', return: 'Returned' };
 	type FormField = keyof ReturnType<typeof blank>;
@@ -52,7 +56,7 @@
 	let rooms = $state<Room[]>([]);
 	let storageItems = $state<Storage[]>([]);
 	let employees = $state<Assignee[]>([]);
-	let changeHistory = $state<ChangeHistory[]>([]);
+	let changeHistory = $state<ChangeHistoryEntry[]>([]);
 	let historyLoading = $state(false);
 	let historyError = $state(false);
 	let historyRequestId = 0;
@@ -74,11 +78,14 @@
 	let dialogElement = $state<HTMLDialogElement>();
 	let returnFocus: HTMLElement | null = null;
 	let activeDateField = $state<DateField | null>(null);
+	let initialSnapshot = $state('');
+	let confirmingDiscard = $state(false);
 
 	const selectedType = $derived(types.find((item) => String(item.id) === form.typeId));
 	const selectedStatus = $derived(statuses.find((item) => String(item.id) === form.statusId));
 	const availableRooms = $derived(rooms.filter((item) => String(item.branchId) === branchId));
 	const availableStorage = $derived(storageItems.filter((item) => String(item.roomId) === roomId && String(item.branchId) === branchId));
+	let hasUnsavedChanges = $derived(Boolean(editing) && role !== '' && initialSnapshot !== '' && formSnapshot({ form, branchId, roomId, assignEmployeeId }) !== initialSnapshot);
 
 	async function load() {
 		const session = await fetch('/v1/auth/session');
@@ -102,14 +109,22 @@
 			if (open) (dialogElement?.querySelector<HTMLElement>('form .form-select-trigger:not(:disabled), form input:not(:disabled), form textarea:not(:disabled)') ?? dialogElement?.querySelector<HTMLElement>('.modal-close'))?.focus();
 		});
 	}
-	function closeForm() {
+	function closeFormImmediately() {
+		confirmingDiscard = false;
 		open = false;
+		initialSnapshot = '';
 		formError = '';
 		fieldErrors = {};
 		activeDateField = null;
 		previewRequestId++;
 		codeLoading = false;
 		void tick().then(() => returnFocus?.focus());
+	}
+	function requestCloseForm() {
+		if (saving) return;
+		activeDateField = null;
+		if (hasUnsavedChanges) { confirmingDiscard = true; return; }
+		closeFormImmediately();
 	}
 	function create() {
 		returnFocus = document.activeElement as HTMLElement;
@@ -123,6 +138,8 @@
 		formError = '';
 		fieldErrors = {};
 		activeDateField = null;
+		initialSnapshot = '';
+		confirmingDiscard = false;
 		open = true;
 		focusForm();
 		void refreshCodePreview(form.typeId);
@@ -139,6 +156,8 @@
 		formError = '';
 		fieldErrors = {};
 		activeDateField = null;
+		initialSnapshot = formSnapshot({ form, branchId, roomId, assignEmployeeId });
+		confirmingDiscard = false;
 		open = true;
 		focusForm();
 	}
@@ -158,7 +177,7 @@
 		historyError = false;
 		changeHistory = [];
 		try {
-			const history = await allPages<ChangeHistory>(`it-assets/${assetId}/history`, 'desc');
+			const history = await allPages<ChangeHistoryEntry>(`it-assets/${assetId}/history`, 'desc');
 			if (requestId === historyRequestId && detailAsset?.id === assetId) changeHistory = history;
 		} catch { if (requestId === historyRequestId && detailAsset?.id === assetId) historyError = true; }
 		finally { if (requestId === historyRequestId) historyLoading = false; }
@@ -214,7 +233,7 @@
 			}
 			const saved = await apiData<Asset>(response);
 			const result = editing ? `IT asset ${saved.assetTag} updated.` : `IT asset ${saved.assetTag} created.`;
-			closeForm();
+			closeFormImmediately();
 			message = result;
 			await assetList?.refresh();
 		} catch {
@@ -282,10 +301,10 @@
 		else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 	}
 	function modalKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented) return;
+		if (event.defaultPrevented || confirmingDiscard) return;
 		if (detailAsset) return;
 		if (!open) return;
-		if (event.key === 'Escape') { event.preventDefault(); if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusField(field)); } else closeForm(); return; }
+		if (event.key === 'Escape') { event.preventDefault(); if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusField(field)); } else requestCloseForm(); return; }
 		if (event.key === 'Tab') trapDialogTab(event, dialogElement);
 	}
 
@@ -308,12 +327,10 @@
 {#snippet assetCodeCell(item: Asset)}<strong class="asset-primary">{item.assetTag}</strong><small class="asset-secondary">{item.serialNumber ?? ''}</small>{/snippet}
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
+{#snippet pageActions()}{#if role !== ''}<AddButton label="Add IT asset" onclick={create} />{/if}{/snippet}
 
 <AssetManagementShell title="IT Assets" active="IT Assets">
-	<div class="heading">
-		<div><p>ASSET INVENTORY</p><h1>IT Assets</h1><span>Track computers, servers, network appliances, power equipment and peripherals.</span></div>
-		{#if role !== ''}<AddButton label="Add IT asset" onclick={create} />{/if}
-	</div>
+	<MasterPageHeader title="IT Assets" description="Track computers, servers, network appliances, power equipment and peripherals." actions={pageActions} />
 	{#if message}<p class="notice">{message}</p>{/if}
 	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title="IT assets" listHeading="All IT assets" description="Find and manage assets across locations." initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={role !== ''} canDelete={role !== ''} actionLabel={(item) => (item as Asset).assetTag} loadingLabel="Loading IT assets…" emptyLabel="No matches found" columns={[
 		{ key: 'assetTag', label: 'Management code', width: 15, cell: assetCodeCell },
@@ -326,9 +343,9 @@
 		{ key: 'status', label: 'Status', width: 9, cell: statusCell }
 	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} onEdit={(item, trigger) => edit(item as Asset, trigger)} onDelete={(item) => remove(item as Asset)} />
 	{#if open}
-		<div class="backdrop app-modal-backdrop" role="presentation">
+		<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
-				<header><h2 id="asset-form-title">{editing ? (role !== '' ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset form" onclick={closeForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<header><h2 id="asset-form-title">{editing ? (role !== '' ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset form" disabled={saving} onclick={requestCloseForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 				<form class="asset-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
 					<div class="asset-form-body app-modal-form-body">
 						{#if formError}<div class="form-error-summary app-modal-error-summary wide" role="alert"><strong>Unable to save IT asset</strong><span>{formError}</span></div>{/if}
@@ -362,10 +379,11 @@
 						{@render searchableSelect('Employee', 'assignEmployeeId', [{ value: '', label: 'Unassigned' }, ...employees.map(employee => ({ value: String(employee.id), label: employeeName(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName] }))])}
 						</FormSection>
 					</div>
-					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={closeForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add IT asset'}</button>{/if}</footer>
+					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add IT asset'}</button>{/if}</footer>
 				</form>
 			</dialog>
-		</div>
+		</ModalBackdrop>
+		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}
 	{/if}
 	{#if detailAsset}
 		<DetailModal title="IT asset detail" titleId="asset-detail-title" closeLabel="Close IT asset detail" returnFocus={detailReturnFocus} onClose={closeDetail}>
@@ -394,24 +412,12 @@
 						{@render detailField('Employee', detailAsset.assignments[0] ? assigneeName(detailAsset.assignments[0]) : '')}
 						<div class="app-detail-wide"><dt>Notes</dt><dd class="app-detail-notes">{detailAsset.notes ?? ''}</dd></div>
 			</dl></section>
-			<section class="app-detail-section"><h3>Change history</h3><div class="history" aria-label="Change history">
-						{#if historyLoading}<p>Loading change history…</p>
-						{:else if historyError}<p role="alert">Unable to load change history.</p>
-						{:else if changeHistory.length === 0}<p>No changes recorded yet.</p>
-						{:else}{#each changeHistory as entry}<article class="history-event"><div class="history-event-heading"><strong>{historyActions[entry.action] ?? entry.action}</strong><span>{new Date(entry.changedAt).toLocaleString()}</span><span>by {entry.actorName}</span></div>
-							{#if entry.changes.length}<table><colgroup><col class="history-field-column"/><col class="history-value-column"/><col class="history-value-column"/></colgroup><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>{#each entry.changes as change}<tr><th scope="row">{historyFields[change.field] ?? change.field}</th><td>{change.before ?? '-'}</td><td>{change.after ?? '-'}</td></tr>{/each}</tbody></table>{/if}
-						</article>{/each}{/if}
-			</div></section>
+			<ChangeHistorySection entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} actionLabels={historyActions} />
 		</DetailModal>
 	{/if}
 </AssetManagementShell>
 
 <style>
-	.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}
-	.heading p{margin:0;color:#1abb9c;font-size:11px;font-weight:700;letter-spacing:.08em}.heading h1{margin:4px 0;font-size:30px}.heading span{color:var(--muted)}
 	.notice{color:var(--muted);font-size:12px}.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:11px}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}
 	.wide{grid-column:1/-1}
-	.history{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:5px}.history p{margin:0;padding:12px;color:var(--muted);font-size:12px}.history table{width:100%;min-width:420px;font-size:12px}.history th,.history td{position:static;padding:8px 12px}
-	.history-event{padding:12px;border-bottom:1px solid var(--border)}.history-event:last-child{border-bottom:0}.history-event-heading{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px;margin-bottom:8px}.history-event-heading span{color:var(--muted)}.history-event table{table-layout:fixed;border-collapse:collapse}.history-field-column{width:28%}.history-value-column{width:36%}.history-event th,.history-event td{text-align:left;vertical-align:top;border-top:1px solid var(--border);overflow-wrap:anywhere}.history-event th{font-weight:600}
-	@media(max-width:700px){.heading{align-items:stretch;flex-direction:column}}
 </style>

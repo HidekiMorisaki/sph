@@ -124,6 +124,9 @@ try {
 	const unauthenticatedCodePreview = await request('/v1/it-asset-code-previews?typeId=1');
 	if (unauthenticatedCodePreview.status !== 401) throw new Error(`Management code preview guard failed (${unauthenticatedCodePreview.status}).`);
 	await payload(unauthenticatedCodePreview);
+	const unauthenticatedCalendars = await request('/v1/work-calendars');
+	if (unauthenticatedCalendars.status !== 401) throw new Error(`Unauthenticated work calendar guard failed (${unauthenticatedCalendars.status}).`);
+	await payload(unauthenticatedCalendars);
 
 	const login = await request('/v1/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: username, password }) });
 	const loginPayload = await payload(login);
@@ -159,6 +162,27 @@ try {
 	if (invalidLimit.status !== 422 || (await payload(invalidLimit)).error.code !== 'INVALID_LIMIT') throw new Error('The list limit guard verification failed.');
 	const databaseResult = await client.query('SELECT deleted_at IS NOT NULL AS deleted FROM departments WHERE id = $1', [item.id]);
 	if (databaseResult.rowCount !== 1 || !databaseResult.rows[0].deleted) throw new Error('The record was not retained as soft-deleted data.');
+	const groupDepartmentResponse = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Group department ${suffix}` }) });
+	const otherGroupDepartmentResponse = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Other group department ${suffix}` }) });
+	if (groupDepartmentResponse.status !== 201 || otherGroupDepartmentResponse.status !== 201) throw new Error('Group department setup failed.');
+	const groupDepartment = (await payload(groupDepartmentResponse)).data;
+	const otherGroupDepartment = (await payload(otherGroupDepartmentResponse)).data;
+	const groupName = `Group ${suffix}`;
+	const employeeGroupResponse = await request('/v1/employee-groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: groupName, departmentId: groupDepartment.id }) });
+	if (employeeGroupResponse.status !== 201) throw new Error(`Employee group create failed (${employeeGroupResponse.status}).`);
+	const employeeGroup = (await payload(employeeGroupResponse)).data;
+	if (employeeGroup.departmentId !== groupDepartment.id || employeeGroup.department?.id !== groupDepartment.id) throw new Error('Employee group response omitted its department.');
+	const sameNameOtherDepartmentResponse = await request('/v1/employee-groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: groupName, departmentId: otherGroupDepartment.id }) });
+	if (sameNameOtherDepartmentResponse.status !== 201) throw new Error('The same group name was not accepted in another department.');
+	const sameNameOtherDepartment = (await payload(sameNameOtherDepartmentResponse)).data;
+	const duplicateGroup = await request('/v1/employee-groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: groupName, departmentId: groupDepartment.id }) });
+	if (duplicateGroup.status !== 409 || !(await payload(duplicateGroup)).error.details.some((detail) => detail.field === 'name')) throw new Error('Employee group department-scoped uniqueness failed.');
+	const groupListResponse = await request(`/v1/employee-groups?search=${encodeURIComponent(groupDepartment.name)}&sortBy=department&sortOrder=asc&limit=10`);
+	const groupListPayload = await payload(groupListResponse);
+	if (groupListResponse.status !== 200 || !groupListPayload.data.some((entry) => entry.id === employeeGroup.id && entry.department?.id === groupDepartment.id)) throw new Error('Employee group department search or sort failed.');
+	const referencedGroupDepartment = await request(`/v1/departments/${groupDepartment.id}`, { method: 'DELETE' });
+	if (referencedGroupDepartment.status !== 409 || (await payload(referencedGroupDepartment)).error.code !== 'RESOURCE_IN_USE') throw new Error('Department group reference guard failed.');
+	if ((await request(`/v1/employee-groups/${sameNameOtherDepartment.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Employee group duplicate cleanup failed.');
 
 	const employmentTypeResponse = await request('/v1/employment-types', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Employee type ${suffix}` }) });
 	if (employmentTypeResponse.status !== 201) throw new Error(`Employment type verification failed (${employmentTypeResponse.status}).`);
@@ -167,7 +191,9 @@ try {
 	if (employeeBranchResponse.status !== 201) throw new Error(`Employee branch verification failed (${employeeBranchResponse.status}).`);
 	const employeeBranch = (await payload(employeeBranchResponse)).data;
 	const employeeCode = `EMP${suffix}`;
-	const employeeInput = { employeeCode, firstName: 'API', lastName: 'Verification', birthDate: '1990-03-15', gender: 'unspecified', email: `${suffix.toLowerCase()}@example.test`, hiredAt: '2020-04-01', employmentTypeId: employmentType.id, branchId: employeeBranch.id, roleCodes: ['general_user'] };
+	const employeeInput = { employeeCode, firstName: 'API', lastName: 'Verification', birthDate: '1990-03-15', gender: 'unspecified', email: `${suffix.toLowerCase()}@example.test`, hiredAt: '2020-04-01', departmentId: groupDepartment.id, groupId: employeeGroup.id, employmentTypeId: employmentType.id, branchId: employeeBranch.id, roleCodes: ['general_user'] };
+	const mismatchedGroupResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `GROUP${suffix}`, email: `${suffix.toLowerCase()}-group@example.test`, departmentId: otherGroupDepartment.id }) });
+	await expectEmployeeError(mismatchedGroupResponse, 400, 'VALIDATION_ERROR', 'groupId');
 	const missingRolesResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `NOROLE${suffix}`, roleCodes: [] }) });
 	if (missingRolesResponse.status !== 400) throw new Error(`Required employee roles create guard failed (${missingRolesResponse.status}).`);
 	await payload(missingRolesResponse);
@@ -184,6 +210,8 @@ try {
 	if (employeeResponse.status !== 201) throw new Error(`Employee create verification failed (${employeeResponse.status}).`);
 	const employee = (await payload(employeeResponse)).data;
 	if (hasRemovedEmployeeFields(employee) || !hasEmployeeDerivedFields(employee) || employee.email !== employeeInput.email || employee.roles.length !== 1 || employee.roles[0].code !== 'general_user') throw new Error('Employee create response contract failed.');
+	const conflictingGroupMove = await request(`/v1/employee-groups/${employeeGroup.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: groupName, departmentId: otherGroupDepartment.id }) });
+	if (conflictingGroupMove.status !== 409 || (await payload(conflictingGroupMove)).error.code !== 'RESOURCE_IN_USE') throw new Error('Employee group department conflict guard failed.');
 	if (employee.canIssueInvitation !== true || !employee.invitationUrl?.startsWith('/account-setup#token=')) throw new Error('System administrator employee creation did not issue an invitation.');
 	const invitationToken = new URLSearchParams(new URL(employee.invitationUrl, baseUrl).hash.slice(1)).get('token');
 	if (!invitationToken || invitationToken.length !== 43) throw new Error('Invitation token format is invalid.');
@@ -348,10 +376,21 @@ try {
 	if (invalidEmployeeSearch.status !== 422 || (await payload(invalidEmployeeSearch)).error.code !== 'INVALID_SEARCH') throw new Error('Employee search length guard verification failed.');
 	const invalidColumnMetadata = await request('/v1/employees?includeColumns=yes');
 	if (invalidColumnMetadata.status !== 422 || (await payload(invalidColumnMetadata)).error.code !== 'INVALID_INCLUDE_COLUMNS') throw new Error('Employee column metadata guard verification failed.');
-	const branchContactInput = { name: employeeBranch.name, phoneNumber1: '0000-00-0000', phoneNumber1Label: `Main ${suffix}`, phoneNumber2: '0000-00-1111', phoneNumber2Label: 'Development', faxNumber1: '0000-00-2222', faxNumber1Label: 'Main', faxNumber2: '0000-00-3333', faxNumber2Label: 'Development', managerEmployeeId: employee.id, deputyManagerEmployeeId: employeeId, notes: 'Employee API verification branch' };
+	const branchContactInput = { name: employeeBranch.name, openedOn: '2020-04-01', closedOn: null, phoneNumber1: '0000-00-0000', phoneNumber1Label: `Main ${suffix}`, phoneNumber2: '0000-00-1111', phoneNumber2Label: 'Development', faxNumber1: '0000-00-2222', faxNumber1Label: 'Main', faxNumber2: '0000-00-3333', faxNumber2Label: 'Development', managerEmployeeId: employee.id, deputyManagerEmployeeId: employeeId, notes: 'Employee API verification branch' };
 	const branchContactUpdate = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(branchContactInput) });
 	const updatedBranch = (await payload(branchContactUpdate)).data;
-	if (branchContactUpdate.status !== 200 || updatedBranch.phoneNumber2 !== branchContactInput.phoneNumber2 || updatedBranch.faxNumber2Label !== branchContactInput.faxNumber2Label || updatedBranch.manager?.id !== employee.id || updatedBranch.deputyManager?.id !== employeeId) throw new Error('Branch contact and responsibility update failed.');
+	if (branchContactUpdate.status !== 200 || updatedBranch.openedOn?.slice(0, 10) !== branchContactInput.openedOn || updatedBranch.phoneNumber2 !== branchContactInput.phoneNumber2 || updatedBranch.faxNumber2Label !== branchContactInput.faxNumber2Label || updatedBranch.manager?.id !== employee.id || updatedBranch.deputyManager?.id !== employeeId) throw new Error('Branch dates, contact, and responsibility update failed.');
+	for (const invalidDates of [
+		{ openedOn: '2020-02-30', closedOn: null },
+		{ openedOn: '2020-04-01', closedOn: '2020-03-31' }
+	]) {
+		const invalidBranchDate = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, ...invalidDates }) });
+		if (invalidBranchDate.status !== 400 || (await payload(invalidBranchDate)).error.code !== 'INVALID_REQUEST') throw new Error('Branch date validation failed.');
+	}
+	const referencedBranchClose = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, closedOn: '2026-09-25' }) });
+	if (referencedBranchClose.status !== 409 || (await payload(referencedBranchClose)).error.code !== 'RESOURCE_IN_USE') throw new Error('Referenced branch closing guard failed.');
+	const unchangedReferencedBranch = await client.query('SELECT closed_on IS NULL AND deleted_at IS NULL AS unchanged FROM branches WHERE id = $1', [employeeBranch.id]);
+	if (!unchangedReferencedBranch.rows[0]?.unchanged) throw new Error('Referenced branch closing was not rolled back.');
 	const branchSearch = await request(`/v1/branches?search=${encodeURIComponent(branchContactInput.phoneNumber1Label)}`);
 	if (branchSearch.status !== 200 || !(await payload(branchSearch)).data.some((entry) => entry.id === employeeBranch.id)) throw new Error('Branch contact search failed.');
 	const invalidBranchManager = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: 2147483647 }) });
@@ -371,10 +410,29 @@ try {
 	if (clearedBranchManager.status !== 200) throw new Error('Branch manager could not be cleared.');
 	const removedEmployee = await request(`/v1/employees/${employee.id}`, { method: 'DELETE' });
 	if (removedEmployee.status !== 200) throw new Error(`Employee soft-delete verification failed (${removedEmployee.status}).`);
+	const movedGroupResponse = await request(`/v1/employee-groups/${employeeGroup.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Moved ${suffix}`, departmentId: otherGroupDepartment.id }) });
+	if (movedGroupResponse.status !== 200 || (await payload(movedGroupResponse)).data.department?.id !== otherGroupDepartment.id) throw new Error('Unreferenced employee group department update failed.');
+	if ((await request(`/v1/employee-groups/${employeeGroup.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Employee group cleanup failed.');
+	if ((await request(`/v1/departments/${groupDepartment.id}`, { method: 'DELETE' })).status !== 200 || (await request(`/v1/departments/${otherGroupDepartment.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Employee group department cleanup failed.');
 	const removedEmploymentType = await request(`/v1/employment-types/${employmentType.id}`, { method: 'DELETE' });
 	if (removedEmploymentType.status !== 200) throw new Error(`Employment type soft-delete verification failed (${removedEmploymentType.status}).`);
-	const removedEmployeeBranch = await request(`/v1/branches/${employeeBranch.id}`, { method: 'DELETE' });
-	if (removedEmployeeBranch.status !== 200) throw new Error(`Employee branch soft-delete verification failed (${removedEmployeeBranch.status}).`);
+	const closedEmployeeBranch = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: null, deputyManagerEmployeeId: null, closedOn: '2026-09-25' }) });
+	const closedEmployeeBranchData = (await payload(closedEmployeeBranch)).data;
+	if (closedEmployeeBranch.status !== 200 || closedEmployeeBranchData.closedOn?.slice(0, 10) !== '2026-09-25') throw new Error(`Employee branch closing verification failed (${closedEmployeeBranch.status}).`);
+	const closedEmployeeBranchState = await client.query('SELECT closed_on::text AS closed_on, deleted_at = updated_at AS timestamps_match FROM branches WHERE id = $1', [employeeBranch.id]);
+	if (closedEmployeeBranchState.rows[0]?.closed_on !== '2026-09-25' || !closedEmployeeBranchState.rows[0]?.timestamps_match) throw new Error('Branch closing dates were not stored consistently.');
+	const closedBranchList = await request(`/v1/branches?search=${encodeURIComponent(employeeBranch.name)}`);
+	if (closedBranchList.status !== 200 || (await payload(closedBranchList)).data.some((entry) => entry.id === employeeBranch.id)) throw new Error('Closed branch remained in the active list.');
+	const closedBranchUpdate = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: null, deputyManagerEmployeeId: null }) });
+	if (closedBranchUpdate.status !== 404) throw new Error('Closed branch remained editable.');
+	await payload(closedBranchUpdate);
+	const historicalBranchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Historical branch ${suffix}`, openedOn: '2000-01-01', closedOn: '2010-12-31' }) });
+	const historicalBranch = (await payload(historicalBranchResponse)).data;
+	if (historicalBranchResponse.status !== 201 || historicalBranch.closedOn?.slice(0, 10) !== '2010-12-31') throw new Error('Historical closed branch creation failed.');
+	const historicalBranchState = await client.query('SELECT deleted_at IS NOT NULL AS deleted, deleted_at = updated_at AS timestamps_match FROM branches WHERE id = $1', [historicalBranch.id]);
+	if (!historicalBranchState.rows[0]?.deleted || !historicalBranchState.rows[0]?.timestamps_match) throw new Error('Historical branch was not created as soft-deleted.');
+	const historicalBranchList = await request(`/v1/branches?search=${encodeURIComponent(historicalBranch.name)}&sortBy=openedOn&sortOrder=asc`);
+	if (historicalBranchList.status !== 200 || (await payload(historicalBranchList)).data.some((entry) => entry.id === historicalBranch.id)) throw new Error('Historical closed branch remained in the active list.');
 
 	const branchResponse = await request('/v1/branches', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Branch ${suffix}`, notes: 'Asset API verification branch' }) });
 	if (branchResponse.status !== 201) throw new Error(`Branch verification failed (${branchResponse.status}).`);
@@ -513,6 +571,27 @@ try {
 	if (Number(afterDeleteAsset.assetTag.split('-')[1]) <= Number(fourthAsset.assetTag.split('-')[1])) throw new Error('A soft-deleted management code was reused.');
 	const removedAfterDelete = await request(`/v1/it-assets/${afterDeleteAsset.id}`, { method: 'DELETE' });
 	if (removedAfterDelete.status !== 200) throw new Error(`Post-delete IT asset cleanup failed (${removedAfterDelete.status}).`);
+	const calendarResponse = await request('/v1/work-calendars', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Calendar ${suffix}`, calendarYear: 2030, description: 'API verification calendar' }) });
+	if (calendarResponse.status !== 201) throw new Error(`Work calendar create verification failed (${calendarResponse.status}).`);
+	const workCalendar = (await payload(calendarResponse)).data;
+	const calendarUpdate = await request(`/v1/work-calendars/${workCalendar.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Updated calendar ${suffix}`, calendarYear: 2030, description: 'Updated API verification calendar' }) });
+	if (calendarUpdate.status !== 200) throw new Error(`Work calendar update verification failed (${calendarUpdate.status}).`);
+	const workingDayResponse = await request(`/v1/work-calendars/${workCalendar.id}/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-04-01', entryType: 'working_day', title: 'Verification day', note: 'Verification note' }) });
+	if (workingDayResponse.status !== 201) throw new Error(`Calendar entry create verification failed (${workingDayResponse.status}).`);
+	const workingDay = (await payload(workingDayResponse)).data;
+	const duplicateWorkingDay = await request(`/v1/work-calendars/${workCalendar.id}/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-04-01', entryType: 'company_holiday', title: 'Duplicate' }) });
+	if (duplicateWorkingDay.status !== 409) throw new Error(`Calendar entry duplicate guard failed (${duplicateWorkingDay.status}).`);
+	await payload(duplicateWorkingDay);
+	const workingDayUpdate = await request(`/v1/work-calendars/${workCalendar.id}/entries/${workingDay.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-04-02', entryType: 'company_holiday', title: 'Updated verification holiday', note: null }) });
+	if (workingDayUpdate.status !== 200) throw new Error(`Calendar entry update verification failed (${workingDayUpdate.status}).`);
+	const calendarAssignments = await request(`/v1/work-calendars/${workCalendar.id}/employees`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ employeeIds: [employeeId] }) });
+	if (calendarAssignments.status !== 200 || !(await payload(calendarAssignments)).data.some(entry => entry.id === employeeId)) throw new Error('Work calendar employee assignment failed.');
+	const calendarList = await request('/v1/work-calendars?sortBy=name&sortOrder=asc&limit=100');
+	const calendarListPayload = await payload(calendarList);
+	if (calendarList.status !== 200 || !calendarListPayload.data.some(entry => entry.id === workCalendar.id)) throw new Error('Work calendar list verification failed.');
+	const invalidCalendarLimit = await request('/v1/work-calendars?limit=0');
+	if (invalidCalendarLimit.status !== 422) throw new Error(`Work calendar limit guard failed (${invalidCalendarLimit.status}).`);
+	await payload(invalidCalendarLimit);
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.general_user, roleGrantId]);
 	const forbidden = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Denied ${suffix}` }) });
 	if (forbidden.status !== 403 || (await payload(forbidden)).error.code !== 'ADMIN_REQUIRED') throw new Error('Employee role guard verification failed.');
@@ -542,6 +621,15 @@ try {
 	const readableMasters = await request('/v1/departments');
 	if (readableMasters.status !== 200) throw new Error(`General user master read verification failed (${readableMasters.status}).`);
 	await payload(readableMasters);
+	for (const path of ['/v1/work-calendars', `/v1/work-calendars/${workCalendar.id}/entries?limit=500`, `/v1/work-calendars/${workCalendar.id}/employees?limit=500`, '/v1/calendar-date-attributes?from=2030-04-01&to=2030-04-30&limit=500']) {
+		const response = await request(path);
+		if (response.status !== 200) throw new Error(`General user work calendar read failed for ${path} (${response.status}).`);
+		await payload(response);
+	}
+	for (const [path, method, body] of [['/v1/work-calendars', 'POST', { name: `Denied ${suffix}`, calendarYear: 2030 }], [`/v1/work-calendars/${workCalendar.id}`, 'PATCH', { name: 'Denied', calendarYear: 2030 }], [`/v1/work-calendars/${workCalendar.id}`, 'DELETE', null], [`/v1/work-calendars/${workCalendar.id}/entries`, 'POST', { workDate: '2030-05-01', entryType: 'working_day', title: 'Denied' }], [`/v1/work-calendars/${workCalendar.id}/entries/${workingDay.id}`, 'PATCH', { workDate: '2030-05-02', entryType: 'working_day', title: 'Denied' }], [`/v1/work-calendars/${workCalendar.id}/entries/${workingDay.id}`, 'DELETE', null], [`/v1/work-calendars/${workCalendar.id}/employees`, 'PUT', { employeeIds: [] }], ['/v1/calendar-holiday-imports', 'POST', null]]) {
+		const response = await request(path, { method, ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) });
+		if (response.status !== 403 || (await payload(response)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`General user work calendar ${method} guard failed for ${path}.`);
+	}
 	for (const [path, expectedCode, body] of [['/v1/branches', 'SYSTEM_ADMIN_REQUIRED', { name: `General branch ${suffix}` }], ['/v1/rooms', 'ADMIN_REQUIRED', { name: `General room ${suffix}`, branchId: branch.id }], ['/v1/storage', 'ADMIN_REQUIRED', { name: `General storage ${suffix}`, branchId: branch.id, roomId: room.id }]]) {
 		const response = await request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 		if (response.status !== 403 || (await payload(response)).error.code !== expectedCode) throw new Error(`General user location write guard failed for ${path}.`);
@@ -568,6 +656,11 @@ try {
 	const removedBusinessMaster = await request(`/v1/departments/${businessItem.id}`, { method: 'DELETE' });
 	if (removedBusinessMaster.status !== 200) throw new Error(`Business administrator master delete verification failed (${removedBusinessMaster.status}).`);
 	await payload(removedBusinessMaster);
+	const businessCalendarRead = await request(`/v1/work-calendars/${workCalendar.id}`);
+	if (businessCalendarRead.status !== 200) throw new Error(`Business administrator work calendar read failed (${businessCalendarRead.status}).`);
+	await payload(businessCalendarRead);
+	const forbiddenBusinessCalendar = await request(`/v1/work-calendars/${workCalendar.id}/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-06-01', entryType: 'working_day', title: 'Denied' }) });
+	if (forbiddenBusinessCalendar.status !== 403 || (await payload(forbiddenBusinessCalendar)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('Business administrator work calendar write guard failed.');
 	for (const [path, method] of [['/v1/branches', 'POST'], [`/v1/branches/${branch.id}`, 'PATCH'], [`/v1/branches/${branch.id}`, 'DELETE']]) {
 		const forbiddenBusinessBranch = await request(path, { method, ...(method === 'DELETE' ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business branch ${suffix}` }) }) });
 		if (forbiddenBusinessBranch.status !== 403 || (await payload(forbiddenBusinessBranch)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`Business administrator branch ${method} guard failed.`);
@@ -580,6 +673,11 @@ try {
 	const businessStorage = (await payload(businessStorageResponse)).data;
 	if ((await request(`/v1/storage/${businessStorage.id}`, { method: 'DELETE' })).status !== 200 || (await request(`/v1/rooms/${businessRoom.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Business administrator location cleanup failed.');
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [originalRole, roleGrantId]);
+	const removedWorkCalendar = await request(`/v1/work-calendars/${workCalendar.id}`, { method: 'DELETE' });
+	if (removedWorkCalendar.status !== 200) throw new Error(`Work calendar delete verification failed (${removedWorkCalendar.status}).`);
+	await payload(removedWorkCalendar);
+	const retainedCalendarData = await client.query('SELECT (SELECT deleted_at IS NOT NULL FROM work_calendars WHERE id = $1) AS calendar_deleted, (SELECT deleted_at IS NOT NULL FROM work_calendar_days WHERE id = $2) AS day_deleted, (SELECT work_calendar_id IS NULL FROM employees WHERE id = $3) AS assignment_cleared', [workCalendar.id, workingDay.id, employeeId]);
+	if (!retainedCalendarData.rows[0]?.calendar_deleted || !retainedCalendarData.rows[0]?.day_deleted || !retainedCalendarData.rows[0]?.assignment_cleared) throw new Error('Work calendar soft deletion or assignment cleanup failed.');
 	const referencedStorage = await request(`/v1/storage/${storage.id}`, { method: 'DELETE' });
 	if (referencedStorage.status !== 409) throw new Error(`Reference guard verification failed (${referencedStorage.status}).`);
 	const removedAsset = await request(`/v1/it-assets/${asset.id}`, { method: 'DELETE' });

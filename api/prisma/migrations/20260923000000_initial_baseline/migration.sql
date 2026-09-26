@@ -34,6 +34,7 @@ CREATE TABLE "employees" (
     "position_id" INTEGER,
     "employment_type_id" INTEGER NOT NULL,
     "branch_id" INTEGER NOT NULL,
+    "work_calendar_id" INTEGER,
     "retired_at" DATE,
     "notes" TEXT,
     "username" TEXT,
@@ -45,6 +46,67 @@ CREATE TABLE "employees" (
     "deleted_at" TIMESTAMPTZ(3),
 
     CONSTRAINT "employees_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "work_calendars" (
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "calendar_year" INTEGER NOT NULL,
+    "description" VARCHAR(1000),
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "work_calendars_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "work_calendar_days" (
+    "id" SERIAL NOT NULL,
+    "calendar_id" INTEGER NOT NULL,
+    "work_date" DATE NOT NULL,
+    "entry_type" VARCHAR(32) NOT NULL DEFAULT 'working_day',
+    "title" VARCHAR(128) NOT NULL,
+    "note" VARCHAR(5000),
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "work_calendar_days_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "calendar_date_attributes" (
+    "id" SERIAL NOT NULL,
+    "calendar_date" DATE NOT NULL,
+    "kind" VARCHAR(32) NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "source" VARCHAR(32) NOT NULL,
+    "source_url" VARCHAR(500),
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "calendar_date_attributes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "calendar_holiday_imports" (
+    "id" SERIAL NOT NULL,
+    "import_key" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "source_url" VARCHAR(500) NOT NULL,
+    "range_start" DATE,
+    "range_end" DATE,
+    "imported_count" INTEGER NOT NULL DEFAULT 0,
+    "status" VARCHAR(20) NOT NULL,
+    "error_message" VARCHAR(500),
+    "completed_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "calendar_holiday_imports_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -89,7 +151,6 @@ CREATE TABLE "departments" (
 -- CreateTable
 CREATE TABLE "employee_groups" (
     "id" SERIAL NOT NULL,
-    "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -138,6 +199,8 @@ CREATE TABLE "storage" (
 CREATE TABLE "branches" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
+    "opened_on" DATE,
+    "closed_on" DATE,
     "postal_code" VARCHAR(8),
     "prefecture" VARCHAR(64),
     "city" VARCHAR(128),
@@ -310,6 +373,22 @@ CREATE TABLE "it_asset_change_history" (
 );
 
 -- CreateTable
+CREATE TABLE "employee_change_history" (
+    "id" SERIAL NOT NULL,
+    "event_key" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "employee_id" INTEGER NOT NULL,
+    "actor_id" INTEGER NOT NULL,
+    "action" VARCHAR(20) NOT NULL,
+    "changes" JSONB NOT NULL,
+    "changed_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "employee_change_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "audit_logs" (
     "id" SERIAL NOT NULL,
     "event_key" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -379,6 +458,33 @@ CREATE UNIQUE INDEX "employees_email_key" ON "employees"("email");
 CREATE UNIQUE INDEX "employees_username_key" ON "employees"("username");
 
 -- CreateIndex
+CREATE INDEX "employees_work_calendar_id_idx" ON "employees"("work_calendar_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "work_calendars_name_key" ON "work_calendars"("name");
+
+-- CreateIndex
+CREATE INDEX "work_calendars_calendar_year_idx" ON "work_calendars"("calendar_year");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "work_calendar_days_calendar_id_work_date_key" ON "work_calendar_days"("calendar_id", "work_date");
+
+-- CreateIndex
+CREATE INDEX "work_calendar_days_calendar_id_idx" ON "work_calendar_days"("calendar_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "calendar_date_attributes_calendar_date_kind_key" ON "calendar_date_attributes"("calendar_date", "kind");
+
+-- CreateIndex
+CREATE INDEX "calendar_date_attributes_calendar_date_idx" ON "calendar_date_attributes"("calendar_date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "calendar_holiday_imports_import_key_key" ON "calendar_holiday_imports"("import_key");
+
+-- CreateIndex
+CREATE INDEX "calendar_holiday_imports_completed_at_idx" ON "calendar_holiday_imports"("completed_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "roles_code_key" ON "roles"("code");
 
 -- CreateIndex
@@ -395,9 +501,6 @@ CREATE UNIQUE INDEX "employee_roles_employee_id_role_id_scope_type_scope_key_key
 
 -- CreateIndex
 CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "employee_groups_code_key" ON "employee_groups"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "employee_groups_name_key" ON "employee_groups"("name");
@@ -499,6 +602,15 @@ CREATE INDEX "it_asset_change_history_asset_id_changed_at_idx" ON "it_asset_chan
 CREATE INDEX "it_asset_change_history_actor_id_idx" ON "it_asset_change_history"("actor_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "employee_change_history_event_key_key" ON "employee_change_history"("event_key");
+
+-- CreateIndex
+CREATE INDEX "employee_change_history_employee_id_changed_at_idx" ON "employee_change_history"("employee_id", "changed_at");
+
+-- CreateIndex
+CREATE INDEX "employee_change_history_actor_id_idx" ON "employee_change_history"("actor_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "audit_logs_event_key_key" ON "audit_logs"("event_key");
 
 -- CreateIndex
@@ -548,6 +660,12 @@ ALTER TABLE "employees" ADD CONSTRAINT "employees_employment_type_id_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "employees" ADD CONSTRAINT "employees_branch_id_fkey" FOREIGN KEY ("branch_id") REFERENCES "branches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "employees" ADD CONSTRAINT "employees_work_calendar_id_fkey" FOREIGN KEY ("work_calendar_id") REFERENCES "work_calendars"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "work_calendar_days" ADD CONSTRAINT "work_calendar_days_calendar_id_fkey" FOREIGN KEY ("calendar_id") REFERENCES "work_calendars"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "branches" ADD CONSTRAINT "branches_manager_employee_id_fkey" FOREIGN KEY ("manager_employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -607,6 +725,12 @@ ALTER TABLE "it_asset_change_history" ADD CONSTRAINT "it_asset_change_history_as
 ALTER TABLE "it_asset_change_history" ADD CONSTRAINT "it_asset_change_history_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "employee_change_history" ADD CONSTRAINT "employee_change_history_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "employee_change_history" ADD CONSTRAINT "employee_change_history_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -631,6 +755,8 @@ ALTER TABLE "it_asset_types" ADD CONSTRAINT "it_asset_types_management_code_pref
 ALTER TABLE "it_asset_types" ADD CONSTRAINT "it_asset_types_next_management_number_range" CHECK (next_management_number BETWEEN 1 AND 10000);
 ALTER TABLE "it_assets" ADD CONSTRAINT "it_assets_date_order" CHECK (purchased_on IS NULL OR disposal_on IS NULL OR disposal_on >= purchased_on);
 ALTER TABLE "it_assets" ADD CONSTRAINT "it_assets_ram_gb_positive" CHECK (ram_gb IS NULL OR ram_gb > 0);
+ALTER TABLE "branches" ADD CONSTRAINT "branches_date_order" CHECK (opened_on IS NULL OR closed_on IS NULL OR closed_on >= opened_on);
+ALTER TABLE "work_calendars" ADD CONSTRAINT "work_calendars_calendar_year_check" CHECK (calendar_year BETWEEN 2011 AND 9999);
 CREATE UNIQUE INDEX "it_asset_assignments_one_active_per_asset" ON "it_asset_assignments"("asset_id") WHERE returned_at IS NULL AND deleted_at IS NULL;
 
 CREATE FUNCTION "set_record_updated_at"() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -644,9 +770,10 @@ DO $$
 DECLARE table_name text;
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
-    'employees','roles','employee_roles','departments','employee_groups','positions','employment_types',
+    'employees','work_calendars','work_calendar_days','calendar_date_attributes','calendar_holiday_imports',
+    'roles','employee_roles','departments','employee_groups','positions','employment_types',
     'storage','branches','rooms','it_assets','it_asset_types','manufacturers','cpu_types','operating_systems',
-    'it_asset_statuses','it_asset_assignments','it_asset_change_history','audit_logs','sessions',
+    'it_asset_statuses','it_asset_assignments','it_asset_change_history','employee_change_history','audit_logs','sessions',
     'password_reset_tokens','account_invitations'
   ]
   LOOP
@@ -663,9 +790,9 @@ INSERT INTO "departments" ("id", "name") VALUES ('3', 'Sales');
 SELECT setval(pg_get_serial_sequence('"departments"', 'id'), (SELECT MAX(id) FROM "departments"), true);
 
 -- employee_groups (3 rows)
-INSERT INTO "employee_groups" ("id", "code", "name") VALUES ('1', 'GENERAL', 'General');
-INSERT INTO "employee_groups" ("id", "code", "name") VALUES ('2', 'PLATFORM', 'Platform');
-INSERT INTO "employee_groups" ("id", "code", "name") VALUES ('3', 'FIELD_SALES', 'Field Sales');
+INSERT INTO "employee_groups" ("id", "name") VALUES ('1', 'General');
+INSERT INTO "employee_groups" ("id", "name") VALUES ('2', 'Platform');
+INSERT INTO "employee_groups" ("id", "name") VALUES ('3', 'Field Sales');
 SELECT setval(pg_get_serial_sequence('"employee_groups"', 'id'), (SELECT MAX(id) FROM "employee_groups"), true);
 
 -- positions (3 rows)
@@ -717,36 +844,35 @@ INSERT INTO "it_asset_statuses" ("id", "name", "disposal_date_policy", "sort_ord
 INSERT INTO "it_asset_statuses" ("id", "name", "disposal_date_policy", "sort_order") VALUES ('4', 'Disposed', 'required', '40');
 SELECT setval(pg_get_serial_sequence('"it_asset_statuses"', 'id'), (SELECT MAX(id) FROM "it_asset_statuses"), true);
 
--- manufacturers (29 rows)
+-- manufacturers (28 rows)
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('1', 'Intel', 'https://www.intel.com/', '2026-09-21', '10');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('10', 'Lenovo', 'https://www.lenovo.com/', '2026-09-21', '100');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('11', 'ASUS', 'https://www.asus.com/', '2026-09-21', '110');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('12', 'Acer', 'https://www.acer.com/', '2026-09-21', '120');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('13', 'Panasonic', 'https://www.panasonic.com/', '2026-09-21', '130');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('14', 'Dynabook', 'https://dynabook.com/', '2026-09-21', '140');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('15', 'IBM', 'https://www.ibm.com/', '2026-09-21', '150');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('16', 'Supermicro', 'https://www.supermicro.com/', '2026-09-21', '160');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('17', 'Synology', 'https://www.synology.com/', '2026-09-21', '170');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('18', 'QNAP', 'https://www.qnap.com/', '2026-09-21', '180');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('19', 'Buffalo', 'https://www.buffalo.jp/', '2026-09-21', '190');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('9', 'Lenovo', 'https://www.lenovo.com/', '2026-09-21', '90');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('10', 'ASUS', 'https://www.asus.com/', '2026-09-21', '100');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('11', 'Acer', 'https://www.acer.com/', '2026-09-21', '110');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('12', 'Panasonic', 'https://www.panasonic.com/', '2026-09-21', '120');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('13', 'Dynabook', 'https://dynabook.com/', '2026-09-21', '130');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('14', 'IBM', 'https://www.ibm.com/', '2026-09-21', '140');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('15', 'Supermicro', 'https://www.supermicro.com/', '2026-09-21', '150');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('16', 'Synology', 'https://www.synology.com/', '2026-09-21', '160');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('17', 'QNAP', 'https://www.qnap.com/', '2026-09-21', '170');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('18', 'Buffalo', 'https://www.buffalo.jp/', '2026-09-21', '180');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('2', 'AMD', 'https://www.amd.com/', '2026-09-21', '20');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('20', 'I-O DATA', 'https://www.iodata.jp/', '2026-09-21', '200');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('21', 'Cisco', 'https://www.cisco.com/', '2026-09-21', '210');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('22', 'Fortinet', 'https://www.fortinet.com/', '2026-09-21', '220');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('23', 'Palo Alto Networks', 'https://www.paloaltonetworks.com/', '2026-09-21', '230');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('24', 'Yamaha', 'https://network.yamaha.com/', '2026-09-21', '240');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('25', 'SonicWall', 'https://www.sonicwall.com/', '2026-09-21', '250');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('26', 'APC by Schneider Electric', 'https://www.apc.com/', '2026-09-21', '260');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('27', 'Eaton', 'https://www.eaton.com/', '2026-09-21', '270');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('28', 'OMRON', 'https://www.omron.com/', '2026-09-21', '280');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('29', 'CyberPower', 'https://www.cyberpower.com/', '2026-09-21', '290');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('19', 'I-O DATA', 'https://www.iodata.jp/', '2026-09-21', '190');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('20', 'Cisco', 'https://www.cisco.com/', '2026-09-21', '200');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('21', 'Fortinet', 'https://www.fortinet.com/', '2026-09-21', '210');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('22', 'Palo Alto Networks', 'https://www.paloaltonetworks.com/', '2026-09-21', '220');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('23', 'Yamaha', 'https://network.yamaha.com/', '2026-09-21', '230');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('24', 'SonicWall', 'https://www.sonicwall.com/', '2026-09-21', '240');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('25', 'APC by Schneider Electric', 'https://www.apc.com/', '2026-09-21', '250');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('26', 'Eaton', 'https://www.eaton.com/', '2026-09-21', '260');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('27', 'OMRON', 'https://www.omron.com/', '2026-09-21', '270');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('28', 'CyberPower', 'https://www.cyberpower.com/', '2026-09-21', '280');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('3', 'Apple', 'https://www.apple.com/', '2026-09-21', '30');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('4', 'NEC', 'https://www.nec.com/', '2026-09-21', '40');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('5', 'Mouse Computer', 'https://www.mouse-jp.co.jp/', '2026-09-21', '50');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('6', 'Fujitsu', 'https://www.fujitsu.com/', '2026-09-21', '60');
 INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('7', 'Dell Technologies', 'https://www.dell.com/', '2026-09-21', '70');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('8', 'HP', 'https://www.hp.com/', '2026-09-21', '80');
-INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('9', 'Hewlett Packard Enterprise', 'https://www.hpe.com/', '2026-09-21', '90');
+INSERT INTO "manufacturers" ("id", "name", "official_url", "source_checked_on", "sort_order") VALUES ('8', 'Hewlett Packard Enterprise', 'https://www.hpe.com/', '2026-09-21', '80');
 SELECT setval(pg_get_serial_sequence('"manufacturers"', 'id'), (SELECT MAX(id) FROM "manufacturers"), true);
 
 -- cpu_types (47 rows)
@@ -851,3 +977,12 @@ INSERT INTO "roles" ("id", "code", "name") VALUES ('1', 'system_administrator', 
 INSERT INTO "roles" ("id", "code", "name") VALUES ('2', 'business_administrator', 'Business Administrator');
 INSERT INTO "roles" ("id", "code", "name") VALUES ('3', 'general_user', 'General User');
 SELECT setval(pg_get_serial_sequence('"roles"', 'id'), (SELECT MAX(id) FROM "roles"), true);
+
+-- Weekend date attributes used by work calendars.
+INSERT INTO "calendar_date_attributes" ("calendar_date", "kind", "name", "source")
+SELECT day::date,
+       CASE WHEN EXTRACT(ISODOW FROM day) = 7 THEN 'sunday' ELSE 'saturday' END,
+       CASE WHEN EXTRACT(ISODOW FROM day) = 7 THEN 'Sunday' ELSE 'Saturday' END,
+       'calculated'
+FROM generate_series(DATE '2011-01-01', DATE '2100-12-31', INTERVAL '1 day') AS day
+WHERE EXTRACT(ISODOW FROM day) IN (6, 7);
