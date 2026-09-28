@@ -1,0 +1,80 @@
+export type EmployeeMaster = {
+	id: number;
+	name: string;
+	sortOrder?: number;
+	usageCount?: number;
+	departmentId?: number | null;
+	department?: { id: number; name: string } | null;
+};
+export type EmployeeRole = { code: string; name: string };
+export type SocialLinkPlatform = 'website' | 'blog' | 'github' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'youtube' | 'qiita' | 'note';
+export type EmployeeSocialLink = { platform: SocialLinkPlatform; url: string };
+
+export const socialLinkPlatforms: Array<{ value: SocialLinkPlatform; label: string }> = [
+	{ value: 'website', label: 'Website' },
+	{ value: 'blog', label: 'Blog' },
+	{ value: 'github', label: 'GitHub' },
+	{ value: 'linkedin', label: 'LinkedIn' },
+	{ value: 'x', label: 'X' },
+	{ value: 'facebook', label: 'Facebook' },
+	{ value: 'instagram', label: 'Instagram' },
+	{ value: 'youtube', label: 'YouTube' },
+	{ value: 'qiita', label: 'Qiita' },
+	{ value: 'note', label: 'note' }
+];
+
+export const socialLinkLabel = (platform: SocialLinkPlatform) => socialLinkPlatforms.find((item) => item.value === platform)?.label ?? platform;
+
+export type EmployeeProfile = {
+	id: number;
+	firstName: string;
+	middleName: string | null;
+	lastName: string;
+	nameKana: string | null;
+	birthDate: string;
+	gender: string;
+	bloodType: string | null;
+	postalCode: string | null;
+	prefecture: string | null;
+	city: string | null;
+	streetAddress: string | null;
+	buildingName: string | null;
+	mobilePhone: string | null;
+	email: string;
+};
+
+export type Employee = EmployeeProfile & {
+	employeeCode: string;
+	age: number;
+	lengthOfService: { years: number; months: number };
+	hiredAt: string;
+	departmentId: number | null;
+	departmentIds: number[];
+	primaryDepartmentId: number | null;
+	groupId: number | null;
+	positionId: number | null;
+	positionIds: number[];
+	primaryPositionId: number | null;
+	employmentTypeId: number;
+	branchId: number;
+	retiredAt: string | null;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+	deletedAt: string | null;
+	departmentRef?: EmployeeMaster | null;
+	departments: Array<EmployeeMaster & { isPrimary: boolean }>;
+	departmentNames: string;
+	group?: EmployeeMaster | null;
+	position?: EmployeeMaster | null;
+	positions: Array<EmployeeMaster & { isPrimary: boolean }>;
+	positionNames: string;
+	employmentType?: EmployeeMaster | null;
+	branch?: EmployeeMaster | null;
+	roles: EmployeeRole[];
+	socialLinks: EmployeeSocialLink[];
+	canIssueInvitation: boolean;
+};
+
+export const employeeFullName = (employee: Pick<EmployeeProfile, 'firstName' | 'middleName' | 'lastName'>) =>
+	[employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ');

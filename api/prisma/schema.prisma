@@ -1,0 +1,640 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/lib/server/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountStatus {
+  unprovisioned
+  active
+  suspended
+}
+
+enum DisposalDatePolicy {
+  prohibited
+  optional
+  required
+}
+
+model Employee {
+  id                      Int                     @id @default(autoincrement())
+  employeeCode            String                  @unique @map("employee_code")
+  firstName               String                  @map("first_name")
+  middleName              String?                 @map("middle_name")
+  lastName                String                  @map("last_name")
+  nameKana                String?                 @map("name_kana")
+  birthDate               DateTime                @map("birth_date") @db.Date
+  gender                  String
+  bloodType               String?                 @map("blood_type")
+  postalCode              String?                 @map("postal_code") @db.VarChar(8)
+  prefecture              String?                 @db.VarChar(64)
+  city                    String?                 @db.VarChar(128)
+  streetAddress           String?                 @map("street_address") @db.VarChar(255)
+  buildingName            String?                 @map("building_name") @db.VarChar(255)
+  mobilePhone             String?                 @map("mobile_phone")
+  email                   String                  @unique
+  hiredAt                 DateTime                @map("hired_at") @db.Date
+  groupId                 Int?                    @map("group_id")
+  employmentTypeId        Int                     @map("employment_type_id")
+  branchId                Int                     @map("branch_id")
+  workCalendarId          Int?                    @map("work_calendar_id")
+  retiredAt               DateTime?               @map("retired_at") @db.Date
+  notes                   String?
+  username                String?                 @unique
+  passwordHash            String?                 @map("password_hash")
+  accountStatus           AccountStatus           @default(unprovisioned) @map("account_status")
+  mustChangeCredentials   Boolean                 @default(false) @map("must_change_credentials")
+  createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt               DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  itAssetAssignments      ItAssetAssignment[]
+  itAssetChangeHistory    ItAssetChangeHistory[]
+  employeeChangeHistory   EmployeeChangeHistory[] @relation("EmployeeHistorySubject")
+  recordedEmployeeChanges EmployeeChangeHistory[] @relation("EmployeeHistoryActor")
+  accountInvitations      AccountInvitation[]     @relation("InvitationRecipient")
+  issuedInvitations       AccountInvitation[]     @relation("InvitationIssuer")
+  sessions                Session[]
+  settings                EmployeeSettings?
+  socialLinks             EmployeeSocialLink[]
+  passwordResetTokens     PasswordResetToken[]
+  auditLogs               AuditLog[]
+  roleGrants              EmployeeRole[]          @relation("Grantee")
+  departmentAssignments   EmployeeDepartment[]
+  positionAssignments     EmployeePosition[]
+  scopedGrants            EmployeeRole[]          @relation("ScopeEmployee")
+  managedBranches         Branch[]                @relation("BranchManager")
+  deputyManagedBranches   Branch[]                @relation("BranchDeputyManager")
+  group                   EmployeeGroup?          @relation(fields: [groupId], references: [id])
+  employmentType          EmploymentType          @relation(fields: [employmentTypeId], references: [id], onDelete: Restrict)
+  branch                  Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  workCalendar            WorkCalendar?           @relation(fields: [workCalendarId], references: [id], onDelete: Restrict)
+
+  @@index([workCalendarId])
+  @@map("employees")
+}
+
+model EmployeeSettings {
+  id              Int       @id @default(autoincrement())
+  employeeId      Int       @unique @map("employee_id")
+  timeZone        String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
+  displayLanguage String    @default("en") @map("display_language") @db.VarChar(8)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@map("employee_settings")
+}
+
+model EmployeeSocialLink {
+  id         Int       @id @default(autoincrement())
+  linkKey    String    @unique @default(dbgenerated("gen_random_uuid()")) @map("link_key") @db.Uuid
+  employeeId Int       @map("employee_id")
+  platform   String    @db.VarChar(32)
+  url        String    @db.VarChar(2048)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, platform])
+  @@index([employeeId, deletedAt])
+  @@map("employee_social_links")
+}
+
+model ExternalLink {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(128)
+  url       String    @db.VarChar(2048)
+  sortOrder Int       @default(9999) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([sortOrder, name])
+  @@map("external_links")
+}
+
+model WorkCalendar {
+  id                         Int               @id @default(autoincrement())
+  name                       String            @unique @db.VarChar(128)
+  calendarYear               Int               @map("calendar_year")
+  scheduledWorkMinutesPerDay Int               @default(465) @map("scheduled_work_minutes_per_day")
+  description                String?           @db.VarChar(1000)
+  createdAt                  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                  DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  employees                  Employee[]
+  entries                    WorkCalendarDay[]
+
+  @@index([calendarYear])
+  @@map("work_calendars")
+}
+
+model WorkCalendarDay {
+  id         Int          @id @default(autoincrement())
+  calendarId Int          @map("calendar_id")
+  workDate   DateTime     @map("work_date") @db.Date
+  entryType  String       @default("working_day") @map("entry_type") @db.VarChar(32)
+  title      String       @db.VarChar(128)
+  note       String?      @db.VarChar(5000)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  calendar   WorkCalendar @relation(fields: [calendarId], references: [id], onDelete: Restrict)
+
+  @@unique([calendarId, workDate])
+  @@index([calendarId])
+  @@map("work_calendar_days")
+}
+
+model CalendarDateAttribute {
+  id           Int       @id @default(autoincrement())
+  calendarDate DateTime  @map("calendar_date") @db.Date
+  kind         String    @db.VarChar(32)
+  name         String    @db.VarChar(128)
+  source       String    @db.VarChar(32)
+  sourceUrl    String?   @map("source_url") @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@unique([calendarDate, kind])
+  @@index([calendarDate])
+  @@map("calendar_date_attributes")
+}
+
+model CalendarHolidayImport {
+  id            Int       @id @default(autoincrement())
+  importKey     String    @unique @default(dbgenerated("gen_random_uuid()")) @map("import_key") @db.Uuid
+  sourceUrl     String    @map("source_url") @db.VarChar(500)
+  rangeStart    DateTime? @map("range_start") @db.Date
+  rangeEnd      DateTime? @map("range_end") @db.Date
+  importedCount Int       @default(0) @map("imported_count")
+  status        String    @db.VarChar(20)
+  errorMessage  String?   @map("error_message") @db.VarChar(500)
+  completedAt   DateTime  @default(now()) @map("completed_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([completedAt])
+  @@map("calendar_holiday_imports")
+}
+
+model Role {
+  id        Int            @id @default(autoincrement())
+  code      String         @unique
+  name      String
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  grants    EmployeeRole[]
+
+  @@map("roles")
+}
+
+model EmployeeRole {
+  id              Int         @id @default(autoincrement())
+  employeeId      Int         @map("employee_id")
+  roleId          Int         @map("role_id")
+  scopeType       String      @default("global") @map("scope_type")
+  scopeKey        String      @default("global") @map("scope_key")
+  departmentId    Int?        @map("department_id")
+  scopeEmployeeId Int?        @map("scope_employee_id")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  employee        Employee    @relation("Grantee", fields: [employeeId], references: [id], onDelete: Restrict)
+  role            Role        @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  department      Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  scopeEmployee   Employee?   @relation("ScopeEmployee", fields: [scopeEmployeeId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, roleId, scopeType, scopeKey])
+  @@index([roleId])
+  @@index([departmentId])
+  @@index([scopeEmployeeId])
+  @@map("employee_roles")
+}
+
+model Department {
+  id                  Int                  @id @default(autoincrement())
+  name                String               @unique
+  sortOrder           Int                  @default(9999) @map("sort_order")
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime?            @map("deleted_at") @db.Timestamptz(3)
+  employeeAssignments EmployeeDepartment[]
+  groups              EmployeeGroup[]
+  roleGrants          EmployeeRole[]
+
+  @@map("employment_departments")
+}
+
+model EmployeeDepartment {
+  id           Int        @id @default(autoincrement())
+  employeeId   Int        @map("employee_id")
+  departmentId Int        @map("department_id")
+  isPrimary    Boolean    @default(false) @map("is_primary")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, departmentId])
+  @@index([departmentId])
+  @@map("employee_departments")
+}
+
+model EmployeeGroup {
+  id           Int         @id @default(autoincrement())
+  departmentId Int?        @map("department_id")
+  name         String
+  sortOrder    Int         @default(9999) @map("sort_order")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  employees    Employee[]
+
+  @@unique([departmentId, name])
+  @@map("employee_groups")
+}
+
+model Position {
+  id                  Int                @id @default(autoincrement())
+  name                String             @unique
+  sortOrder           Int                @default(9999) @map("sort_order")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  employeeAssignments EmployeePosition[]
+
+  @@map("employment_positions")
+}
+
+model EmployeePosition {
+  id         Int       @id @default(autoincrement())
+  employeeId Int       @map("employee_id")
+  positionId Int       @map("position_id")
+  isPrimary  Boolean   @default(false) @map("is_primary")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  position   Position  @relation(fields: [positionId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, positionId])
+  @@index([positionId])
+  @@map("employee_positions")
+}
+
+model EmploymentType {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  sortOrder Int        @default(9999) @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  employees Employee[]
+
+  @@map("employment_types")
+}
+
+model Storage {
+  id        Int       @id @default(autoincrement())
+  name      String
+  sortOrder Int       @default(9999) @map("sort_order")
+  notes     String?
+  branchId  Int       @map("branch_id")
+  roomId    Int       @map("room_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  room      Room      @relation(fields: [branchId, roomId], references: [branchId, id])
+  itAssets  ItAsset[]
+
+  @@unique([branchId, roomId, name])
+  @@index([roomId])
+  @@map("storage")
+}
+
+model Branch {
+  id                      Int        @id @default(autoincrement())
+  name                    String     @unique
+  sortOrder               Int        @default(9999) @map("sort_order")
+  openedOn                DateTime?  @map("opened_on") @db.Date
+  closedOn                DateTime?  @map("closed_on") @db.Date
+  postalCode              String?    @map("postal_code") @db.VarChar(8)
+  prefecture              String?    @db.VarChar(64)
+  city                    String?    @db.VarChar(128)
+  streetAddress           String?    @map("street_address") @db.VarChar(255)
+  buildingName            String?    @map("building_name") @db.VarChar(255)
+  phoneNumber1            String?    @map("phone_number_1") @db.VarChar(32)
+  phoneNumber1Label       String?    @map("phone_number_1_label") @db.VarChar(128)
+  phoneNumber2            String?    @map("phone_number_2") @db.VarChar(32)
+  phoneNumber2Label       String?    @map("phone_number_2_label") @db.VarChar(128)
+  faxNumber1              String?    @map("fax_number_1") @db.VarChar(32)
+  faxNumber1Label         String?    @map("fax_number_1_label") @db.VarChar(128)
+  faxNumber2              String?    @map("fax_number_2") @db.VarChar(32)
+  faxNumber2Label         String?    @map("fax_number_2_label") @db.VarChar(128)
+  managerEmployeeId       Int?       @map("manager_employee_id")
+  deputyManagerEmployeeId Int?       @map("deputy_manager_employee_id")
+  notes                   String?
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt               DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  rooms                   Room[]
+  employees               Employee[]
+  manager                 Employee?  @relation("BranchManager", fields: [managerEmployeeId], references: [id], onDelete: Restrict)
+  deputyManager           Employee?  @relation("BranchDeputyManager", fields: [deputyManagerEmployeeId], references: [id], onDelete: Restrict)
+
+  @@index([managerEmployeeId])
+  @@index([deputyManagerEmployeeId])
+  @@map("branches")
+}
+
+model Room {
+  id        Int       @id @default(autoincrement())
+  name      String
+  sortOrder Int       @default(9999) @map("sort_order")
+  notes     String?
+  branchId  Int       @map("branch_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  storage   Storage[]
+
+  @@unique([branchId, name])
+  @@unique([branchId, id])
+  @@index([branchId])
+  @@map("rooms")
+}
+
+model ItAsset {
+  id                Int                     @id @default(autoincrement())
+  assetTag          String                  @unique @map("asset_tag")
+  typeId            Int                     @map("type_id")
+  manufacturerId    Int?                    @map("manufacturer_id")
+  modelNumber       String?                 @map("model_number")
+  serialNumber      String?                 @map("serial_number")
+  cpuTypeId         Int?                    @map("cpu_type_id")
+  ramGb             Int?                    @map("ram_gb")
+  operatingSystemId Int?                    @map("operating_system_id")
+  loginUsername     String?                 @map("login_username")
+  storageId         Int                     @map("storage_id")
+  statusId          Int                     @map("status_id")
+  purchasedOn       DateTime                @map("purchased_on") @db.Date
+  disposalOn        DateTime?               @map("disposal_on") @db.Date
+  notes             String?
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  type              ItAssetType             @relation(fields: [typeId], references: [id])
+  manufacturer      Manufacturer?           @relation(fields: [manufacturerId], references: [id])
+  cpuType           CpuType?                @relation(fields: [cpuTypeId], references: [id])
+  operatingSystem   OperatingSystem?        @relation(fields: [operatingSystemId], references: [id])
+  storage           Storage                 @relation(fields: [storageId], references: [id])
+  status            ItAssetStatus           @relation(fields: [statusId], references: [id])
+  assignments       ItAssetAssignment[]
+  changeHistory     ItAssetChangeHistory[]
+  managementCodes   ItAssetManagementCode[]
+
+  @@unique([manufacturerId, serialNumber])
+  @@index([typeId])
+  @@index([manufacturerId])
+  @@index([cpuTypeId])
+  @@index([operatingSystemId])
+  @@index([storageId])
+  @@index([statusId])
+  @@map("it_assets")
+}
+
+model ItAssetManagementCode {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique @db.VarChar(64)
+  assetId   Int       @map("asset_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  asset     ItAsset   @relation(fields: [assetId], references: [id])
+
+  @@index([assetId])
+  @@map("it_asset_management_codes")
+}
+
+model ItAssetType {
+  id                    Int       @id @default(autoincrement())
+  name                  String    @unique
+  managementCodePrefix  String    @unique @map("management_code_prefix") @db.VarChar(5)
+  nextManagementNumber  Int       @default(1) @map("next_management_number")
+  supportsCpu           Boolean   @default(false) @map("supports_cpu")
+  supportsRam           Boolean   @default(false) @map("supports_ram")
+  supportsOs            Boolean   @default(false) @map("supports_os")
+  supportsLoginUsername Boolean   @default(false) @map("supports_login_username")
+  sortOrder             Int       @default(9999) @map("sort_order")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz(3)
+  assets                ItAsset[]
+
+  @@map("it_asset_types")
+}
+
+model Manufacturer {
+  id              Int       @id @default(autoincrement())
+  name            String    @unique
+  officialUrl     String?   @map("official_url")
+  sourceCheckedOn DateTime? @map("source_checked_on") @db.Date
+  sortOrder       Int       @default(9999) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  assets          ItAsset[]
+  cpuTypes        CpuType[]
+
+  @@map("manufacturers")
+}
+
+model CpuType {
+  id              Int          @id @default(autoincrement())
+  manufacturerId  Int          @map("manufacturer_id")
+  series          String
+  modelNumber     String       @map("model_number")
+  name            String       @unique
+  officialUrl     String?      @map("official_url")
+  sourceCheckedOn DateTime?    @map("source_checked_on") @db.Date
+  sortOrder       Int          @default(9999) @map("sort_order")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  manufacturer    Manufacturer @relation(fields: [manufacturerId], references: [id])
+  assets          ItAsset[]
+
+  @@unique([manufacturerId, modelNumber])
+  @@index([manufacturerId])
+  @@map("cpu_types")
+}
+
+model OperatingSystem {
+  id              Int       @id @default(autoincrement())
+  vendor          String
+  product         String
+  version         String
+  edition         String?
+  architecture    String?
+  displayName     String    @unique @map("display_name")
+  officialUrl     String?   @map("official_url")
+  sourceCheckedOn DateTime? @map("source_checked_on") @db.Date
+  sortOrder       Int       @default(9999) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  assets          ItAsset[]
+
+  @@map("operating_systems")
+}
+
+model ItAssetStatus {
+  id                 Int                @id @default(autoincrement())
+  name               String             @unique
+  disposalDatePolicy DisposalDatePolicy @default(prohibited) @map("disposal_date_policy")
+  sortOrder          Int                @default(9999) @map("sort_order")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  assets             ItAsset[]
+
+  @@map("it_asset_statuses")
+}
+
+model ItAssetAssignment {
+  id         Int       @id @default(autoincrement())
+  assetId    Int       @map("asset_id")
+  employeeId Int       @map("employee_id")
+  assignedAt DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(3)
+  returnedAt DateTime? @map("returned_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  asset      ItAsset   @relation(fields: [assetId], references: [id])
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([assetId, assignedAt])
+  @@index([assetId])
+  @@index([employeeId])
+  @@map("it_asset_assignments")
+}
+
+model ItAssetChangeHistory {
+  id        Int       @id @default(autoincrement())
+  eventKey  String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  assetId   Int       @map("asset_id")
+  actorId   Int       @map("actor_id")
+  action    String    @db.VarChar(20)
+  changes   Json
+  changedAt DateTime  @default(now()) @map("changed_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  asset     ItAsset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  actor     Employee  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, changedAt])
+  @@index([actorId])
+  @@map("it_asset_change_history")
+}
+
+model EmployeeChangeHistory {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  employeeId Int       @map("employee_id")
+  actorId    Int       @map("actor_id")
+  action     String    @db.VarChar(20)
+  changes    Json
+  changedAt  DateTime  @default(now()) @map("changed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation("EmployeeHistorySubject", fields: [employeeId], references: [id], onDelete: Restrict)
+  actor      Employee  @relation("EmployeeHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, changedAt])
+  @@index([actorId])
+  @@map("employee_change_history")
+}
+
+model AuditLog {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  actorId    Int       @map("actor_id")
+  action     String
+  resource   String
+  resourceId Int       @map("resource_id")
+  detail     Json?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  actor      Employee  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+}
+
+model Session {
+  id         Int       @id @default(autoincrement())
+  tokenHash  String    @unique @map("token_hash")
+  employeeId Int       @map("employee_id")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id         Int       @id @default(autoincrement())
+  tokenHash  String    @unique @map("token_hash")
+  employeeId Int       @map("employee_id")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model AccountInvitation {
+  id           Int       @id @default(autoincrement())
+  tokenHash    String    @unique @map("token_hash")
+  employeeId   Int       @map("employee_id")
+  issuedById   Int       @map("issued_by_id")
+  emailAtIssue String    @map("email_at_issue")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt       DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee     Employee  @relation("InvitationRecipient", fields: [employeeId], references: [id], onDelete: Restrict)
+  issuedBy     Employee  @relation("InvitationIssuer", fields: [issuedById], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, createdAt])
+  @@index([issuedById])
+  @@index([expiresAt])
+  @@map("account_invitations")
+}

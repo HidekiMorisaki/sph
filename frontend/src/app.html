@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<script>
+			try {
+				if (localStorage.getItem('theme') === 'light') {
+					document.documentElement.dataset.theme = 'light';
+				}
+				if (localStorage.getItem('asset-sidebar-collapsed') === 'true') {
+					document.documentElement.dataset.assetSidebarCollapsed = 'true';
+				}
+			} catch {
+				// Keep the dark default if browser storage is unavailable.
+			}
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

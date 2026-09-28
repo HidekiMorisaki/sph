@@ -1,0 +1,4 @@
+/* Add-specific icon layout layered on the shared primary action style. */
+.app-add-button{gap:5px}
+.app-add-button svg{flex:none;width:14px;height:14px}
+@media(max-width:700px){.app-add-button{width:100%}}
