@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ChangeHistoryEntry } from '$lib/change-history';
-	import { formatDate, formatTimestamp, localization } from '$lib/localization';
+	import { formatDate, formatEmployeeName, formatTimestamp, localization } from '$lib/localization';
 
 	let {
 		entries,
@@ -8,6 +8,7 @@
 		error = false,
 		fieldLabels,
 		dateFields = [],
+		valueFormatters = {},
 		actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' }
 	}: {
 		entries: ChangeHistoryEntry[];
@@ -15,12 +16,15 @@
 		error?: boolean;
 		fieldLabels: Record<string, string>;
 		dateFields?: string[];
+		valueFormatters?: Record<string, (value: string) => string>;
 		actionLabels?: Record<string, string>;
 	} = $props();
 
-	function displayValue(field: string, value: string | null) {
+	function displayValue(field: string, value: ChangeHistoryEntry['changes'][number]['before']) {
+		if (value && typeof value === 'object') return formatEmployeeName(value, $localization);
 		if (value === null || value.trim() === '') return '-';
-		return dateFields.includes(field) ? formatDate(value, $localization) || value : value;
+		if (dateFields.includes(field)) return formatDate(value, $localization) || value;
+		return valueFormatters[field]?.(value) ?? value;
 	}
 
 </script>
@@ -31,7 +35,7 @@
 		{#if loading}<p>Loading change history…</p>
 		{:else if error}<p role="alert">Unable to load change history.</p>
 		{:else if entries.length === 0}<p>No changes recorded yet.</p>
-		{:else}{#each entries as entry}<article class="history-event"><div class="history-event-heading"><strong>{actionLabels[entry.action] ?? entry.action}</strong><span>{formatTimestamp(entry.changedAt, $localization)}</span><span>by {entry.actorName}</span></div>
+		{:else}{#each entries as entry}<article class="history-event"><div class="history-event-heading"><strong>{actionLabels[entry.action] ?? entry.action}</strong><span>{formatTimestamp(entry.changedAt, $localization)}</span><span>by {formatEmployeeName(entry.actor, $localization)}</span></div>
 			{#if entry.changes.length}<table><colgroup><col class="history-field-column"/><col class="history-value-column"/><col class="history-value-column"/></colgroup><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>{#each entry.changes as change}<tr><th scope="row">{fieldLabels[change.field] ?? change.field}</th><td>{displayValue(change.field, change.before)}</td><td>{displayValue(change.field, change.after)}</td></tr>{/each}</tbody></table>{/if}
 		</article>{/each}{/if}
 	</div>

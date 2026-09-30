@@ -27,7 +27,7 @@
 		{ key: 'sortOrder', label: 'Sort Order', width: 10, value: (item: CpuType) => item.sortOrder }
 	];
 
-	let role = $state('');
+	let canManage = $state(false);
 	let list = $state<MasterList>();
 	let manufacturers = $state<Manufacturer[]>([]);
 	let notice = $state('');
@@ -45,14 +45,13 @@
 	let returnFocus = $state<HTMLElement | null>(null);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
-	let canManage = $derived(role === 'system_administrator' || role === 'business_administrator');
 	let hasUnsavedChanges = $derived(mode === 'edit' && initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 
 	async function initialize() {
 		try {
 			const session = await fetch('/v1/auth/session');
 			if (!session.ok) return;
-			role = (await apiData<{ user: { role: string } }>(session)).user.role;
+			canManage = (await apiData<{ user: { capabilities: { canManageAdministration: boolean } } }>(session)).user.capabilities.canManageAdministration;
 			const response = await fetch('/v1/manufacturers?limit=500');
 			manufacturers = response.ok ? await apiData<Manufacturer[]>(response) : [];
 		} catch { notice = 'Unable to load manufacturers.'; }

@@ -50,7 +50,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 			branch: { select: { name: true } },
 			roleGrants: {
 				where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
-				select: { role: { select: { code: true, name: true } } }
+				select: { role: { select: { id: true, name: true } } }
 			}
 		}
 	});
@@ -81,7 +81,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 		branchId: field(employee.branchId, employee.branch.name),
 		retiredAt: field(date(employee.retiredAt)),
 		notes: field(employee.notes),
-		roles: field(roles.map((role) => role.code).join('|'), roles.map((role) => role.name).join(', '))
+		roles: field(roles.map((role) => role.id).join('|'), roles.map((role) => role.name).join(', '))
 	};
 }
 

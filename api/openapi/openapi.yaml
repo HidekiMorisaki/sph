@@ -22,9 +22,30 @@ paths:
     get:
       tags: [Health]
       operationId: getHealth
+      description: Public liveness information, including the running product version.
       responses:
         '200':
           $ref: '#/components/responses/Success'
+  /v1/system-information:
+    get:
+      tags: [System settings]
+      operationId: getSystemInformation
+      description: System administrator only. Returns read-only release information for the running system.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200':
+          description: System information
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, responseCode, data]
+                properties:
+                  status: { type: string, const: success }
+                  responseCode: { type: integer, const: 200 }
+                  data: { $ref: '#/components/schemas/SystemInformation' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /v1/work-calendars:
     get:
       tags: [Work calendars]
@@ -300,6 +321,7 @@ paths:
     get:
       tags: [Authentication]
       operationId: getSession
+      description: Returns the authenticated employee with separate firstName, middleName, and lastName fields. No preformatted name field is returned.
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
@@ -461,14 +483,30 @@ paths:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
         - name: sortBy
           in: query
-          schema: { type: string, enum: [code, name], default: name }
+          schema: { type: string, enum: [name], default: name }
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /v1/roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Roles]
+      operationId: updateRoleName
+      description: System administrator only. Updates the role name, which is the role natural key. Permission identifiers and assignments are not exposed or editable through this endpoint.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/RoleNameWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/{master}:
     parameters:
       - $ref: '#/components/parameters/Master'
@@ -822,6 +860,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ExternalLinkWrite' }
+    RoleNameWrite:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RoleNameWrite' }
     EmployeeWrite:
       required: true
       content:
@@ -924,6 +967,28 @@ components:
                   details:
                     - { field: serialNumber, reason: This manufacturer and serial number combination is already in use. }
   schemas:
+    SystemInformation:
+      type: object
+      required: [name, version, notices, repositoryUrl, revisionHistory]
+      properties:
+        name: { type: string, minLength: 1, example: SME Portal Hub }
+        version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.1.0 }
+        notices:
+          type: array
+          items: { type: string, minLength: 1 }
+        repositoryUrl: { type: [string, 'null'], format: uri, pattern: '^https?://' }
+        revisionHistory:
+          type: array
+          items:
+            type: object
+            required: [version, releasedAt, changes]
+            properties:
+              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.1.0 }
+              releasedAt: { type: string, format: date, example: '2026-09-30' }
+              changes:
+                type: array
+                minItems: 1
+                items: { type: string, minLength: 1 }
     MasterListItem:
       type: object
       required: [usageCount]
@@ -981,10 +1046,18 @@ components:
         notes: { type: [string, 'null'], maxLength: 5000 }
     Role:
       type: object
-      required: [code, name]
+      required: [id, name, isSystemManagement, createdAt, updatedAt]
       properties:
-        code: { type: string, enum: [system_administrator, business_administrator, general_user] }
-        name: { type: string }
+        id: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 128 }
+        isSystemManagement: { type: boolean, description: Server-derived assignment guard. Internal permission identifiers are never returned. }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RoleNameWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
     EmployeeDerivedFields:
       type: object
       description: Language-neutral values calculated by the API for each employee response and never persisted.
@@ -999,7 +1072,7 @@ components:
             months: { type: integer, minimum: 0, maximum: 11 }
     EmployeeWrite:
       type: object
-      required: [employeeCode, firstName, lastName, birthDate, gender, email, hiredAt, employmentTypeId, branchId, roleCodes]
+      required: [employeeCode, firstName, lastName, birthDate, gender, email, hiredAt, employmentTypeId, branchId, roleIds]
       properties:
         employeeCode: { type: string, minLength: 10, maxLength: 64, pattern: '^[A-Za-z0-9]+$', description: Must be unique among employees. }
         firstName: { type: string, maxLength: 128 }
@@ -1036,11 +1109,12 @@ components:
         branchId: { type: integer, minimum: 1 }
         retiredAt: { type: [string, 'null'], format: date, description: Must not be before hiredAt. }
         notes: { type: [string, 'null'], maxLength: 5000 }
-        roleCodes:
+        roleIds:
           type: array
           minItems: 1
           uniqueItems: true
-          items: { type: string, enum: [system_administrator, business_administrator, general_user] }
+          description: Active role identifiers returned by GET /v1/roles.
+          items: { $ref: '#/components/schemas/PositiveIdInput' }
     PositiveIdInput:
       description: A positive database identifier. Digit strings are accepted because browser form values are serialized as strings.
       oneOf:

@@ -1,14 +1,14 @@
 import { Client } from 'pg';
 
 const tables = [
-	'employees', 'employee_settings', 'employee_social_links', 'roles', 'employee_roles', 'employee_departments', 'employee_positions', 'employment_departments', 'employee_groups', 'employment_positions', 'employment_types',
+	'employees', 'employee_settings', 'employee_social_links', 'roles', 'permissions', 'permission_operations', 'role_permissions', 'employee_roles', 'employee_departments', 'employee_positions', 'employment_departments', 'employee_groups', 'employment_positions', 'employment_types',
 	'storage', 'branches', 'rooms', 'it_assets', 'it_asset_types', 'manufacturers',
 	'cpu_types', 'operating_systems', 'it_asset_statuses', 'it_asset_assignments', 'it_asset_management_codes',
 	'it_asset_change_history', 'employee_change_history', 'audit_logs', 'sessions', 'password_reset_tokens', 'account_invitations',
 	'work_calendars', 'work_calendar_days', 'calendar_date_attributes', 'calendar_holiday_imports', 'external_links'
 ];
 const naturalKeyIndexes = [
-	'employees_employee_code_key', 'employees_email_key', 'employee_settings_employee_id_key', 'employee_social_links_employee_id_platform_key', 'roles_code_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'employee_departments_employee_id_department_id_key', 'employee_positions_employee_id_position_id_key', 'employment_departments_name_key', 'employee_groups_department_id_name_key', 'employee_groups_unassigned_name_key',
+	'employees_employee_code_key', 'employees_email_key', 'employee_settings_employee_id_key', 'employee_social_links_employee_id_platform_key', 'roles_name_key', 'permissions_identifier_key', 'permissions_name_key', 'permission_operations_operation_key', 'role_permissions_role_id_permission_id_key', 'employee_roles_employee_id_role_id_scope_type_scope_key_key', 'employee_departments_employee_id_department_id_key', 'employee_positions_employee_id_position_id_key', 'employment_departments_name_key', 'employee_groups_department_id_name_key', 'employee_groups_unassigned_name_key',
 	'employment_positions_name_key', 'employment_types_name_key', 'storage_branch_id_room_id_name_key', 'branches_name_key', 'rooms_branch_id_name_key',
 	'it_assets_asset_tag_key', 'it_asset_management_codes_code_key', 'it_asset_types_name_key', 'manufacturers_name_key',
 	'cpu_types_name_key', 'operating_systems_display_name_key', 'it_asset_statuses_name_key',
@@ -156,9 +156,15 @@ try {
 		SELECT count(*) FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_name IN ('departments', 'positions')
 	`);
-	const retainedRoleCodeColumn = await count(`
+	const removedRoleCodeColumn = await count(`
 		SELECT count(*) FROM information_schema.columns
-		WHERE table_schema = 'public' AND table_name = 'roles' AND column_name = 'code' AND is_nullable = 'NO'
+		WHERE table_schema = 'public' AND table_name = 'roles' AND column_name = 'code'
+	`);
+	const permissionIdentifiers = await count(`SELECT count(*) FROM permissions WHERE deleted_at IS NULL AND identifier IS NOT NULL`);
+	const permissionMappings = await count(`SELECT count(*) FROM permission_operations WHERE deleted_at IS NULL AND operation IN ('system.manage', 'administration.manage', 'assets.manage')`);
+	const immutablePermissionTrigger = await count(`
+		SELECT count(*) FROM information_schema.triggers
+		WHERE trigger_schema = 'public' AND event_object_table = 'permissions' AND trigger_name = 'permissions_identifier_immutable'
 	`);
 	const removedAssetTables = await count(`
 		SELECT count(*) FROM information_schema.tables
@@ -211,7 +217,13 @@ try {
 			AND updated_at >= created_at
 	`);
 	const activeAccounts = await count("SELECT count(*) FROM employees WHERE account_status = 'active' AND deleted_at IS NULL");
-	const roles = await count("SELECT count(*) FROM roles WHERE code IN ('system_administrator', 'business_administrator', 'general_user') AND deleted_at IS NULL");
+	const roles = await count(`
+		SELECT count(*) FROM roles r
+		WHERE r.deleted_at IS NULL AND EXISTS (
+			SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id AND p.deleted_at IS NULL
+			WHERE rp.role_id = r.id AND rp.deleted_at IS NULL
+		)
+	`);
 	const activeEmployeesWithoutRoles = await count(`
 		SELECT count(*) FROM employees e
 		WHERE e.deleted_at IS NULL
@@ -221,10 +233,18 @@ try {
 				WHERE er.employee_id = e.id AND er.scope_type = 'global' AND er.deleted_at IS NULL
 			)
 	`);
+	const activeRoleGrantsReferencingDeletedEmployees = await count(`
+		SELECT count(*) FROM employee_roles er
+		WHERE er.deleted_at IS NULL
+			AND (
+				EXISTS (SELECT 1 FROM employees e WHERE e.id = er.employee_id AND e.deleted_at IS NOT NULL)
+				OR EXISTS (SELECT 1 FROM employees e WHERE e.id = er.scope_employee_id AND e.deleted_at IS NOT NULL)
+			)
+	`);
 	const removedUsersTable = await count("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
-	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, branchContactColumns, branchResponsibilityColumns, branchDateColumns, branchDateOrderConstraint, branchResponsibilityForeignKeys, branchResponsibilityIndexes, removedLocationClassificationColumns, removedCodeColumns, employmentSortOrderColumns, itAssetMasterSortOrderColumns, locationSortOrderColumns, legacyEmploymentTables, retainedRoleCodeColumn, removedAssetTables, storageReferenceColumns, oldItAssetLocationColumn, storageRoomForeignKey, itAssetManagementCodeFormatConstraint, unreservedItAssetCodes, requiredEmployeeColumns, requiredEmployeeReferences, employeeDepartmentConstraints, employeeDepartmentPrimaryIndex, employeePositionConstraints, employeePositionPrimaryIndex, removedPrimaryAssignmentColumns, duplicateActivePrimaryAssignments, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, removedUsersTable };
+	const result = { missingCommonColumns, autoIncrementIntegerIds, timestampColumns, naturalKeys, updatedAtTriggers, cascadeForeignKeys, removedEmployeeEmergencyContactColumns, removedEmployeeStatusColumn, removedEmployeeEmailColumns, locationNotesColumns, branchContactColumns, branchResponsibilityColumns, branchDateColumns, branchDateOrderConstraint, branchResponsibilityForeignKeys, branchResponsibilityIndexes, removedLocationClassificationColumns, removedCodeColumns, employmentSortOrderColumns, itAssetMasterSortOrderColumns, locationSortOrderColumns, legacyEmploymentTables, removedRoleCodeColumn, permissionIdentifiers, permissionMappings, immutablePermissionTrigger, removedAssetTables, storageReferenceColumns, oldItAssetLocationColumn, storageRoomForeignKey, itAssetManagementCodeFormatConstraint, unreservedItAssetCodes, requiredEmployeeColumns, requiredEmployeeReferences, employeeDepartmentConstraints, employeeDepartmentPrimaryIndex, employeePositionConstraints, employeePositionPrimaryIndex, removedPrimaryAssignmentColumns, duplicateActivePrimaryAssignments, softDeletedSessions, updatedAtTriggerVerified, activeAccounts, roles, activeEmployeesWithoutRoles, activeRoleGrantsReferencingDeletedEmployees, removedUsersTable };
 	console.log(JSON.stringify(result));
-	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || branchContactColumns !== 8 || branchResponsibilityColumns !== 2 || branchDateColumns !== 2 || branchDateOrderConstraint !== 1 || branchResponsibilityForeignKeys !== 2 || branchResponsibilityIndexes !== 2 || removedLocationClassificationColumns !== 0 || removedCodeColumns !== 0 || employmentSortOrderColumns !== 4 || itAssetMasterSortOrderColumns !== 5 || locationSortOrderColumns !== 3 || legacyEmploymentTables !== 0 || retainedRoleCodeColumn !== 1 || removedAssetTables !== 0 || storageReferenceColumns !== 3 || oldItAssetLocationColumn !== 0 || storageRoomForeignKey !== 1 || itAssetManagementCodeFormatConstraint !== 1 || unreservedItAssetCodes !== 0 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || employeeDepartmentConstraints !== 2 || employeeDepartmentPrimaryIndex !== 1 || employeePositionConstraints !== 2 || employeePositionPrimaryIndex !== 1 || removedPrimaryAssignmentColumns !== 0 || duplicateActivePrimaryAssignments !== 0 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || removedUsersTable !== 0) {
+	if (missingCommonColumns !== 0 || autoIncrementIntegerIds !== tables.length || timestampColumns !== tables.length * 3 || naturalKeys !== naturalKeyIndexes.length || updatedAtTriggers !== tables.length || cascadeForeignKeys !== 0 || removedEmployeeEmergencyContactColumns !== 0 || removedEmployeeEmailColumns !== 0 || locationNotesColumns !== 3 || branchContactColumns !== 8 || branchResponsibilityColumns !== 2 || branchDateColumns !== 2 || branchDateOrderConstraint !== 1 || branchResponsibilityForeignKeys !== 2 || branchResponsibilityIndexes !== 2 || removedLocationClassificationColumns !== 0 || removedCodeColumns !== 0 || employmentSortOrderColumns !== 4 || itAssetMasterSortOrderColumns !== 5 || locationSortOrderColumns !== 3 || legacyEmploymentTables !== 0 || removedRoleCodeColumn !== 0 || permissionIdentifiers !== 3 || permissionMappings !== 3 || immutablePermissionTrigger !== 1 || removedAssetTables !== 0 || storageReferenceColumns !== 3 || oldItAssetLocationColumn !== 0 || storageRoomForeignKey !== 1 || itAssetManagementCodeFormatConstraint !== 1 || unreservedItAssetCodes !== 0 || requiredEmployeeColumns !== 9 || requiredEmployeeReferences !== 2 || employeeDepartmentConstraints !== 2 || employeeDepartmentPrimaryIndex !== 1 || employeePositionConstraints !== 2 || employeePositionPrimaryIndex !== 1 || removedPrimaryAssignmentColumns !== 0 || duplicateActivePrimaryAssignments !== 0 || updatedAtTriggerVerified !== 1 || activeAccounts < 1 || roles !== 3 || activeEmployeesWithoutRoles !== 0 || activeRoleGrantsReferencingDeletedEmployees !== 0 || removedUsersTable !== 0) {
 		process.exitCode = 1;
 	}
 } finally {

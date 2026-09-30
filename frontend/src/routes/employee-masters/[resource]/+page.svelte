@@ -116,7 +116,7 @@
 				fetch('/v1/auth/session'),
 				isGroup ? fetch('/v1/departments?sortBy=name&sortOrder=asc&limit=500') : Promise.resolve(null)
 			]);
-			if (sessionResponse.ok) { const session = await apiData<{ user: { role: string } }>(sessionResponse); canManage = ['system_administrator', 'business_administrator'].includes(session.user.role); }
+			if (sessionResponse.ok) { const session = await apiData<{ user: { capabilities: { canManageAdministration: boolean } } }>(sessionResponse); canManage = session.user.capabilities.canManageAdministration; }
 			departments = departmentResponse?.ok ? await apiData<EmployeeMaster[]>(departmentResponse) : [];
 		})();
 	});

@@ -1,0 +1,23 @@
+{
+	"name": "SME Portal Hub",
+	"notices": [
+		"Version 0.1.0 is an initial development release. Features, data structures, and upgrade procedures may change before version 1.0.0."
+	],
+	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
+	"revisionHistory": [
+		{
+			"version": "0.1.0",
+			"releasedAt": "2026-09-30",
+			"changes": [
+				"Added product version, release notice, public repository, and revision history information to System settings.",
+				"Added verified full-database backup, update, and disaster-recovery tools for Windows, macOS, and Linux.",
+				"Added role name management and replaced editable role codes with immutable permission identifiers.",
+				"Improved Work calendars with automatic public-holiday imports and responsive employee assignment controls.",
+				"Added language-aware employee name formatting and localized gender and length-of-service labels.",
+				"Added employee email actions and made IT asset notes easier to identify.",
+				"Improved responsive layouts across Settings, System settings, master data, and asset management screens.",
+				"Added date-safe active-data backup and restore verification tools."
+			]
+		}
+	]
+}

@@ -1,6 +1,6 @@
 import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
 import { failure, success } from '$lib/server/api/response';
-import { DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayLanguage, isTimeZone } from '$lib/server/auth/localization';
+import { DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayLanguage, isTimeZone, type DisplayLanguage } from '$lib/server/auth/localization';
 import { getPrisma } from '$lib/server/prisma';
 
 function output(settings: { timeZone: string; displayLanguage: string } | null) {
@@ -29,7 +29,7 @@ export async function PATCH({ request, locals }: import('./$types').RequestEvent
 	if (details.length || !body) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', details);
 
 	const timeZone = body.timeZone as string;
-	const displayLanguage = body.displayLanguage as 'en' | 'ja';
+	const displayLanguage = body.displayLanguage as DisplayLanguage;
 	const saved = await getPrisma().$transaction(async (tx) => {
 		const existing = await tx.employeeSettings.findUnique({ where: { employeeId: actor.id }, select: { id: true } });
 		const item = existing

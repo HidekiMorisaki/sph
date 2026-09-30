@@ -1,4 +1,5 @@
 import { failure, success } from '$lib/server/api/response';
+import { capabilitiesFor } from '$lib/server/auth/permissions';
 
 export function GET({ locals }: import('./$types').RequestEvent) {
 	if (!locals.user) {
@@ -10,9 +11,11 @@ export function GET({ locals }: import('./$types').RequestEvent) {
 			id: locals.user.id,
 			username: locals.user.username,
 			email: locals.user.email,
-			name: locals.user.name,
-			role: locals.user.role,
+			firstName: locals.user.firstName,
+			middleName: locals.user.middleName,
+			lastName: locals.user.lastName,
 			roles: locals.user.roles,
+			capabilities: capabilitiesFor(locals.user),
 			mustChangeCredentials: locals.user.mustChangeCredentials,
 			timeZone: locals.user.timeZone,
 			displayLanguage: locals.user.displayLanguage

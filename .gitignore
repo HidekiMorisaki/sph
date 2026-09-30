@@ -8,3 +8,6 @@ staticfiles/
 frontend/src/lib/server/generated/
 api/src/lib/server/generated/
 /TEMP/
+/backups/
+/sph-backups/
+*.dump

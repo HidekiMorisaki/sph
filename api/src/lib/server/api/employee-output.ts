@@ -48,7 +48,7 @@ export const employeeSafeSelect = {
 	},
 	roleGrants: {
 		where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
-		select: { role: { select: { code: true, name: true } } }
+		select: { role: { select: { id: true, name: true } } }
 	}
 } satisfies Prisma.EmployeeSelect;
 

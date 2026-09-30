@@ -994,15 +994,6 @@ INSERT INTO "roles" ("id", "code", "name") VALUES ('2', 'business_administrator'
 INSERT INTO "roles" ("id", "code", "name") VALUES ('3', 'general_user', 'General User');
 SELECT setval(pg_get_serial_sequence('"roles"', 'id'), (SELECT MAX(id) FROM "roles"), true);
 
--- Weekend date attributes used by work calendars.
-INSERT INTO "calendar_date_attributes" ("calendar_date", "kind", "name", "source")
-SELECT day::date,
-       CASE WHEN EXTRACT(ISODOW FROM day) = 7 THEN 'sunday' ELSE 'saturday' END,
-       CASE WHEN EXTRACT(ISODOW FROM day) = 7 THEN 'Sunday' ELSE 'Saturday' END,
-       'calculated'
-FROM generate_series(DATE '2011-01-01', DATE '2100-12-31', INTERVAL '1 day') AS day
-WHERE EXTRACT(ISODOW FROM day) IN (6, 7);
-
 -- Employee position assignments
 CREATE TABLE "employee_positions" (
     "id" SERIAL NOT NULL,
@@ -1167,3 +1158,107 @@ CREATE TRIGGER "it_asset_management_codes_set_updated_at"
 BEFORE UPDATE ON "it_asset_management_codes"
 FOR EACH ROW
 EXECUTE FUNCTION "set_record_updated_at"();
+
+-- Consolidated from 20260929020000_replace_role_codes_with_permissions
+-- CreateTable
+CREATE TABLE "permissions" (
+    "id" SERIAL NOT NULL,
+    "identifier" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "permission_operations" (
+    "id" SERIAL NOT NULL,
+    "operation" TEXT NOT NULL,
+    "permission_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "permission_operations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "role_permissions" (
+    "id" SERIAL NOT NULL,
+    "role_id" INTEGER NOT NULL,
+    "permission_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "permissions_identifier_key" ON "permissions"("identifier");
+CREATE UNIQUE INDEX "permissions_name_key" ON "permissions"("name");
+CREATE UNIQUE INDEX "permission_operations_operation_key" ON "permission_operations"("operation");
+CREATE INDEX "permission_operations_permission_id_idx" ON "permission_operations"("permission_id");
+CREATE UNIQUE INDEX "role_permissions_role_id_permission_id_key" ON "role_permissions"("role_id", "permission_id");
+CREATE INDEX "role_permissions_permission_id_idx" ON "role_permissions"("permission_id");
+CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+
+-- AddForeignKey
+ALTER TABLE "permission_operations" ADD CONSTRAINT "permission_operations_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Seed permissions with database-generated random identifiers.
+INSERT INTO "permissions" ("name") VALUES
+    ('System management'),
+    ('Administrative management'),
+    ('Asset management');
+
+INSERT INTO "permission_operations" ("operation", "permission_id")
+SELECT mapping.operation, permission.id
+FROM (VALUES
+    ('system.manage', 'System management'),
+    ('administration.manage', 'Administrative management'),
+    ('assets.manage', 'Asset management')
+) AS mapping(operation, permission_name)
+JOIN "permissions" permission ON permission.name = mapping.permission_name;
+
+INSERT INTO "role_permissions" ("role_id", "permission_id")
+SELECT role.id, permission.id
+FROM (VALUES
+    ('system_administrator', 'System management'),
+    ('system_administrator', 'Administrative management'),
+    ('system_administrator', 'Asset management'),
+    ('business_administrator', 'Administrative management'),
+    ('business_administrator', 'Asset management'),
+    ('general_user', 'Asset management')
+) AS mapping(role_code, permission_name)
+JOIN "roles" role ON role.code = mapping.role_code AND role.deleted_at IS NULL
+JOIN "permissions" permission ON permission.name = mapping.permission_name;
+
+CREATE TRIGGER "permissions_set_updated_at" BEFORE UPDATE ON "permissions" FOR EACH ROW EXECUTE FUNCTION "set_record_updated_at"();
+CREATE TRIGGER "permission_operations_set_updated_at" BEFORE UPDATE ON "permission_operations" FOR EACH ROW EXECUTE FUNCTION "set_record_updated_at"();
+CREATE TRIGGER "role_permissions_set_updated_at" BEFORE UPDATE ON "role_permissions" FOR EACH ROW EXECUTE FUNCTION "set_record_updated_at"();
+
+-- Make permission identifiers immutable, including for direct application SQL.
+CREATE FUNCTION prevent_permission_identifier_update() RETURNS trigger AS $$
+BEGIN
+    IF NEW.identifier IS DISTINCT FROM OLD.identifier THEN
+        RAISE EXCEPTION 'Permission identifiers cannot be changed.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "permissions_identifier_immutable"
+BEFORE UPDATE OF "identifier" ON "permissions"
+FOR EACH ROW EXECUTE FUNCTION prevent_permission_identifier_update();
+
+-- Remove the former role natural key after all permission relationships exist.
+DROP INDEX "roles_code_key";
+ALTER TABLE "roles" DROP COLUMN "code";
+
+-- Reserve room for BCP 47 language tags used by future display languages.
+ALTER TABLE "employee_settings" ALTER COLUMN "display_language" TYPE VARCHAR(64);

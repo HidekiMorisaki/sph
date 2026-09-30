@@ -1,0 +1,11 @@
+.git
+.env
+TEMP
+docs
+frontend
+gateway
+db
+**/node_modules
+**/.svelte-kit
+**/build
+**/npm-debug.log

@@ -14,7 +14,7 @@
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import type { Employee } from '$lib/employees';
-	import { formatDate, localization } from '$lib/localization';
+	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
 	import '$lib/styles/add-button.css';
 	type EmployeeRef={id:number;employeeCode:string;firstName:string;middleName:string|null;lastName:string};
@@ -23,7 +23,7 @@
 	type Storage={id:number;name:string;sortOrder:number;notes:string|null;branchId:number;roomId:number;room:Room};
 	type Tab='branches'|'rooms'|'locations';
 	let { kind: tab }: { kind: Tab } = $props();
-	let role=$state(''); let branches=$state<Branch[]>([]); let rooms=$state<Room[]>([]); let employees=$state<EmployeeRef[]>([]); let message=$state(''); let editingId=$state<number|null>(null);
+	let canManageAdministration=$state(false);let canManageSystemSettings=$state(false); let branches=$state<Branch[]>([]); let rooms=$state<Room[]>([]); let employees=$state<EmployeeRef[]>([]); let message=$state(''); let editingId=$state<number|null>(null);
 	let form=$state({name:'',sortOrder:'9999',openedOn:'',closedOn:'',postalCode:'',prefecture:'',city:'',streetAddress:'',buildingName:'',phoneNumber1:'',phoneNumber1Label:'',phoneNumber2:'',phoneNumber2Label:'',faxNumber1:'',faxNumber1Label:'',faxNumber2:'',faxNumber2Label:'',managerEmployeeId:'',deputyManagerEmployeeId:'',branchId:'',roomId:'',notes:''});
 	let formOpen=$state(false);
 	let activeDateField=$state<'openedOn'|'closedOn'|null>(null);
@@ -36,10 +36,10 @@
 	let list=$state<MasterList>();
 	let endpoint=$derived(tab==='locations'?'/v1/storage':`/v1/${tab}`);
 	function contactLines(first:string|null,firstLabel:string|null,second:string|null,secondLabel:string|null){return [[first,firstLabel],[second,secondLabel]].filter((entry):entry is [string,string|null]=>Boolean(entry[0])).map(([number,label])=>`${number}${label?` : ${label}`:''}`).join('\n');}
-	function employeeName(employee:EmployeeRef|null|undefined){return employee?[employee.firstName,employee.middleName,employee.lastName].filter(Boolean).join(' '):'';}
+	function employeeName(employee:EmployeeRef|null|undefined){return employee?formatEmployeeName(employee,$localization):'';}
 	function dateValue(value:string|null|undefined){return value?value.slice(0,10):'';}
 	let columns=$derived(tab==='rooms'?[{key:'name',label:'Name',value:(item:Room)=>item.name},{key:'branch',label:'Branch',value:(item:Room)=>item.branch.name},{key:'notes',label:'Notes',value:(item:Room)=>item.notes??''},{key:'sortOrder',label:'Sort Order',value:(item:Room)=>item.sortOrder}]:[{key:'name',label:'Name',value:(item:Storage)=>item.name},{key:'branch',label:'Branch',value:(item:Storage)=>item.room.branch.name},{key:'room',label:'Room',value:(item:Storage)=>item.room.name},{key:'notes',label:'Notes',value:(item:Storage)=>item.notes??''},{key:'sortOrder',label:'Sort Order',value:(item:Storage)=>item.sortOrder}]);
-	let canManage=$derived(role==='system_administrator'||(tab!=='branches'&&role==='business_administrator'));
+	let canManage=$derived(tab==='branches'?canManageSystemSettings:canManageAdministration);
 	const title=$derived(tab==='branches'?'Branches':tab==='rooms'?'Rooms':'Storages');
 	const resourceLabel=$derived(tab==='branches'?'branch':tab==='rooms'?'room':'storage');
 	const addLabel=$derived(`Add ${resourceLabel}`);
@@ -53,7 +53,7 @@
 	function emptyForm(){const branchId=branches[0]?String(branches[0].id):'';return {name:'',sortOrder:'9999',openedOn:'',closedOn:'',postalCode:'',prefecture:'',city:'',streetAddress:'',buildingName:'',phoneNumber1:'',phoneNumber1Label:'',phoneNumber2:'',phoneNumber2Label:'',faxNumber1:'',faxNumber1Label:'',faxNumber2:'',faxNumber2Label:'',managerEmployeeId:'',deputyManagerEmployeeId:'',branchId,roomId:rooms.find((room)=>String(room.branchId)===branchId)?String(rooms.find((room)=>String(room.branchId)===branchId)!.id):'',notes:''};}
 	function reset(clearMessage=true){editingId=null;formOpen=false;activeDateField=null;errors={};formError='';form=emptyForm();initialSnapshot='';confirmingDiscard=false;if(clearMessage)message='';}
 	async function loadEmployees(){const collected:EmployeeRef[]=[];let offset=0,total=1;while(offset<total){const response=await fetch(`/v1/employees?limit=500&offset=${offset}&sortBy=employee&sortOrder=asc`);if(!response.ok)throw new Error();const payload=await response.json() as {data:EmployeeRef[];meta?:{total?:number}};collected.push(...payload.data);offset+=payload.data.length;total=payload.meta?.total??collected.length;if(!payload.data.length)break;}employees=collected;}
-	async function load(){const session=await fetch('/v1/auth/session');if(!session.ok){message='Please sign in to continue.';return;}role=(await apiData<{user:{role:string}}>(session)).user.role;const responses=await Promise.all([fetch('/v1/branches?limit=500'),fetch('/v1/rooms?limit=500')]);if(responses.some((response)=>!response.ok)){message='Unable to load location data.';return;}[branches,rooms]=await Promise.all([apiData<Branch[]>(responses[0]),apiData<Room[]>(responses[1])]);if(tab==='branches'&&role==='system_administrator'){try{await loadEmployees();}catch{message='Unable to load employee options.';}}if(!editingId)reset(false);}
+	async function load(){const session=await fetch('/v1/auth/session');if(!session.ok){message='Please sign in to continue.';return;}const capabilities=(await apiData<{user:{capabilities:{canManageAdministration:boolean;canManageSystemSettings:boolean}}}>(session)).user.capabilities;canManageAdministration=capabilities.canManageAdministration;canManageSystemSettings=capabilities.canManageSystemSettings;const responses=await Promise.all([fetch('/v1/branches?limit=500'),fetch('/v1/rooms?limit=500')]);if(responses.some((response)=>!response.ok)){message='Unable to load location data.';return;}[branches,rooms]=await Promise.all([apiData<Branch[]>(responses[0]),apiData<Room[]>(responses[1])]);if(tab==='branches'&&canManageSystemSettings){try{await loadEmployees();}catch{message='Unable to load employee options.';}}if(!editingId)reset(false);}
 	function edit(item:Branch|Room|Storage,trigger:HTMLButtonElement|null){returnFocus=trigger;editingId=item.id;formOpen=true;activeDateField=null;errors={};formError='';form={...emptyForm(),name:item.name,sortOrder:String(item.sortOrder??9999),...('postalCode' in item?{openedOn:dateValue(item.openedOn),closedOn:dateValue(item.closedOn),postalCode:item.postalCode??'',prefecture:item.prefecture??'',city:item.city??'',streetAddress:item.streetAddress??'',buildingName:item.buildingName??'',phoneNumber1:item.phoneNumber1??'',phoneNumber1Label:item.phoneNumber1Label??'',phoneNumber2:item.phoneNumber2??'',phoneNumber2Label:item.phoneNumber2Label??'',faxNumber1:item.faxNumber1??'',faxNumber1Label:item.faxNumber1Label??'',faxNumber2:item.faxNumber2??'',faxNumber2Label:item.faxNumber2Label??'',managerEmployeeId:item.managerEmployeeId?String(item.managerEmployeeId):'',deputyManagerEmployeeId:item.deputyManagerEmployeeId?String(item.deputyManagerEmployeeId):''}:{}),branchId:'branchId' in item?String(item.branchId):'',roomId:'roomId' in item?String(item.roomId):'',notes:item.notes??''};initialSnapshot=formSnapshot(form);confirmingDiscard=false;void tick().then(()=>formElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());}
 	function showDetail(item:Branch,trigger:HTMLElement|null){returnFocus=trigger;detailBranch=item;}
 	function add(){returnFocus=document.activeElement instanceof HTMLElement&&document.activeElement!==document.body?document.activeElement:addButton??null;reset();formOpen=true;void tick().then(()=>formElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());}

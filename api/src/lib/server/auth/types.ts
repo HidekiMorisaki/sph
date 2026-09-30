@@ -1,13 +1,18 @@
+import type { DisplayLanguage } from './localization';
+
 export type AuthenticatedUser = {
 	id: number;
 	username: string;
 	email: string | null;
-	name: string | null;
-	role: 'system_administrator' | 'business_administrator' | 'general_user';
-	roles: string[];
+	firstName: string;
+	middleName: string | null;
+	lastName: string;
+	roles: Array<{ id: number; name: string }>;
+	permissionIdentifiers: string[];
+	permissionOperations: string[];
 	mustChangeCredentials: boolean;
 	timeZone: string;
-	displayLanguage: 'en' | 'ja';
+	displayLanguage: DisplayLanguage;
 };
 
 export type AuthenticatedSession = {

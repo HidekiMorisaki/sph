@@ -13,7 +13,7 @@
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import { formatDate, localization } from '$lib/localization';
+	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
 
 	type Named = { id: number; code?: string; name: string; displayName?: string; managementCodePrefix?: string; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
@@ -43,7 +43,7 @@
 		}
 	}
 	const iso = (value: string | null) => value ? value.slice(0, 10) : '';
-	const employeeName = (employee: Assignee) => [employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ');
+	const employeeName = (employee: Assignee) => formatEmployeeName(employee, $localization);
 	const assigneeName = (assignment: Assignment | undefined) => assignment ? employeeName(assignment.employee) : 'Unassigned';
 	const invalidRam = (value: string) => value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1);
 
@@ -63,7 +63,7 @@
 	let historyRequestId = 0;
 	let detailAsset = $state<Asset | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
-	let role = $state('');
+	let canManageAssets = $state(false);
 	let form = $state(blank());
 	let branchId = $state('');
 	let roomId = $state('');
@@ -87,12 +87,12 @@
 	const selectedStatus = $derived(statuses.find((item) => String(item.id) === form.statusId));
 	const availableRooms = $derived(rooms.filter((item) => String(item.branchId) === branchId));
 	const availableStorage = $derived(storageItems.filter((item) => String(item.roomId) === roomId && String(item.branchId) === branchId));
-	let hasUnsavedChanges = $derived(Boolean(editing) && role !== '' && initialSnapshot !== '' && formSnapshot({ form, branchId, roomId, assignEmployeeId }) !== initialSnapshot);
+	let hasUnsavedChanges = $derived(Boolean(editing) && canManageAssets && initialSnapshot !== '' && formSnapshot({ form, branchId, roomId, assignEmployeeId }) !== initialSnapshot);
 
 	async function load() {
 		const session = await fetch('/v1/auth/session');
 		if (!session.ok) { message = 'Please sign in to continue.'; return; }
-		role = (await apiData<{ user: { role: string } }>(session)).user.role;
+		canManageAssets = (await apiData<{ user: { capabilities: { canManageAssets: boolean } } }>(session)).user.capabilities.canManageAssets;
 		const names = ['it-asset-types', 'manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'];
 		const responses = await Promise.all(names.map(endpoint));
 		if (responses.some((response) => !response.ok)) { message = 'Unable to load IT asset data.'; return; }
@@ -100,7 +100,7 @@
 		[types, manufacturers, cpus, systems, statuses] = data as unknown as [Named[], Named[], Named[], Named[], Named[]];
 		try { [branches, rooms, storageItems] = await Promise.all([allPages<Branch>('branches'), allPages<Room>('rooms'), allPages<Storage>('storage')]); }
 		catch { message = 'Unable to load location data.'; return; }
-		if (role !== '') {
+		if (canManageAssets) {
 			const response = await fetch('/v1/it-asset-assignees');
 			if (response.ok) employees = await apiData<Assignee[]>(response);
 		}
@@ -339,25 +339,25 @@
 <svelte:window onkeydown={modalKeydown} />
 
 {#snippet dateInput(label: string, field: DateField, value: string, above = false, required = false, inactive = false)}
-	<DatePicker {label} {field} {value} {above} {required} disabled={role === '' || inactive} error={fieldErrors[field] ?? ''} open={activeDateField === field} onToggle={() => activeDateField = activeDateField === field ? null : field} onSelect={(selected) => chooseDate(field, selected)} />
+	<DatePicker {label} {field} {value} {above} {required} disabled={!canManageAssets || inactive} error={fieldErrors[field] ?? ''} open={activeDateField === field} onToggle={() => activeDateField = activeDateField === field ? null : field} onSelect={(selected) => chooseDate(field, selected)} />
 {/snippet}
 
 {#snippet searchableSelect(label: string, field: SelectField, options: SelectOption[], required = false, inactive = false)}
-	<SearchSelect {label} {field} value={selectedValue(field)} {options} {required} disabled={role === '' || inactive} error={fieldErrors[field] ?? ''} emptyText="No matching options." onOpen={() => activeDateField = null} onSelect={(value) => chooseFormSelect(field, value)} />
+	<SearchSelect {label} {field} value={selectedValue(field)} {options} {required} disabled={!canManageAssets || inactive} error={fieldErrors[field] ?? ''} emptyText="No matching options." onOpen={() => activeDateField = null} onSelect={(value) => chooseFormSelect(field, value)} />
 {/snippet}
 
 {#snippet detailField(label: string, value: string | number | null | undefined)}
 	<div><dt>{label}</dt><dd>{value ?? ''}</dd></div>
 {/snippet}
-{#snippet assetCodeCell(item: Asset)}<strong class="asset-primary">{item.assetTag}</strong><small class="asset-secondary">{item.serialNumber ?? ''}</small>{/snippet}
+{#snippet assetCodeCell(item: Asset)}<strong class="asset-primary">{item.assetTag}</strong>{#if item.notes?.trim()}<small class="asset-secondary asset-note" title={item.notes}>{item.notes}</small>{/if}{/snippet}
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
-{#snippet pageActions()}{#if role !== ''}<AddButton label="Add IT asset" onclick={create} />{/if}{/snippet}
+{#snippet pageActions()}{#if canManageAssets}<AddButton label="Add IT asset" onclick={create} />{/if}{/snippet}
 
 <AssetManagementShell title="IT Assets" active="IT Assets">
 	<MasterPageHeader title="IT Assets" description="Track computers, servers, network appliances, power equipment and peripherals." actions={pageActions} />
 	{#if message}<p class="notice">{message}</p>{/if}
-	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title="IT assets" listHeading="All IT assets" description="Find and manage assets across locations." initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={role !== ''} canDelete={role !== ''} actionLabel={(item) => (item as Asset).assetTag} loadingLabel="Loading IT assets…" emptyLabel="No matches found" columns={[
+	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title="IT assets" listHeading="All IT assets" description="Find and manage assets across locations." initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={canManageAssets} canDelete={canManageAssets} actionLabel={(item) => (item as Asset).assetTag} loadingLabel="Loading IT assets…" emptyLabel="No matches found" columns={[
 		{ key: 'assetTag', label: 'Management code', width: 15, cell: assetCodeCell },
 		{ key: 'type', label: 'Type', width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: 'Manufacturer / model', width: 17, cell: manufacturerCell },
@@ -370,24 +370,24 @@
 	{#if open}
 		<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
-				<header><h2 id="asset-form-title">{editing ? (role !== '' ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset form" disabled={saving} onclick={requestCloseForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<header><h2 id="asset-form-title">{editing ? (canManageAssets ? 'Edit IT asset' : 'IT asset details') : 'Add IT asset'}</h2><button class="modal-close app-modal-close" type="button" aria-label="Close IT asset form" disabled={saving} onclick={requestCloseForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 				<form class="asset-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
 					<div class="asset-form-body app-modal-form-body">
 						{#if formError}<div class="form-error-summary app-modal-error-summary wide" role="alert"><strong>Unable to save IT asset</strong><span>{formError}</span></div>{/if}
 						<FormSection title="Basic information" framed>
 						{@render searchableSelect('Type', 'typeId', types.map(item => ({ value: String(item.id), label: item.name })), true)}
-						<label><span>Management code <span class="required" aria-hidden="true">*</span></span><input name="assetTag" value={form.assetTag} maxlength="64" class:invalid={Boolean(fieldErrors.assetTag)} aria-invalid={Boolean(fieldErrors.assetTag)} aria-describedby={fieldErrors.assetTag ? 'assetTag-error' : 'assetTag-hint'} placeholder={codeLoading ? 'Preparing code…' : 'Select a type'} disabled={role === '' || codeLoading} oninput={(event) => updateManagementCode(event.currentTarget.value)}/>{#if fieldErrors.assetTag}<span id="assetTag-error" class="field-error" role="alert">{fieldErrors.assetTag}</span>{:else}<small id="assetTag-hint" class="field-hint">{editing && form.assetTag === editing.assetTag && /-[0-9]{4}$/.test(form.assetTag) ? 'This existing 4-digit code can remain unchanged.' : 'Use the selected type prefix followed by 3 digits.'}</small>{/if}</label>
+						<label><span>Management code <span class="required" aria-hidden="true">*</span></span><input name="assetTag" value={form.assetTag} maxlength="64" class:invalid={Boolean(fieldErrors.assetTag)} aria-invalid={Boolean(fieldErrors.assetTag)} aria-describedby={fieldErrors.assetTag ? 'assetTag-error' : 'assetTag-hint'} placeholder={codeLoading ? 'Preparing code…' : 'Select a type'} disabled={!canManageAssets || codeLoading} oninput={(event) => updateManagementCode(event.currentTarget.value)}/>{#if fieldErrors.assetTag}<span id="assetTag-error" class="field-error" role="alert">{fieldErrors.assetTag}</span>{:else}<small id="assetTag-hint" class="field-hint">{editing && form.assetTag === editing.assetTag && /-[0-9]{4}$/.test(form.assetTag) ? 'This existing 4-digit code can remain unchanged.' : 'Use the selected type prefix followed by 3 digits.'}</small>{/if}</label>
 						{@render searchableSelect('Status', 'statusId', [{ value: '', label: '-' }, ...statuses.map(item => ({ value: String(item.id), label: item.name }))], true)}
 						{@render searchableSelect('Manufacturer', 'manufacturerId', [{ value: '', label: '-' }, ...manufacturers.map(item => ({ value: String(item.id), label: item.name }))])}
-						<label>Model number<input bind:value={form.modelNumber} placeholder="e.g. Latitude 7450" disabled={role === ''}/></label>
-						<label>Serial number<input name="serialNumber" value={form.serialNumber} oninput={(event) => updateField('serialNumber', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.serialNumber)} aria-invalid={Boolean(fieldErrors.serialNumber)} aria-describedby={fieldErrors.serialNumber ? 'serialNumber-error' : undefined} placeholder="e.g. ABC123456" disabled={role === ''}/>{#if fieldErrors.serialNumber}<span id="serialNumber-error" class="field-error" role="alert">{fieldErrors.serialNumber}</span>{/if}</label>
+						<label>Model number<input bind:value={form.modelNumber} placeholder="e.g. Latitude 7450" disabled={!canManageAssets}/></label>
+						<label>Serial number<input name="serialNumber" value={form.serialNumber} oninput={(event) => updateField('serialNumber', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.serialNumber)} aria-invalid={Boolean(fieldErrors.serialNumber)} aria-describedby={fieldErrors.serialNumber ? 'serialNumber-error' : undefined} placeholder="e.g. ABC123456" disabled={!canManageAssets}/>{#if fieldErrors.serialNumber}<span id="serialNumber-error" class="field-error" role="alert">{fieldErrors.serialNumber}</span>{/if}</label>
 						</FormSection>
 						{#if selectedType?.supportsCpu || selectedType?.supportsRam || selectedType?.supportsOs || selectedType?.supportsLoginUsername}
 							<FormSection title="Hardware and software" framed>
 							{#if selectedType?.supportsCpu}{@render searchableSelect('CPU type', 'cpuTypeId', [{ value: '', label: '-' }, ...cpus.map(item => ({ value: String(item.id), label: item.name }))])}{/if}
-							{#if selectedType?.supportsRam}<label>RAM (GB)<input name="ramGb" value={form.ramGb} oninput={(event) => updateField('ramGb', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.ramGb)} aria-invalid={Boolean(fieldErrors.ramGb)} aria-describedby={fieldErrors.ramGb ? 'ramGb-error' : undefined} type="number" min="1" step="1" placeholder="e.g. 16" disabled={role === ''}/>{#if fieldErrors.ramGb}<span id="ramGb-error" class="field-error" role="alert">{fieldErrors.ramGb}</span>{/if}</label>{/if}
+							{#if selectedType?.supportsRam}<label>RAM (GB)<input name="ramGb" value={form.ramGb} oninput={(event) => updateField('ramGb', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.ramGb)} aria-invalid={Boolean(fieldErrors.ramGb)} aria-describedby={fieldErrors.ramGb ? 'ramGb-error' : undefined} type="number" min="1" step="1" placeholder="e.g. 16" disabled={!canManageAssets}/>{#if fieldErrors.ramGb}<span id="ramGb-error" class="field-error" role="alert">{fieldErrors.ramGb}</span>{/if}</label>{/if}
 							{#if selectedType?.supportsOs}{@render searchableSelect('Operating system', 'operatingSystemId', [{ value: '', label: '-' }, ...systems.map(item => ({ value: String(item.id), label: item.displayName ?? item.name }))])}{/if}
-							{#if selectedType?.supportsLoginUsername}<label>Login username<input bind:value={form.loginUsername} autocomplete="off" placeholder="e.g. j.smith" disabled={role === ''}/></label>{/if}
+							{#if selectedType?.supportsLoginUsername}<label>Login username<input bind:value={form.loginUsername} autocomplete="off" placeholder="e.g. j.smith" disabled={!canManageAssets}/></label>{/if}
 							</FormSection>
 						{/if}
 						<FormSection title="Location and lifecycle" framed>
@@ -398,13 +398,13 @@
 						{@render dateInput('Disposal date', 'disposalOn', form.disposalOn, true, selectedStatus?.disposalDatePolicy === 'required', selectedStatus?.disposalDatePolicy === 'prohibited')}
 						</FormSection>
 						<FormSection title="Additional information" framed>
-						<label class="wide">Notes<textarea bind:value={form.notes} placeholder="e.g. Asset details or maintenance notes" disabled={role === ''}></textarea></label>
+						<label class="wide">Notes<textarea bind:value={form.notes} placeholder="e.g. Asset details or maintenance notes" disabled={!canManageAssets}></textarea></label>
 						</FormSection>
 						<FormSection title="Assign to employee" framed>
 						{@render searchableSelect('Employee', 'assignEmployeeId', [{ value: '', label: 'Unassigned' }, ...employees.map(employee => ({ value: String(employee.id), label: employeeName(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName] }))])}
 						</FormSection>
 					</div>
-					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{role !== '' ? 'Cancel' : 'Close'}</button>{#if role !== ''}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add IT asset'}</button>{/if}</footer>
+					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{canManageAssets ? 'Cancel' : 'Close'}</button>{#if canManageAssets}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add IT asset'}</button>{/if}</footer>
 				</form>
 			</dialog>
 		</ModalBackdrop>
@@ -443,6 +443,6 @@
 </AssetManagementShell>
 
 <style>
-	.notice{color:var(--muted);font-size:12px}.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:11px}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}
+	.notice{color:var(--muted);font-size:12px}.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:11px}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}
 	.wide{grid-column:1/-1}
 </style>

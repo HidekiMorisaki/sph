@@ -81,7 +81,7 @@ model EmployeeSettings {
   id              Int       @id @default(autoincrement())
   employeeId      Int       @unique @map("employee_id")
   timeZone        String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
-  displayLanguage String    @default("en") @map("display_language") @db.VarChar(8)
+  displayLanguage String    @default("en") @map("display_language") @db.VarChar(64)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -187,15 +187,56 @@ model CalendarHolidayImport {
 }
 
 model Role {
-  id        Int            @id @default(autoincrement())
-  code      String         @unique
-  name      String
-  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt DateTime?      @map("deleted_at") @db.Timestamptz(3)
-  grants    EmployeeRole[]
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  grants      EmployeeRole[]
+  permissions RolePermission[]
 
   @@map("roles")
+}
+
+model Permission {
+  id         Int                   @id @default(autoincrement())
+  identifier String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String                @unique
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?             @map("deleted_at") @db.Timestamptz(3)
+  roles      RolePermission[]
+  operations PermissionOperation[]
+
+  @@map("permissions")
+}
+
+model PermissionOperation {
+  id           Int        @id @default(autoincrement())
+  operation    String     @unique
+  permissionId Int        @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@index([permissionId])
+  @@map("permission_operations")
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
 }
 
 model EmployeeRole {

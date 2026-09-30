@@ -40,7 +40,11 @@ try {
 		const passwordHash = `scrypt$${salt}$${scryptSync(input.password, salt, 64).toString('base64url')}`;
 		const employmentType = await client.query('SELECT id FROM employment_types WHERE name = $1 AND deleted_at IS NULL', [input.employmentType]);
 		const branch = await client.query('SELECT id FROM branches WHERE name = $1 AND deleted_at IS NULL', [input.branch]);
-		const role = await client.query("SELECT id FROM roles WHERE code = 'system_administrator' AND deleted_at IS NULL");
+		const role = await client.query(`SELECT DISTINCT r.id FROM roles r
+			JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+			JOIN permissions p ON p.id = rp.permission_id AND p.deleted_at IS NULL
+			JOIN permission_operations po ON po.permission_id = p.id AND po.operation = 'system.manage' AND po.deleted_at IS NULL
+			WHERE r.deleted_at IS NULL`);
 		if (employmentType.rowCount !== 1 || branch.rowCount !== 1 || role.rowCount !== 1) throw new Error('The initial administrator master data is unavailable or ambiguous.');
 		const created = await client.query(
 			`INSERT INTO employees (employee_code, first_name, last_name, birth_date, gender, email, hired_at, employment_type_id, branch_id, username, password_hash, account_status, must_change_credentials)

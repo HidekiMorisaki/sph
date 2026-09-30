@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { productName } from '$lib/brand';
+	import { roleNames, type SessionUser } from '$lib/auth';
 	import MenuItemIcon from '$lib/components/MenuItemIcon.svelte';
 	import { clearExternalLinks, externalLinks, loadExternalLinks } from '$lib/externalLinks';
-	import { icons, menus, parentMenuForPath, roleLabels, type Item, type MenuGroup } from './sidebarNavigation';
+	import { formatEmployeeName, localization } from '$lib/localization';
+	import { icons, menus, parentMenuForPath, type Item, type MenuGroup } from './sidebarNavigation';
 
-	type User = { username: string; name: string | null; role: string };
-	let { collapsed, user, currentPath = '', home = false, onLogout }: { collapsed: boolean; user: User | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void> } = $props();
-	let canManageMasters = $derived(user?.role === 'system_administrator' || user?.role === 'business_administrator');
+	let { collapsed, user, currentPath = '', home = false, onLogout }: { collapsed: boolean; user: SessionUser | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void> } = $props();
+	let canManageMasters = $derived(Boolean(user?.capabilities.canManageAdministration));
 	let sidebarMenus = $derived.by((): MenuGroup[] => menus.flatMap((group) => group.label === 'SITE MANAGEMENT' && $externalLinks.length
 		? [{ label: 'OTHER SYSTEMS', items: $externalLinks.map((link): Item => ({ text: link.name, icon: 'external', href: link.url, external: true })) }, group]
 		: [group]));
@@ -96,7 +97,7 @@
 	{#if home}<div class="brand"><span class="brand-icon">S</span><strong>{productName}</strong></div>{:else}<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>{/if}
 	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each sidebarMenus as group}
-			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.role === 'system_administrator')}
+			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings)}
 			<div class="nav-group"><p class="nav-label">{group.label}</p>
 				{#each group.items as item}
 					{#if item.children}
@@ -117,7 +118,7 @@
 			<div class="sidebar-user" bind:this={sidebarUser}>
 				<button class="account-trigger" type="button" aria-label={userMenuOpen ? 'Close account menu' : 'Open account menu'} aria-haspopup="menu" aria-expanded={userMenuOpen} onclick={() => userMenuOpen = !userMenuOpen}>
 					<span class="avatar">{user.username.slice(0, 1).toUpperCase()}<i></i></span>
-					<span class="sidebar-user-info"><b>{user.name ?? user.username}</b><small>{roleLabels[user.role] ?? user.role}</small></span>
+					<span class="sidebar-user-info"><b>{formatEmployeeName(user, $localization) || user.username}</b><small>{roleNames(user)}</small></span>
 					<span class="more-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg></span>
 				</button>
 				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><a href="/settings" role="menuitem"><MenuItemIcon name="settings" />Settings</a><button type="button" role="menuitem" onclick={onLogout}><MenuItemIcon name="sign-out" />Sign out</button></div>{/if}

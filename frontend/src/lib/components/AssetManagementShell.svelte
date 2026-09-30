@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import type { Snippet } from 'svelte';
   import { apiData } from '$lib/api';
+  import type { SessionUser } from '$lib/auth';
   import { applyLocalization, type LocalizationSettings } from '$lib/localization';
   import AppHeader from './AppHeader.svelte';
   import AppSidebar from './AppSidebar.svelte';
@@ -10,7 +11,7 @@
 
   let { title, children }: { title: string; active?: string; children: Snippet } = $props();
   let collapsed = $state(false);
-  let user = $state<({ username: string; name: string | null; role: string } & LocalizationSettings) | null>(null);
+  let user = $state<SessionUser | null>(null);
   function toggle() {
     collapsed = !collapsed;
     localStorage.setItem('asset-sidebar-collapsed', String(collapsed));
@@ -26,13 +27,13 @@
     void (async () => {
       const response = await fetch('/v1/auth/session');
       if (response.ok) {
-        user = (await apiData<{ user: { username: string; name: string | null; role: string } & LocalizationSettings }>(response)).user;
+        user = (await apiData<{ user: SessionUser }>(response)).user;
         applyLocalization(user);
       }
     })();
     const updateProfile = (event: Event) => {
-      const detail = (event as CustomEvent<{ name: string }>).detail;
-      if (user && detail?.name) user = { ...user, name: detail.name };
+      const detail = (event as CustomEvent<Pick<SessionUser, 'firstName' | 'middleName' | 'lastName'>>).detail;
+      if (user && detail?.firstName && detail?.lastName) user = { ...user, ...detail };
     };
     window.addEventListener('profile-updated', updateProfile);
     return () => window.removeEventListener('profile-updated', updateProfile);

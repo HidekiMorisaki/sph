@@ -8,6 +8,8 @@ SME Portal Hub is a web-based system that enables small and medium-sized enterpr
 | Your goal | Read this section |
 | --- | --- |
 | Install, try, or use SME Portal Hub | [Quick Start for Users](#quick-start-for-users) |
+| Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
+| Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
 | Understand, verify, or modify the codebase | [Developer Guide](#developer-guide) |
 
 The system includes:
@@ -56,7 +58,7 @@ On macOS or Linux:
 cp .env.example .env
 ```
 
-Open `.env` and replace the example values before starting the system. At minimum, review all PostgreSQL and `INITIAL_ADMIN_*` settings.
+Open `.env` and replace the example values before starting the system. At minimum, review the PostgreSQL settings and configure the initial administrator credentials below.
 
 The initial administrator settings are:
 
@@ -64,15 +66,8 @@ The initial administrator settings are:
 | --- | --- |
 | `INITIAL_ADMIN_USERNAME` | Username used for the first sign-in. |
 | `INITIAL_ADMIN_PASSWORD` | Temporary initial password. Use at least 12 characters, including an uppercase letter, a lowercase letter, and a number. |
-| `INITIAL_ADMIN_EMAIL` | Initial administrator email address. |
-| `INITIAL_ADMIN_EMPLOYEE_CODE` | Unique employee code containing 10 to 64 letters or digits. |
-| `INITIAL_ADMIN_FIRST_NAME` | Administrator's first name. |
-| `INITIAL_ADMIN_LAST_NAME` | Administrator's last name. |
-| `INITIAL_ADMIN_BIRTH_DATE` | Birth date in `YYYY-MM-DD` format. |
-| `INITIAL_ADMIN_GENDER` | One of `female`, `male`, or `unspecified`. |
-| `INITIAL_ADMIN_HIRED_AT` | Hire date in `YYYY-MM-DD` format. |
-| `INITIAL_ADMIN_EMPLOYMENT_TYPE` | Name of an employment type created by the initial migration, such as the value in `.env.example`. |
-| `INITIAL_ADMIN_BRANCH` | Name of a branch created by the initial migration, such as the value in `.env.example`. |
+
+After signing in, the other initial administrator details can be changed in **Settings** for personal information and **Employees** for employment and organization information.
 
 Do not commit `.env` or share its passwords. The supplied `.env.example` values are examples and should not be used as production credentials.
 
@@ -86,7 +81,23 @@ docker compose up -d --build
 
 On the first start, Docker builds the images, starts PostgreSQL, runs all Prisma migrations, creates the initial system administrator, and then starts the API, frontend, and gateway. The initial startup can take a few minutes.
 
-### 5. Verify the installation
+### 5. Open SME Portal Hub and sign in
+
+After the containers are ready, open the following URL in a web browser:
+
+```text
+http://localhost:3000/
+```
+
+Sign in with the values configured in `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`.
+
+The initial administrator must set a new strong password after the first sign-in before using the normal system features. Once the new password has been set successfully, remove all `INITIAL_ADMIN_*` entries from `.env`. Keep the PostgreSQL and CORS settings in the file.
+
+SME Portal Hub is now ready to use.
+
+## Quick Start troubleshooting
+
+### Verify the installation
 
 Show all containers, including the one-time migration container:
 
@@ -120,21 +131,42 @@ Invoke-RestMethod http://localhost:3000/v1/health
 
 A successful response reports that the `equipment-api` service is healthy.
 
-### 6. Open SME Portal Hub and sign in
+### The web page does not open
 
-After the containers are ready, open the following URL in a web browser:
+Check that all long-running services are running and healthy:
 
-```text
-http://localhost:3000/
+```bash
+docker compose ps -a
+docker compose logs gateway frontend api
 ```
 
-Sign in with the values configured in `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`.
+Also confirm that port `3000` is not already used by another application.
 
-The initial administrator must set a new strong password after the first sign-in before using the normal system features. Once the new password has been set successfully, remove all `INITIAL_ADMIN_*` entries from `.env`. Keep the PostgreSQL and CORS settings in the file.
+### The migration container failed
 
-SME Portal Hub is now ready to use.
+Review its logs:
 
-### Starting and stopping the system
+```bash
+docker compose logs migration
+```
+
+Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial password that does not meet the strength requirements, or employment type and branch names that do not match the initial master data.
+
+After correcting `.env`, rerun:
+
+```bash
+docker compose up -d --build
+```
+
+### A port is already in use
+
+The default Compose configuration binds the gateway to host port `3000` and PostgreSQL to host port `5432`. Stop the conflicting application or adjust the relevant port mapping in `docker-compose.yml`.
+
+### Bind mounts do not work
+
+Some Docker environments cannot reliably bind-mount projects stored on removable drives. Move the repository to an internal drive, such as `C:\projects\sph`, and start the system again.
+
+## Starting and stopping the system
 
 View service status:
 
@@ -166,54 +198,21 @@ Start the existing installation again:
 docker compose up -d
 ```
 
-Rebuild after pulling source changes:
-
-```bash
-docker compose up -d --build
-```
-
 Database data is stored in the named Docker volume `sph-db-data` and is retained by `docker compose down`. Do not add the `--volumes` option unless permanent data removal is intentional and a suitable backup exists.
 
-### Quick Start troubleshooting
+## Upgrading to the latest version
 
-#### The web page does not open
+To upgrade from any earlier version, run the following commands from the repository root in Windows PowerShell:
 
-Check that all long-running services are running and healthy:
-
-```bash
-docker compose ps -a
-docker compose logs gateway frontend api
+```powershell
+docker compose stop gateway frontend api
+git pull --ff-only
+.\scripts\update.ps1
 ```
-
-Also confirm that port `3000` is not already used by another application.
-
-#### The migration container failed
-
-Review its logs:
-
-```bash
-docker compose logs migration
-```
-
-Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial password that does not meet the strength requirements, or employment type and branch names that do not match the initial master data.
-
-After correcting `.env`, rerun:
-
-```bash
-docker compose up -d --build
-```
-
-#### A port is already in use
-
-The default Compose configuration binds the gateway to host port `3000` and PostgreSQL to host port `5432`. Stop the conflicting application or adjust the relevant port mapping in `docker-compose.yml`.
-
-#### Bind mounts do not work
-
-Some Docker environments cannot reliably bind-mount projects stored on removable drives. Move the repository to an internal drive, such as `C:\projects\sph`, and start the system again.
 
 ## Developer Guide
 
-This section is for maintainers and contributors who need to understand, verify, or modify the application. Installation and normal use are covered entirely by the Quick Start above.
+This section is for maintainers and contributors who need to understand, verify, or modify the application. Installation and normal use are covered by the user sections above.
 
 ### Architecture
 

@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
+	import { genderOptions, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
 	import DatePicker from './DatePicker.svelte';
 	import DiscardChangesDialog from './DiscardChangesDialog.svelte';
@@ -23,7 +24,7 @@
 		employee = null,
 		masters = {},
 		roles = [],
-		currentUserRoles = [],
+		canManageSystemSettings = false,
 		returnFocus = null,
 		onClose,
 		onSaved
@@ -32,18 +33,17 @@
 		employee?: Employee | null;
 		masters?: Record<string, EmployeeMaster[]>;
 		roles?: EmployeeRole[];
-		currentUserRoles?: string[];
+		canManageSystemSettings?: boolean;
 		returnFocus?: HTMLElement | null;
 		onClose: () => void;
 		onSaved: (employee: SavedEmployee) => void | Promise<void>;
 	} = $props();
 
-	const genders = [['female', 'Female'], ['male', 'Male'], ['unspecified', 'Unspecified']] as const;
 	const bloodTypes = ['A', 'B', 'AB', 'O'];
 	const blank = () => ({
 		employeeCode: '', firstName: '', middleName: '', lastName: '', nameKana: '', birthDate: '', gender: '', bloodType: '',
 		postalCode: '', prefecture: '', city: '', streetAddress: '', buildingName: '', mobilePhone: '', email: '',
-		hiredAt: '', departmentIds: [] as string[], primaryDepartmentId: '', groupId: '', positionIds: [] as string[], employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleCodes: [] as string[]
+		hiredAt: '', departmentIds: [] as string[], primaryDepartmentId: '', groupId: '', positionIds: [] as string[], employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleIds: [] as string[]
 	});
 	type Form = ReturnType<typeof blank>;
 
@@ -56,12 +56,13 @@
 	let activeDateField = $state<DateField | null>(null);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
+	let genders = $derived(genderOptions($localization));
 	let availableGroups = $derived((masters['employee-groups'] ?? []).filter((item) => item.departmentId != null && String(item.departmentId) === form.primaryDepartmentId));
 	let selectedDepartmentOptions = $derived((masters.departments ?? []).filter((item) => form.departmentIds.includes(String(item.id))).map((item) => ({ value: String(item.id), label: item.name })));
 	let hasUnsavedChanges = $derived(mode !== 'create' && initialSnapshot !== '' && formSnapshot(adminPayload()) !== initialSnapshot);
 
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
-	const fieldError = (field: string) => fieldErrors[field] ?? (missingFields.includes(field) ? (field === 'roleCodes' ? 'Select at least one role.' : 'This field is required.') : '');
+	const fieldError = (field: string) => fieldErrors[field] ?? (missingFields.includes(field) ? (field === 'roleIds' ? 'Select at least one role.' : 'This field is required.') : '');
 	function initializeForm() {
 		if (!employee) { form = blank(); return; }
 		const full = employee;
@@ -72,7 +73,7 @@
 			buildingName: employee.buildingName ?? '', mobilePhone: employee.mobilePhone ?? '', email: employee.email ?? '',
 			hiredAt: iso(full?.hiredAt), departmentIds: full?.departmentIds?.map(String) ?? (full?.departmentId == null ? [] : [String(full.departmentId)]), primaryDepartmentId: full?.primaryDepartmentId == null ? (full?.departmentId == null ? '' : String(full.departmentId)) : String(full.primaryDepartmentId), groupId: full?.groupId == null ? '' : String(full.groupId),
 			positionIds: full?.positionIds?.map(String) ?? (full?.positionId == null ? [] : [String(full.positionId)]), employmentTypeId: full?.employmentTypeId == null ? '' : String(full.employmentTypeId),
-			branchId: full?.branchId == null ? '' : String(full.branchId), retiredAt: iso(full?.retiredAt), notes: full?.notes ?? '', roleCodes: full?.roles.map((role) => role.code) ?? []
+			branchId: full?.branchId == null ? '' : String(full.branchId), retiredAt: iso(full?.retiredAt), notes: full?.notes ?? '', roleIds: full?.roles.map((role) => String(role.id)) ?? []
 		};
 		if (!availableGroups.some((group) => String(group.id) === form.groupId)) form.groupId = '';
 	}
@@ -81,7 +82,7 @@
 		missingFields = missingFields.filter((name) => name !== field);
 		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = '';
 	}
-	function updateTextField(field: Exclude<keyof Form, 'roleCodes' | 'positionIds' | 'departmentIds'>, value: string) { form[field] = value; clearFieldError(field); }
+	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds'>, value: string) { form[field] = value; clearFieldError(field); }
 	function chooseDepartments(values: string[]) {
 		form.departmentIds = values;
 		if (!values.includes(form.primaryDepartmentId)) form.primaryDepartmentId = values[0] ?? '';
@@ -97,11 +98,12 @@
 		clearFieldError('groupId');
 	}
 	function chooseDate(field: DateField, value: string) { form[field] = value; clearFieldError(field); activeDateField = null; }
-	function roleIsLocked(roleCode: string) { return roleCode === 'system_administrator' && !currentUserRoles.includes('system_administrator'); }
-	function toggleRole(roleCode: string) {
-		if (roleIsLocked(roleCode)) return;
-		form.roleCodes = form.roleCodes.includes(roleCode) ? form.roleCodes.filter((code) => code !== roleCode) : [...form.roleCodes, roleCode];
-		clearFieldError('roleCodes');
+	function roleIsLocked(role: EmployeeRole) { return Boolean(role.isSystemManagement) && !canManageSystemSettings; }
+	function toggleRole(role: EmployeeRole) {
+		if (roleIsLocked(role)) return;
+		const roleId = String(role.id);
+		form.roleIds = form.roleIds.includes(roleId) ? form.roleIds.filter((id) => id !== roleId) : [...form.roleIds, roleId];
+		clearFieldError('roleIds');
 	}
 	function closeImmediately() {
 		confirmingDiscard = false;
@@ -117,14 +119,14 @@
 	}
 	function focusFormField(field: string) {
 		const normalizedField = field === 'primaryPositionId' ? 'positionIds' : field === 'departmentId' ? 'departmentIds' : field;
-		const selector = normalizedField === 'roleCodes' ? '.roles-field input:not(:disabled)' : ['positionIds', 'departmentIds'].includes(normalizedField) ? `.form-multi-select-picker[data-field="${normalizedField}"] .form-multi-select-trigger` : normalizedField === 'birthDate' || normalizedField === 'hiredAt' || normalizedField === 'retiredAt' ? `.custom-date[data-field="${normalizedField}"] .date-trigger` : ['gender', 'bloodType', 'primaryDepartmentId', 'groupId', 'employmentTypeId', 'branchId'].includes(normalizedField) ? `.form-select-picker[data-field="${normalizedField}"] .form-select-trigger` : `[name="${normalizedField}"]`;
+		const selector = normalizedField === 'roleIds' ? '.roles-field input:not(:disabled)' : ['positionIds', 'departmentIds'].includes(normalizedField) ? `.form-multi-select-picker[data-field="${normalizedField}"] .form-multi-select-trigger` : normalizedField === 'birthDate' || normalizedField === 'hiredAt' || normalizedField === 'retiredAt' ? `.custom-date[data-field="${normalizedField}"] .date-trigger` : ['gender', 'bloodType', 'primaryDepartmentId', 'groupId', 'employmentTypeId', 'branchId'].includes(normalizedField) ? `.form-select-picker[data-field="${normalizedField}"] .form-select-trigger` : `[name="${normalizedField}"]`;
 		dialogElement?.querySelector<HTMLElement>(selector)?.focus();
 	}
 	function adminPayload() { return { ...form, primaryDepartmentId: form.primaryDepartmentId || null, primaryPositionId: form.positionIds[0] ?? null }; }
 	async function save() {
 		formError = ''; fieldErrors = {};
 		const pickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'];
-		missingFields = [...pickerFields.filter((field) => !form[field as keyof Form]), ...(!form.roleCodes.length ? ['roleCodes'] : [])];
+		missingFields = [...pickerFields.filter((field) => !form[field as keyof Form]), ...(!form.roleIds.length ? ['roleIds'] : [])];
 		if (missingFields.length) { focusFormField(missingFields[0]); return; }
 		const endpoint = mode === 'admin-edit' && employee ? `/v1/employees/${employee.id}` : '/v1/employees';
 		saving = true;
@@ -167,7 +169,7 @@
 {#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false, disabled = false)}
 	<SearchSelect {label} {field} value={form[field]} {options} {required} {disabled} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => chooseSelect(field, value)} />
 {/snippet}
-{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleCodes' | 'positionIds' | 'departmentIds'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
+{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
@@ -179,7 +181,7 @@
 				{#if formError}<div class="app-modal-error-summary wide" role="alert"><strong>Unable to save employee</strong><span>{formError}</span></div>{/if}
 				<FormSection title="Basic information" framed>
 					{@render textInput('Employee code', 'employeeCode', 'e.g. JPDEMO00000001', 64, true, 'text', '[A-Za-z0-9]{10,64}', 10)}
-					{@render textInput('First name', 'firstName', 'e.g. Hana', 128, true)}{@render textInput('Middle name', 'middleName', 'e.g. Marie', 128)}{@render textInput('Last name', 'lastName', 'e.g. Yamada', 128, true)}{@render textInput('Name (Kana)', 'nameKana', 'e.g. ヤマダ ハナ', 255)}{@render dateInput('Birth date', 'birthDate', form.birthDate, false, true)}{@render formSelect('Gender', 'gender', [{ value: '', label: '-' }, ...genders.map(([value, label]) => ({ value, label }))], true)}{@render formSelect('Blood type', 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
+					{@render textInput('First name', 'firstName', 'e.g. Hana', 128, true)}{@render textInput('Middle name', 'middleName', 'e.g. Marie', 128)}{@render textInput('Last name', 'lastName', 'e.g. Yamada', 128, true)}{@render textInput('Name (Kana)', 'nameKana', 'e.g. ヤマダ ハナ', 255)}{@render dateInput('Birth date', 'birthDate', form.birthDate, false, true)}{@render formSelect('Gender', 'gender', [{ value: '', label: '-' }, ...genders], true)}{@render formSelect('Blood type', 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
 				</FormSection>
 				<FormSection title="Contact information" framed>
 					{@render textInput('Postal code', 'postalCode', 'e.g. 100-0001', 8, false, 'text', '\\d{3}-?\\d{4}')}{@render textInput('Prefecture', 'prefecture', 'e.g. Tokyo', 64)}{@render textInput('City', 'city', 'e.g. Chiyoda', 128)}{@render textInput('Street address', 'streetAddress', 'e.g. Chiyoda 1-1', 255)}{@render textInput('Building', 'buildingName', 'e.g. Main Building 3F', 255)}{@render textInput('Mobile phone', 'mobilePhone', 'e.g. 090-1234-5678', 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput('Email', 'email', 'e.g. hana@example.com', 254, true, 'email')}
@@ -191,7 +193,7 @@
 						<label class="wide">Notes<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder="e.g. Notes about this employee" oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
 					</FormSection>
 					<FormSection title="Access" framed>
-						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleCodes'))}><legend>Roles <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role.code)}><input type="checkbox" checked={form.roleCodes.includes(role.code)} disabled={roleIsLocked(role.code)} onchange={() => toggleRole(role.code)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleCodes')}<span class="field-error" role="alert">{fieldError('roleCodes')}</span>{/if}{#if !currentUserRoles.includes('system_administrator')}<small>Only a System Administrator can change the System Administrator role.</small>{/if}</fieldset>
+						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>Roles <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="checkbox" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>Only a System Administrator can change a role with system management permission.</small>{/if}</fieldset>
 					</FormSection>
 			</div>
 			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : mode === 'create' ? 'Add employee' : 'Save changes'}</button></footer>

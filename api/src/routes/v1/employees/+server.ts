@@ -10,6 +10,7 @@ import { syncEmployeePositions } from '$lib/server/api/employee-positions';
 import { employeeReferenceErrors } from '$lib/server/api/employee-references';
 import { canAssignRequestedRoles, createGlobalRoleGrants } from '$lib/server/api/employee-roles';
 import { issueInvitation } from '$lib/server/auth/invitation';
+import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success, throwApiError } from '$lib/server/api/response';
 import { Prisma } from '$lib/server/generated/prisma/client';
@@ -309,11 +310,11 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 
 export async function POST({ request, locals, url }: import('./$types').RequestEvent) {
 	const actor = requireAdminApi(locals.user);
-	if (actor.roles.includes('system_administrator') && !dev && url.protocol !== 'https:') return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
+	if (hasPermissionOperation(actor, permissionOperations.systemManagement) && !dev && url.protocol !== 'https:') return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
 	const parsed = parseEmployeeInput(await request.json().catch(() => null));
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;
-	if (!canAssignRequestedRoles(actor, input.roleCodes)) return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'You cannot assign one or more requested roles.');
+	if (!await canAssignRequestedRoles(actor, input.roleIds)) return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'You cannot assign one or more requested roles.');
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {
 			const referenceErrors = await employeeReferenceErrors(tx, { ...input.employee, departmentIds: input.departmentIds, primaryDepartmentId: input.primaryDepartmentId, positionIds: input.positionIds });
@@ -321,8 +322,8 @@ export async function POST({ request, locals, url }: import('./$types').RequestE
 			const created = await tx.employee.create({ data: input.employee, select: { id: true } });
 			await syncEmployeeDepartments(tx, created.id, input.departmentIds, input.primaryDepartmentId);
 			await syncEmployeePositions(tx, created.id, input.positionIds, input.primaryPositionId);
-			if (!await createGlobalRoleGrants(tx, created.id, input.roleCodes)) throw new Error('role unavailable');
-			const invitation = actor.roles.includes('system_administrator') ? await issueInvitation(tx, created.id, actor.id, input.employee.email) : null;
+			if (!await createGlobalRoleGrants(tx, created.id, input.roleIds)) throw new Error('role unavailable');
+			const invitation = hasPermissionOperation(actor, permissionOperations.systemManagement) ? await issueInvitation(tx, created.id, actor.id, input.employee.email) : null;
 			await recordEmployeeChange(tx, created.id, actor.id, 'create', null, await readEmployeeFields(tx, created.id));
 			await writeAuditLog(tx, actor.id, 'create', 'employee', created.id);
 			await writeAuditLog(tx, actor.id, 'update_roles', 'employee', created.id);

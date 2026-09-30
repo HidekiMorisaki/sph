@@ -6,6 +6,7 @@ import { throwApiError } from '$lib/server/api/response';
 
 import type { AuthenticatedSession, AuthenticatedUser } from './types';
 import { DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayLanguage, isTimeZone } from './localization';
+import { hasPermissionOperation, permissionOperations } from './permissions';
 
 const scrypt = promisify(scryptCallback);
 
@@ -66,7 +67,10 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 			employee: {
 				select: { id: true, username: true, email: true, firstName: true, middleName: true, lastName: true, mustChangeCredentials: true,
 					settings: { select: { timeZone: true, displayLanguage: true, deletedAt: true } },
-					roleGrants: { where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } }, select: { role: { select: { code: true } } } } }
+					roleGrants: {
+						where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
+						select: { role: { select: { id: true, name: true, permissions: { where: { deletedAt: null, permission: { deletedAt: null } }, select: { permission: { select: { identifier: true, operations: { where: { deletedAt: null }, select: { operation: true } } } } } } } } }
+					} }
 			}
 		}
 	});
@@ -78,9 +82,10 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	if (record.expiresAt <= new Date()) {
 		return null;
 	}
-	const roles = record.employee.roleGrants.map((grant) => grant.role.code);
+	const roles = record.employee.roleGrants.map((grant) => ({ id: grant.role.id, name: grant.role.name })).sort((left, right) => left.name.localeCompare(right.name, 'en'));
 	if (roles.length === 0) return null;
-	const role = roles.includes('system_administrator') ? 'system_administrator' : roles.includes('business_administrator') ? 'business_administrator' : 'general_user';
+	const permissionIdentifiers = [...new Set(record.employee.roleGrants.flatMap((grant) => grant.role.permissions.map((entry) => entry.permission.identifier)))];
+	const grantedOperations = [...new Set(record.employee.roleGrants.flatMap((grant) => grant.role.permissions.flatMap((entry) => entry.permission.operations.map((operation) => operation.operation))))];
 	const settings = record.employee.settings?.deletedAt == null ? record.employee.settings : null;
 	const displayLanguage = isDisplayLanguage(settings?.displayLanguage) ? settings.displayLanguage : DEFAULT_DISPLAY_LANGUAGE;
 
@@ -95,9 +100,12 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 			id: record.employee.id,
 			username: record.employee.username ?? record.employee.email,
 			email: record.employee.email,
-			name: [record.employee.firstName, record.employee.middleName, record.employee.lastName].filter(Boolean).join(' '),
-			role,
+			firstName: record.employee.firstName,
+			middleName: record.employee.middleName,
+			lastName: record.employee.lastName,
 			roles,
+			permissionIdentifiers,
+			permissionOperations: grantedOperations,
 			mustChangeCredentials: record.employee.mustChangeCredentials,
 			timeZone: isTimeZone(settings?.timeZone) ? settings.timeZone : DEFAULT_TIME_ZONE,
 			displayLanguage
@@ -126,7 +134,7 @@ export function requireUser(user: AuthenticatedUser | null): AuthenticatedUser {
 
 export function requireAdmin(user: AuthenticatedUser | null): AuthenticatedUser {
 	const authenticatedUser = requireUser(user);
-	if (!authenticatedUser.roles.some((role) => role === 'system_administrator' || role === 'business_administrator')) {
+	if (!hasPermissionOperation(authenticatedUser, permissionOperations.administrationManagement)) {
 		throwApiError(403, 'ADMIN_REQUIRED', 'Administrator access is required.');
 	}
 

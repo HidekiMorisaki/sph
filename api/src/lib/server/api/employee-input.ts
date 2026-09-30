@@ -2,10 +2,7 @@ import type { ApiErrorDetail } from '$lib/server/api/response';
 
 const genders = new Set(['female', 'male', 'unspecified']);
 const bloodTypes = new Set(['A', 'B', 'AB', 'O']);
-export const employeeRoleCodes = ['system_administrator', 'business_administrator', 'general_user'] as const;
-export type EmployeeRoleCode = (typeof employeeRoleCodes)[number];
-const employeeRoleCodeSet = new Set<string>(employeeRoleCodes);
-const removedFields = ['active', 'workEmail', 'loginEmail', 'personalEmail'];
+const removedFields = ['active', 'workEmail', 'loginEmail', 'personalEmail', 'roleCodes'];
 
 type EmployeeInput = {
 	employee: {
@@ -19,7 +16,7 @@ type EmployeeInput = {
 	primaryDepartmentId: number | null;
 	positionIds: number[];
 	primaryPositionId: number | null;
-	roleCodes: EmployeeRoleCode[];
+	roleIds: number[];
 };
 
 export type EmployeeSelfInput = Pick<EmployeeInput['employee'],
@@ -151,12 +148,9 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 	if (retiredAt && hiredAt && retiredAt < hiredAt) invalid(errors, 'retiredAt', 'Retirement date cannot be before hire date.');
 	const notes = readText(body, 'notes', 5000, false, errors);
 
-	const rawRoleCodes = body.roleCodes;
-	let roleCodes: EmployeeRoleCode[] = [];
-	if (!Array.isArray(rawRoleCodes) || rawRoleCodes.length === 0) invalid(errors, 'roleCodes', 'Select at least one role.');
-	else if (rawRoleCodes.some((role) => typeof role !== 'string' || !employeeRoleCodeSet.has(role))) invalid(errors, 'roleCodes', 'Select valid roles.');
-	else if (new Set(rawRoleCodes).size !== rawRoleCodes.length) invalid(errors, 'roleCodes', 'Do not select the same role more than once.');
-	else roleCodes = rawRoleCodes as EmployeeRoleCode[];
+	const parsedRoleIds = readIds(body, 'roleIds', errors);
+	const roleIds = parsedRoleIds ?? [];
+	if (!parsedRoleIds || roleIds.length === 0) invalid(errors, 'roleIds', 'Select at least one role.');
 
 	if (errors.length || !employeeCode || !firstName || !lastName || !birthDate || !gender || !email || !hiredAt || !employmentTypeId || !branchId) {
 		return { success: false, errors };
@@ -169,7 +163,7 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 			primaryDepartmentId,
 			positionIds,
 			primaryPositionId,
-			roleCodes
+			roleIds
 		}
 	};
 }

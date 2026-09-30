@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
 
 const baseUrl = process.env.API_VERIFY_BASE_URL ?? 'http://localhost:3000';
+const expectedVersion = readFileSync(new URL('../../VERSION', import.meta.url), 'utf8').trim();
 const origin = process.env.API_VERIFY_ORIGIN ?? baseUrl;
 const requestHost = process.env.API_VERIFY_HOST;
 const username = process.env.INITIAL_ADMIN_USERNAME;
@@ -19,6 +21,8 @@ let originalRole;
 let originalPasswordHash;
 let employeeId;
 let roleGrantId;
+let renamedRoleId;
+let originalRoleName;
 let cookie;
 
 async function request(path, init = {}) {
@@ -98,7 +102,9 @@ try {
 	if (databaseName.rows[0]?.name !== verificationDatabaseName) throw new Error('API verification database does not match API_VERIFY_DATABASE_NAME.');
 	const accountResult = await client.query(`SELECT e.id, e.employee_code, e.email, e.password_hash, e.must_change_credentials, er.id AS grant_id, er.role_id
 		FROM employees e JOIN employee_roles er ON er.employee_id = e.id AND er.scope_type = 'global' AND er.deleted_at IS NULL
-		JOIN roles r ON r.id = er.role_id AND r.code = 'system_administrator' AND r.deleted_at IS NULL
+		JOIN roles r ON r.id = er.role_id AND r.deleted_at IS NULL
+		JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+		JOIN permission_operations po ON po.permission_id = rp.permission_id AND po.operation = 'system.manage' AND po.deleted_at IS NULL
 		WHERE e.username = $1 AND e.deleted_at IS NULL`, [username]);
 	if (accountResult.rowCount !== 1) throw new Error('The verification administrator is unavailable.');
 	if (accountResult.rows[0].email !== configuredEmail) throw new Error('The initial administrator email was not sourced from INITIAL_ADMIN_EMAIL.');
@@ -107,8 +113,25 @@ try {
 	originalMustChange = accountResult.rows[0].must_change_credentials;
 	originalRole = accountResult.rows[0].role_id;
 	originalPasswordHash = accountResult.rows[0].password_hash;
+	const roleRows = await client.query(`SELECT r.id, array_agg(po.operation ORDER BY po.operation) AS operations
+		FROM roles r
+		JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+		JOIN permission_operations po ON po.permission_id = rp.permission_id AND po.deleted_at IS NULL
+		WHERE r.deleted_at IS NULL
+		GROUP BY r.id`);
+	const roleIds = {
+		system: roleRows.rows.find((role) => role.operations.includes('system.manage'))?.id,
+		business: roleRows.rows.find((role) => role.operations.includes('administration.manage') && !role.operations.includes('system.manage'))?.id,
+		general: roleRows.rows.find((role) => role.operations.includes('assets.manage') && !role.operations.includes('administration.manage'))?.id
+	};
+	if (!roleIds.system || !roleIds.business || !roleIds.general) throw new Error('Verification roles are unavailable.');
 	await client.query('UPDATE employees SET must_change_credentials = false WHERE id = $1', [employeeId]);
 
+	const health = await request('/v1/health');
+	const healthPayload = await payload(health);
+	if (health.status !== 200 || healthPayload.data.healthy !== true || healthPayload.data.version !== expectedVersion) throw new Error('Health version verification failed.');
+	const unauthenticatedSystemInformation = await request('/v1/system-information');
+	if (unauthenticatedSystemInformation.status !== 401 || (await payload(unauthenticatedSystemInformation)).error.code !== 'AUTHENTICATION_REQUIRED') throw new Error('Unauthenticated system information guard failed.');
 	const unauthenticated = await request('/v1/departments');
 	if (unauthenticated.status !== 401) throw new Error(`Unauthenticated guard verification failed (${unauthenticated.status}).`);
 	await payload(unauthenticated);
@@ -124,6 +147,8 @@ try {
 	const unauthenticatedSettings = await request('/v1/settings');
 	if (unauthenticatedSettings.status !== 401) throw new Error(`Unauthenticated settings guard failed (${unauthenticatedSettings.status}).`);
 	await payload(unauthenticatedSettings);
+	const unauthenticatedRoleUpdate = await request('/v1/roles/1', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Denied' }) });
+	if (unauthenticatedRoleUpdate.status !== 401 || (await payload(unauthenticatedRoleUpdate)).error.code !== 'AUTHENTICATION_REQUIRED') throw new Error('Unauthenticated role update guard failed.');
 	const unauthenticatedPassword = await request('/v1/auth/password', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{}' });
 	if (unauthenticatedPassword.status !== 401) throw new Error(`Unauthenticated password guard failed (${unauthenticatedPassword.status}).`);
 	await payload(unauthenticatedPassword);
@@ -142,6 +167,26 @@ try {
 	if (login.status !== 200) throw new Error(`Login verification failed (${login.status}/${loginPayload.error?.code ?? 'UNKNOWN'}).`);
 	cookie = login.headers.get('set-cookie')?.split(';')[0];
 	if (!cookie) throw new Error('Login did not issue a session cookie.');
+	const authenticatedSession = await request('/v1/auth/session');
+	const authenticatedUser = (await payload(authenticatedSession)).data.user;
+	if (authenticatedSession.status !== 200 || authenticatedUser.capabilities?.canManageSystemSettings !== true || !Array.isArray(authenticatedUser.roles) || Object.hasOwn(authenticatedUser, 'permissionIdentifiers') || JSON.stringify(authenticatedUser).includes('system.manage')) {
+		throw new Error('Session capability projection or permission identifier secrecy failed.');
+	}
+	const systemInformation = await request('/v1/system-information');
+	const systemInformationPayload = await payload(systemInformation);
+	const initialRevision = systemInformationPayload.data.revisionHistory?.find((entry) => entry.version === '0.1.0');
+	if (systemInformation.status !== 200 || systemInformationPayload.data.name !== 'SME Portal Hub' || systemInformationPayload.data.version !== expectedVersion || !Array.isArray(systemInformationPayload.data.notices) || systemInformationPayload.data.repositoryUrl !== 'https://github.com/HidekiMorisaki/sph' || initialRevision?.releasedAt !== '2026-09-30' || !Array.isArray(initialRevision.changes) || !initialRevision.changes.length) throw new Error('System information response contract failed.');
+	const permissionRows = await client.query('SELECT id, identifier::text AS identifier FROM permissions WHERE deleted_at IS NULL ORDER BY id');
+	if (permissionRows.rowCount !== 3 || new Set(permissionRows.rows.map((permission) => permission.identifier)).size !== 3 || permissionRows.rows.some((permission) => !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(permission.identifier))) {
+		throw new Error('Generated permission identifiers are invalid or non-unique.');
+	}
+	let permissionIdentifierUpdateRejected = false;
+	try {
+		await client.query('UPDATE permissions SET identifier = $1 WHERE id = $2', [randomUUID(), permissionRows.rows[0].id]);
+	} catch (error) {
+		permissionIdentifierUpdateRejected = error?.code === 'P0001';
+	}
+	if (!permissionIdentifierUpdateRejected) throw new Error('Permission identifier immutability trigger failed.');
 	const sessionToken = cookie.slice(cookie.indexOf('=') + 1);
 	const sessionTimestamp = await client.query(`SELECT
 		abs(EXTRACT(EPOCH FROM (created_at - CURRENT_TIMESTAMP))) < 60 AS created_at_is_current,
@@ -179,6 +224,7 @@ try {
 	const localizedSession = await request('/v1/auth/session');
 	const localizedSessionPayload = await payload(localizedSession);
 	if (localizedSessionPayload.data.user.timeZone !== 'UTC' || localizedSessionPayload.data.user.displayLanguage !== 'ja') throw new Error('Session localization failed.');
+	if (typeof localizedSessionPayload.data.user.firstName !== 'string' || typeof localizedSessionPayload.data.user.lastName !== 'string' || !Object.hasOwn(localizedSessionPayload.data.user, 'middleName') || Object.hasOwn(localizedSessionPayload.data.user, 'name')) throw new Error('Session employee name parts failed.');
 	const weakPassword = await request('/v1/auth/password', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ currentPassword: password, newPassword: 'too-weak', confirmation: 'too-weak' }) });
 	if (weakPassword.status !== 400 || (await payload(weakPassword)).error.code !== 'VALIDATION_ERROR') throw new Error('Password strength validation failed.');
 	const wrongCurrentPassword = await request('/v1/auth/password', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ currentPassword: `${password}wrong`, newPassword: 'ValidPassword123', confirmation: 'ValidPassword123' }) });
@@ -275,13 +321,13 @@ try {
 	const primaryPosition = (await payload(primaryPositionResponse)).data;
 	const secondaryPosition = (await payload(secondaryPositionResponse)).data;
 	const employeeCode = `EMP${suffix}`;
-	const employeeInput = { employeeCode, firstName: 'API', lastName: 'Verification', birthDate: '1990-03-15', gender: 'unspecified', email: `${suffix.toLowerCase()}@example.test`, hiredAt: '2020-04-01', departmentIds: [groupDepartment.id, otherGroupDepartment.id], primaryDepartmentId: groupDepartment.id, groupId: employeeGroup.id, positionIds: [primaryPosition.id, secondaryPosition.id], primaryPositionId: primaryPosition.id, employmentTypeId: employmentType.id, branchId: employeeBranch.id, roleCodes: ['general_user'] };
+	const employeeInput = { employeeCode, firstName: 'API', lastName: 'Verification', birthDate: '1990-03-15', gender: 'unspecified', email: `${suffix.toLowerCase()}@example.test`, hiredAt: '2020-04-01', departmentIds: [groupDepartment.id, otherGroupDepartment.id], primaryDepartmentId: groupDepartment.id, groupId: employeeGroup.id, positionIds: [primaryPosition.id, secondaryPosition.id], primaryPositionId: primaryPosition.id, employmentTypeId: employmentType.id, branchId: employeeBranch.id, roleIds: [roleIds.general] };
 	const mismatchedGroupResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `GROUP${suffix}`, email: `${suffix.toLowerCase()}-group@example.test`, primaryDepartmentId: otherGroupDepartment.id }) });
 	await expectEmployeeError(mismatchedGroupResponse, 400, 'VALIDATION_ERROR', 'groupId');
-	const missingRolesResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `NOROLE${suffix}`, roleCodes: [] }) });
+	const missingRolesResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `NOROLE${suffix}`, roleIds: [] }) });
 	if (missingRolesResponse.status !== 400) throw new Error(`Required employee roles create guard failed (${missingRolesResponse.status}).`);
 	await payload(missingRolesResponse);
-	const duplicateRolesResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `DUPROLE${suffix}`, roleCodes: ['general_user', 'general_user'] }) });
+	const duplicateRolesResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `DUPROLE${suffix}`, roleIds: [roleIds.general, roleIds.general] }) });
 	if (duplicateRolesResponse.status !== 400) throw new Error(`Duplicate employee roles guard failed (${duplicateRolesResponse.status}).`);
 	await payload(duplicateRolesResponse);
 	const duplicatePositionsResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, employeeCode: `DUPPOS${suffix}`, email: `${suffix.toLowerCase()}-duppos@example.test`, positionIds: [primaryPosition.id, primaryPosition.id] }) });
@@ -303,7 +349,7 @@ try {
 	const employeeResponse = await request('/v1/employees', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, emergencyContactName: 'Removed', emergencyContactRelation: 'Removed', emergencyContactPhone: '+81 90 0000 0000' }) });
 	if (employeeResponse.status !== 201) throw new Error(`Employee create verification failed (${employeeResponse.status}).`);
 	const employee = (await payload(employeeResponse)).data;
-	if (hasRemovedEmployeeFields(employee) || !hasEmployeeDerivedFields(employee) || employee.email !== employeeInput.email || employee.roles.length !== 1 || employee.roles[0].code !== 'general_user' || employee.departmentIds.length !== 2 || employee.primaryDepartmentId !== groupDepartment.id || employee.departmentId !== groupDepartment.id || employee.departments[0]?.isPrimary !== true || employee.positionIds.length !== 2 || employee.primaryPositionId !== primaryPosition.id || employee.positionId !== primaryPosition.id || employee.positions[0]?.isPrimary !== true) throw new Error('Employee create response contract failed.');
+	if (hasRemovedEmployeeFields(employee) || !hasEmployeeDerivedFields(employee) || employee.email !== employeeInput.email || employee.roles.length !== 1 || employee.roles[0].id !== roleIds.general || Object.hasOwn(employee.roles[0], 'code') || employee.departmentIds.length !== 2 || employee.primaryDepartmentId !== groupDepartment.id || employee.departmentId !== groupDepartment.id || employee.departments[0]?.isPrimary !== true || employee.positionIds.length !== 2 || employee.primaryPositionId !== primaryPosition.id || employee.positionId !== primaryPosition.id || employee.positions[0]?.isPrimary !== true) throw new Error('Employee create response contract failed.');
 	const employmentUsageLists = {};
 	for (const path of ['/v1/departments', '/v1/employee-groups', '/v1/positions', '/v1/employment-types']) {
 		const response = await request(`${path}?limit=500`);
@@ -417,25 +463,40 @@ try {
 	const employeeUpdateResponse = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', emergencyContactName: 'Removed', emergencyContactRelation: 'Removed', emergencyContactPhone: '+81 90 0000 0000' }) });
 	if (employeeUpdateResponse.status !== 200) throw new Error(`Employee update verification failed (${employeeUpdateResponse.status}).`);
 	const updatedEmployee = (await payload(employeeUpdateResponse)).data;
-	if (hasRemovedEmployeeFields(updatedEmployee) || !hasEmployeeDerivedFields(updatedEmployee) || updatedEmployee.roles[0]?.code !== 'general_user') throw new Error('Employee update response contract failed.');
-	const roleListResponse = await request('/v1/roles?sortBy=code&sortOrder=asc&offset=0&limit=100');
+	if (hasRemovedEmployeeFields(updatedEmployee) || !hasEmployeeDerivedFields(updatedEmployee) || updatedEmployee.roles[0]?.id !== roleIds.general) throw new Error('Employee update response contract failed.');
+	const roleListResponse = await request('/v1/roles?sortBy=name&sortOrder=asc&offset=0&limit=100');
 	const roleListPayload = await payload(roleListResponse);
-	if (roleListResponse.status !== 200 || roleListPayload.data.length !== 3 || roleListPayload.meta.limit !== 100) throw new Error('Role list verification failed.');
-	const roleIds = await client.query("SELECT code, id FROM roles WHERE code IN ('system_administrator', 'business_administrator', 'general_user') AND deleted_at IS NULL");
-	const roleByCode = Object.fromEntries(roleIds.rows.map((row) => [row.code, row.id]));
-	if (!roleByCode.system_administrator || !roleByCode.general_user || !roleByCode.business_administrator) throw new Error('Verification roles are unavailable.');
-	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.business_administrator, roleGrantId]);
+	if (roleListResponse.status !== 200 || roleListPayload.data.length !== 3 || roleListPayload.meta.limit !== 100 || roleListPayload.data.some((role) => !Number.isInteger(role.id) || !role.createdAt || !role.updatedAt)) throw new Error('Role list verification failed.');
+	const generalRole = roleListPayload.data.find((role) => role.id === roleIds.general);
+	if (!generalRole) throw new Error('General user role is unavailable.');
+	renamedRoleId = generalRole.id;
+	originalRoleName = generalRole.name;
+	const invalidRoleName = await request(`/v1/roles/${generalRole.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: ' ' }) });
+	if (invalidRoleName.status !== 400 || (await payload(invalidRoleName)).error.details?.[0]?.field !== 'name') throw new Error('Role name validation failed.');
+	const renamedRoleName = `General user ${suffix}`;
+	const roleUpdate = await request(`/v1/roles/${generalRole.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: renamedRoleName }) });
+	const roleUpdatePayload = await payload(roleUpdate);
+	if (roleUpdate.status !== 200 || roleUpdatePayload.data.name !== renamedRoleName || roleUpdatePayload.data.isSystemManagement !== false || Object.hasOwn(roleUpdatePayload.data, 'code') || Object.hasOwn(roleUpdatePayload.data, 'identifier')) throw new Error('Role name update or output contract verification failed.');
+	const duplicateRoleName = await request(`/v1/roles/${generalRole.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: roleListPayload.data.find((role) => role.id === roleIds.business)?.name }) });
+	if (duplicateRoleName.status !== 409 || (await payload(duplicateRoleName)).error.code !== 'DUPLICATE_VALUE') throw new Error('Role name uniqueness verification failed.');
+	const searchedRoles = await request(`/v1/roles?search=${encodeURIComponent(suffix)}&sortBy=name&sortOrder=asc&limit=100`);
+	if (searchedRoles.status !== 200 || !(await payload(searchedRoles)).data.some((role) => role.id === generalRole.id)) throw new Error('Role search failed.');
+	const roleAudit = await client.query("SELECT id FROM audit_logs WHERE action = 'update' AND resource = 'role' AND resource_id = $1 AND deleted_at IS NULL ORDER BY id DESC LIMIT 1", [generalRole.id]);
+	if (roleAudit.rowCount !== 1) throw new Error('Role update audit log was not recorded.');
+	const restoredRole = await request(`/v1/roles/${generalRole.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: originalRoleName }) });
+	if (restoredRole.status !== 200 || (await payload(restoredRole)).data.name !== originalRoleName) throw new Error('Role name restoration failed.');
+	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleIds.business, roleGrantId]);
 	const forbiddenInvitation = await request(`/v1/employees/${employee.id}/invitations`, { method: 'POST' });
 	if (forbiddenInvitation.status !== 403 || (await payload(forbiddenInvitation)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('Business administrator invitation guard failed.');
-	const businessRoleUpdate = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleCodes: ['business_administrator'] }) });
-	if (businessRoleUpdate.status !== 200 || (await payload(businessRoleUpdate)).data.roles[0]?.code !== 'business_administrator') throw new Error('Business administrator role promotion failed.');
-	const forbiddenSystemRole = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleCodes: ['system_administrator'] }) });
+	const businessRoleUpdate = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleIds: [roleIds.business] }) });
+	if (businessRoleUpdate.status !== 200 || (await payload(businessRoleUpdate)).data.roles[0]?.id !== roleIds.business) throw new Error('Business administrator role promotion failed.');
+	const forbiddenSystemRole = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleIds: [roleIds.system] }) });
 	if (forbiddenSystemRole.status !== 403 || (await payload(forbiddenSystemRole)).error.code !== 'ROLE_ASSIGNMENT_FORBIDDEN') throw new Error('Business administrator system role guard failed.');
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [originalRole, roleGrantId]);
-	const systemRoleUpdate = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleCodes: ['system_administrator', 'general_user'] }) });
+	const systemRoleUpdate = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', roleIds: [roleIds.system, roleIds.general] }) });
 	if (systemRoleUpdate.status !== 200 || (await payload(systemRoleUpdate)).data.roles.length !== 2) throw new Error('System administrator role assignment failed.');
 	const restoreEmployeeRole = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated' }) });
-	if (restoreEmployeeRole.status !== 200 || (await payload(restoreEmployeeRole)).data.roles[0]?.code !== 'general_user') throw new Error('Employee role restoration failed.');
+	if (restoreEmployeeRole.status !== 200 || (await payload(restoreEmployeeRole)).data.roles[0]?.id !== roleIds.general) throw new Error('Employee role restoration failed.');
 	const removedEmployeeUpdateInput = await request(`/v1/employees/${employee.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...employeeInput, firstName: 'API Updated', active: false }) });
 	if (removedEmployeeUpdateInput.status !== 400) throw new Error('Removed employee update input verification failed.');
 	await payload(removedEmployeeUpdateInput);
@@ -443,7 +504,7 @@ try {
 	if (employeeListResponse.status !== 200) throw new Error(`Employee list verification failed (${employeeListResponse.status}).`);
 	const employeeListPayload = await payload(employeeListResponse);
 	const listedEmployee = employeeListPayload.data.find((entry) => entry.id === employee.id);
-	if (!listedEmployee || hasRemovedEmployeeFields(listedEmployee) || !hasEmployeeDerivedFields(listedEmployee) || listedEmployee.roles[0]?.code !== 'general_user') throw new Error('Employee list contract verification failed.');
+	if (!listedEmployee || hasRemovedEmployeeFields(listedEmployee) || !hasEmployeeDerivedFields(listedEmployee) || listedEmployee.roles[0]?.id !== roleIds.general) throw new Error('Employee list contract verification failed.');
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(employeeListPayload.meta.calculatedAsOf)) throw new Error('Employee calculation date metadata is unavailable.');
 	const expectedAge = Math.floor(wholeCalendarMonths(employeeInput.birthDate, employeeListPayload.meta.calculatedAsOf) / 12);
 	const expectedServiceMonths = wholeCalendarMonths(employeeInput.hiredAt, employeeListPayload.meta.calculatedAsOf);
@@ -522,8 +583,17 @@ try {
 	if (responsibleEmployeeDelete.status !== 409 || (await payload(responsibleEmployeeDelete)).error.code !== 'RESOURCE_IN_USE') throw new Error('Branch responsible employee delete guard failed.');
 	const clearedBranchManager = await request(`/v1/branches/${employeeBranch.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...branchContactInput, managerEmployeeId: null, deputyManagerEmployeeId: null }) });
 	if (clearedBranchManager.status !== 200) throw new Error('Branch manager could not be cleared.');
+	await client.query(`INSERT INTO employee_roles (employee_id, role_id, scope_type, scope_key, scope_employee_id)
+		VALUES ($1, $2, 'employee', $3, $4)`, [employeeId, roleIds.general, `employee:${employee.id}`, employee.id]);
 	const removedEmployee = await request(`/v1/employees/${employee.id}`, { method: 'DELETE' });
 	if (removedEmployee.status !== 200) throw new Error(`Employee soft-delete verification failed (${removedEmployee.status}).`);
+	const retainedEmployeeRoles = await client.query(`SELECT employee_id, scope_employee_id, deleted_at
+		FROM employee_roles WHERE employee_id = $1 OR scope_employee_id = $1`, [employee.id]);
+	if (retainedEmployeeRoles.rowCount < 2 || retainedEmployeeRoles.rows.some((role) => role.deleted_at === null) ||
+		!retainedEmployeeRoles.rows.some((role) => role.employee_id === employee.id) ||
+		!retainedEmployeeRoles.rows.some((role) => role.scope_employee_id === employee.id)) {
+		throw new Error('Employee role grants were not retained as soft-deleted data.');
+	}
 	for (const employeePosition of [primaryPosition, secondaryPosition]) {
 		if ((await request(`/v1/positions/${employeePosition.id}`, { method: 'DELETE' })).status !== 200) throw new Error('Employee position cleanup failed.');
 	}
@@ -775,7 +845,9 @@ try {
 	const invalidExternalLimit = await request('/v1/external-links?limit=0');
 	if (invalidExternalLimit.status !== 422) throw new Error(`External link list limit guard failed (${invalidExternalLimit.status}).`);
 	await payload(invalidExternalLimit);
-	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.general_user, roleGrantId]);
+	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleIds.general, roleGrantId]);
+	const forbiddenGeneralSystemInformation = await request('/v1/system-information');
+	if (forbiddenGeneralSystemInformation.status !== 403 || (await payload(forbiddenGeneralSystemInformation)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('General user system information guard failed.');
 	const forbidden = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Denied ${suffix}` }) });
 	if (forbidden.status !== 403 || (await payload(forbidden)).error.code !== 'ADMIN_REQUIRED') throw new Error('Employee role guard verification failed.');
 	const generalEmployeeList = await request('/v1/employees?limit=1');
@@ -787,7 +859,7 @@ try {
 	const profileInput = selfProfileInput(originalProfile);
 	const selfUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...profileInput, firstName: 'Self Updated' }) });
 	if (selfUpdate.status !== 200 || (await payload(selfUpdate)).data.firstName !== 'Self Updated') throw new Error('General user self-profile update failed.');
-	const forbiddenSelfUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...profileInput, employeeCode: 'FORBIDDEN01', roleCodes: ['system_administrator'] }) });
+	const forbiddenSelfUpdate = await request('/v1/employees/me', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...profileInput, employeeCode: 'FORBIDDEN01', roleIds: [roleIds.system] }) });
 	await expectEmployeeError(forbiddenSelfUpdate, 400, 'VALIDATION_ERROR', 'employeeCode');
 	const unchangedProfile = await request('/v1/employees/me');
 	if (unchangedProfile.status !== 200 || (await payload(unchangedProfile)).data.firstName !== 'Self Updated') throw new Error('Forbidden self-profile fields changed employee data.');
@@ -801,6 +873,8 @@ try {
 	if (forbiddenEmployeeExport.status !== 403 || (await payload(forbiddenEmployeeExport)).error.code !== 'ADMIN_REQUIRED') throw new Error('Employee export metadata role guard verification failed.');
 	const forbiddenRoleList = await request('/v1/roles');
 	if (forbiddenRoleList.status !== 403 || (await payload(forbiddenRoleList)).error.code !== 'ADMIN_REQUIRED') throw new Error('Role list guard verification failed.');
+	const forbiddenGeneralRoleUpdate = await request(`/v1/roles/${roleIds.general}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: originalRoleName }) });
+	if (forbiddenGeneralRoleUpdate.status !== 403 || (await payload(forbiddenGeneralRoleUpdate)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('General user role update guard failed.');
 	const readableMasters = await request('/v1/departments');
 	if (readableMasters.status !== 200) throw new Error(`General user master read verification failed (${readableMasters.status}).`);
 	await payload(readableMasters);
@@ -838,7 +912,9 @@ try {
 	const assignmentHistory = await payload(await request(`/v1/it-assets/${asset.id}/history`));
 	if (!assignmentHistory.data.some(entry => entry.action === 'assign' && entry.changes.some(change => change.field === 'assigneeId' && change.after)) ||
 		!assignmentHistory.data.some(entry => entry.action === 'return' && entry.changes.some(change => change.field === 'assigneeId' && change.after === null))) throw new Error('Standalone assignment history was not recorded.');
-	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleByCode.business_administrator, roleGrantId]);
+	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roleIds.business, roleGrantId]);
+	const forbiddenBusinessSystemInformation = await request('/v1/system-information');
+	if (forbiddenBusinessSystemInformation.status !== 403 || (await payload(forbiddenBusinessSystemInformation)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('Business administrator system information guard failed.');
 	const businessMaster = await request('/v1/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: `Business administrator ${suffix}` }) });
 	if (businessMaster.status !== 201) throw new Error(`Business administrator master write verification failed (${businessMaster.status}).`);
 	const businessItem = (await payload(businessMaster)).data;
@@ -852,6 +928,8 @@ try {
 	if (forbiddenBusinessCalendar.status !== 403 || (await payload(forbiddenBusinessCalendar)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('Business administrator work calendar write guard failed.');
 	const businessExternalLinks = await request('/v1/external-links?limit=500');
 	if (businessExternalLinks.status !== 200 || !(await payload(businessExternalLinks)).data.some((item) => item.id === externalLink.id)) throw new Error('Business administrator external link read failed.');
+	const forbiddenBusinessRoleUpdate = await request(`/v1/roles/${roleIds.general}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: originalRoleName }) });
+	if (forbiddenBusinessRoleUpdate.status !== 403 || (await payload(forbiddenBusinessRoleUpdate)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error('Business administrator role update guard failed.');
 	for (const [path, method, body] of [['/v1/external-links', 'POST', externalLinkInput], [`/v1/external-links/${externalLink.id}`, 'PATCH', externalLinkInput], [`/v1/external-links/${externalLink.id}`, 'DELETE', null]]) {
 		const response = await request(path, { method, ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) });
 		if (response.status !== 403 || (await payload(response)).error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`Business administrator external link ${method} guard failed.`);
@@ -912,7 +990,7 @@ try {
 			birthDate: administrator.birthDate.slice(0, 10),
 			hiredAt: administrator.hiredAt.slice(0, 10),
 			retiredAt: administrator.retiredAt?.slice(0, 10) ?? null,
-			roleCodes: ['general_user']
+			roleIds: [roleIds.general]
 		})
 	});
 	if (lastSystemRoleRemoval.status !== 409 || (await payload(lastSystemRoleRemoval)).error.code !== 'LAST_SYSTEM_ADMINISTRATOR') throw new Error('Last system administrator role removal guard failed.');
@@ -957,5 +1035,6 @@ try {
 		await client.query('UPDATE employees SET must_change_credentials = $1, password_hash = $2 WHERE id = $3', [originalMustChange, originalPasswordHash, employeeId]).catch(() => undefined);
 		await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [originalRole, roleGrantId]).catch(() => undefined);
 	}
+	if (renamedRoleId !== undefined && originalRoleName !== undefined) await client.query('UPDATE roles SET name = $1 WHERE id = $2', [originalRoleName, renamedRoleId]).catch(() => undefined);
 	await client.end();
 }

@@ -1,11 +1,14 @@
 export const DEFAULT_TIME_ZONE = 'Asia/Tokyo';
 export const DEFAULT_DISPLAY_LANGUAGE = 'en';
-export const DISPLAY_LANGUAGES = ['en', 'ja'] as const;
+export const DISPLAY_LANGUAGES = [
+	{ value: 'en', label: 'English' },
+	{ value: 'ja', label: '日本語' }
+] as const;
 
-export type DisplayLanguage = (typeof DISPLAY_LANGUAGES)[number];
+export type DisplayLanguage = (typeof DISPLAY_LANGUAGES)[number]['value'];
 
 export function isDisplayLanguage(value: unknown): value is DisplayLanguage {
-	return typeof value === 'string' && DISPLAY_LANGUAGES.includes(value as DisplayLanguage);
+	return typeof value === 'string' && DISPLAY_LANGUAGES.some((language) => language.value === value);
 }
 
 export function isTimeZone(value: unknown): value is string {

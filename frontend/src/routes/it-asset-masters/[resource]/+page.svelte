@@ -29,7 +29,7 @@
 	const title = $derived(labels[resource]);
 	const itemLabel = $derived(singularLabels[resource]);
 	const addLabel = $derived(`Add ${itemLabel}`);
-	let role = $state('');
+	let canManage = $state(false);
 	let manufacturers = $state<Item[]>([]);
 	let editing = $state<Item | null>(null);
 	let modalTitle = $derived(`${editing ? 'Edit' : 'Add'} ${itemLabel}`);
@@ -47,7 +47,6 @@
 	let sourceDateOpen = $state(false);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
-	let canManage = $derived(role === 'system_administrator' || role === 'business_administrator');
 	let hasUnsavedChanges = $derived(Boolean(editing) && initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 	let initialSortBy = $derived('sortOrder');
 	let minTableWidth = $derived(resource === 'operating-systems' ? 920 : resource === 'it-asset-types' || resource === 'manufacturers' ? 780 : 720);
@@ -79,7 +78,7 @@
 	async function load() {
 		const session = await fetch('/v1/auth/session');
 		if (!session.ok) { message = 'Please sign in to continue.'; return; }
-		role = (await apiData<{ user: { role: string } }>(session)).user.role;
+		canManage = (await apiData<{ user: { capabilities: { canManageAdministration: boolean } } }>(session)).user.capabilities.canManageAdministration;
 		const response = await fetch('/v1/manufacturers?limit=500');
 		manufacturers = response.ok ? await apiData<Item[]>(response) : [];
 		if (!editing) resetForm();

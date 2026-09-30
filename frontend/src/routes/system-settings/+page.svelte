@@ -9,6 +9,8 @@
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
+	import SystemInformationSection from '$lib/components/system-settings/SystemInformationSection.svelte';
 	import { loadExternalLinks, type ExternalLink } from '$lib/externalLinks';
 	import { formatTimestamp, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
@@ -16,15 +18,15 @@
 
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
 	type FormField = 'name' | 'url' | 'sortOrder';
-	type SystemSettingsSection = 'external-links';
-	const systemSettingsSections: SystemSettingsSection[] = ['external-links'];
+	type SystemSettingsSection = 'roles' | 'external-links' | 'system-information';
+	const systemSettingsSections: SystemSettingsSection[] = ['roles', 'external-links', 'system-information'];
 	const emptyForm = () => ({ name: '', url: '', sortOrder: '9999' });
 
 	let loading = $state(true);
 	let accessDenied = $state(false);
 	let loadError = $state('');
 	let notice = $state('');
-	let activeSection = $state<SystemSettingsSection>('external-links');
+	let activeSection = $state<SystemSettingsSection>('roles');
 	let list = $state<MasterList>();
 	let mode = $state<ModalMode>(null);
 	let selected = $state<ExternalLink | null>(null);
@@ -43,9 +45,8 @@
 	let hasUnsavedChanges = $derived(mode === 'edit' && initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 
 	const columns = [
-		{ key: 'name', label: 'Name', width: 27, value: (item: ExternalLink) => item.name },
-		{ key: 'url', label: 'URL', width: 58, cell: urlCell },
-		{ key: 'sortOrder', label: 'Sort order', width: 10, value: (item: ExternalLink) => item.sortOrder }
+		{ key: 'name', label: 'Name', width: 65, cell: nameCell },
+		{ key: 'sortOrder', label: 'Sort order', width: 25, value: (item: ExternalLink) => item.sortOrder }
 	];
 
 	function updateActiveSection() {
@@ -78,8 +79,8 @@
 			const response = await fetch('/v1/auth/session');
 			if (response.status === 401) { window.location.assign('/'); return; }
 			if (!response.ok) throw new Error();
-			const user = (await apiData<{ user: { roles: string[] } }>(response)).user;
-			accessDenied = !user.roles.includes('system_administrator');
+			const user = (await apiData<{ user: { capabilities: { canManageSystemSettings: boolean } } }>(response)).user;
+			accessDenied = !user.capabilities.canManageSystemSettings;
 		} catch { loadError = 'Unable to load system settings. Refresh the page and try again.'; }
 		finally { loading = false; if (!accessDenied && !loadError) await initializeSectionNavigation(); }
 	}
@@ -177,7 +178,7 @@
 	});
 </script>
 
-{#snippet urlCell(item: ExternalLink)}<a class="external-url" href={item.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${item.name} in a new window`} onclick={(event) => event.stopPropagation()}>{item.url}</a>{/snippet}
+{#snippet nameCell(item: ExternalLink)}<a class="external-link-name" href={item.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${item.name} in a new window`} onclick={(event) => event.stopPropagation()}>{item.name}</a>{/snippet}
 {#snippet listActions()}<AddButton bind:element={addButton} label="Add external link" onclick={() => openModal('add')} />{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />
@@ -192,11 +193,13 @@
 		{:else}
 			{#if notice}<p class="notice" class:error={notice.startsWith('Unable') || notice.startsWith('Only')} role={notice.startsWith('Unable') || notice.startsWith('Only') ? 'alert' : 'status'}>{notice}</p>{/if}
 			<div class="settings-layout">
-				<nav class="settings-nav" aria-label="System settings sections"><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>External links</a></nav>
+				<nav class="settings-nav" aria-label="System settings sections"><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>Roles</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>External links</a><a class:active={activeSection === 'system-information'} href="#system-information" aria-current={activeSection === 'system-information' ? 'location' : undefined} onclick={(event) => selectSection(event, 'system-information')}>System information</a></nav>
 				<div class="settings-content">
+					<section id="roles" class="settings-card" aria-label="Role settings"><RoleManagementSection onNotice={(message) => notice = message} /></section>
 					<section id="external-links" class="settings-card" aria-label="External links settings">
-						<MasterList bind:this={list} endpoint="/v1/external-links" searchParam="q" title="External links" listHeading="External links" description="Manage the other systems shown in every user's sidebar." {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" sortStorageKey="system-settings-sort:/v1/external-links" pageSizeStorageKey="external-links-page-size" minTableWidth={720} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel="No external links found." />
+						<MasterList bind:this={list} endpoint="/v1/external-links" searchParam="q" title="External links" listHeading="External links" description="Manage the other systems shown in every user's sidebar." {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" sortStorageKey="system-settings-sort:/v1/external-links" pageSizeStorageKey="external-links-page-size" minTableWidth={0} actionWidth={10} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel="No external links found." />
 					</section>
+					<section id="system-information" class="settings-card" aria-label="System information"><SystemInformationSection /></section>
 				</div>
 			</div>
 		{/if}
@@ -228,7 +231,7 @@
 {/if}
 
 <style>
-	.settings-page{width:100%}.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:13px;font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}.settings-nav a:hover,.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}.settings-content{display:flex;min-width:0;flex-direction:column;gap:20px;isolation:isolate}.settings-card{position:relative;min-width:0;scroll-margin-top:72px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.page-state.error{color:var(--danger)}.notice{margin:0 0 16px;padding:10px 12px;background:rgba(26,187,156,.08);color:#168b76;border:1px solid rgba(26,187,156,.28);border-radius:5px;font-size:12px}.notice.error{background:color-mix(in srgb,var(--danger) 9%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 28%,transparent)}.external-url,.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
-	@media(max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:grid;grid-template-columns:repeat(1,minmax(0,1fr))}.settings-nav a{justify-content:center;text-align:center}}
+	.settings-page{width:100%}.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:13px;font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}.settings-nav a:hover,.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}.settings-content{display:flex;min-width:0;flex-direction:column;gap:20px;isolation:isolate}.settings-card{position:relative;min-width:0;scroll-margin-top:72px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.page-state.error{color:var(--danger)}.notice{margin:0 0 16px;padding:10px 12px;background:rgba(26,187,156,.08);color:#168b76;border:1px solid rgba(26,187,156,.28);border-radius:5px;font-size:12px}.notice.error{background:color-mix(in srgb,var(--danger) 9%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 28%,transparent)}.external-link-name,.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
+	@media(max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.settings-nav a{justify-content:center;text-align:center}}
 	@media(max-width:700px){.settings-layout{gap:16px}.settings-nav{grid-template-columns:1fr}.settings-nav a{justify-content:flex-start;text-align:left}.wide{grid-column:auto}}
 </style>

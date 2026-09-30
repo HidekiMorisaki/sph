@@ -3,13 +3,14 @@
 	import { apiData } from '$lib/api';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import EmailAddressActions from '$lib/components/EmailAddressActions.svelte';
 	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
 	import EmployeeFormModal from '$lib/components/EmployeeFormModal.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import { employeeFullName, type Employee, type EmployeeMaster, type EmployeeRole } from '$lib/employees';
-	import { formatTimestamp, localization } from '$lib/localization';
+	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
+	import { formatEmployeeName, formatLengthOfService, formatTimestamp, invitationEmailSubject, localization } from '$lib/localization';
 	import { en as messages } from '$lib/ui/messages';
 
 	type InvitationPayload = { invitationUrl: string; invitationExpiresAt: string };
@@ -35,15 +36,15 @@
 	let message = $state('');
 	let masters = $state<Record<string, EmployeeMaster[]>>({});
 	let roles = $state<EmployeeRole[]>([]);
-	let currentUserRoles = $state<string[]>([]);
+	let canManageAdministration = $state(false);
+	let canManageSystemSettings = $state(false);
 	let currentUserId = $state<number | null>(null);
-	let canManageEmployees = $derived(currentUserRoles.includes('system_administrator') || currentUserRoles.includes('business_administrator'));
+	let canManageEmployees = $derived(canManageAdministration);
 	let exporting = $state(false);
 
 	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-	const fullName = employeeFullName;
+	const fullName = (employee: Employee) => formatEmployeeName(employee, $localization);
 	const initials = (item: Employee) => `${item.firstName.charAt(0)}${item.lastName.charAt(0)}`.toUpperCase();
-	const formatLengthOfService = (value: Employee['lengthOfService']) => `${value.years} ${value.years === 1 ? messages.employee.year : messages.employee.years} ${value.months} ${value.months === 1 ? messages.employee.month : messages.employee.months}`;
 	async function loadMasters() {
 		const responses = await Promise.all(resources.map((resource) => fetch(`/v1/${resource}?limit=500`)));
 		masters = Object.fromEntries(await Promise.all(responses.map(async (response, index) => [resources[index], response.ok ? await apiData<EmployeeMaster[]>(response) : []])));
@@ -52,8 +53,9 @@
 		const [roleResponse, sessionResponse] = await Promise.all([fetch('/v1/roles?sortBy=name&sortOrder=asc&limit=100'), fetch('/v1/auth/session')]);
 		if (roleResponse.ok) roles = await apiData<EmployeeRole[]>(roleResponse);
 		if (sessionResponse.ok) {
-			const current = (await apiData<{ user: { id: number; roles: string[] } }>(sessionResponse)).user;
-			currentUserRoles = current.roles;
+			const current = (await apiData<{ user: { id: number; capabilities: { canManageAdministration: boolean; canManageSystemSettings: boolean } } }>(sessionResponse)).user;
+			canManageAdministration = current.capabilities.canManageAdministration;
+			canManageSystemSettings = current.capabilities.canManageSystemSettings;
 			currentUserId = current.id;
 		}
 	}
@@ -137,7 +139,7 @@
 			for (const row of rows) csvRows.push(columns.map((column) => csvCell((row as unknown as Record<string, unknown>)[column.key])).join(','));
 			const blob = new Blob(['\uFEFF', csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob);
 			const anchor = document.createElement('a'); anchor.href = url; anchor.download = `employees-${dateIso(new Date())}.csv`; document.body.appendChild(anchor); anchor.click(); anchor.remove();
-			window.setTimeout(() => URL.revokeObjectURL(url), 0); message = `Exported ${rows.length} employees.`;
+			window.setTimeout(() => URL.revokeObjectURL(url), 0);
 		} catch { message = 'Unable to export employees.'; } finally { exporting = false; }
 	}
 	onMount(() => {
@@ -161,7 +163,7 @@
 	<MasterList bind:this={employeeList} endpoint="/v1/employees" title="Employees" listHeading="All employees" description="Sortable, searchable, paginated." initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={(item) => canManageEmployees || item.id === currentUserId} canDelete={canManageEmployees} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} loadingLabel="Loading employees…" emptyLabel="No matches found" columns={[
 		{ key: 'employee', label: 'Employee', width: 18, cell: employeeCell },
 		{ key: 'age', label: messages.employee.age, width: 6, value: (item) => (item as Employee).age },
-		{ key: 'lengthOfService', label: messages.employee.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService) },
+		{ key: 'lengthOfService', label: messages.employee.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization) },
 		{ key: 'department', label: 'Departments', width: 12, cell: departmentsCell },
 		{ key: 'group', label: 'Group', width: 9, value: (item) => (item as Employee).group?.name },
 		{ key: 'position', label: 'Positions', width: 12, cell: positionsCell },
@@ -171,10 +173,10 @@
 	]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />
 	</div>
 
-	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {currentUserRoles} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
+	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
 
-	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={currentUserRoles.includes('system_administrator') && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
-	{#if invitation}<ModalBackdrop onDismiss={closeInvitation}><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">Employee invitation link</h2><button class="modal-close app-modal-close" type="button" aria-label="Close invitation" onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>Send this link to <strong>{invitation.email}</strong> yourself. It is shown only now and expires at {formatTimestamp(invitation.expiresAt, $localization)}.</p><label>Invitation URL<input aria-label="Invitation URL" readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label><p class="invitation-warning">Anyone with this link can set the account password until it expires. Share it only with the intended employee.</p>{#if copyMessage}<p role="status">{copyMessage}</p>{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>Close</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>Copy link</button></footer></dialog></ModalBackdrop>{/if}
+	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canManageSystemSettings && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
+	{#if invitation}<ModalBackdrop onDismiss={closeInvitation}><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">Employee invitation link</h2><button class="modal-close app-modal-close" type="button" aria-label="Close invitation" onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>Send this link to the employee below yourself. It is shown only now and expires at {formatTimestamp(invitation.expiresAt, $localization)}.</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>Invitation URL<input aria-label="Invitation URL" readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label><p class="invitation-warning">Anyone with this link can set the account password until it expires. Share it only with the intended employee.</p>{#if copyMessage}<p role="status">{copyMessage}</p>{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>Close</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>Copy link</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
 <style>

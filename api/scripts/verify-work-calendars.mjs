@@ -39,7 +39,9 @@ try {
 	const account = await client.query(`SELECT e.id, e.must_change_credentials, er.id AS grant_id, er.role_id
 		FROM employees e
 		JOIN employee_roles er ON er.employee_id = e.id AND er.scope_type = 'global' AND er.deleted_at IS NULL
-		JOIN roles r ON r.id = er.role_id AND r.code = 'system_administrator' AND r.deleted_at IS NULL
+		JOIN roles r ON r.id = er.role_id AND r.deleted_at IS NULL
+		JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+		JOIN permission_operations po ON po.permission_id = rp.permission_id AND po.operation = 'system.manage' AND po.deleted_at IS NULL
 		WHERE e.username = $1 AND e.deleted_at IS NULL`, [username]);
 	if (account.rowCount !== 1) throw new Error('Verification administrator is unavailable.');
 	({ id: employeeId, must_change_credentials: originalMustChange, grant_id: roleGrantId, role_id: originalRoleId } = account.rows[0]);
@@ -71,19 +73,30 @@ try {
 	await expect(await request(`/v1/work-calendars/${calendar.id}/entries?limit=500`), 200, 'Calendar entry read');
 	await expect(await request(`/v1/work-calendars/${calendar.id}/employees?limit=500`), 200, 'Assignment read');
 	const attributes = await expect(await request('/v1/calendar-date-attributes?from=2030-04-01&to=2030-04-30&limit=500'), 200, 'Calendar date attribute read');
-	if (!attributes.data.some((attribute) => attribute.kind === 'saturday') || !attributes.data.some((attribute) => attribute.kind === 'sunday')) throw new Error('Stored weekend attributes were not returned.');
+	if (attributes.data.some((attribute) => attribute.kind === 'saturday' || attribute.kind === 'sunday')) throw new Error('Retired weekend attributes were returned.');
+	const outOfRangeHolidays = await client.query("SELECT count(*)::int AS count FROM calendar_date_attributes WHERE kind = 'public_holiday' AND deleted_at IS NULL AND calendar_date < DATE '2011-01-01'");
+	if (outOfRangeHolidays.rows[0]?.count !== 0) throw new Error('An active public holiday exists before the supported calendar range.');
 	await expect(await request('/v1/calendar-date-attributes?from=2010-12-01&to=2010-12-31'), 422, 'Calendar data start guard');
 	await expect(await request('/v1/calendar-holiday-imports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), 400, 'Holiday import calendar validation');
 	await expect(await request('/v1/calendar-holiday-imports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workCalendarId: 2147483647 }) }), 404, 'Holiday import missing calendar guard');
 
-	const roles = Object.fromEntries((await client.query("SELECT id, code FROM roles WHERE code IN ('system_administrator', 'business_administrator', 'general_user')")).rows.map((role) => [role.code, role.id]));
-	for (const role of ['general_user', 'business_administrator']) {
-		await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [roles[role], roleGrantId]);
-		await expect(await request(`/v1/work-calendars/${calendar.id}`), 200, `${role} calendar read`);
-		const denied = await expect(await request(`/v1/work-calendars/${calendar.id}/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-05-01', entryType: 'working_day', title: 'Denied' }) }), 403, `${role} calendar write guard`);
-		if (denied.error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`${role} returned the wrong authorization error.`);
-		const holidayDenied = await expect(await request('/v1/calendar-holiday-imports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workCalendarId: calendar.id }) }), 403, `${role} holiday import guard`);
-		if (holidayDenied.error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`${role} returned the wrong holiday import authorization error.`);
+	const roleRows = await client.query(`SELECT r.id, array_agg(po.operation ORDER BY po.operation) AS operations
+		FROM roles r
+		JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
+		JOIN permission_operations po ON po.permission_id = rp.permission_id AND po.deleted_at IS NULL
+		WHERE r.deleted_at IS NULL GROUP BY r.id`);
+	const restrictedRoles = [
+		{ label: 'general user', id: roleRows.rows.find((role) => role.operations.includes('assets.manage') && !role.operations.includes('administration.manage'))?.id },
+		{ label: 'business administrator', id: roleRows.rows.find((role) => role.operations.includes('administration.manage') && !role.operations.includes('system.manage'))?.id }
+	];
+	if (restrictedRoles.some((role) => !role.id)) throw new Error('Restricted verification roles are unavailable.');
+	for (const role of restrictedRoles) {
+		await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [role.id, roleGrantId]);
+		await expect(await request(`/v1/work-calendars/${calendar.id}`), 200, `${role.label} calendar read`);
+		const denied = await expect(await request(`/v1/work-calendars/${calendar.id}/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workDate: '2030-05-01', entryType: 'working_day', title: 'Denied' }) }), 403, `${role.label} calendar write guard`);
+		if (denied.error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`${role.label} returned the wrong authorization error.`);
+		const holidayDenied = await expect(await request('/v1/calendar-holiday-imports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ workCalendarId: calendar.id }) }), 403, `${role.label} holiday import guard`);
+		if (holidayDenied.error.code !== 'SYSTEM_ADMIN_REQUIRED') throw new Error(`${role.label} returned the wrong holiday import authorization error.`);
 	}
 
 	await client.query('UPDATE employee_roles SET role_id = $1 WHERE id = $2', [originalRoleId, roleGrantId]);

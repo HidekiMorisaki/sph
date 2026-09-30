@@ -35,7 +35,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null }, select: { email: true } });
 			if (!previous) return { status: 'not_found' as const };
 			const before = await readEmployeeFields(tx, id);
-			const roleResult = await syncGlobalRoleGrants(tx, actor, id, input.roleCodes);
+			const roleResult = await syncGlobalRoleGrants(tx, actor, id, input.roleIds);
 			if (roleResult !== 'updated') return { status: roleResult };
 			await tx.employee.update({ where: { id }, data: input.employee });
 			await syncEmployeeDepartments(tx, id, input.departmentIds, input.primaryDepartmentId);
@@ -61,9 +61,9 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async (tx) => {
 		if (!await tx.employee.count({ where: { id, deletedAt: null } })) return 'not_found';
-		const targetIsSystemAdmin = await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { code: 'system_administrator', deletedAt: null } } });
+		const targetIsSystemAdmin = await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } } } });
 		if (targetIsSystemAdmin) {
-			const otherSystemAdmins = await tx.employeeRole.count({ where: { employeeId: { not: id }, deletedAt: null, scopeType: 'global', role: { code: 'system_administrator', deletedAt: null }, employee: { accountStatus: 'active', deletedAt: null } } });
+			const otherSystemAdmins = await tx.employeeRole.count({ where: { employeeId: { not: id }, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } }, employee: { accountStatus: 'active', deletedAt: null } } });
 			if (!otherSystemAdmins) return 'last_admin';
 		}
 		const references = await Promise.all([
@@ -73,13 +73,18 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 		if (references[0] > 0) return 'referenced';
 		if (references[1] > 0) return 'branch_responsibility';
 		const before = await readEmployeeFields(tx, id);
-		const changed = await tx.employee.updateMany({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } });
+		const deletedAt = new Date();
+		const changed = await tx.employee.updateMany({ where: { id, deletedAt: null }, data: { deletedAt } });
 		if (!changed.count) return 'not_found';
-		await tx.employeePosition.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt: new Date(), isPrimary: false } });
-		await tx.employeeDepartment.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt: new Date(), isPrimary: false } });
-		await tx.employeeSocialLink.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt: new Date() } });
-		await tx.session.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt: new Date() } });
-		await tx.accountInvitation.updateMany({ where: { employeeId: id, usedAt: null, deletedAt: null }, data: { deletedAt: new Date() } });
+		await tx.employeeRole.updateMany({
+			where: { deletedAt: null, OR: [{ employeeId: id }, { scopeEmployeeId: id }] },
+			data: { deletedAt }
+		});
+		await tx.employeePosition.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
+		await tx.employeeDepartment.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
+		await tx.employeeSocialLink.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
+		await tx.session.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
+		await tx.accountInvitation.updateMany({ where: { employeeId: id, usedAt: null, deletedAt: null }, data: { deletedAt } });
 		await recordEmployeeChange(tx, id, actor.id, 'delete', before, null);
 		await writeAuditLog(tx, actor.id, 'delete', 'employee', id); return 'deleted';
 	}, { isolationLevel: 'Serializable' });

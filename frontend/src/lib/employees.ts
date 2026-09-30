@@ -6,7 +6,7 @@ export type EmployeeMaster = {
 	departmentId?: number | null;
 	department?: { id: number; name: string } | null;
 };
-export type EmployeeRole = { code: string; name: string };
+export type EmployeeRole = { id: number; name: string; isSystemManagement?: boolean };
 export type SocialLinkPlatform = 'website' | 'blog' | 'github' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'youtube' | 'qiita' | 'note';
 export type EmployeeSocialLink = { platform: SocialLinkPlatform; url: string };
 
@@ -75,6 +75,3 @@ export type Employee = EmployeeProfile & {
 	socialLinks: EmployeeSocialLink[];
 	canIssueInvitation: boolean;
 };
-
-export const employeeFullName = (employee: Pick<EmployeeProfile, 'firstName' | 'middleName' | 'lastName'>) =>
-	[employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ');

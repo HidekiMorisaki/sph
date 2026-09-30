@@ -35,6 +35,6 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 		action: item.action,
 		changes: item.changes,
 		changedAt: item.changedAt,
-		actorName: [item.actor.firstName, item.actor.middleName, item.actor.lastName].filter(Boolean).join(' ')
+		actor: item.actor
 	})), 200, listMeta(query, items.length, total));
 }
