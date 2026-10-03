@@ -8,9 +8,14 @@
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import { socialLinkPlatforms, type EmployeeProfile, type EmployeeSocialLink, type SocialLinkPlatform } from '$lib/employees';
-	import { applyLocalization, DEFAULT_LOCALIZATION, displayLanguageOptions, genderOptions, type DisplayLanguage, type LocalizationSettings } from '$lib/localization';
+	import { localization as appliedLocalization, applyLocalization, DEFAULT_LOCALIZATION, displayLanguageOptions, genderOptions, personNameFields, type DisplayLanguage, type LocalizationSettings } from '$lib/localization';
 
-	type ApiErrorPayload = { error?: { message?: string; details?: Array<{ field?: string; reason: string }> } };
+	import { localeMessages } from '$lib/locale-messages';
+	import { settingsFieldError, settingsSaveError } from '$lib/settings-messages';
+	const text = $derived(localeMessages[$appliedLocalization.displayLanguage].settings);
+	const nameFields = $derived(personNameFields($appliedLocalization));
+	const fieldError = (reason: string) => settingsFieldError(reason, $appliedLocalization.displayLanguage);
+	type ApiErrorPayload = { error?: { code?: string; message?: string; details?: Array<{ field?: string; reason: string }> } };
 	type ProfileForm = Omit<EmployeeProfile, 'id' | 'birthDate'> & { birthDate: string };
 	type ProfileField = keyof ProfileForm;
 	type SocialLinkValues = Record<SocialLinkPlatform, string>;
@@ -33,7 +38,7 @@
 	let profileErrors = $state<Record<string, string>>({});
 	let birthDateOpen = $state(false);
 	let localization = $state<LocalizationSettings>({ ...DEFAULT_LOCALIZATION });
-	let genders = $derived(genderOptions(localization));
+	let genders = $derived(genderOptions($appliedLocalization));
 	let localizationSaving = $state(false);
 	let localizationMessage = $state('');
 	let localizationErrors = $state<Record<string, string>>({});
@@ -53,10 +58,10 @@
 	let navigationLockUntil = 0;
 
 	const passwordRules = $derived([
-		{ text: 'At least 12 characters', met: newPassword.length >= 12 },
-		{ text: 'At least one uppercase letter (A–Z)', met: /[A-Z]/.test(newPassword) },
-		{ text: 'At least one lowercase letter (a–z)', met: /[a-z]/.test(newPassword) },
-		{ text: 'At least one number (0–9)', met: /\d/.test(newPassword) }
+		{ text: text.ruleLength, met: newPassword.length >= 12 },
+		{ text: text.ruleUpper, met: /[A-Z]/.test(newPassword) },
+		{ text: text.ruleLower, met: /[a-z]/.test(newPassword) },
+		{ text: text.ruleNumber, met: /\d/.test(newPassword) }
 	]);
 
 	function nullable(value: string | null) { const trimmed = value?.trim() ?? ''; return trimmed || null; }
@@ -114,24 +119,24 @@
 			localization = await apiData<LocalizationSettings>(settingsResponse);
 			const savedLinks = await apiData<EmployeeSocialLink[]>(socialLinksResponse);
 			socialLinks = { ...blankSocialLinks(), ...Object.fromEntries(savedLinks.map(({ platform, url }) => [platform, url])) };
-			applyLocalization(localization);
-		} catch { loadError = 'Unable to load your settings. Refresh the page and try again.'; }
+			await applyLocalization(localization);
+		} catch { loadError = 'loadFailed'; }
 		finally { loading = false; await initializeSectionNavigation(); }
 	}
 
 	async function saveProfile() {
 		profileMessage = ''; profileErrors = {};
-		if (!profile.firstName.trim()) profileErrors.firstName = 'First name is required.';
-		if (!profile.lastName.trim()) profileErrors.lastName = 'Last name is required.';
-		if (!profile.birthDate) profileErrors.birthDate = 'Birth date is required.';
-		if (!profile.gender) profileErrors.gender = 'Gender is required.';
+		if (!profile.firstName.trim()) profileErrors.firstName = 'firstNameRequired';
+		if (!profile.lastName.trim()) profileErrors.lastName = 'lastNameRequired';
+		if (!profile.birthDate) profileErrors.birthDate = 'birthDateRequired';
+		if (!profile.gender) profileErrors.gender = 'genderRequired';
 		const postalCode = profile.postalCode?.trim() ?? '';
-		if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) profileErrors.postalCode = 'Use a Japanese postal code such as 100-0001.';
+		if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) profileErrors.postalCode = 'postalCodeInvalid';
 		const mobilePhone = profile.mobilePhone?.trim() ?? '';
-		if (mobilePhone && !/^[+0-9][0-9 ()-]{6,31}$/.test(mobilePhone)) profileErrors.mobilePhone = 'Use 7 to 32 characters: numbers, spaces, parentheses, or hyphens.';
+		if (mobilePhone && !/^[+0-9][0-9 ()-]{6,31}$/.test(mobilePhone)) profileErrors.mobilePhone = 'phoneInvalid';
 		const email = profile.email.trim();
-		if (!email) profileErrors.email = 'Email is required.';
-		else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) profileErrors.email = 'Enter a valid email address.';
+		if (!email) profileErrors.email = 'emailRequired';
+		else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) profileErrors.email = 'emailInvalid';
 		const firstError = Object.keys(profileErrors)[0];
 		if (firstError) { await tick(); focusProfile(firstError); return; }
 		profileSaving = true;
@@ -140,15 +145,15 @@
 			if (!response.ok) {
 				const body = await response.json().catch(() => null) as ApiErrorPayload | null;
 				const errors = setApiErrors(body);
-				profileErrors = errors; profileMessage = body?.error?.message ?? 'Unable to save your profile.';
+				profileErrors = errors; profileMessage = settingsSaveError(body?.error?.code, response.status, 'profileFailed');
 				const field = Object.keys(errors)[0]; if (field) { await tick(); focusProfile(field); }
 				return;
 			}
 			const saved = await apiData<EmployeeProfile>(response);
 			profile = profileForm(saved);
 			window.dispatchEvent(new CustomEvent('profile-updated', { detail: { firstName: saved.firstName, middleName: saved.middleName, lastName: saved.lastName } }));
-			profileMessage = 'Profile saved.';
-		} catch { profileMessage = 'Unable to save your profile. Check your connection and try again.'; }
+			profileMessage = 'profileSaved';
+		} catch { profileMessage = 'profileConnectionFailed'; }
 		finally { profileSaving = false; }
 	}
 
@@ -156,9 +161,9 @@
 		localizationMessage = ''; localizationErrors = {}; localizationSaving = true;
 		try {
 			const response = await fetch('/v1/settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(localization) });
-			if (!response.ok) { const body = await response.json().catch(() => null) as ApiErrorPayload | null; localizationErrors = setApiErrors(body); localizationMessage = body?.error?.message ?? 'Unable to save localization settings.'; return; }
-			localization = await apiData<LocalizationSettings>(response); applyLocalization(localization); localizationMessage = 'Localization settings saved.';
-		} catch { localizationMessage = 'Unable to save localization settings. Check your connection and try again.'; }
+			if (!response.ok) { const body = await response.json().catch(() => null) as ApiErrorPayload | null; localizationErrors = setApiErrors(body); localizationMessage = settingsSaveError(body?.error?.code, response.status, 'localizationFailed'); return; }
+			localization = await apiData<LocalizationSettings>(response); await applyLocalization(localization); localizationMessage = 'localizationSaved';
+		} catch { localizationMessage = 'localizationConnectionFailed'; }
 		finally { localizationSaving = false; }
 	}
 
@@ -176,7 +181,7 @@
 			try {
 				const parsed = new URL(url);
 				if ((parsed.protocol !== 'https:' && parsed.protocol !== 'http:') || !parsed.hostname) throw new Error();
-			} catch { socialLinkErrors[platform] = 'Enter a valid HTTP or HTTPS URL.'; }
+			} catch { socialLinkErrors[platform] = 'urlInvalid'; }
 			return [{ platform, url }];
 		});
 		if (Object.keys(socialLinkErrors).length) { await tick(); document.querySelector<HTMLInputElement>('.social-links-grid input[aria-invalid="true"]')?.focus(); return; }
@@ -190,29 +195,29 @@
 					const platform = match ? links[Number(match[1])]?.platform : undefined;
 					if (platform) socialLinkErrors[platform] = detail.reason;
 				}
-				socialLinksMessage = body?.error?.message ?? 'Unable to save social links.';
+				socialLinksMessage = settingsSaveError(body?.error?.code, response.status, 'socialFailed');
 				return;
 			}
 			const saved = await apiData<EmployeeSocialLink[]>(response);
 			socialLinks = { ...blankSocialLinks(), ...Object.fromEntries(saved.map(({ platform, url }) => [platform, url])) };
-			socialLinksMessage = 'Social links saved.';
-		} catch { socialLinksMessage = 'Unable to save social links. Check your connection and try again.'; }
+			socialLinksMessage = 'socialSaved';
+		} catch { socialLinksMessage = 'socialConnectionFailed'; }
 		finally { socialLinksSaving = false; }
 	}
 
 	function clearPasswordError(field: string) { if (passwordErrors[field]) { const next = { ...passwordErrors }; delete next[field]; passwordErrors = next; } passwordMessage = ''; }
 	async function changePassword() {
 		passwordMessage = ''; passwordErrors = {};
-		if (!currentPassword) passwordErrors.currentPassword = 'Enter your current password.';
-		if (!passwordRules.every((rule) => rule.met)) passwordErrors.newPassword = 'Your new password does not meet every requirement.';
-		if (confirmation !== newPassword) passwordErrors.confirmation = 'The passwords do not match.';
+		if (!currentPassword) passwordErrors.currentPassword = 'currentPasswordRequired';
+		if (!passwordRules.every((rule) => rule.met)) passwordErrors.newPassword = 'passwordRequirementsUnmet';
+		if (confirmation !== newPassword) passwordErrors.confirmation = 'passwordMismatch';
 		if (Object.keys(passwordErrors).length) { await tick(); (passwordErrors.currentPassword ? currentPasswordInput : document.querySelector<HTMLInputElement>(passwordErrors.newPassword ? '[name="newPassword"]' : '[name="confirmation"]'))?.focus(); return; }
 		passwordSaving = true;
 		try {
 			const response = await fetch('/v1/auth/password', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword, confirmation }) });
-			if (!response.ok) { const body = await response.json().catch(() => null) as ApiErrorPayload | null; passwordErrors = setApiErrors(body); passwordMessage = body?.error?.message ?? 'Unable to change your password.'; const field = Object.keys(passwordErrors)[0]; await tick(); document.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus(); return; }
-			currentPassword = ''; newPassword = ''; confirmation = ''; passwordMessage = 'Password changed. Redirecting to sign in…'; window.setTimeout(() => window.location.assign('/'), 900);
-		} catch { passwordMessage = 'Unable to change your password. Check your connection and try again.'; }
+			if (!response.ok) { const body = await response.json().catch(() => null) as ApiErrorPayload | null; passwordErrors = setApiErrors(body); passwordMessage = settingsSaveError(body?.error?.code, response.status, 'passwordFailed'); const field = Object.keys(passwordErrors)[0]; await tick(); document.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus(); return; }
+			currentPassword = ''; newPassword = ''; confirmation = ''; passwordMessage = 'passwordChanged'; window.setTimeout(() => window.location.assign('/'), 900);
+		} catch { passwordMessage = 'passwordConnectionFailed'; }
 		finally { passwordSaving = false; }
 	}
 
@@ -228,73 +233,72 @@
 	});
 </script>
 
-<svelte:head><title>Settings</title></svelte:head>
 
-<AssetManagementShell title="Settings">
+<AssetManagementShell title={text.title}>
 	<div class="settings-page">
-		<MasterPageHeader title="Settings" description="Manage your personal profile, localization preferences, and account security." />
-		{#if loading}<div class="page-state">Loading settings…</div>
-		{:else if loadError}<div class="page-state error" role="alert">{loadError}</div>
+		<MasterPageHeader title={text.title} description={text.description} />
+		{#if loading}<div class="page-state">{text.loading}</div>
+		{:else if loadError}<div class="page-state error" role="alert">{fieldError(loadError)}</div>
 		{:else}
 			<div class="settings-layout">
-				<nav class="settings-nav" aria-label="Settings sections"><a class:active={activeSection === 'profile'} href="#profile" aria-current={activeSection === 'profile' ? 'location' : undefined} onclick={(event) => selectSection(event, 'profile')}>Profile</a><a class:active={activeSection === 'social-links'} href="#social-links" aria-current={activeSection === 'social-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'social-links')}>Social links</a><a class:active={activeSection === 'localization'} href="#localization" aria-current={activeSection === 'localization' ? 'location' : undefined} onclick={(event) => selectSection(event, 'localization')}>Localization</a><a class:active={activeSection === 'password'} href="#password" aria-current={activeSection === 'password' ? 'location' : undefined} onclick={(event) => selectSection(event, 'password')}>Password</a></nav>
+				<nav class="settings-nav" aria-label={text.sections}><a class:active={activeSection === 'profile'} href="#profile" aria-current={activeSection === 'profile' ? 'location' : undefined} onclick={(event) => selectSection(event, 'profile')}>{text.profile}</a><a class:active={activeSection === 'social-links'} href="#social-links" aria-current={activeSection === 'social-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'social-links')}>{text.socialLinks}</a><a class:active={activeSection === 'localization'} href="#localization" aria-current={activeSection === 'localization' ? 'location' : undefined} onclick={(event) => selectSection(event, 'localization')}>{text.localization}</a><a class:active={activeSection === 'password'} href="#password" aria-current={activeSection === 'password' ? 'location' : undefined} onclick={(event) => selectSection(event, 'password')}>{text.password}</a></nav>
 				<div class="settings-content">
 					<section id="profile" class="settings-card" aria-labelledby="profile-title">
-						<header><div><h2 id="profile-title">Profile</h2><p>Update the personal and contact information associated with your employee record.</p></div></header>
+						<header><div><h2 id="profile-title">{text.profile}</h2><p>{text.profileDescription}</p></div></header>
 						<form novalidate onsubmit={(event) => { event.preventDefault(); void saveProfile(); }}>
 							<div class="form-body">
-								{#if profileMessage}<p class:success={profileMessage === 'Profile saved.'} class="form-message" role={profileMessage === 'Profile saved.' ? 'status' : 'alert'}>{profileMessage}</p>{/if}
-								<FormSection title="Basic information" framed columns={2}>
-									<label><span>First name <i>*</i></span><input name="firstName" value={profile.firstName} maxlength="128" aria-invalid={!!profileErrors.firstName} aria-describedby={profileErrors.firstName ? 'firstName-error' : undefined} oninput={(event) => updateProfile('firstName', event.currentTarget.value)} />{#if profileErrors.firstName}<small id="firstName-error">{profileErrors.firstName}</small>{/if}</label>
-									<label><span>Middle name</span><input name="middleName" value={profile.middleName ?? ''} maxlength="128" oninput={(event) => updateProfile('middleName', event.currentTarget.value)} /></label>
-									<label><span>Last name <i>*</i></span><input name="lastName" value={profile.lastName} maxlength="128" aria-invalid={!!profileErrors.lastName} aria-describedby={profileErrors.lastName ? 'lastName-error' : undefined} oninput={(event) => updateProfile('lastName', event.currentTarget.value)} />{#if profileErrors.lastName}<small id="lastName-error">{profileErrors.lastName}</small>{/if}</label>
-									<label><span>Name (Kana)</span><input name="nameKana" value={profile.nameKana ?? ''} maxlength="255" oninput={(event) => updateProfile('nameKana', event.currentTarget.value)} /></label>
-									<DatePicker label="Birth date" field="birthDate" value={profile.birthDate} required error={profileErrors.birthDate ?? ''} open={birthDateOpen} onToggle={() => birthDateOpen = !birthDateOpen} onSelect={(value) => { updateProfile('birthDate', value); birthDateOpen = false; }} />
-									<SearchSelect label="Gender" field="gender" value={profile.gender} options={genders} required error={profileErrors.gender ?? ''} onSelect={(value) => updateProfile('gender', value)} />
-									<SearchSelect label="Blood type" field="bloodType" value={profile.bloodType ?? ''} options={[{ value: '', label: '-' }, ...bloodTypes]} error={profileErrors.bloodType ?? ''} onSelect={(value) => updateProfile('bloodType', value)} />
+								{#if profileMessage}<p class:success={profileMessage === 'profileSaved'} class="form-message" role={profileMessage === 'profileSaved' ? 'status' : 'alert'}>{fieldError(profileMessage)}</p>{/if}
+								<FormSection title={text.basic} framed columns={2}>
+									{#each nameFields as field (field)}
+										<label><span>{text[field]} {#if field !== 'middleName'}<i>*</i>{/if}</span><input name={field} value={profile[field] ?? ''} maxlength="128" aria-invalid={!!profileErrors[field]} aria-describedby={profileErrors[field] ? `${field}-error` : undefined} oninput={(event) => updateProfile(field, event.currentTarget.value)} />{#if profileErrors[field]}<small id={`${field}-error`}>{fieldError(profileErrors[field])}</small>{/if}</label>
+									{/each}
+									<label><span>{text.nameKana}</span><input name="nameKana" value={profile.nameKana ?? ''} maxlength="255" aria-invalid={!!profileErrors.nameKana} aria-describedby={profileErrors.nameKana ? 'nameKana-error' : undefined} oninput={(event) => updateProfile('nameKana', event.currentTarget.value)} />{#if profileErrors.nameKana}<small id="nameKana-error">{fieldError(profileErrors.nameKana)}</small>{/if}</label>
+									<DatePicker label={text.birthDate} field="birthDate" value={profile.birthDate} required error={profileErrors.birthDate ? fieldError(profileErrors.birthDate) : ''} open={birthDateOpen} onToggle={() => birthDateOpen = !birthDateOpen} onSelect={(value) => { updateProfile('birthDate', value); birthDateOpen = false; }} />
+									<SearchSelect label={text.gender} field="gender" value={profile.gender} options={genders} required error={profileErrors.gender ? fieldError(profileErrors.gender) : ''} onSelect={(value) => updateProfile('gender', value)} />
+									<SearchSelect label={text.bloodType} field="bloodType" value={profile.bloodType ?? ''} options={[{ value: '', label: '-' }, ...bloodTypes]} error={profileErrors.bloodType ? fieldError(profileErrors.bloodType) : ''} onSelect={(value) => updateProfile('bloodType', value)} />
 								</FormSection>
-								<FormSection title="Contact information" framed columns={2}>
-									<label><span>Postal code</span><input name="postalCode" value={profile.postalCode ?? ''} maxlength="8" placeholder="e.g. 100-0001" aria-invalid={!!profileErrors.postalCode} aria-describedby={`postalCode-hint${profileErrors.postalCode ? ' postalCode-error' : ''}`} oninput={(event) => updateProfile('postalCode', event.currentTarget.value)} /><small id="postalCode-hint" class="field-hint">Optional · 7 digits with an optional hyphen · Maximum 8 characters</small>{#if profileErrors.postalCode}<small id="postalCode-error" class="field-error">{profileErrors.postalCode}</small>{/if}</label>
-									<label><span>Prefecture</span><input name="prefecture" value={profile.prefecture ?? ''} maxlength="64" placeholder="e.g. Tokyo" aria-invalid={!!profileErrors.prefecture} aria-describedby={`prefecture-hint${profileErrors.prefecture ? ' prefecture-error' : ''}`} oninput={(event) => updateProfile('prefecture', event.currentTarget.value)} /><small id="prefecture-hint" class="field-hint">Optional · Maximum 64 characters</small>{#if profileErrors.prefecture}<small id="prefecture-error" class="field-error">{profileErrors.prefecture}</small>{/if}</label>
-									<label><span>City</span><input name="city" value={profile.city ?? ''} maxlength="128" placeholder="e.g. Chiyoda-ku" aria-invalid={!!profileErrors.city} aria-describedby={`city-hint${profileErrors.city ? ' city-error' : ''}`} oninput={(event) => updateProfile('city', event.currentTarget.value)} /><small id="city-hint" class="field-hint">Optional · Maximum 128 characters</small>{#if profileErrors.city}<small id="city-error" class="field-error">{profileErrors.city}</small>{/if}</label>
-									<label><span>Street address</span><input name="streetAddress" value={profile.streetAddress ?? ''} maxlength="255" placeholder="e.g. 1-1 Chiyoda" aria-invalid={!!profileErrors.streetAddress} aria-describedby={`streetAddress-hint${profileErrors.streetAddress ? ' streetAddress-error' : ''}`} oninput={(event) => updateProfile('streetAddress', event.currentTarget.value)} /><small id="streetAddress-hint" class="field-hint">Optional · Maximum 255 characters</small>{#if profileErrors.streetAddress}<small id="streetAddress-error" class="field-error">{profileErrors.streetAddress}</small>{/if}</label>
-									<label><span>Building</span><input name="buildingName" value={profile.buildingName ?? ''} maxlength="255" placeholder="e.g. Example Building 5F" aria-invalid={!!profileErrors.buildingName} aria-describedby={`buildingName-hint${profileErrors.buildingName ? ' buildingName-error' : ''}`} oninput={(event) => updateProfile('buildingName', event.currentTarget.value)} /><small id="buildingName-hint" class="field-hint">Optional · Maximum 255 characters</small>{#if profileErrors.buildingName}<small id="buildingName-error" class="field-error">{profileErrors.buildingName}</small>{/if}</label>
-									<label><span>Mobile phone</span><input name="mobilePhone" value={profile.mobilePhone ?? ''} maxlength="32" type="tel" placeholder="e.g. +81 90-1234-5678" aria-invalid={!!profileErrors.mobilePhone} aria-describedby={`mobilePhone-hint${profileErrors.mobilePhone ? ' mobilePhone-error' : ''}`} oninput={(event) => updateProfile('mobilePhone', event.currentTarget.value)} /><small id="mobilePhone-hint" class="field-hint">Optional · 7–32 characters · Numbers, spaces, parentheses, and hyphens</small>{#if profileErrors.mobilePhone}<small id="mobilePhone-error" class="field-error">{profileErrors.mobilePhone}</small>{/if}</label>
-									<label class="wide"><span>Email <i>*</i></span><input name="email" value={profile.email} maxlength="254" type="email" placeholder="e.g. user@example.com" aria-invalid={!!profileErrors.email} aria-describedby={`email-hint${profileErrors.email ? ' email-error' : ''}`} oninput={(event) => updateProfile('email', event.currentTarget.value)} /><small id="email-hint" class="field-hint">Required · Valid email address · Maximum 254 characters</small>{#if profileErrors.email}<small id="email-error" class="field-error">{profileErrors.email}</small>{/if}</label>
+								<FormSection title={text.contact} framed columns={2}>
+									<label><span>{text.postalCode}</span><input name="postalCode" value={profile.postalCode ?? ''} maxlength="8" placeholder={text.postalExample} aria-invalid={!!profileErrors.postalCode} aria-describedby={`postalCode-hint${profileErrors.postalCode ? ' postalCode-error' : ''}`} oninput={(event) => updateProfile('postalCode', event.currentTarget.value)} /><small id="postalCode-hint" class="field-hint">{text.postalHint}</small>{#if profileErrors.postalCode}<small id="postalCode-error" class="field-error">{fieldError(profileErrors.postalCode)}</small>{/if}</label>
+									<label><span>{text.prefecture}</span><input name="prefecture" value={profile.prefecture ?? ''} maxlength="64" placeholder={text.prefectureExample} aria-invalid={!!profileErrors.prefecture} aria-describedby={`prefecture-hint${profileErrors.prefecture ? ' prefecture-error' : ''}`} oninput={(event) => updateProfile('prefecture', event.currentTarget.value)} /><small id="prefecture-hint" class="field-hint">{text.prefectureHint}</small>{#if profileErrors.prefecture}<small id="prefecture-error" class="field-error">{fieldError(profileErrors.prefecture)}</small>{/if}</label>
+									<label><span>{text.city}</span><input name="city" value={profile.city ?? ''} maxlength="128" placeholder={text.cityExample} aria-invalid={!!profileErrors.city} aria-describedby={`city-hint${profileErrors.city ? ' city-error' : ''}`} oninput={(event) => updateProfile('city', event.currentTarget.value)} /><small id="city-hint" class="field-hint">{text.cityHint}</small>{#if profileErrors.city}<small id="city-error" class="field-error">{fieldError(profileErrors.city)}</small>{/if}</label>
+									<label><span>{text.streetAddress}</span><input name="streetAddress" value={profile.streetAddress ?? ''} maxlength="255" placeholder={text.streetExample} aria-invalid={!!profileErrors.streetAddress} aria-describedby={`streetAddress-hint${profileErrors.streetAddress ? ' streetAddress-error' : ''}`} oninput={(event) => updateProfile('streetAddress', event.currentTarget.value)} /><small id="streetAddress-hint" class="field-hint">{text.addressHint}</small>{#if profileErrors.streetAddress}<small id="streetAddress-error" class="field-error">{fieldError(profileErrors.streetAddress)}</small>{/if}</label>
+									<label><span>{text.buildingName}</span><input name="buildingName" value={profile.buildingName ?? ''} maxlength="255" placeholder={text.buildingExample} aria-invalid={!!profileErrors.buildingName} aria-describedby={`buildingName-hint${profileErrors.buildingName ? ' buildingName-error' : ''}`} oninput={(event) => updateProfile('buildingName', event.currentTarget.value)} /><small id="buildingName-hint" class="field-hint">{text.addressHint}</small>{#if profileErrors.buildingName}<small id="buildingName-error" class="field-error">{fieldError(profileErrors.buildingName)}</small>{/if}</label>
+									<label><span>{text.mobilePhone}</span><input name="mobilePhone" value={profile.mobilePhone ?? ''} maxlength="32" type="tel" placeholder={text.phoneExample} aria-invalid={!!profileErrors.mobilePhone} aria-describedby={`mobilePhone-hint${profileErrors.mobilePhone ? ' mobilePhone-error' : ''}`} oninput={(event) => updateProfile('mobilePhone', event.currentTarget.value)} /><small id="mobilePhone-hint" class="field-hint">{text.phoneHint}</small>{#if profileErrors.mobilePhone}<small id="mobilePhone-error" class="field-error">{fieldError(profileErrors.mobilePhone)}</small>{/if}</label>
+									<label class="wide"><span>{text.email} <i>*</i></span><input name="email" value={profile.email} maxlength="254" type="email" placeholder={text.emailExample} aria-invalid={!!profileErrors.email} aria-describedby={`email-hint${profileErrors.email ? ' email-error' : ''}`} oninput={(event) => updateProfile('email', event.currentTarget.value)} /><small id="email-hint" class="field-hint">{text.emailHint}</small>{#if profileErrors.email}<small id="email-error" class="field-error">{fieldError(profileErrors.email)}</small>{/if}</label>
 								</FormSection>
 							</div>
-							<footer><button class="app-primary-action" type="submit" disabled={profileSaving}>{profileSaving ? 'Saving…' : 'Save profile'}</button></footer>
+							<footer><button class="app-primary-action" type="submit" disabled={profileSaving}>{profileSaving ? text.saving : text.saveProfile}</button></footer>
 						</form>
 					</section>
 
 					<section id="social-links" class="settings-card" aria-labelledby="social-links-title">
-						<header><div><h2 id="social-links-title">Social links</h2><p>Add the websites, blogs, and social profiles shown on your employee detail. Leave a field blank to remove it.</p></div></header>
+						<header><div><h2 id="social-links-title">{text.socialLinks}</h2><p>{text.socialDescription}</p></div></header>
 						<form novalidate onsubmit={(event) => { event.preventDefault(); void saveSocialLinks(); }}><div class="form-body social-links-grid">
-							{#if socialLinksMessage}<p class:success={socialLinksMessage === 'Social links saved.'} class="form-message" role={socialLinksMessage === 'Social links saved.' ? 'status' : 'alert'}>{socialLinksMessage}</p>{/if}
+							{#if socialLinksMessage}<p class:success={socialLinksMessage === 'socialSaved'} class="form-message" role={socialLinksMessage === 'socialSaved' ? 'status' : 'alert'}>{fieldError(socialLinksMessage)}</p>{/if}
 							{#each socialLinkPlatforms as site}
-								<label><span class="social-link-label"><SocialLinkIcon platform={site.value} size={17} />{site.label}</span><input name={`socialLink-${site.value}`} value={socialLinks[site.value]} maxlength="2048" type="url" inputmode="url" autocomplete="url" placeholder="https://" aria-invalid={!!socialLinkErrors[site.value]} aria-describedby={socialLinkErrors[site.value] ? `socialLink-${site.value}-error` : undefined} oninput={(event) => updateSocialLink(site.value, event.currentTarget.value)} />{#if socialLinkErrors[site.value]}<small id={`socialLink-${site.value}-error`}>{socialLinkErrors[site.value]}</small>{/if}</label>
+								<label><span class="social-link-label"><SocialLinkIcon platform={site.value} size={17} />{site.value === 'website' ? text.website : site.value === 'blog' ? text.blog : site.label}</span><input name={`socialLink-${site.value}`} value={socialLinks[site.value]} maxlength="2048" type="url" inputmode="url" autocomplete="url" placeholder="https://" aria-invalid={!!socialLinkErrors[site.value]} aria-describedby={socialLinkErrors[site.value] ? `socialLink-${site.value}-error` : undefined} oninput={(event) => updateSocialLink(site.value, event.currentTarget.value)} />{#if socialLinkErrors[site.value]}<small id={`socialLink-${site.value}-error`}>{fieldError(socialLinkErrors[site.value] ?? '')}</small>{/if}</label>
 							{/each}
-						</div><footer><button class="app-primary-action" type="submit" disabled={socialLinksSaving}>{socialLinksSaving ? 'Saving…' : 'Save social links'}</button></footer></form>
+						</div><footer><button class="app-primary-action" type="submit" disabled={socialLinksSaving}>{socialLinksSaving ? text.saving : text.saveSocialLinks}</button></footer></form>
 					</section>
 
 					<section id="localization" class="settings-card localization-card" aria-labelledby="localization-title">
-						<header><div><h2 id="localization-title">Localization</h2><p>Choose how localized dates and future translated content are presented.</p></div></header>
+						<header><div><h2 id="localization-title">{text.localization}</h2><p>{text.localizationDescription}</p></div></header>
 						<form novalidate onsubmit={(event) => { event.preventDefault(); void saveLocalization(); }}><div class="form-body compact-grid">
-							{#if localizationMessage}<p class:success={localizationMessage.endsWith('saved.')} class="form-message" role={localizationMessage.endsWith('saved.') ? 'status' : 'alert'}>{localizationMessage}</p>{/if}
-							<SearchSelect label="Time zone" field="timeZone" value={localization.timeZone} options={timeZoneOptions} required error={localizationErrors.timeZone ?? ''} onSelect={(value) => { localization.timeZone = value; localizationMessage = ''; }} />
-							<SearchSelect label="Display language" field="displayLanguage" value={localization.displayLanguage} options={languageOptions} required error={localizationErrors.displayLanguage ?? ''} onSelect={(value) => { localization.displayLanguage = value as DisplayLanguage; localizationMessage = ''; }} />
-						</div><footer><button class="app-primary-action" type="submit" disabled={localizationSaving}>{localizationSaving ? 'Saving…' : 'Save localization'}</button></footer></form>
+							{#if localizationMessage}<p class:success={localizationMessage === 'localizationSaved'} class="form-message" role={localizationMessage === 'localizationSaved' ? 'status' : 'alert'}>{fieldError(localizationMessage)}</p>{/if}
+							<SearchSelect label={text.timeZone} field="timeZone" value={localization.timeZone} options={timeZoneOptions} required error={localizationErrors.timeZone ? fieldError(localizationErrors.timeZone) : ''} onSelect={(value) => { localization.timeZone = value; localizationMessage = ''; }} />
+							<SearchSelect label={text.displayLanguage} field="displayLanguage" value={localization.displayLanguage} options={languageOptions} required error={localizationErrors.displayLanguage ? fieldError(localizationErrors.displayLanguage) : ''} onSelect={(value) => { localization.displayLanguage = value as DisplayLanguage; localizationMessage = ''; }} />
+						</div><footer><button class="app-primary-action" type="submit" disabled={localizationSaving}>{localizationSaving ? text.saving : text.saveLocalization}</button></footer></form>
 					</section>
 
 					<section id="password" class="settings-card" aria-labelledby="password-title">
-						<header><div><h2 id="password-title">Password</h2><p>Changing your password signs you out of every active session.</p></div></header>
+						<header><div><h2 id="password-title">{text.password}</h2><p>{text.passwordDescription}</p></div></header>
 						<form novalidate onsubmit={(event) => { event.preventDefault(); void changePassword(); }}><div class="form-body password-grid">
-							{#if passwordMessage}<p class:success={passwordMessage.startsWith('Password changed')} class="form-message" role={passwordMessage.startsWith('Password changed') ? 'status' : 'alert'}>{passwordMessage}</p>{/if}
-							<label><span>Current password <i>*</i></span><input bind:this={currentPasswordInput} name="currentPassword" bind:value={currentPassword} type="password" autocomplete="current-password" aria-invalid={!!passwordErrors.currentPassword} aria-describedby={passwordErrors.currentPassword ? 'currentPassword-error' : undefined} oninput={() => clearPasswordError('currentPassword')} />{#if passwordErrors.currentPassword}<small id="currentPassword-error">{passwordErrors.currentPassword}</small>{/if}</label>
-							<label><span>New password <i>*</i></span><input name="newPassword" bind:value={newPassword} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.newPassword} aria-describedby="password-requirements newPassword-error" oninput={() => clearPasswordError('newPassword')} />{#if passwordErrors.newPassword}<small id="newPassword-error">{passwordErrors.newPassword}</small>{/if}</label>
-							<label><span>Confirm new password <i>*</i></span><input name="confirmation" bind:value={confirmation} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.confirmation} aria-describedby={passwordErrors.confirmation ? 'confirmation-error' : undefined} oninput={() => clearPasswordError('confirmation')} />{#if passwordErrors.confirmation}<small id="confirmation-error">{passwordErrors.confirmation}</small>{/if}</label>
-							<div id="password-requirements" class="password-requirements"><strong>New password requirements</strong><ul>{#each passwordRules as rule}<li class:met={rule.met}><span aria-hidden="true">{rule.met ? '✓' : '○'}</span><span>{rule.text}</span><span class="sr-only">: {rule.met ? 'met' : 'not met'}</span></li>{/each}</ul></div>
-						</div><footer><button class="app-primary-action" type="submit" disabled={passwordSaving}>{passwordSaving ? 'Changing…' : 'Change password'}</button></footer></form>
+							{#if passwordMessage}<p class:success={passwordMessage === 'passwordChanged'} class="form-message" role={passwordMessage === 'passwordChanged' ? 'status' : 'alert'}>{fieldError(passwordMessage)}</p>{/if}
+							<label><span>{text.currentPassword} <i>*</i></span><input bind:this={currentPasswordInput} name="currentPassword" bind:value={currentPassword} type="password" autocomplete="current-password" aria-invalid={!!passwordErrors.currentPassword} aria-describedby={passwordErrors.currentPassword ? 'currentPassword-error' : undefined} oninput={() => clearPasswordError('currentPassword')} />{#if passwordErrors.currentPassword}<small id="currentPassword-error">{fieldError(passwordErrors.currentPassword)}</small>{/if}</label>
+							<label><span>{text.newPassword} <i>*</i></span><input name="newPassword" bind:value={newPassword} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.newPassword} aria-describedby="password-requirements newPassword-error" oninput={() => clearPasswordError('newPassword')} />{#if passwordErrors.newPassword}<small id="newPassword-error">{fieldError(passwordErrors.newPassword)}</small>{/if}</label>
+							<label><span>{text.confirmation} <i>*</i></span><input name="confirmation" bind:value={confirmation} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.confirmation} aria-describedby={passwordErrors.confirmation ? 'confirmation-error' : undefined} oninput={() => clearPasswordError('confirmation')} />{#if passwordErrors.confirmation}<small id="confirmation-error">{fieldError(passwordErrors.confirmation)}</small>{/if}</label>
+							<div id="password-requirements" class="password-requirements"><strong>{text.passwordRequirements}</strong><ul>{#each passwordRules as rule}<li class:met={rule.met}><span aria-hidden="true">{rule.met ? '✓' : '○'}</span><span>{rule.text}</span><span class="sr-only">: {rule.met ? text.met : text.notMet}</span></li>{/each}</ul></div>
+						</div><footer><button class="app-primary-action" type="submit" disabled={passwordSaving}>{passwordSaving ? text.changing : text.changePassword}</button></footer></form>
 					</section>
 				</div>
 			</div>

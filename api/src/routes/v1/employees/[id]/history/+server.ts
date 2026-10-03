@@ -12,7 +12,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 	if (!employeeId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const query = parseListQuery(url, sortFields, 'changedAt');
 	const prisma = getPrisma();
-	if (!await prisma.employee.count({ where: { id: employeeId, deletedAt: null } })) return failure(404, 'NOT_FOUND', 'Not found.');
+	if (!await prisma.employee.count({ where: { id: employeeId } })) return failure(404, 'NOT_FOUND', 'Not found.');
 	const where = { employeeId, deletedAt: null };
 	const [total, items] = await prisma.$transaction([
 		prisma.employeeChangeHistory.count({ where }),

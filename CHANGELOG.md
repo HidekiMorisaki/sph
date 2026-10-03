@@ -1,16 +1,21 @@
 # Changelog
 
-All notable changes to SME Portal Hub are documented in this file.
+[日本語版はこちら](./CHANGELOG_JA.md)
+
+User-facing changes to SME Portal Hub are documented below by release.
+
+## [0.2.0] - 2026-10-03
+
+- Added guided English/Japanese installers for Windows, macOS and Linux, with optional fictional sample data for evaluation.
+- Added English/Japanese display across major pages, shared navigation and master management.
+- Added an employee dashboard for headcount, age groups and turnover, with PDF export of summaries and charts.
+- Added IT asset network details and encrypted password management, including a Server Administrator role and reauthentication before password display.
+- Added options to include retired and deleted employees in lists and CSV exports, with read-only details for deleted employees.
+- Improved updates and restores for existing installations with verified backups and encryption key checks.
 
 ## [0.1.0] - 2026-09-30
-
-### Added
 
 - Initial development release.
 - Product version and release information for administrators.
 - Verified full-database backup, guided update, and disaster-recovery tools for Windows, macOS, and Linux.
 - Public repository link in System settings.
-
-### Notes
-
-- Features, data structures, and upgrade procedures may change before version 1.0.0.

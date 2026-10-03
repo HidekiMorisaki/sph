@@ -27,7 +27,9 @@ try {
 	$sourceUpdated = $currentCommit -ne $previousCommit
 
 	Invoke-Compose -Arguments @('rm', '--force', '--stop', 'migration')
-	Invoke-Compose -Arguments @('up', '-d', '--build')
+	Invoke-Compose -Arguments @('build')
+	Invoke-Compose -Arguments @('run', '--rm', '--no-deps', '--volume', "${backupDirectory}:/baseline-backup", 'migration', 'node', 'scripts/baseline-existing.mjs', '/baseline-backup/manifest.json', '--if-legacy')
+	Invoke-Compose -Arguments @('up', '-d', '--no-build')
 	Wait-MigrationSucceeded
 	Wait-ComposeServiceHealthy -Service 'api'
 	Wait-ComposeServiceHealthy -Service 'frontend'

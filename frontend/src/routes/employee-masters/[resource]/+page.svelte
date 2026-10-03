@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { localization } from '$lib/localization';
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
@@ -16,19 +18,23 @@
 	import { formSnapshot } from '$lib/modalForm';
 	import '$lib/styles/add-button.css';
 
+	let text = $derived(localeMessages[$localization.displayLanguage].masters);
+	function m(key: string | undefined): string { return key ? text[key as keyof typeof text] ?? text.invalidValue : ''; }
+	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
+
 	type Item = EmployeeMaster;
-	const labels: Record<string, string> = { departments: 'Departments', 'employee-groups': 'Groups', positions: 'Positions', 'employment-types': 'Types', branches: 'Branches' };
-	const singularLabels: Record<string, string> = { departments: 'department', 'employee-groups': 'group', positions: 'position', 'employment-types': 'employment type', branches: 'branch' };
+	let labels: Record<string, string> = $derived({ departments: text.departments, 'employee-groups': text.employeeGroups, positions: text.positions, 'employment-types': text.employmentTypes, branches: text.branches });
+	let singularLabels: Record<string, string> = $derived({ departments: text.departmentItem, 'employee-groups': text.groupItem, positions: text.positionItem, 'employment-types': text.employmentTypeItem, branches: text.branchItem });
 	let resource = $derived(page.params.resource ?? '');
 	let hasSortOrder = $derived(resource !== 'branches');
 	let columns = $derived(resource === 'employee-groups'
-		? [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'department', label: 'Department', value: (item: Item) => item.department?.name }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]
+		? [{ key: 'name', label: text.name, value: (item: Item) => item.name }, { key: 'department', label: text.department, value: (item: Item) => item.department?.name }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]
 		: hasSortOrder
-			? [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]
-			: [{ key: 'name', label: 'Name', value: (item: Item) => item.name }]);
-	let title = $derived(labels[resource] ?? 'Employee masters');
-	let itemLabel = $derived(singularLabels[resource] ?? 'item');
-	let addLabel = $derived(`Add ${itemLabel}`);
+			? [{ key: 'name', label: text.name, value: (item: Item) => item.name }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]
+			: [{ key: 'name', label: text.name, value: (item: Item) => item.name }]);
+	let title = $derived(labels[resource] ?? text.employeeMasters);
+	let itemLabel = $derived(singularLabels[resource] ?? text.item);
+	let addLabel = $derived(t('addItem', itemLabel));
 	let endpoint = $derived('/v1/' + resource);
 	let canManage = $state(false);
 	let list = $state<MasterList>();
@@ -37,7 +43,7 @@
 	let departmentId = $state('');
 	let departments = $state<EmployeeMaster[]>([]);
 	let editing = $state<Item | null>(null);
-	let modalTitle = $derived(`${editing ? 'Edit' : 'Add'} ${itemLabel}`);
+	let modalTitle = $derived(t(editing ? 'editItem' : 'addItem', itemLabel));
 	let formOpen = $state(false);
 	let saving = $state(false);
 	let message = $state('');
@@ -74,8 +80,8 @@
 	function requestCloseForm() { if (saving) return; if (hasUnsavedChanges) { confirmingDiscard = true; return; } closeFormImmediately(); }
 	async function save() {
 		if (saving) return;
-		errors = { ...(!name.trim() ? { name: 'Name is required.' } : {}), ...(isGroup && !departmentId ? { departmentId: 'Department is required.' } : {}), ...(hasSortOrder && (!/^\d+$/.test(sortOrder) || !Number.isSafeInteger(Number(sortOrder))) ? { sortOrder: 'Enter a non-negative whole number.' } : {}) };
-		if (Object.keys(errors).length) { formError = 'Correct the highlighted fields.'; await tick(); if (errors.departmentId) focusFirstField(); else if (errors.name) nameInput?.focus(); else sortOrderInput?.focus(); return; }
+		errors = { ...(!name.trim() ? { name: 'nameRequired' } : {}), ...(isGroup && !departmentId ? { departmentId: 'departmentRequired' } : {}), ...(hasSortOrder && (!/^\d+$/.test(sortOrder) || !Number.isSafeInteger(Number(sortOrder))) ? { sortOrder: 'sortInvalid' } : {}) };
+		if (Object.keys(errors).length) { formError = 'correctFields'; await tick(); if (errors.departmentId) focusFirstField(); else if (errors.name) nameInput?.focus(); else sortOrderInput?.focus(); return; }
 		saving = true; formError = '';
 		try {
 			const payload = isGroup ? { name, departmentId, sortOrder: Number(sortOrder) } : hasSortOrder ? { name, sortOrder: Number(sortOrder) } : { name };
@@ -83,20 +89,20 @@
 			if (!response.ok) {
 				const payload = await response.json().catch(() => null) as { error?: { code?: string; details?: { field?: string }[] } } | null;
 				const field = payload?.error?.details?.[0]?.field;
-				if (field === 'name') { errors = { name: 'Name already exists.' }; formError = 'Correct the highlighted field.'; await tick(); nameInput?.focus(); }
-				else if (field === 'departmentId') { errors = { departmentId: 'Select an active department.' }; formError = 'Correct the highlighted field.'; await tick(); focusFirstField(); }
-				else if (payload?.error?.code === 'RESOURCE_IN_USE') formError = 'This group is used by employees in another department.';
-				else formError = response.status === 403 ? 'You do not have permission to save this item.' : 'Unable to save this item. Check the entered values.';
+				if (field === 'name') { errors = { name: 'nameDuplicate' }; formError = 'correctField'; await tick(); nameInput?.focus(); }
+				else if (field === 'departmentId') { errors = { departmentId: 'activeDepartment' }; formError = 'correctField'; await tick(); focusFirstField(); }
+				else if (payload?.error?.code === 'RESOURCE_IN_USE') formError = 'groupInUse';
+				else formError = response.status === 403 ? 'saveForbidden' : 'saveFailed';
 				return;
 			}
 			const focusTarget = returnFocus; resetForm(); await list?.refresh(); void tick().then(() => focusTarget?.focus());
-		} catch { formError = 'Unable to save this item. Try again.'; }
+		} catch { formError = 'saveRetry'; }
 		finally { saving = false; }
 	}
 	async function remove(item: Item) {
-		if (!confirm(`Delete ${item.name}?`)) return;
+		if (!confirm(t('deleteConfirm', item.name))) return;
 		const response = await fetch(`${endpoint}/${item.id}`, { method: 'DELETE' });
-		if (!response.ok) { message = response.status === 403 ? 'You do not have permission to delete this item.' : 'This item is in use or could not be deleted.'; return; }
+		if (!response.ok) { message = response.status === 403 ? 'deleteForbidden' : 'deleteFailed'; return; }
 		message = ''; await list?.refresh();
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
@@ -128,24 +134,24 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 <AssetManagementShell {title} active="">
-	<MasterPageHeader {title} description="Maintain the controlled values used by employee records." actions={headerActions} />
-	{#if message}<p class="notice" role="alert">{message}</p>{/if}
+	<MasterPageHeader {title} description={text.employeeDescription} actions={headerActions} />
+	{#if message}<p class="notice" role="alert">{m(message)}</p>{/if}
 	<section class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} {canManage} initialSortBy="sortOrder" sortStorageKey={`master-sort:${endpoint}`} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
 </AssetManagementShell>
 
 {#if canManage && formOpen}
 	<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="employee-master-dialog-title">
-		<ModalHeader title={modalTitle} titleId="employee-master-dialog-title" closeLabel={`Close ${itemLabel} form`} disabled={saving} onClose={requestCloseForm} />
+		<ModalHeader title={modalTitle} titleId="employee-master-dialog-title" closeLabel={t('closeForm', itemLabel)} disabled={saving} onClose={requestCloseForm} />
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="master-form-body app-modal-form-body">
-				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save item</strong><span>{formError}</span></div>{/if}
-				<FormSection title="Basic information" columns={2} framed>
-				{#if isGroup}<SearchSelect label="Department" field="departmentId" value={departmentId} options={[{ value: '', label: '-' }, ...departments.map((item) => ({ value: String(item.id), label: item.name }))]} required error={errors.departmentId ?? ''} onSelect={(value) => { departmentId = value; errors.departmentId = undefined; formError = ''; }} />{/if}
-				<label><span>Name <span class="required" aria-hidden="true">*</span></span><input bind:this={nameInput} bind:value={name} maxlength="128" placeholder="e.g. Example name" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} oninput={() => { errors.name = undefined; formError = ''; }} />{#if errors.name}<small id="name-error" class="field-error">{errors.name}</small>{/if}</label>
-				{#if hasSortOrder}<label><span>Sort Order <span class="required" aria-hidden="true">*</span></span><input bind:this={sortOrderInput} name="sortOrder" bind:value={sortOrder} type="number" min="0" step="1" required class:invalid={!!errors.sortOrder} aria-invalid={!!errors.sortOrder} aria-describedby={errors.sortOrder ? 'sort-order-error' : undefined} oninput={() => { errors.sortOrder = undefined; formError = ''; }} />{#if errors.sortOrder}<small id="sort-order-error" class="field-error">{errors.sortOrder}</small>{/if}</label>{/if}
+				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.saveTitle}</strong><span>{m(formError)}</span></div>{/if}
+				<FormSection title={text.basicInformation} columns={2} framed>
+				{#if isGroup}<SearchSelect label={text.department} field="departmentId" value={departmentId} options={[{ value: '', label: '-' }, ...departments.map((item) => ({ value: String(item.id), label: item.name }))]} required error={m(errors.departmentId ?? '')} onSelect={(value) => { departmentId = value; errors.departmentId = undefined; formError = ''; }} />{/if}
+				<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input bind:this={nameInput} bind:value={name} maxlength="128" placeholder={text.nameExample} class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} oninput={() => { errors.name = undefined; formError = ''; }} />{#if errors.name}<small id="name-error" class="field-error">{m(errors.name)}</small>{/if}</label>
+				{#if hasSortOrder}<label><span>{text.sortOrder} <span class="required" aria-hidden="true">*</span></span><input bind:this={sortOrderInput} name="sortOrder" bind:value={sortOrder} type="number" min="0" step="1" required class:invalid={!!errors.sortOrder} aria-invalid={!!errors.sortOrder} aria-describedby={errors.sortOrder ? 'sort-order-error' : undefined} oninput={() => { errors.sortOrder = undefined; formError = ''; }} />{#if errors.sortOrder}<small id="sort-order-error" class="field-error">{m(errors.sortOrder)}</small>{/if}</label>{/if}
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : addLabel}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
 		</form>
 	</dialog></ModalBackdrop>
 	{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}

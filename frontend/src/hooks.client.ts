@@ -20,6 +20,11 @@ function requestUrl(input: RequestInfo | URL, response: Response) {
 	}
 }
 
+async function apiErrorCode(response: Response): Promise<string | null> {
+	const payload = await response.clone().json().catch(() => null) as { error?: { code?: unknown } } | null;
+	return typeof payload?.error?.code === 'string' ? payload.error.code : null;
+}
+
 export const init: ClientInit = () => {
 	const currentFetch = window.fetch as GuardedFetch;
 	if (currentFetch.sessionRedirectGuard) return;
@@ -33,6 +38,7 @@ export const init: ClientInit = () => {
 
 		const url = requestUrl(input, response);
 		if (!url || url.origin !== window.location.origin || !url.pathname.startsWith('/v1/') || AUTHENTICATION_FAILURE_ENDPOINTS.has(url.pathname)) return response;
+		if (await apiErrorCode(response) !== 'AUTHENTICATION_REQUIRED') return response;
 
 		redirecting = true;
 		window.location.replace('/');

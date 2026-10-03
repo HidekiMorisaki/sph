@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import type { ChangeHistoryEntry } from '$lib/change-history';
 	import { formatDate, formatEmployeeName, formatTimestamp, localization } from '$lib/localization';
+
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 
 	let {
 		entries,
@@ -9,7 +12,7 @@
 		fieldLabels,
 		dateFields = [],
 		valueFormatters = {},
-		actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' }
+		actionLabels
 	}: {
 		entries: ChangeHistoryEntry[];
 		loading?: boolean;
@@ -30,13 +33,13 @@
 </script>
 
 <section class="app-detail-section">
-	<h3>Change history</h3>
-	<div class="history" aria-label="Change history">
-		{#if loading}<p>Loading change history…</p>
-		{:else if error}<p role="alert">Unable to load change history.</p>
-		{:else if entries.length === 0}<p>No changes recorded yet.</p>
-		{:else}{#each entries as entry}<article class="history-event"><div class="history-event-heading"><strong>{actionLabels[entry.action] ?? entry.action}</strong><span>{formatTimestamp(entry.changedAt, $localization)}</span><span>by {formatEmployeeName(entry.actor, $localization)}</span></div>
-			{#if entry.changes.length}<table><colgroup><col class="history-field-column"/><col class="history-value-column"/><col class="history-value-column"/></colgroup><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>{#each entry.changes as change}<tr><th scope="row">{fieldLabels[change.field] ?? change.field}</th><td>{displayValue(change.field, change.before)}</td><td>{displayValue(change.field, change.after)}</td></tr>{/each}</tbody></table>{/if}
+	<h3>{commonText.history}</h3>
+	<div class="history" aria-label={commonText.history}>
+		{#if loading}<p>{commonText.historyLoading}</p>
+		{:else if error}<p role="alert">{commonText.historyFailed}</p>
+		{:else if entries.length === 0}<p>{commonText.historyEmpty}</p>
+		{:else}{#each entries as entry}<article class="history-event"><div class="history-event-heading"><strong>{(actionLabels ?? { create: commonText.created, update: commonText.updated, delete: commonText.deleted })[entry.action] ?? entry.action}</strong><span>{formatTimestamp(entry.changedAt, $localization)}</span><span>{formatLocaleTemplate(commonText.byActor, formatEmployeeName(entry.actor, $localization))}</span></div>
+			{#if entry.changes.length}<table><colgroup><col class="history-field-column"/><col class="history-value-column"/><col class="history-value-column"/></colgroup><thead><tr><th>{commonText.field}</th><th>{commonText.before}</th><th>{commonText.after}</th></tr></thead><tbody>{#each entry.changes as change}<tr><th scope="row">{fieldLabels[change.field] ?? change.field}</th><td>{displayValue(change.field, change.before)}</td><td>{displayValue(change.field, change.after)}</td></tr>{/each}</tbody></table>{/if}
 		</article>{/each}{/if}
 	</div>
 </section>

@@ -60,6 +60,11 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 	const positions = positionAssignments.map((assignment) => ({ ...assignment.position, isPrimary: assignment.isPrimary }));
 	const primaryDepartment = departments.find((department) => department.isPrimary) ?? null;
 	const primaryPosition = positions.find((position) => position.isPrimary) ?? null;
+	const employmentStatus = employee.deletedAt
+		? 'deleted'
+		: employee.retiredAt && employee.retiredAt <= referenceDate
+			? 'retired'
+			: 'current';
 	return {
 		...employee,
 		departmentId: primaryDepartment?.id ?? null,
@@ -74,7 +79,8 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 		primaryPositionId: primaryPosition?.id ?? null,
 		positions,
 		positionNames: positions.map((position) => position.name).join(' | '),
-		canIssueInvitation: accountStatus === 'unprovisioned',
+		employmentStatus,
+		canIssueInvitation: accountStatus === 'unprovisioned' && employmentStatus === 'current',
 		...employeeDerivedValues(employee, referenceDate),
 		roles: roleGrants.map((grant) => grant.role).sort((left, right) => left.name.localeCompare(right.name, 'en'))
 	};

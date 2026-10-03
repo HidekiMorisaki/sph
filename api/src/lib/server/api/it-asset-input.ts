@@ -1,5 +1,6 @@
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { ApiErrorDetail } from '$lib/server/api/response';
+import { parseIpAddress } from './it-asset-network';
 
 type Body = Record<string, unknown>;
 const nullableText = (body: Body, key: string, max = 5000) => typeof body[key] === 'string' && body[key].trim() ? body[key].trim().slice(0, max) : null;
@@ -11,9 +12,35 @@ const parseDate = (raw: unknown) => {
 	return Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== raw ? undefined : date;
 };
 
+function hostname(body: Body, details: ApiErrorDetail[]): string | null {
+	const value = typeof body.hostname === 'string' && body.hostname.trim() ? body.hostname.trim() : null;
+	if (!value) return null;
+	const valid = value.length <= 253 && !value.endsWith('.') && value.split('.').every((label) => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
+	if (!valid) details.push({ field: 'hostname', reason: 'Enter a valid hostname with labels of 63 characters or fewer.' });
+	return valid ? value.toLowerCase() : null;
+}
+
+function managementConsoleUrl(body: Body, details: ApiErrorDetail[]): string | null {
+	const value = typeof body.managementConsoleUrl === 'string' && body.managementConsoleUrl.trim() ? body.managementConsoleUrl.trim() : null;
+	if (!value) return null;
+	try {
+		const parsed = new URL(value);
+		if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password || value.length > 2048) throw new Error();
+		return parsed.toString();
+	} catch {
+		details.push({ field: 'managementConsoleUrl', reason: 'Enter an absolute HTTP or HTTPS URL without embedded credentials.' });
+		return null;
+	}
+}
+
 export function parseItAssetInput(value: unknown) {
 	const body: Body = value && typeof value === 'object' && !Array.isArray(value) ? value as Body : {};
 	const details: ApiErrorDetail[] = [];
+	const ipAddress1 = parseIpAddress(body.ipAddress1, 'ipAddress1');
+	const ipAddress2 = parseIpAddress(body.ipAddress2, 'ipAddress2');
+	if (ipAddress1.error) details.push(ipAddress1.error);
+	if (ipAddress2.error) details.push(ipAddress2.error);
+	if (ipAddress1.value && ipAddress1.value === ipAddress2.value) details.push({ field: 'ipAddress2', reason: 'Enter a different IP address for the second network interface.' });
 	const rawAssetTag = body.assetTag;
 	const assetTag = rawAssetTag === null || rawAssetTag === undefined
 		? null
@@ -35,8 +62,19 @@ export function parseItAssetInput(value: unknown) {
 	const rawRam = body.ramGb;
 	const ramGb = rawRam === '' || rawRam === null || rawRam === undefined ? null : typeof rawRam === 'number' ? rawRam : typeof rawRam === 'string' && /^\d+$/.test(rawRam) ? Number(rawRam) : NaN;
 	if (ramGb !== null && (!Number.isSafeInteger(ramGb) || ramGb < 1)) details.push({ field: 'ramGb', reason: 'Enter a whole number greater than zero.' });
-	if (details.length) return { data: null, details, assigneeId, assetTag: assetTag ?? null };
-	return { data: { typeId: ids.typeId!, manufacturerId: ids.manufacturerId, modelNumber: nullableText(body, 'modelNumber', 255), serialNumber: nullableText(body, 'serialNumber', 255), cpuTypeId: ids.cpuTypeId, ramGb, operatingSystemId: ids.operatingSystemId, loginUsername: nullableText(body, 'loginUsername', 255), storageId: ids.storageId!, statusId: ids.statusId!, purchasedOn: purchasedOn!, disposalOn: disposalOn!, notes: nullableText(body, 'notes') }, details, assigneeId, assetTag: assetTag ?? null };
+	const parsedHostname = hostname(body, details);
+	const parsedManagementConsoleUrl = managementConsoleUrl(body, details);
+	if (details.length) return { data: null, details, assigneeId, assetTag: assetTag ?? null, ipAddresses: { ipAddress1: ipAddress1.value, ipAddress2: ipAddress2.value } };
+	return {
+		data: {
+			typeId: ids.typeId!, manufacturerId: ids.manufacturerId, modelNumber: nullableText(body, 'modelNumber', 255), serialNumber: nullableText(body, 'serialNumber', 255),
+			cpuTypeId: ids.cpuTypeId, ramGb, operatingSystemId: ids.operatingSystemId, loginUsername: nullableText(body, 'loginUsername', 255),
+			hostname: parsedHostname, adminUsername: nullableText(body, 'adminUsername', 255), managementConsoleUrl: parsedManagementConsoleUrl,
+			managementConsoleUsername: nullableText(body, 'managementConsoleUsername', 255), storageId: ids.storageId!, statusId: ids.statusId!,
+			purchasedOn: purchasedOn!, disposalOn: disposalOn!, notes: nullableText(body, 'notes')
+		},
+		details, assigneeId, assetTag: assetTag ?? null, ipAddresses: { ipAddress1: ipAddress1.value, ipAddress2: ipAddress2.value }
+	};
 }
 
 type ItAssetData = NonNullable<ReturnType<typeof parseItAssetInput>['data']>;
@@ -59,7 +97,6 @@ export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data:
 	if (type && !type.supportsCpu && data.cpuTypeId !== null) details.push({ field: 'cpuTypeId', reason: 'This type does not support a CPU type.' });
 	if (type && !type.supportsRam && data.ramGb !== null) details.push({ field: 'ramGb', reason: 'This type does not support RAM.' });
 	if (type && !type.supportsOs && data.operatingSystemId !== null) details.push({ field: 'operatingSystemId', reason: 'This type does not support an operating system.' });
-	if (type && !type.supportsLoginUsername && data.loginUsername !== null) details.push({ field: 'loginUsername', reason: 'This type does not support a login username.' });
 	if (status?.disposalDatePolicy === 'required' && !data.disposalOn) details.push({ field: 'disposalOn', reason: 'Select a disposal date for this status.' });
 	if (status?.disposalDatePolicy === 'prohibited' && data.disposalOn) details.push({ field: 'disposalOn', reason: 'This status does not allow a disposal date.' });
 	return details;
@@ -68,5 +105,6 @@ export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data:
 export const itAssetInclude = {
 	type: true, manufacturer: true, cpuType: true, operatingSystem: true, status: true,
 	storage: { include: { room: { include: { branch: true } } } },
+	ipAddresses: { where: { deletedAt: null }, orderBy: { slot: 'asc' as const } },
 	assignments: { where: { returnedAt: null, deletedAt: null }, include: { employee: { select: { id: true, employeeCode: true, firstName: true, middleName: true, lastName: true } } }, take: 1 }
 } as const;

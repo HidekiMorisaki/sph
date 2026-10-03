@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { localization } from '$lib/localization';
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
 	import { groupLabelForPath } from '$lib/components/sidebarNavigation';
@@ -9,7 +10,7 @@
 		description?: string;
 		actions?: Snippet;
 	} = $props();
-	let groupLabel = $derived(groupLabelForPath(page.url.pathname));
+	let groupLabel = $derived(groupLabelForPath(page.url.pathname, $localization.displayLanguage));
 </script>
 
 <header class="master-page-header">

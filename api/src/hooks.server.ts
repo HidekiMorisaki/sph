@@ -5,8 +5,6 @@ import { authenticateRequest } from '$lib/server/auth/request';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const ONBOARDING_PATH = '/v1/auth/onboarding';
-const AUTH_PATHS = new Set(['/v1/auth/login', '/v1/auth/logout', '/v1/auth/session', '/v1/auth/account-setup', ONBOARDING_PATH]);
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/v1/') && !SAFE_METHODS.has(event.request.method)) {
@@ -22,9 +20,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.session = principal
 		? { id: principal.authentication.credentialId, expiresAt: principal.authentication.expiresAt }
 		: null;
-	if (event.locals.user?.mustChangeCredentials && event.url.pathname.startsWith('/v1/') && !AUTH_PATHS.has(event.url.pathname)) {
-		return failure(403, 'ONBOARDING_REQUIRED', 'Account setup must be completed before using this resource.');
-	}
 
 	const response = await resolve(event);
 	if (event.url.pathname.startsWith('/v1/') && response.status >= 400) {

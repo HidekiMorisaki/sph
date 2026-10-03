@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { localization } from '$lib/localization';
 	import { afterNavigate } from '$app/navigation';
 	import { tick } from 'svelte';
 	import { apiData } from '$lib/api';
@@ -16,11 +18,15 @@
 	import { formSnapshot } from '$lib/modalForm';
 	import '$lib/styles/add-button.css';
 
+	let text = $derived(localeMessages[$localization.displayLanguage].masters);
+	function m(key: string | undefined): string { return key ? text[key as keyof typeof text] ?? text.invalidValue : ''; }
+	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
+
 	type Resource = 'it-asset-types' | 'manufacturers' | 'cpu-types' | 'operating-systems' | 'it-asset-statuses';
 	type Item = { id: number; name?: string; managementCodePrefix?: string; displayName?: string; sortOrder: number; manufacturerId?: number; series?: string; modelNumber?: string; vendor?: string; product?: string; version?: string; edition?: string | null; architecture?: string | null; officialUrl?: string | null; sourceCheckedOn?: string | null; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
-	const labels: Record<Resource, string> = { 'it-asset-types': 'Types', manufacturers: 'Manufacturers', 'cpu-types': 'CPU types', 'operating-systems': 'Operating systems', 'it-asset-statuses': 'Statuses' };
-	const singularLabels: Record<Resource, string> = { 'it-asset-types': 'asset type', manufacturers: 'manufacturer', 'cpu-types': 'CPU type', 'operating-systems': 'operating system', 'it-asset-statuses': 'asset status' };
-	const allowed = new Set(Object.keys(labels));
+	let labels: Record<Resource, string> = $derived({ 'it-asset-types': text.itAssetTypes, manufacturers: text.manufacturers, 'cpu-types': text.cpuTitle, 'operating-systems': text.operatingSystems, 'it-asset-statuses': text.statuses });
+	let singularLabels: Record<Resource, string> = $derived({ 'it-asset-types': text.assetTypeItem, manufacturers: text.manufacturerItem, 'cpu-types': text.cpuItem, 'operating-systems': text.osItem, 'it-asset-statuses': text.statusItem });
+	const allowed = new Set(['it-asset-types', 'manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses']);
 	const normalizeResource = (value: string): Resource => allowed.has(value) ? value as Resource : 'it-asset-types';
 	const blank = () => ({ name: '', managementCodePrefix: '', displayName: '', sortOrder: '9999', manufacturerId: '', series: '', modelNumber: '', vendor: '', product: '', version: '', edition: '', architecture: '', officialUrl: '', sourceCheckedOn: '', supportsCpu: false, supportsRam: false, supportsOs: false, supportsLoginUsername: false, disposalDatePolicy: 'prohibited' });
 
@@ -28,11 +34,11 @@
 	const resource = $derived(normalizeResource(data.resource));
 	const title = $derived(labels[resource]);
 	const itemLabel = $derived(singularLabels[resource]);
-	const addLabel = $derived(`Add ${itemLabel}`);
+	const addLabel = $derived(t('addItem', itemLabel));
 	let canManage = $state(false);
 	let manufacturers = $state<Item[]>([]);
 	let editing = $state<Item | null>(null);
-	let modalTitle = $derived(`${editing ? 'Edit' : 'Add'} ${itemLabel}`);
+	let modalTitle = $derived(t(editing ? 'editItem' : 'addItem', itemLabel));
 	let message = $state('');
 	let form = $state(blank());
 	let list = $state<MasterList>();
@@ -51,12 +57,12 @@
 	let initialSortBy = $derived('sortOrder');
 	let minTableWidth = $derived(resource === 'operating-systems' ? 920 : resource === 'it-asset-types' || resource === 'manufacturers' ? 780 : 720);
 	let columns = $derived(resource === 'it-asset-types'
-		? [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'managementCodePrefix', label: 'Prefix', value: (item: Item) => item.managementCodePrefix }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]
+		? [{ key: 'name', label: text.name, value: (item: Item) => item.name }, { key: 'managementCodePrefix', label: text.prefix, value: (item: Item) => item.managementCodePrefix }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]
 		: resource === 'manufacturers'
-			? [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'officialUrl', label: 'Official URL', value: (item: Item) => item.officialUrl ?? '' }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]
+			? [{ key: 'name', label: text.name, value: (item: Item) => item.name }, { key: 'officialUrl', label: text.officialUrl, value: (item: Item) => item.officialUrl ?? '' }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]
 			: resource === 'operating-systems'
-				? [{ key: 'displayName', label: 'Name', value: (item: Item) => item.displayName }, { key: 'vendor', label: 'Vendor', value: (item: Item) => item.vendor }, { key: 'product', label: 'Product', value: (item: Item) => item.product }, { key: 'version', label: 'Version', value: (item: Item) => item.version }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]
-				: [{ key: 'name', label: 'Name', value: (item: Item) => item.name }, { key: 'disposalDatePolicy', label: 'Disposal date', value: (item: Item) => item.disposalDatePolicy }, { key: 'sortOrder', label: 'Sort Order', value: (item: Item) => item.sortOrder }]);
+				? [{ key: 'displayName', label: text.name, value: (item: Item) => item.displayName }, { key: 'vendor', label: text.vendor, value: (item: Item) => item.vendor }, { key: 'product', label: text.product, value: (item: Item) => item.product }, { key: 'version', label: text.version, value: (item: Item) => item.version }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]
+				: [{ key: 'name', label: text.name, value: (item: Item) => item.name }, { key: 'disposalDatePolicy', label: text.disposalDate, value: (item: Item) => m(item.disposalDatePolicy) }, { key: 'sortOrder', label: text.sortOrder, value: (item: Item) => item.sortOrder }]);
 
 	function generatedOperatingSystemDisplayName() {
 		const name = [form.vendor, form.product, form.version, form.edition].map((value) => value.trim()).filter(Boolean).join(' ');
@@ -77,7 +83,7 @@
 	function resetForm() { editing = null; formOpen = false; sourceDateOpen = false; errors = {}; formError = ''; form = blank(); form.manufacturerId = manufacturers[0] ? String(manufacturers[0].id) : ''; initialSnapshot = ''; confirmingDiscard = false; }
 	async function load() {
 		const session = await fetch('/v1/auth/session');
-		if (!session.ok) { message = 'Please sign in to continue.'; return; }
+		if (!session.ok) { message = 'signInRequired'; return; }
 		canManage = (await apiData<{ user: { capabilities: { canManageAdministration: boolean } } }>(session)).user.capabilities.canManageAdministration;
 		const response = await fetch('/v1/manufacturers?limit=500');
 		manufacturers = response.ok ? await apiData<Item[]>(response) : [];
@@ -99,29 +105,29 @@
 		updateOperatingSystemDisplayName();
 		const required = [...(resource === 'operating-systems' ? ['vendor', 'product', 'version', 'displayName'] : ['name']), ...(resource === 'it-asset-types' ? ['managementCodePrefix'] : [])];
 		errors = {};
-		for (const key of required) if (!String(form[key as keyof typeof form] ?? '').trim()) errors[key] = `${key.replace(/([A-Z])/g, ' $1')} is required.`;
-		if (resource === 'it-asset-types' && form.managementCodePrefix && !/^[A-Z]{3,5}$/.test(form.managementCodePrefix)) errors.managementCodePrefix = 'Use 3 to 5 uppercase letters.';
-		if (!/^\d+$/.test(form.sortOrder)) errors.sortOrder = 'Enter a non-negative whole number.';
-		if (form.officialUrl && !/^https?:\/\//i.test(form.officialUrl)) errors.officialUrl = 'Enter a valid URL.';
-		if (Object.keys(errors).length) { formError = 'Correct the highlighted fields.'; await tick(); formElement?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); return; }
+		for (const key of required) if (!String(form[key as keyof typeof form] ?? '').trim()) errors[key] = 'fieldRequired';
+		if (resource === 'it-asset-types' && form.managementCodePrefix && !/^[A-Z]{3,5}$/.test(form.managementCodePrefix)) errors.managementCodePrefix = 'prefixInvalid';
+		if (!/^\d+$/.test(form.sortOrder)) errors.sortOrder = 'sortInvalid';
+		if (form.officialUrl && !/^https?:\/\//i.test(form.officialUrl)) errors.officialUrl = 'urlInvalid';
+		if (Object.keys(errors).length) { formError = 'correctFields'; await tick(); formElement?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); return; }
 		saving = true; formError = '';
 		try {
 			const response = await fetch(`/v1/${resource}${editing ? '/' + editing.id : ''}`, { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
 			if (!response.ok) {
 				const payload = await response.json().catch(() => null) as { error?: { details?: { field?: string }[] } } | null;
 				const field = payload?.error?.details?.[0]?.field;
-				if (field && ['name', 'displayName', 'managementCodePrefix'].includes(field)) { errors[field] = 'This value already exists.'; formError = 'Correct the highlighted field.'; await tick(); formElement?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); }
-				else formError = response.status === 403 ? 'You do not have permission to save this item.' : 'Unable to save this item. Check required fields and duplicate values.';
+				if (field && ['name', 'displayName', 'managementCodePrefix'].includes(field)) { errors[field] = 'valueDuplicate'; formError = 'correctField'; await tick(); formElement?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); }
+				else formError = response.status === 403 ? 'saveForbidden' : 'saveDuplicateFailed';
 				return;
 			}
 			const focusTarget = returnFocus; resetForm(); await list?.refresh(); void tick().then(() => focusTarget?.focus());
-		} catch { formError = 'Unable to save this item. Try again.'; }
+		} catch { formError = 'saveRetry'; }
 		finally { saving = false; }
 	}
 	async function remove(item: Item) {
-		if (!confirm(`Delete ${item.name ?? item.displayName ?? 'item'}?`)) return;
+		if (!confirm(t('deleteConfirm', item.name ?? item.displayName ?? text.item))) return;
 		const response = await fetch(`/v1/${resource}/${item.id}`, { method: 'DELETE' });
-		if (!response.ok) { message = response.status === 403 ? 'You do not have permission to delete this item.' : 'This item is in use or could not be deleted.'; return; }
+		if (!response.ok) { message = response.status === 403 ? 'deleteForbidden' : 'deleteFailed'; return; }
 		message = ''; await load(); resetForm(); await list?.refresh();
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
@@ -144,42 +150,42 @@
 	<CpuTypesPage />
 {:else}
 	<AssetManagementShell {title} active="">
-		<MasterPageHeader {title} description="Maintain the controlled values used by IT asset records." actions={headerActions} />
-		{#if message}<p class="notice" role="alert">{message}</p>{/if}
+		<MasterPageHeader {title} description={text.itDescription} actions={headerActions} />
+		{#if message}<p class="notice" role="alert">{m(message)}</p>{/if}
 		<section class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} {canManage} {minTableWidth} {initialSortBy} sortStorageKey={`master-sort:/v1/${resource}`} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></section>
 	</AssetManagementShell>
 
 	{#if canManage && formOpen}
 		<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="it-master-dialog-title">
-			<ModalHeader title={modalTitle} titleId="it-master-dialog-title" closeLabel={`Close ${itemLabel} form`} disabled={saving} onClose={requestCloseForm} />
+			<ModalHeader title={modalTitle} titleId="it-master-dialog-title" closeLabel={t('closeForm', itemLabel)} disabled={saving} onClose={requestCloseForm} />
 			<form bind:this={formElement} class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 				<div class="master-form-body app-modal-form-body">
-					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save item</strong><span>{formError}</span></div>{/if}
-					<FormSection title="Basic information" framed>
-					{#if resource === 'it-asset-types' || resource === 'manufacturers' || resource === 'it-asset-statuses'}<label><span>Name <span class="required" aria-hidden="true">*</span></span><input name="name" bind:value={form.name} maxlength="128" placeholder="e.g. Example name" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'master-name-error' : undefined} oninput={() => clearError('name')} />{#if errors.name}<small id="master-name-error" class="field-error">{errors.name}</small>{/if}</label>{/if}
-					{#if resource === 'it-asset-types'}<label><span>Management code prefix <span class="required" aria-hidden="true">*</span></span><input name="managementCodePrefix" bind:value={form.managementCodePrefix} minlength="3" maxlength="5" placeholder="e.g. NPC" class:invalid={!!errors.managementCodePrefix} aria-invalid={!!errors.managementCodePrefix} aria-describedby={errors.managementCodePrefix ? 'master-prefix-error' : undefined} oninput={() => clearError('managementCodePrefix')} />{#if errors.managementCodePrefix}<small id="master-prefix-error" class="field-error">{errors.managementCodePrefix}</small>{/if}</label>{/if}
+					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.saveTitle}</strong><span>{m(formError)}</span></div>{/if}
+					<FormSection title={text.basicInformation} framed>
+					{#if resource === 'it-asset-types' || resource === 'manufacturers' || resource === 'it-asset-statuses'}<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" bind:value={form.name} maxlength="128" placeholder={text.nameExample} class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'master-name-error' : undefined} oninput={() => clearError('name')} />{#if errors.name}<small id="master-name-error" class="field-error">{m(errors.name)}</small>{/if}</label>{/if}
+					{#if resource === 'it-asset-types'}<label><span>{text.managementCodePrefix} <span class="required" aria-hidden="true">*</span></span><input name="managementCodePrefix" bind:value={form.managementCodePrefix} minlength="3" maxlength="5" placeholder={text.prefixExample} class:invalid={!!errors.managementCodePrefix} aria-invalid={!!errors.managementCodePrefix} aria-describedby={errors.managementCodePrefix ? 'master-prefix-error' : undefined} oninput={() => clearError('managementCodePrefix')} />{#if errors.managementCodePrefix}<small id="master-prefix-error" class="field-error">{m(errors.managementCodePrefix)}</small>{/if}</label>{/if}
 					{#if resource === 'operating-systems'}
-						<label><span>Vendor <span class="required" aria-hidden="true">*</span></span><input name="vendor" bind:value={form.vendor} placeholder="e.g. Microsoft" class:invalid={!!errors.vendor} aria-invalid={!!errors.vendor} aria-describedby={errors.vendor ? 'master-vendor-error' : undefined} oninput={(event) => updateOperatingSystemField('vendor', event.currentTarget.value)} />{#if errors.vendor}<small id="master-vendor-error" class="field-error">{errors.vendor}</small>{/if}</label>
-						<label><span>Product <span class="required" aria-hidden="true">*</span></span><input name="product" bind:value={form.product} placeholder="e.g. Windows" class:invalid={!!errors.product} aria-invalid={!!errors.product} aria-describedby={errors.product ? 'master-product-error' : undefined} oninput={(event) => updateOperatingSystemField('product', event.currentTarget.value)} />{#if errors.product}<small id="master-product-error" class="field-error">{errors.product}</small>{/if}</label>
-						<label><span>Version <span class="required" aria-hidden="true">*</span></span><input name="version" bind:value={form.version} placeholder="e.g. 11" class:invalid={!!errors.version} aria-invalid={!!errors.version} aria-describedby={errors.version ? 'master-version-error' : undefined} oninput={(event) => updateOperatingSystemField('version', event.currentTarget.value)} />{#if errors.version}<small id="master-version-error" class="field-error">{errors.version}</small>{/if}</label>
-						<label><span>Edition</span><input name="edition" bind:value={form.edition} placeholder="e.g. Pro" oninput={(event) => updateOperatingSystemField('edition', event.currentTarget.value)} /></label><label><span>Architecture</span><input name="architecture" bind:value={form.architecture} placeholder="e.g. x64" oninput={(event) => updateOperatingSystemField('architecture', event.currentTarget.value)} /></label>
-						<label><span>Display name <span class="required" aria-hidden="true">*</span></span><input name="displayName" bind:value={form.displayName} readonly placeholder="e.g. Windows 11 Pro" class:invalid={!!errors.displayName} aria-invalid={!!errors.displayName} aria-describedby={errors.displayName ? 'master-display-error' : undefined} />{#if errors.displayName}<small id="master-display-error" class="field-error">{errors.displayName}</small>{/if}</label>
+						<label><span>{text.vendor} <span class="required" aria-hidden="true">*</span></span><input name="vendor" bind:value={form.vendor} placeholder={text.vendorExample} class:invalid={!!errors.vendor} aria-invalid={!!errors.vendor} aria-describedby={errors.vendor ? 'master-vendor-error' : undefined} oninput={(event) => updateOperatingSystemField('vendor', event.currentTarget.value)} />{#if errors.vendor}<small id="master-vendor-error" class="field-error">{m(errors.vendor)}</small>{/if}</label>
+						<label><span>{text.product} <span class="required" aria-hidden="true">*</span></span><input name="product" bind:value={form.product} placeholder={text.productExample} class:invalid={!!errors.product} aria-invalid={!!errors.product} aria-describedby={errors.product ? 'master-product-error' : undefined} oninput={(event) => updateOperatingSystemField('product', event.currentTarget.value)} />{#if errors.product}<small id="master-product-error" class="field-error">{m(errors.product)}</small>{/if}</label>
+						<label><span>{text.version} <span class="required" aria-hidden="true">*</span></span><input name="version" bind:value={form.version} placeholder={text.versionExample} class:invalid={!!errors.version} aria-invalid={!!errors.version} aria-describedby={errors.version ? 'master-version-error' : undefined} oninput={(event) => updateOperatingSystemField('version', event.currentTarget.value)} />{#if errors.version}<small id="master-version-error" class="field-error">{m(errors.version)}</small>{/if}</label>
+						<label><span>{text.edition}</span><input name="edition" bind:value={form.edition} placeholder={text.editionExample} oninput={(event) => updateOperatingSystemField('edition', event.currentTarget.value)} /></label><label><span>{text.architecture}</span><input name="architecture" bind:value={form.architecture} placeholder={text.architectureExample} oninput={(event) => updateOperatingSystemField('architecture', event.currentTarget.value)} /></label>
+						<label><span>{text.displayName} <span class="required" aria-hidden="true">*</span></span><input name="displayName" bind:value={form.displayName} readonly placeholder={text.displayNameExample} class:invalid={!!errors.displayName} aria-invalid={!!errors.displayName} aria-describedby={errors.displayName ? 'master-display-error' : undefined} />{#if errors.displayName}<small id="master-display-error" class="field-error">{m(errors.displayName)}</small>{/if}</label>
 					{/if}
-					<label><span>Sort order <span class="required" aria-hidden="true">*</span></span><input name="sortOrder" bind:value={form.sortOrder} type="number" min="0" step="1" placeholder="e.g. 9999" class:invalid={!!errors.sortOrder} aria-invalid={!!errors.sortOrder} aria-describedby={errors.sortOrder ? 'master-order-error' : undefined} oninput={() => clearError('sortOrder')} />{#if errors.sortOrder}<small id="master-order-error" class="field-error">{errors.sortOrder}</small>{/if}</label>
+					<label><span>{text.sortOrder} <span class="required" aria-hidden="true">*</span></span><input name="sortOrder" bind:value={form.sortOrder} type="number" min="0" step="1" placeholder={text.sortOrderExample} class:invalid={!!errors.sortOrder} aria-invalid={!!errors.sortOrder} aria-describedby={errors.sortOrder ? 'master-order-error' : undefined} oninput={() => clearError('sortOrder')} />{#if errors.sortOrder}<small id="master-order-error" class="field-error">{m(errors.sortOrder)}</small>{/if}</label>
 					</FormSection>
 					{#if resource === 'manufacturers' || resource === 'operating-systems'}
-						<FormSection title="Reference information" framed>
-							<label><span>Official URL</span><input name="officialUrl" bind:value={form.officialUrl} type="url" maxlength="1000" placeholder="https://example.com" class:invalid={!!errors.officialUrl} aria-invalid={!!errors.officialUrl} aria-describedby={errors.officialUrl ? 'master-url-error' : undefined} oninput={() => clearError('officialUrl')} />{#if errors.officialUrl}<small id="master-url-error" class="field-error">{errors.officialUrl}</small>{/if}</label><DatePicker label="Source checked" field="master-source-checked" value={form.sourceCheckedOn} open={sourceDateOpen} onToggle={() => sourceDateOpen = !sourceDateOpen} onSelect={(value) => { form.sourceCheckedOn = value; sourceDateOpen = false; }} />
+						<FormSection title={text.referenceInformation} framed>
+							<label><span>{text.officialUrl}</span><input name="officialUrl" bind:value={form.officialUrl} type="url" maxlength="1000" placeholder="https://example.com" class:invalid={!!errors.officialUrl} aria-invalid={!!errors.officialUrl} aria-describedby={errors.officialUrl ? 'master-url-error' : undefined} oninput={() => clearError('officialUrl')} />{#if errors.officialUrl}<small id="master-url-error" class="field-error">{m(errors.officialUrl)}</small>{/if}</label><DatePicker label={text.sourceChecked} field="master-source-checked" value={form.sourceCheckedOn} open={sourceDateOpen} onToggle={() => sourceDateOpen = !sourceDateOpen} onSelect={(value) => { form.sourceCheckedOn = value; sourceDateOpen = false; }} />
 						</FormSection>
 					{/if}
 					{#if resource === 'it-asset-statuses'}
-						<FormSection title="Lifecycle policy" framed><SearchSelect label="Disposal date" field="disposalDatePolicy" value={form.disposalDatePolicy} options={[{ value: 'prohibited', label: 'Prohibited' }, { value: 'optional', label: 'Optional' }, { value: 'required', label: 'Required' }]} onSelect={(value) => form.disposalDatePolicy = value} /></FormSection>
+						<FormSection title={text.lifecyclePolicy} framed><SearchSelect label={text.disposalDate} field="disposalDatePolicy" value={form.disposalDatePolicy} options={[{ value: 'prohibited', label: text.prohibited }, { value: 'optional', label: text.optional }, { value: 'required', label: text.required }]} onSelect={(value) => form.disposalDatePolicy = value} /></FormSection>
 					{/if}
 					{#if resource === 'it-asset-types'}
-						<FormSection title="Supported fields" framed><fieldset class="supported-fields"><legend class="visually-hidden">Supported fields</legend><label><input bind:checked={form.supportsCpu} type="checkbox" />CPU</label><label><input bind:checked={form.supportsRam} type="checkbox" />RAM</label><label><input bind:checked={form.supportsOs} type="checkbox" />OS</label><label><input bind:checked={form.supportsLoginUsername} type="checkbox" />Login username</label></fieldset></FormSection>
+						<FormSection title={text.supportedFields} framed><fieldset class="supported-fields"><legend class="visually-hidden">{text.supportedFields}</legend><label><input bind:checked={form.supportsCpu} type="checkbox" />CPU</label><label><input bind:checked={form.supportsRam} type="checkbox" />RAM</label><label><input bind:checked={form.supportsOs} type="checkbox" />OS</label><label><input bind:checked={form.supportsLoginUsername} type="checkbox" />{text.loginUsername}</label></fieldset></FormSection>
 					{/if}
 				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : addLabel}</button></footer>
+				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
 			</form>
 		</dialog></ModalBackdrop>
 		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}

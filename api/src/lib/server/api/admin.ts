@@ -21,6 +21,18 @@ export function requireAssetWriteApi(user: AuthenticatedUser | null): Authentica
 	return user;
 }
 
+export function requireAssetCredentialReadApi(user: AuthenticatedUser | null): AuthenticatedUser {
+	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
+	if (!hasPermissionOperation(user, permissionOperations.assetCredentialRead)) throwApiError(403, 'ASSET_CREDENTIAL_READ_REQUIRED', 'Asset credential access is required.');
+	return user;
+}
+
+export function requireAssetCredentialWriteApi(user: AuthenticatedUser | null): AuthenticatedUser {
+	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
+	if (!hasPermissionOperation(user, permissionOperations.assetCredentialWrite)) throwApiError(403, 'ASSET_CREDENTIAL_WRITE_REQUIRED', 'Asset credential management access is required.');
+	return user;
+}
+
 export function requireAuthenticatedApi(user: AuthenticatedUser | null): AuthenticatedUser {
 	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
 	return user;
@@ -30,6 +42,6 @@ type AuditWriter = {
 	auditLog: { create(args: Prisma.AuditLogCreateArgs): Promise<unknown> };
 };
 
-export async function writeAuditLog(client: AuditWriter, actorId: number, action: string, resource: string, resourceId: number): Promise<void> {
-	await client.auditLog.create({ data: { actorId, action, resource, resourceId } });
+export async function writeAuditLog(client: AuditWriter, actorId: number, action: string, resource: string, resourceId: number, detail?: Prisma.InputJsonValue): Promise<void> {
+	await client.auditLog.create({ data: { actorId, action, resource, resourceId, ...(detail === undefined ? {} : { detail }) } });
 }

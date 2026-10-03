@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { localization } from '$lib/localization';
+	import { localeMessages } from '$lib/locale-messages';
+
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let {
 		label,
 		value = '',
-		placeholder = 'Search...',
+		placeholder,
 		disabled = false,
 		onValueChange
 	}: {
@@ -17,7 +21,7 @@
 <label class="search-box">
 	<span class="sr-only">{label}</span>
 	<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg>
-	<input type="search" {value} {placeholder} {disabled} oninput={(event) => onValueChange(event.currentTarget.value)} />
+	<input type="search" {value} placeholder={placeholder ?? commonText.search} {disabled} oninput={(event) => onValueChange(event.currentTarget.value)} />
 </label>
 
 <style>

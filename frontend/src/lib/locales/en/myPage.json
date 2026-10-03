@@ -1,0 +1,15 @@
+{
+	"title": "My Page",
+	"underDevelopment": "This page is under development.",
+	"welcome": "Welcome back, {1}",
+	"assetOverview": "ASSET OVERVIEW",
+	"ready": "Ready to manage",
+	"inventory": "Keep inventory current",
+	"attention": "ATTENTION",
+	"noAlerts": "No critical alerts",
+	"assignments": "Review assignments regularly",
+	"account": "ACCOUNT",
+	"emailUnset": "Email not set",
+	"management": "Management",
+	"sidebarHelp": "Use the sidebar to maintain employees, locations and equipment."
+}

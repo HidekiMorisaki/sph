@@ -12,11 +12,7 @@
 		"prisma:migrate": "prisma migrate dev",
 		"db:deploy": "prisma migrate deploy",
 		"admin:create": "node scripts/create-admin.mjs",
-		"db:backup-active": "node scripts/create-active-data-backup.mjs",
-		"db:verify-active-backup": "node scripts/verify-active-data-backup.mjs",
-		"db:verify": "node scripts/verify-database.mjs",
-		"api:verify": "node scripts/verify-api.mjs",
-		"calendar:verify": "node scripts/verify-work-calendars.mjs",
+		"db:baseline": "node scripts/baseline-existing.mjs",
 		"check": "svelte-kit sync && prisma generate && tsc --noEmit"
 	},
 	"devDependencies": {

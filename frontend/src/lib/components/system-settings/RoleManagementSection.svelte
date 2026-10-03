@@ -6,6 +6,12 @@
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import { formSnapshot } from '$lib/modalForm';
 
+	import { localeMessages } from '$lib/locale-messages';
+	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
+	import { localization } from '$lib/localization';
+	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
+	let common = $derived(localeMessages[$localization.displayLanguage].common);
+
 	type Role = { id: number; name: string; createdAt: string; updatedAt: string };
 	type RoleField = 'name';
 
@@ -22,9 +28,9 @@
 	let confirmingDiscard = $state(false);
 	let hasUnsavedChanges = $derived(Boolean(selected) && initialSnapshot !== '' && formSnapshot({ name }) !== initialSnapshot);
 
-	const columns = [
-		{ key: 'name', label: 'Name', width: 90, value: (item: Role) => item.name }
-	];
+	let columns = $derived([
+		{ key: 'name', label: text.name, width: 90, value: (item: Role) => item.name }
+	]);
 
 	function openEdit(item: Role, trigger: HTMLButtonElement | null) {
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -59,11 +65,11 @@
 
 	function validate() {
 		const next: Partial<Record<RoleField, string>> = {};
-		if (!name.trim()) next.name = 'Name is required.';
-		else if (name.trim().length > 128) next.name = 'Enter 128 characters or fewer.';
+		if (!name.trim()) next.name = text.nameRequired;
+		else if (name.trim().length > 128) next.name = text.nameLength;
 		errors = next;
 		if (!Object.keys(next).length) return true;
-		formError = 'Correct the highlighted fields.';
+		formError = text.correctFields;
 		void tick().then(() => dialogElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());
 		return false;
 	}
@@ -79,19 +85,19 @@
 				body: JSON.stringify({ name: name.trim() })
 			});
 			if (!response.ok) {
-				const payload = await response.json().catch(() => null) as { error?: { message?: string; details?: Array<{ field?: string; reason: string }> } } | null;
-				errors = Object.fromEntries((payload?.error?.details ?? []).flatMap((detail) => detail.field === 'name' ? [['name', detail.reason]] : []));
-				formError = response.status === 403 ? 'Only a System Administrator can update roles.' : payload?.error?.message ?? 'Unable to update the role.';
+				const payload = await response.json().catch(() => null) as { error?: { code?: string; details?: Array<{ field?: string; reason: string }> } } | null;
+				errors = Object.fromEntries((payload?.error?.details ?? []).flatMap((detail) => detail.field === 'name' ? [['name', systemSettingReason(detail.reason, text, 'role')]] : []));
+				formError = response.status === 403 ? text.roleForbidden : systemSettingError(payload?.error?.code, response.status, text, 'role', text.roleSaveFailed);
 				if (errors.name) void tick().then(() => dialogElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());
 				return;
 			}
 			selected = null;
 			initialSnapshot = '';
-			onNotice('Role name updated.');
+			onNotice(text.roleSaved);
 			await list?.refresh();
 			void tick().then(() => returnFocus?.focus());
 		} catch {
-			formError = 'Unable to update the role. Check your connection and try again.';
+			formError = text.roleSaveRetry;
 		} finally {
 			saving = false;
 		}
@@ -111,21 +117,21 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<MasterList bind:this={list} endpoint="/v1/roles" title="Roles" listHeading="Roles" description="Rename roles used throughout the system. Permissions remain attached when a name changes." {columns} canEdit initialSortBy="name" sortStorageKey="system-settings-sort:/v1/roles" pageSizeStorageKey="roles-page-size" minTableWidth={0} actionWidth={10} onEdit={(item, trigger) => openEdit(item as Role, trigger)} emptyLabel="No roles found." />
+<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canEdit initialSortBy="name" sortStorageKey="system-settings-sort:/v1/roles" pageSizeStorageKey="roles-page-size" minTableWidth={0} actionWidth={10} onEdit={(item, trigger) => openEdit(item as Role, trigger)} emptyLabel={text.noRoles} />
 
 {#if selected}
 	<ModalBackdrop onDismiss={requestClose} disabled={saving}>
 		<dialog bind:this={dialogElement} class="role-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="role-dialog-title">
-			<header><h2 id="role-dialog-title">Edit role</h2><button class="app-modal-close" type="button" aria-label="Close role dialog" disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+			<header><h2 id="role-dialog-title">{text.editRole}</h2><button class="app-modal-close" type="button" aria-label={text.closeRoleDialog} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 			<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 				<div class="app-modal-form-body role-form-body">
-					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save role</strong><span>{formError}</span></div>{/if}
-					<FormSection title="Role information" framed columns={2}>
-						<label><span>Name <span class="required" aria-hidden="true">*</span></span><input name="name" value={name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'role-name-error' : undefined} oninput={(event) => updateName(event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="role-name-error" role="alert">{errors.name}</span>{/if}</label>
+					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.roleSaveHeading}</strong><span>{formError}</span></div>{/if}
+					<FormSection title={text.roleInformation} framed columns={2}>
+						<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" value={name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'role-name-error' : undefined} oninput={(event) => updateName(event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="role-name-error" role="alert">{errors.name}</span>{/if}</label>
 					</FormSection>
-					<p class="permission-note">Role permissions use an internal immutable identifier and remain unchanged when this name is updated. Permission editing will be added separately.</p>
+					<p class="permission-note">{text.permissionNote}</p>
 				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></footer>
+				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? common.saving : common.saveChanges}</button></footer>
 			</form>
 		</dialog>
 	</ModalBackdrop>

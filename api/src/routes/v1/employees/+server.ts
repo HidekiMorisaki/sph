@@ -59,39 +59,48 @@ function parseSearch(url: URL) {
 	return search;
 }
 
-function includeColumnMetadata(url: URL) {
-	const value = url.searchParams.get('includeColumns');
+function parseBooleanQuery(url: URL, name: string, errorCode: string) {
+	const value = url.searchParams.get(name);
 	if (value === null || value === 'false') return false;
 	if (value === 'true') return true;
-	throwApiError(422, 'INVALID_INCLUDE_COLUMNS', 'includeColumns must be true or false.', [
-		{ field: 'includeColumns', reason: 'UNSUPPORTED_VALUE' }
+	throwApiError(422, errorCode, `${name} must be true or false.`, [
+		{ field: name, reason: 'UNSUPPORTED_VALUE' }
 	]);
 }
 
-function employeeWhere(search: string): Prisma.EmployeeWhereInput {
-	if (!search) return { deletedAt: null };
+type EmployeeVisibility = { includeRetired: boolean; includeDeleted: boolean; referenceDate: Date };
+
+function employeeWhere(search: string, visibility: EmployeeVisibility): Prisma.EmployeeWhereInput {
+	const visibleEmployees: Prisma.EmployeeWhereInput[] = [{
+		deletedAt: null,
+		...(visibility.includeRetired ? {} : { OR: [{ retiredAt: null }, { retiredAt: { gt: visibility.referenceDate } }] })
+	}];
+	if (visibility.includeDeleted) visibleEmployees.push({ deletedAt: { not: null } });
+	if (!search) return { OR: visibleEmployees };
 	const contains = { contains: search, mode: 'insensitive' as const };
 	return {
-		deletedAt: null,
-		OR: [
-			{ employeeCode: contains },
-			{ firstName: contains },
-			{ middleName: contains },
-			{ lastName: contains },
-			{ nameKana: contains },
-			{ postalCode: contains },
-			{ prefecture: contains },
-			{ city: contains },
-			{ streetAddress: contains },
-			{ buildingName: contains },
-			{ mobilePhone: contains },
-			{ email: contains },
-			{ notes: contains },
-			{ departmentAssignments: { some: { deletedAt: null, department: { deletedAt: null, name: contains } } } },
-			{ group: { name: contains } },
-			{ positionAssignments: { some: { deletedAt: null, position: { deletedAt: null, name: contains } } } },
-			{ employmentType: { name: contains } },
-			{ branch: { name: contains } }
+		AND: [
+			{ OR: visibleEmployees },
+			{ OR: [
+				{ employeeCode: contains },
+				{ firstName: contains },
+				{ middleName: contains },
+				{ lastName: contains },
+				{ nameKana: contains },
+				{ postalCode: contains },
+				{ prefecture: contains },
+				{ city: contains },
+				{ streetAddress: contains },
+				{ buildingName: contains },
+				{ mobilePhone: contains },
+				{ email: contains },
+				{ notes: contains },
+				{ departmentAssignments: { some: { deletedAt: null, department: { deletedAt: null, name: contains } } } },
+				{ group: { name: contains } },
+				{ positionAssignments: { some: { deletedAt: null, position: { deletedAt: null, name: contains } } } },
+				{ employmentType: { name: contains } },
+				{ branch: { name: contains } }
+			] }
 		]
 	};
 }
@@ -139,15 +148,34 @@ function employeeSqlSearchClause(search: string) {
 	`;
 }
 
+function employeeSqlVisibilityClause(visibility: EmployeeVisibility) {
+	const referenceDateIso = visibility.referenceDate.toISOString().slice(0, 10);
+	if (visibility.includeRetired && visibility.includeDeleted) return Prisma.empty;
+	if (visibility.includeRetired) return Prisma.sql`AND employee.deleted_at IS NULL`;
+	if (visibility.includeDeleted) return Prisma.sql`
+		AND (
+			employee.deleted_at IS NOT NULL
+			OR employee.retired_at IS NULL
+			OR employee.retired_at > CAST(${referenceDateIso} AS date)
+		)
+	`;
+	return Prisma.sql`
+		AND employee.deleted_at IS NULL
+		AND (employee.retired_at IS NULL OR employee.retired_at > CAST(${referenceDateIso} AS date))
+	`;
+}
+
 async function roleSortedEmployeeIds(
 	tx: Prisma.TransactionClient,
 	search: string,
+	visibility: EmployeeVisibility,
 	sortOrder: 'asc' | 'desc',
 	offset: number,
 	limit: number
 ): Promise<number[]> {
 	const direction = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
 	const searchClause = employeeSqlSearchClause(search);
+	const visibilityClause = employeeSqlVisibilityClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -174,7 +202,8 @@ async function roleSortedEmployeeIds(
 				AND employee_role.scope_type = 'global'
 				AND employee_role.deleted_at IS NULL
 		) AS role_values ON true
-		WHERE employee.deleted_at IS NULL
+		WHERE true
+		${visibilityClause}
 		${searchClause}
 		ORDER BY role_values.sort_key ${direction}, employee.id ASC
 		OFFSET ${offset}
@@ -186,6 +215,7 @@ async function roleSortedEmployeeIds(
 async function assignmentSortedEmployeeIds(
 	tx: Prisma.TransactionClient,
 	search: string,
+	visibility: EmployeeVisibility,
 	sortBy: 'department' | 'position',
 	sortOrder: 'asc' | 'desc',
 	offset: number,
@@ -194,6 +224,7 @@ async function assignmentSortedEmployeeIds(
 	const direction = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
 	const sortKey = sortBy === 'department' ? Prisma.sql`department_values.names` : Prisma.sql`position_values.names`;
 	const searchClause = employeeSqlSearchClause(search);
+	const visibilityClause = employeeSqlVisibilityClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -212,7 +243,8 @@ async function assignmentSortedEmployeeIds(
 		) AS position_values ON true
 		LEFT JOIN employment_types AS employment_type ON employment_type.id = employee.employment_type_id
 		LEFT JOIN branches AS branch ON branch.id = employee.branch_id
-		WHERE employee.deleted_at IS NULL
+		WHERE true
+		${visibilityClause}
 		${searchClause}
 		ORDER BY ${sortKey} ${direction} NULLS LAST, employee.id ASC
 		OFFSET ${offset}
@@ -224,6 +256,7 @@ async function assignmentSortedEmployeeIds(
 async function lengthOfServiceSortedEmployeeIds(
 	tx: Prisma.TransactionClient,
 	search: string,
+	visibility: EmployeeVisibility,
 	sortOrder: 'asc' | 'desc',
 	offset: number,
 	limit: number,
@@ -232,6 +265,7 @@ async function lengthOfServiceSortedEmployeeIds(
 	const direction = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
 	const referenceDateIso = referenceDate.toISOString().slice(0, 10);
 	const searchClause = employeeSqlSearchClause(search);
+	const visibilityClause = employeeSqlVisibilityClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -250,7 +284,8 @@ async function lengthOfServiceSortedEmployeeIds(
 		) AS position_values ON true
 		LEFT JOIN employment_types AS employment_type ON employment_type.id = employee.employment_type_id
 		LEFT JOIN branches AS branch ON branch.id = employee.branch_id
-		WHERE employee.deleted_at IS NULL
+		WHERE true
+		${visibilityClause}
 		${searchClause}
 		ORDER BY GREATEST(
 			0,
@@ -285,10 +320,15 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	const viewer = requireAuthenticatedApi(locals.user);
 	const query = parseListQuery(url, sortFields, 'employeeCode');
 	const search = parseSearch(url);
-	const withColumns = includeColumnMetadata(url);
+	const withColumns = parseBooleanQuery(url, 'includeColumns', 'INVALID_INCLUDE_COLUMNS');
 	if (withColumns) requireAdminApi(viewer);
-	const where = employeeWhere(search);
 	const referenceDate = employeeReferenceDate();
+	const visibility = {
+		includeRetired: parseBooleanQuery(url, 'includeRetired', 'INVALID_INCLUDE_RETIRED'),
+		includeDeleted: parseBooleanQuery(url, 'includeDeleted', 'INVALID_INCLUDE_DELETED'),
+		referenceDate
+	};
+	const where = employeeWhere(search, visibility);
 	const { total, items } = await getPrisma().$transaction(async (tx) => {
 		const total = await tx.employee.count({ where });
 		if (!['roles', 'lengthOfService', 'department', 'position'].includes(query.sortBy)) {
@@ -296,16 +336,16 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 			return { total, items };
 		}
 		const ids = query.sortBy === 'roles'
-			? await roleSortedEmployeeIds(tx, search, query.sortOrder, query.offset, query.limit)
+			? await roleSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit)
 			: query.sortBy === 'lengthOfService'
-				? await lengthOfServiceSortedEmployeeIds(tx, search, query.sortOrder, query.offset, query.limit, referenceDate)
-				: await assignmentSortedEmployeeIds(tx, search, query.sortBy as 'department' | 'position', query.sortOrder, query.offset, query.limit);
-		const records = await tx.employee.findMany({ where: { id: { in: ids }, deletedAt: null }, select: employeeSafeSelect });
+				? await lengthOfServiceSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit, referenceDate)
+				: await assignmentSortedEmployeeIds(tx, search, visibility, query.sortBy as 'department' | 'position', query.sortOrder, query.offset, query.limit);
+		const records = await tx.employee.findMany({ where: { id: { in: ids } }, select: employeeSafeSelect });
 		const recordById = new Map(records.map((record) => [record.id, record]));
 		return { total, items: ids.flatMap((id) => { const record = recordById.get(id); return record ? [record] : []; }) };
 	}, { isolationLevel: 'RepeatableRead' });
 	const columns = withColumns ? await employeeColumns() : undefined;
-	return success(items.map((item) => employeeOutput(item, referenceDate)), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), ...(columns ? { columns } : {}) });
+	return success(items.map((item) => employeeOutput(item, referenceDate)), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), includeRetired: visibility.includeRetired, includeDeleted: visibility.includeDeleted, ...(columns ? { columns } : {}) });
 }
 
 export async function POST({ request, locals, url }: import('./$types').RequestEvent) {

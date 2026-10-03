@@ -65,7 +65,7 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 			id: true,
 			expiresAt: true,
 			employee: {
-				select: { id: true, username: true, email: true, firstName: true, middleName: true, lastName: true, mustChangeCredentials: true,
+				select: { id: true, username: true, email: true, firstName: true, middleName: true, lastName: true,
 					settings: { select: { timeZone: true, displayLanguage: true, deletedAt: true } },
 					roleGrants: {
 						where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
@@ -106,7 +106,6 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 			roles,
 			permissionIdentifiers,
 			permissionOperations: grantedOperations,
-			mustChangeCredentials: record.employee.mustChangeCredentials,
 			timeZone: isTimeZone(settings?.timeZone) ? settings.timeZone : DEFAULT_TIME_ZONE,
 			displayLanguage
 		}

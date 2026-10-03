@@ -62,6 +62,7 @@ export type Employee = EmployeeProfile & {
 	createdAt: string;
 	updatedAt: string;
 	deletedAt: string | null;
+	employmentStatus: 'current' | 'retired' | 'deleted';
 	departmentRef?: EmployeeMaster | null;
 	departments: Array<EmployeeMaster & { isPrimary: boolean }>;
 	departmentNames: string;

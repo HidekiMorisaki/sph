@@ -35,6 +35,18 @@ assert_maintenance_prerequisites() {
 	sph_compose version >/dev/null
 	sph_compose config --quiet
 	[[ -f "$SPH_REPOSITORY_ROOT/.env" ]] || { echo '.env is required in the repository root.' >&2; return 1; }
+	credential_encryption_key_fingerprint >/dev/null
+}
+
+credential_encryption_key_fingerprint() {
+	local line key count
+	count="$(grep -c '^IT_ASSET_CREDENTIAL_ENCRYPTION_KEY=' "$SPH_REPOSITORY_ROOT/.env" || true)"
+	[[ "$count" == 1 ]] || { echo 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY must be configured exactly once in .env.' >&2; return 1; }
+	line="$(sed -n 's/^IT_ASSET_CREDENTIAL_ENCRYPTION_KEY=//p' "$SPH_REPOSITORY_ROOT/.env" | tr -d '\r')"
+	key="$line"
+	if [[ "$key" == \"*\" || "$key" == \'*\' ]]; then key="${key:1:${#key}-2}"; fi
+	[[ "$key" =~ ^[A-Za-z0-9_-]{43}$ ]] || { echo 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY must be a canonical base64url-encoded 32-byte key.' >&2; return 1; }
+	if command -v sha256sum >/dev/null 2>&1; then printf '%s' "$key" | sha256sum | awk '{print $1}'; else printf '%s' "$key" | shasum -a 256 | awk '{print $1}'; fi
 }
 
 compose_container_id() {
@@ -108,7 +120,7 @@ json_escape() {
 new_sph_full_backup() {
 	local requested_root=${1:-}
 	local version commit timestamp backup_id backup_directory archive_path manifest_path
-	local container_id source_tables target_tables source_migrations target_migrations server_version archive_hash
+	local container_id source_tables target_tables source_migrations target_migrations server_version archive_hash credential_key_fingerprint
 
 	assert_database_ready
 	get_database_identity
@@ -143,9 +155,10 @@ new_sph_full_backup() {
 
 	server_version="$(database_scalar "$SPH_DATABASE_NAME" "$SPH_DATABASE_USER" 'SHOW server_version;')"
 	archive_hash="$(sha256_file "$archive_path")"
-	printf '{\n  "formatVersion": 1,\n  "application": "SME Portal Hub",\n  "backupId": "%s",\n  "createdAtUtc": "%s",\n  "productVersion": "%s",\n  "sourceCommit": "%s",\n  "databaseName": "%s",\n  "postgresVersion": "%s",\n  "archiveFile": "database.dump",\n  "archiveFormat": "postgresql-custom",\n  "sha256": "%s",\n  "verifiedRestore": true\n}\n' \
+	credential_key_fingerprint="$(credential_encryption_key_fingerprint)"
+	printf '{\n  "formatVersion": 1,\n  "application": "SME Portal Hub",\n  "backupId": "%s",\n  "createdAtUtc": "%s",\n  "productVersion": "%s",\n  "sourceCommit": "%s",\n  "databaseName": "%s",\n  "postgresVersion": "%s",\n  "archiveFile": "database.dump",\n  "archiveFormat": "postgresql-custom",\n  "sha256": "%s",\n  "credentialEncryptionKeyFingerprint": "%s",\n  "verifiedRestore": true\n}\n' \
 		"$(json_escape "$backup_id")" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$(json_escape "$version")" "$(json_escape "$commit")" \
-		"$(json_escape "$SPH_DATABASE_NAME")" "$(json_escape "$server_version")" "$archive_hash" > "$manifest_path"
+		"$(json_escape "$SPH_DATABASE_NAME")" "$(json_escape "$server_version")" "$archive_hash" "$credential_key_fingerprint" > "$manifest_path"
 
 	SPH_CREATED_BACKUP="$backup_directory"
 	SPH_INCOMPLETE_BACKUP=""

@@ -1,0 +1,50 @@
+{
+	"language": {
+		"label": "日本語",
+		"locale": "ja-JP",
+		"employeeNameFallbackOrder": "surnameFirst",
+		"durationPartSeparator": "",
+		"removeDurationUnitSpacing": true,
+		"invitationEmailSubject": "{1} への招待リンク"
+	},
+	"calendar": {
+		"required": "必須",
+		"calendar": "カレンダー",
+		"previousYears": "前の12年間",
+		"nextYears": "次の12年間",
+		"backToCalendar": "カレンダーに戻る",
+		"previousYear": "前年",
+		"previousMonth": "前月",
+		"chooseYear": "年を選択",
+		"nextMonth": "翌月",
+		"nextYear": "翌年",
+		"clear": "クリア",
+		"today": "今日",
+		"chooseYearLabel": "{1}年を選択"
+	},
+	"genderLabels": {
+		"female": "女性",
+		"male": "男性",
+		"unspecified": "未指定"
+	},
+	"weekdays": {
+		"compact": [
+			"日",
+			"月",
+			"火",
+			"水",
+			"木",
+			"金",
+			"土"
+		],
+		"short": [
+			"日",
+			"月",
+			"火",
+			"水",
+			"木",
+			"金",
+			"土"
+		]
+	}
+}

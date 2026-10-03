@@ -14,7 +14,12 @@
 	import { loadExternalLinks, type ExternalLink } from '$lib/externalLinks';
 	import { formatTimestamp, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
-	import { productName } from '$lib/brand';
+
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
+	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
+	let common = $derived(localeMessages[$localization.displayLanguage].common);
+	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
 	type FormField = 'name' | 'url' | 'sortOrder';
@@ -26,6 +31,7 @@
 	let accessDenied = $state(false);
 	let loadError = $state('');
 	let notice = $state('');
+	let noticeIsError = $state(false);
 	let activeSection = $state<SystemSettingsSection>('roles');
 	let list = $state<MasterList>();
 	let mode = $state<ModalMode>(null);
@@ -44,10 +50,10 @@
 	let navigationLockUntil = 0;
 	let hasUnsavedChanges = $derived(mode === 'edit' && initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 
-	const columns = [
-		{ key: 'name', label: 'Name', width: 65, cell: nameCell },
-		{ key: 'sortOrder', label: 'Sort order', width: 25, value: (item: ExternalLink) => item.sortOrder }
-	];
+	let columns = $derived([
+		{ key: 'name', label: text.name, width: 65, cell: nameCell },
+		{ key: 'sortOrder', label: text.sortOrder, width: 25, value: (item: ExternalLink) => item.sortOrder }
+	]);
 
 	function updateActiveSection() {
 		scrollFrame = null;
@@ -81,7 +87,7 @@
 			if (!response.ok) throw new Error();
 			const user = (await apiData<{ user: { capabilities: { canManageSystemSettings: boolean } } }>(response)).user;
 			accessDenied = !user.capabilities.canManageSystemSettings;
-		} catch { loadError = 'Unable to load system settings. Refresh the page and try again.'; }
+		} catch { loadError = text.loadFailed; }
 		finally { loading = false; if (!accessDenied && !loadError) await initializeSectionNavigation(); }
 	}
 
@@ -110,20 +116,20 @@
 	}
 	function validate() {
 		const next: Partial<Record<FormField, string>> = {};
-		if (!form.name.trim()) next.name = 'Name is required.';
-		else if (form.name.trim().length > 128) next.name = 'Enter 128 characters or fewer.';
-		if (!form.url.trim()) next.url = 'URL is required.';
+		if (!form.name.trim()) next.name = text.nameRequired;
+		else if (form.name.trim().length > 128) next.name = text.nameLength;
+		if (!form.url.trim()) next.url = text.urlRequired;
 		else {
 			try {
 				const url = new URL(form.url.trim());
-				if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) next.url = 'Enter a valid HTTP or HTTPS URL.';
-				else if (url.username || url.password) next.url = 'Do not include a username or password in the URL.';
-			} catch { next.url = 'Enter a valid HTTP or HTTPS URL.'; }
+				if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) next.url = text.urlInvalid;
+				else if (url.username || url.password) next.url = text.urlCredentials;
+			} catch { next.url = text.urlInvalid; }
 		}
-		if (!/^\d+$/.test(form.sortOrder) || !Number.isSafeInteger(Number(form.sortOrder)) || Number(form.sortOrder) > 2_147_483_647) next.sortOrder = 'Enter a whole number from 0 to 2147483647.';
+		if (!/^\d+$/.test(form.sortOrder) || !Number.isSafeInteger(Number(form.sortOrder)) || Number(form.sortOrder) > 2_147_483_647) next.sortOrder = text.sortInvalid;
 		errors = next;
 		if (!Object.keys(next).length) return true;
-		formError = 'Correct the highlighted fields.';
+		formError = text.correctFields;
 		const field = Object.keys(next)[0];
 		void tick().then(() => dialogElement?.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus());
 		return false;
@@ -137,27 +143,27 @@
 				body: JSON.stringify({ name: form.name.trim(), url: form.url.trim(), sortOrder: Number(form.sortOrder) })
 			});
 			if (!response.ok) {
-				const payload = await response.json().catch(() => null) as { error?: { message?: string; details?: Array<{ field?: string; reason: string }> } } | null;
-				errors = Object.fromEntries((payload?.error?.details ?? []).flatMap((detail) => detail.field && ['name', 'url', 'sortOrder'].includes(detail.field) ? [[detail.field, detail.reason]] : []));
-				formError = response.status === 403 ? 'Only a System Administrator can save external links.' : payload?.error?.message ?? 'Unable to save the external link.';
+				const payload = await response.json().catch(() => null) as { error?: { code?: string; details?: Array<{ field?: string; reason: string }> } } | null;
+				errors = Object.fromEntries((payload?.error?.details ?? []).flatMap((detail) => detail.field && ['name', 'url', 'sortOrder'].includes(detail.field) ? [[detail.field, systemSettingReason(detail.reason, text, 'link')]] : []));
+				formError = response.status === 403 ? text.linkSaveForbidden : systemSettingError(payload?.error?.code, response.status, text, 'link', text.linkSaveFailed);
 				const field = Object.keys(errors)[0]; if (field) void tick().then(() => dialogElement?.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus());
 				return;
 			}
-			mode = null; selected = null; notice = 'External link saved.';
+			mode = null; selected = null; notice = text.linkSaved; noticeIsError = false;
 			await Promise.all([list?.refresh(), loadExternalLinks(true)]);
 			void tick().then(() => returnFocus?.focus());
-		} catch { formError = 'Unable to save the external link. Check your connection and try again.'; }
+		} catch { formError = text.linkSaveRetry; }
 		finally { saving = false; }
 	}
 	async function remove(item: ExternalLink) {
-		if (removing || !confirm(`Delete ${item.name}?`)) return;
-		removing = true; notice = '';
+		if (removing || !confirm(t('deleteConfirm', item.name))) return;
+		removing = true; notice = ''; noticeIsError = false;
 		try {
 			const response = await fetch(`/v1/external-links/${item.id}`, { method: 'DELETE' });
-			if (!response.ok) { notice = response.status === 403 ? 'Only a System Administrator can delete external links.' : 'Unable to delete the external link.'; return; }
-			notice = 'External link deleted.';
+			if (!response.ok) { noticeIsError = true; notice = response.status === 403 ? text.linkDeleteForbidden : text.linkDeleteFailed; return; }
+			notice = text.linkDeleted;
 			await Promise.all([list?.refresh(), loadExternalLinks(true)]);
-		} catch { notice = 'Unable to delete the external link.'; }
+		} catch { notice = text.linkDeleteFailed; noticeIsError = true; }
 		finally { removing = false; }
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
@@ -178,28 +184,27 @@
 	});
 </script>
 
-{#snippet nameCell(item: ExternalLink)}<a class="external-link-name" href={item.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${item.name} in a new window`} onclick={(event) => event.stopPropagation()}>{item.name}</a>{/snippet}
-{#snippet listActions()}<AddButton bind:element={addButton} label="Add external link" onclick={() => openModal('add')} />{/snippet}
+{#snippet nameCell(item: ExternalLink)}<a class="external-link-name" href={item.url} target="_blank" rel="noopener noreferrer" aria-label={formatLocaleTemplate(common.openExternal, item.name)} onclick={(event) => event.stopPropagation()}>{item.name}</a>{/snippet}
+{#snippet listActions()}<AddButton bind:element={addButton} label={text.addLink} onclick={() => openModal('add')} />{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />
-<svelte:head><title>System settings · {productName}</title></svelte:head>
 
-<AssetManagementShell title="System settings">
+<AssetManagementShell title={text.title}>
 	<div class="settings-page">
-		<MasterPageHeader title="System settings" description="Manage system-wide configuration available to your organization." />
-		{#if loading}<div class="page-state">Loading system settings…</div>
-		{:else if accessDenied}<div class="page-state error" role="alert">System Administrator access is required.</div>
+		<MasterPageHeader title={text.title} description={text.description} />
+		{#if loading}<div class="page-state">{text.loading}</div>
+		{:else if accessDenied}<div class="page-state error" role="alert">{text.accessDenied}</div>
 		{:else if loadError}<div class="page-state error" role="alert">{loadError}</div>
 		{:else}
-			{#if notice}<p class="notice" class:error={notice.startsWith('Unable') || notice.startsWith('Only')} role={notice.startsWith('Unable') || notice.startsWith('Only') ? 'alert' : 'status'}>{notice}</p>{/if}
+			{#if notice}<p class="notice" class:error={noticeIsError} role={noticeIsError ? 'alert' : 'status'}>{notice}</p>{/if}
 			<div class="settings-layout">
-				<nav class="settings-nav" aria-label="System settings sections"><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>Roles</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>External links</a><a class:active={activeSection === 'system-information'} href="#system-information" aria-current={activeSection === 'system-information' ? 'location' : undefined} onclick={(event) => selectSection(event, 'system-information')}>System information</a></nav>
+				<nav class="settings-nav" aria-label={text.sections}><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>{text.roles}</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>{text.links}</a><a class:active={activeSection === 'system-information'} href="#system-information" aria-current={activeSection === 'system-information' ? 'location' : undefined} onclick={(event) => selectSection(event, 'system-information')}>{text.information}</a></nav>
 				<div class="settings-content">
-					<section id="roles" class="settings-card" aria-label="Role settings"><RoleManagementSection onNotice={(message) => notice = message} /></section>
-					<section id="external-links" class="settings-card" aria-label="External links settings">
-						<MasterList bind:this={list} endpoint="/v1/external-links" searchParam="q" title="External links" listHeading="External links" description="Manage the other systems shown in every user's sidebar." {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" sortStorageKey="system-settings-sort:/v1/external-links" pageSizeStorageKey="external-links-page-size" minTableWidth={0} actionWidth={10} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel="No external links found." />
+					<section id="roles" class="settings-card" aria-label={text.roleSettings}><RoleManagementSection onNotice={(message) => { notice = message; noticeIsError = false; }} /></section>
+					<section id="external-links" class="settings-card" aria-label={text.linkSettings}>
+						<MasterList bind:this={list} endpoint="/v1/external-links" searchParam="q" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" sortStorageKey="system-settings-sort:/v1/external-links" pageSizeStorageKey="external-links-page-size" minTableWidth={0} actionWidth={10} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel={text.noLinks} />
 					</section>
-					<section id="system-information" class="settings-card" aria-label="System information"><SystemInformationSection /></section>
+					<section id="system-information" class="settings-card" aria-label={text.information}><SystemInformationSection /></section>
 				</div>
 			</div>
 		{/if}
@@ -207,23 +212,23 @@
 </AssetManagementShell>
 
 {#if mode === 'detail' && selected}
-	<DetailModal title="External link details" titleId="external-link-detail-title" closeLabel="Close external link details" {returnFocus} compact dialogClass="external-link-dialog" onClose={closeDetail}>
-		<section class="app-detail-section"><h3>Link information</h3><dl class="app-detail-grid"><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>Sort order</dt><dd>{selected.sortOrder}</dd></div><div class="app-detail-wide"><dt>URL</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div><dt>Created</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>Updated</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
+	<DetailModal title={text.linkDetails} titleId="external-link-detail-title" closeLabel={text.closeLinkDetails} {returnFocus} compact dialogClass="external-link-dialog" onClose={closeDetail}>
+		<section class="app-detail-section"><h3>{text.linkInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div><dt>{text.sortOrder}</dt><dd>{selected.sortOrder}</dd></div><div class="app-detail-wide"><dt>{text.url}</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div><dt>{text.created}</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>{text.updated}</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
 	</DetailModal>
 {:else if mode}
 	<ModalBackdrop onDismiss={requestCloseModal} disabled={saving || removing}>
 		<dialog bind:this={dialogElement} class="external-link-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="external-link-dialog-title">
-			<header><h2 id="external-link-dialog-title">{mode === 'add' ? 'Add external link' : 'Edit external link'}</h2><button class="app-modal-close" type="button" aria-label="Close external link dialog" disabled={saving} onclick={requestCloseModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+			<header><h2 id="external-link-dialog-title">{mode === 'add' ? text.addLink : text.editLink}</h2><button class="app-modal-close" type="button" aria-label={text.closeLinkDialog} disabled={saving} onclick={requestCloseModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 			<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 				<div class="app-modal-form-body external-link-form-body">
-					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save external link</strong><span>{formError}</span></div>{/if}
-					<FormSection title="Link information" framed columns={2}>
-						<label><span>Name <span class="required" aria-hidden="true">*</span></span><input name="name" value={form.name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'external-link-name-error' : undefined} oninput={(event) => updateField('name', event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="external-link-name-error" role="alert">{errors.name}</span>{/if}</label>
-						<label><span>Sort order <span class="required" aria-hidden="true">*</span></span><input name="sortOrder" type="number" min="0" max="2147483647" step="1" value={form.sortOrder} required class:invalid={Boolean(errors.sortOrder)} aria-invalid={Boolean(errors.sortOrder)} aria-describedby={errors.sortOrder ? 'external-link-sort-error' : undefined} oninput={(event) => updateField('sortOrder', event.currentTarget.value)} />{#if errors.sortOrder}<span class="field-error" id="external-link-sort-error" role="alert">{errors.sortOrder}</span>{/if}</label>
-						<label class="wide"><span>URL <span class="required" aria-hidden="true">*</span></span><input name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://" value={form.url} required maxlength="2048" class:invalid={Boolean(errors.url)} aria-invalid={Boolean(errors.url)} aria-describedby={errors.url ? 'external-link-url-error' : 'external-link-url-hint'} oninput={(event) => updateField('url', event.currentTarget.value)} />{#if errors.url}<span class="field-error" id="external-link-url-error" role="alert">{errors.url}</span>{:else}<small id="external-link-url-hint" class="field-hint">Use an HTTP or HTTPS URL without embedded credentials.</small>{/if}</label>
+					{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.linkSaveHeading}</strong><span>{formError}</span></div>{/if}
+					<FormSection title={text.linkInformation} framed columns={2}>
+						<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" value={form.name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'external-link-name-error' : undefined} oninput={(event) => updateField('name', event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="external-link-name-error" role="alert">{errors.name}</span>{/if}</label>
+						<label><span>{text.sortOrder} <span class="required" aria-hidden="true">*</span></span><input name="sortOrder" type="number" min="0" max="2147483647" step="1" value={form.sortOrder} required class:invalid={Boolean(errors.sortOrder)} aria-invalid={Boolean(errors.sortOrder)} aria-describedby={errors.sortOrder ? 'external-link-sort-error' : undefined} oninput={(event) => updateField('sortOrder', event.currentTarget.value)} />{#if errors.sortOrder}<span class="field-error" id="external-link-sort-error" role="alert">{errors.sortOrder}</span>{/if}</label>
+						<label class="wide"><span>{text.url} <span class="required" aria-hidden="true">*</span></span><input name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://" value={form.url} required maxlength="2048" class:invalid={Boolean(errors.url)} aria-invalid={Boolean(errors.url)} aria-describedby={errors.url ? 'external-link-url-error' : 'external-link-url-hint'} oninput={(event) => updateField('url', event.currentTarget.value)} />{#if errors.url}<span class="field-error" id="external-link-url-error" role="alert">{errors.url}</span>{:else}<small id="external-link-url-hint" class="field-hint">{text.urlHint}</small>{/if}</label>
 					</FormSection>
 				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseModal}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : mode === 'add' ? 'Add external link' : 'Save changes'}</button></footer>
+				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseModal}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? common.saving : mode === 'add' ? text.addLink : common.saveChanges}</button></footer>
 			</form>
 		</dialog>
 	</ModalBackdrop>

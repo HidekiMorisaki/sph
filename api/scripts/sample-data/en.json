@@ -1,0 +1,1213 @@
+{
+  "branches": [
+    "London",
+    "Manchester",
+    "Birmingham",
+    "New York",
+    "Los Angeles",
+    "Chicago"
+  ],
+  "lastNames": [
+    "Wilson",
+    "Bennett",
+    "Morgan",
+    "Parker",
+    "Hughes",
+    "Foster",
+    "Hayes",
+    "Collins",
+    "Reed",
+    "Turner",
+    "Brooks",
+    "Ward",
+    "Carter",
+    "Cooper",
+    "Bailey",
+    "Sullivan",
+    "Ellis",
+    "Mitchell",
+    "Gray",
+    "Walker"
+  ],
+  "femaleNames": [
+    "Emma",
+    "Olivia",
+    "Charlotte",
+    "Amelia",
+    "Sophia",
+    "Isabella",
+    "Evelyn",
+    "Grace",
+    "Lily",
+    "Hannah",
+    "Chloe",
+    "Lucy",
+    "Alice",
+    "Sophie",
+    "Ella",
+    "Maya",
+    "Anna",
+    "Clara",
+    "Julia",
+    "Rose"
+  ],
+  "maleNames": [
+    "James",
+    "Oliver",
+    "William",
+    "Henry",
+    "Theodore",
+    "Benjamin",
+    "Lucas",
+    "Alexander",
+    "Daniel",
+    "Thomas",
+    "Samuel",
+    "Nathan",
+    "Adam",
+    "Jack",
+    "Ethan",
+    "Noah",
+    "Leo",
+    "Oscar",
+    "David",
+    "George"
+  ],
+  "roles": [
+    "System Administrator",
+    "Business Administrator",
+    "General User",
+    "Server Administrator"
+  ],
+  "permissions": [
+    "System management",
+    "Administrative management",
+    "Asset management",
+    "Asset credential management"
+  ],
+  "roomNames": [
+    "Main office",
+    "Meeting room",
+    "Technical room"
+  ],
+  "storageNames": [
+    "Assigned equipment",
+    "Spare equipment"
+  ],
+  "note": "Fictional sample for display verification. Use this record to check details, notes and history.",
+  "street": "Example Street",
+  "building": "Sample Office",
+  "phoneLabel": "Reception",
+  "calendar": "Sample working calendar",
+  "working": "Working day",
+  "holiday": "Sample holiday",
+  "external": "Sample intranet",
+  "group": [
+    "Corporate Services",
+    "Product Development",
+    "Customer Success"
+  ],
+  "masters": {
+    "employment_departments": [
+      {
+        "name": "General Affairs"
+      },
+      {
+        "name": "Engineering"
+      },
+      {
+        "name": "Sales"
+      }
+    ],
+    "employee_groups": [
+      {
+        "name": "Corporate Services"
+      },
+      {
+        "name": "Product Development"
+      },
+      {
+        "name": "Customer Success"
+      }
+    ],
+    "employment_positions": [
+      {
+        "name": "Member"
+      },
+      {
+        "name": "Manager"
+      },
+      {
+        "name": "Director"
+      }
+    ],
+    "employment_types": [
+      {
+        "name": "Regular"
+      },
+      {
+        "name": "Contract"
+      },
+      {
+        "name": "Part Time"
+      },
+      {
+        "name": "Temporary"
+      }
+    ],
+    "it_asset_types": [
+      {
+        "name": "Laptop",
+        "supports_cpu": "true",
+        "supports_ram": "true",
+        "supports_os": "true",
+        "supports_login_username": "true",
+        "management_code_prefix": "NPC",
+        "next_management_number": "1"
+      },
+      {
+        "name": "Desktop",
+        "supports_cpu": "true",
+        "supports_ram": "true",
+        "supports_os": "true",
+        "supports_login_username": "true",
+        "management_code_prefix": "DPC",
+        "next_management_number": "1"
+      },
+      {
+        "name": "Server",
+        "supports_cpu": "true",
+        "supports_ram": "true",
+        "supports_os": "true",
+        "supports_login_username": "true",
+        "management_code_prefix": "SRV",
+        "next_management_number": "1"
+      },
+      {
+        "name": "NAS",
+        "supports_cpu": "true",
+        "supports_ram": "true",
+        "supports_os": "true",
+        "supports_login_username": "true",
+        "management_code_prefix": "NAS",
+        "next_management_number": "1"
+      },
+      {
+        "name": "UTM",
+        "supports_cpu": "false",
+        "supports_ram": "false",
+        "supports_os": "false",
+        "supports_login_username": "false",
+        "management_code_prefix": "UTM",
+        "next_management_number": "1"
+      },
+      {
+        "name": "UPS",
+        "supports_cpu": "false",
+        "supports_ram": "false",
+        "supports_os": "false",
+        "supports_login_username": "false",
+        "management_code_prefix": "UPS",
+        "next_management_number": "1"
+      },
+      {
+        "name": "PC peripheral",
+        "supports_cpu": "false",
+        "supports_ram": "false",
+        "supports_os": "false",
+        "supports_login_username": "false",
+        "management_code_prefix": "OTH",
+        "next_management_number": "1"
+      },
+      {
+        "name": "Display",
+        "supports_cpu": "false",
+        "supports_ram": "false",
+        "supports_os": "false",
+        "supports_login_username": "false",
+        "management_code_prefix": "DSP",
+        "next_management_number": "1"
+      }
+    ],
+    "it_asset_statuses": [
+      {
+        "name": "Normal",
+        "disposal_date_policy": "prohibited"
+      },
+      {
+        "name": "Broken",
+        "disposal_date_policy": "prohibited"
+      },
+      {
+        "name": "Pending disposal",
+        "disposal_date_policy": "optional"
+      },
+      {
+        "name": "Disposed",
+        "disposal_date_policy": "required"
+      }
+    ],
+    "manufacturers": [
+      {
+        "name": "Intel",
+        "official_url": "https://www.intel.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Lenovo",
+        "official_url": "https://www.lenovo.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "ASUS",
+        "official_url": "https://www.asus.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Acer",
+        "official_url": "https://www.acer.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Panasonic",
+        "official_url": "https://www.panasonic.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Dynabook",
+        "official_url": "https://dynabook.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "IBM",
+        "official_url": "https://www.ibm.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Supermicro",
+        "official_url": "https://www.supermicro.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Synology",
+        "official_url": "https://www.synology.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "QNAP",
+        "official_url": "https://www.qnap.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Buffalo",
+        "official_url": "https://www.buffalo.jp/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "AMD",
+        "official_url": "https://www.amd.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "I-O DATA",
+        "official_url": "https://www.iodata.jp/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Cisco",
+        "official_url": "https://www.cisco.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Fortinet",
+        "official_url": "https://www.fortinet.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Palo Alto Networks",
+        "official_url": "https://www.paloaltonetworks.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Yamaha",
+        "official_url": "https://network.yamaha.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "SonicWall",
+        "official_url": "https://www.sonicwall.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "APC by Schneider Electric",
+        "official_url": "https://www.apc.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Eaton",
+        "official_url": "https://www.eaton.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "OMRON",
+        "official_url": "https://www.omron.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "CyberPower",
+        "official_url": "https://www.cyberpower.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Apple",
+        "official_url": "https://www.apple.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "NEC",
+        "official_url": "https://www.nec.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Mouse Computer",
+        "official_url": "https://www.mouse-jp.co.jp/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Fujitsu",
+        "official_url": "https://www.fujitsu.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Dell Technologies",
+        "official_url": "https://www.dell.com/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "name": "Hewlett Packard Enterprise",
+        "official_url": "https://www.hpe.com/",
+        "source_checked_on": "2026-09-21"
+      }
+    ],
+    "cpu_types": [
+      {
+        "series": "Core i5",
+        "model_number": "i5-2450M",
+        "name": "Intel Core i5-2450M",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "i7-14700K",
+        "name": "Intel Core i7-14700K",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Ryzen 7",
+        "model_number": "7840U",
+        "name": "AMD Ryzen 7 7840U",
+        "official_url": "https://www.amd.com/en/products/specifications.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "Ryzen 9",
+        "model_number": "7950X",
+        "name": "AMD Ryzen 9 7950X",
+        "official_url": "https://www.amd.com/en/products/specifications.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "EPYC",
+        "model_number": "9654",
+        "name": "AMD EPYC 9654",
+        "official_url": "https://www.amd.com/en/products/processors/server/epyc.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "Apple M",
+        "model_number": "M1",
+        "name": "Apple M1",
+        "official_url": "https://support.apple.com/",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Apple"
+      },
+      {
+        "series": "Apple M",
+        "model_number": "M2",
+        "name": "Apple M2",
+        "official_url": "https://support.apple.com/",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Apple"
+      },
+      {
+        "series": "Apple M",
+        "model_number": "M3",
+        "name": "Apple M3",
+        "official_url": "https://support.apple.com/",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Apple"
+      },
+      {
+        "series": "Apple M",
+        "model_number": "M4",
+        "name": "Apple M4",
+        "official_url": "https://support.apple.com/",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Apple"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "i5-3230M",
+        "name": "Intel Core i5-3230M",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "i5-3340M",
+        "name": "Intel Core i5-3340M",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "i7-4710MQ",
+        "name": "Intel Core i7-4710MQ",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "i5-6200U",
+        "name": "Intel Core i5-6200U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "i7-8565U",
+        "name": "Intel Core i7-8565U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Ryzen 5",
+        "model_number": "7530U",
+        "name": "AMD Ryzen 5 7530U",
+        "official_url": "https://www.amd.com/en/products/specifications.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "Core i9",
+        "model_number": "i9-13900",
+        "name": "Intel Core i9-13900",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "i5-13600K",
+        "name": "Intel Core i5-13600K",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-21",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Celeron",
+        "model_number": "2955U",
+        "name": "Intel Celeron 2955U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "A-Series",
+        "model_number": "A6-9225",
+        "name": "AMD A-Series A6-9225",
+        "official_url": "https://www.amd.com/en/products/specifications.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "Ryzen 7",
+        "model_number": "5800U",
+        "name": "AMD Ryzen 7 5800U",
+        "official_url": "https://www.amd.com/en/products/specifications.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "AMD"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "1235U",
+        "name": "Intel Core i5-1235U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "7Y57",
+        "name": "Intel Core i5-7Y57",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i3",
+        "model_number": "5005U",
+        "name": "Intel Core i3-5005U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i3",
+        "model_number": "8145U",
+        "name": "Intel Core i3-8145U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "10210U",
+        "name": "Intel Core i5-10210U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "10500",
+        "name": "Intel Core i5-10500",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "1135G7",
+        "name": "Intel Core i5-1135G7",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "1145G7",
+        "name": "Intel Core i5-1145G7",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "11500",
+        "name": "Intel Core i5-11500",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "12500",
+        "name": "Intel Core i5-12500",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "1334U",
+        "name": "Intel Core i5-1334U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "4200M",
+        "name": "Intel Core i5-4200M",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "4200U",
+        "name": "Intel Core i5-4200U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "4460",
+        "name": "Intel Core i5-4460",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i5",
+        "model_number": "8250U",
+        "name": "Intel Core i5-8250U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "1360P",
+        "name": "Intel Core i7-1360P",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "10700",
+        "name": "Intel Core i7-10700",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "11370H",
+        "name": "Intel Core i7-11370H",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "1165G7",
+        "name": "Intel Core i7-1165G7",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "3770",
+        "name": "Intel Core i7-3770",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "8550U",
+        "name": "Intel Core i7-8550U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i9",
+        "model_number": "10900",
+        "name": "Intel Core i9-10900",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core Ultra 5",
+        "model_number": "226V",
+        "name": "Intel Core Ultra 5 226V",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core Ultra 7",
+        "model_number": "285V",
+        "name": "Intel Core Ultra 7 285V",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Xeon 6",
+        "model_number": "6333P",
+        "name": "Intel Xeon 6 6333P",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core i7",
+        "model_number": "14700KF",
+        "name": "Intel Core i7-14700KF",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      },
+      {
+        "series": "Core 7",
+        "model_number": "150U",
+        "name": "Intel Core 7 150U",
+        "official_url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "source_checked_on": "2026-09-25",
+        "manufacturer_name": "Intel"
+      }
+    ],
+    "operating_systems": [
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "10",
+        "edition": "Pro",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 10 Pro (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-10-home-and-pro",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "22.04 LTS",
+        "edition": "Desktop",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 22.04 LTS Desktop (amd64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "24.04 LTS",
+        "edition": "Desktop",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 24.04 LTS Desktop (amd64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "26.04 LTS",
+        "edition": "Desktop",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 26.04 LTS Desktop (amd64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "22.04 LTS",
+        "edition": "Server",
+        "architecture": "arm64",
+        "display_name": "Ubuntu 22.04 LTS Server (arm64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "24.04 LTS",
+        "edition": "Server",
+        "architecture": "arm64",
+        "display_name": "Ubuntu 24.04 LTS Server (arm64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "26.04 LTS",
+        "edition": "Server",
+        "architecture": "arm64",
+        "display_name": "Ubuntu 26.04 LTS Server (arm64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Red Hat",
+        "product": "Red Hat Enterprise Linux",
+        "version": "8",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "Red Hat Enterprise Linux 8 (x64)",
+        "official_url": "https://access.redhat.com/support/policy/updates/errata",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Red Hat",
+        "product": "Red Hat Enterprise Linux",
+        "version": "9",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "Red Hat Enterprise Linux 9 (x64)",
+        "official_url": "https://access.redhat.com/support/policy/updates/errata",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Debian Project",
+        "product": "Debian",
+        "version": "12",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "Debian 12 (x64)",
+        "official_url": "https://www.debian.org/releases/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Debian Project",
+        "product": "Debian",
+        "version": "13",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "Debian 13 (x64)",
+        "official_url": "https://www.debian.org/releases/",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "10",
+        "edition": "Enterprise",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 10 Enterprise (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-10-enterprise-and-education",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Apple",
+        "product": "macOS",
+        "version": "14 Sonoma",
+        "edition": null,
+        "architecture": "ARM64",
+        "display_name": "Apple macOS 14 Sonoma",
+        "official_url": "https://support.apple.com/en-us/109033",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Apple",
+        "product": "macOS",
+        "version": "15 Sequoia",
+        "edition": null,
+        "architecture": "ARM64",
+        "display_name": "Apple macOS 15 Sequoia",
+        "official_url": "https://support.apple.com/en-us/109033",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "20.04 LTS",
+        "edition": "Server",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 20.04 LTS Server (amd64)",
+        "official_url": "https://documentation.ubuntu.com/release-notes/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "22.04 LTS",
+        "edition": "Server",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 22.04 LTS Server (amd64)",
+        "official_url": "https://documentation.ubuntu.com/release-notes/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "24.04 LTS",
+        "edition": "Server",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 24.04 LTS Server (amd64)",
+        "official_url": "https://documentation.ubuntu.com/release-notes/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "26.04 LTS",
+        "edition": "Server",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 26.04 LTS Server (amd64)",
+        "official_url": "https://documentation.ubuntu.com/release-notes/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CentOS Project",
+        "product": "CentOS Linux",
+        "version": "7",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "CentOS Linux 7 (x64)",
+        "official_url": "https://www.centos.org/centos-linux/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CentOS Project",
+        "product": "CentOS Linux",
+        "version": "8",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "CentOS Linux 8 (x64)",
+        "official_url": "https://www.centos.org/centos-linux/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CentOS Project",
+        "product": "CentOS Stream",
+        "version": "8",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "CentOS Stream 8 (x64)",
+        "official_url": "https://www.centos.org/cl-vs-cs/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CentOS Project",
+        "product": "CentOS Stream",
+        "version": "9",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "CentOS Stream 9 (x64)",
+        "official_url": "https://www.centos.org/download/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CentOS Project",
+        "product": "CentOS Stream",
+        "version": "10",
+        "edition": null,
+        "architecture": "x64",
+        "display_name": "CentOS Stream 10 (x64)",
+        "official_url": "https://www.centos.org/centos10/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Google",
+        "product": "ChromeOS",
+        "version": "154",
+        "edition": "Stable",
+        "architecture": null,
+        "display_name": "Google ChromeOS 154 Stable",
+        "official_url": "https://support.google.com/chrome/a/answer/7679408",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Google",
+        "product": "ChromeOS",
+        "version": "144",
+        "edition": "LTS",
+        "architecture": null,
+        "display_name": "Google ChromeOS 144 LTS",
+        "official_url": "https://support.google.com/chrome/a/answer/12239814",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CachyOS",
+        "product": "CachyOS",
+        "version": "Rolling",
+        "edition": "Desktop",
+        "architecture": "x64",
+        "display_name": "CachyOS Rolling Desktop (x64)",
+        "official_url": "https://www.cachyos.org/download/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "CachyOS",
+        "product": "CachyOS",
+        "version": "Rolling",
+        "edition": "Handheld",
+        "architecture": "x64",
+        "display_name": "CachyOS Rolling Handheld (x64)",
+        "official_url": "https://www.cachyos.org/download/",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "7 SP1",
+        "edition": "Professional",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 7 SP1 Professional (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-7",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "7 SP1",
+        "edition": "Enterprise",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 7 SP1 Enterprise (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-7",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "8",
+        "edition": "Professional",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 8 Professional (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-8",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "8",
+        "edition": "Enterprise",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 8 Enterprise (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-8",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "8.1",
+        "edition": "Professional",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 8.1 Professional (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-81",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "8.1",
+        "edition": "Enterprise",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 8.1 Enterprise (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-81",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "XP SP3",
+        "edition": "Professional",
+        "architecture": "x86",
+        "display_name": "Microsoft Windows XP SP3 Professional (x86)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-xp",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "XP SP2",
+        "edition": "Professional",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows XP SP2 Professional (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-xp",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "2000 SP4",
+        "edition": "Professional",
+        "architecture": "x86",
+        "display_name": "Microsoft Windows 2000 SP4 Professional (x86)",
+        "official_url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows Server",
+        "version": "2000 SP4",
+        "edition": "Server",
+        "architecture": "x86",
+        "display_name": "Microsoft Windows 2000 Server SP4 (x86)",
+        "official_url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version",
+        "source_checked_on": "2026-09-25"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "11",
+        "edition": "Pro",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 11 Pro (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "11",
+        "edition": "Enterprise",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows 11 Enterprise (x64)",
+        "official_url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows",
+        "version": "11",
+        "edition": "Pro",
+        "architecture": "ARM64",
+        "display_name": "Microsoft Windows 11 Pro (ARM64)",
+        "official_url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows Server",
+        "version": "2019",
+        "edition": "Standard",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows Server 2019 Standard",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2019",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows Server",
+        "version": "2022",
+        "edition": "Standard",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows Server 2022 Standard",
+        "official_url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2022",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Microsoft",
+        "product": "Windows Server",
+        "version": "2025",
+        "edition": "Standard",
+        "architecture": "x64",
+        "display_name": "Microsoft Windows Server 2025 Standard",
+        "official_url": "https://learn.microsoft.com/en-us/windows-server/get-started/windows-server-release-info",
+        "source_checked_on": "2026-09-21"
+      },
+      {
+        "vendor": "Canonical",
+        "product": "Ubuntu",
+        "version": "20.04 LTS",
+        "edition": "Desktop",
+        "architecture": "amd64",
+        "display_name": "Ubuntu 20.04 LTS Desktop (amd64)",
+        "official_url": "https://ubuntu.com/about/release-cycle",
+        "source_checked_on": "2026-09-21"
+      }
+    ]
+  }
+}

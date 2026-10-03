@@ -13,6 +13,7 @@ export function itAssetErrorResponse(error: unknown) {
 	if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') return null;
 	const diagnostic = `${JSON.stringify(error.meta ?? {})} ${error.message}`;
 	if (diagnostic.includes('asset_tag') || diagnostic.includes('assetTag') || diagnostic.includes('ItAssetManagementCode') || diagnostic.includes('it_asset_management_codes')) return failure(409, 'IT_ASSET_FIELD_CONFLICT', 'An IT asset already uses this value.', [{ field: 'assetTag', reason: 'This management code is already in use.' }]);
+	if (diagnostic.includes('it_asset_ip_addresses_active_room_ip_key') || (diagnostic.includes('room_id') && diagnostic.includes('ip_address'))) return failure(409, 'IT_ASSET_FIELD_CONFLICT', 'An IT asset already uses this IP address in the selected room.', [{ field: 'ipAddress1', reason: 'This IP address is already in use in the selected room.' }, { field: 'ipAddress2', reason: 'This IP address is already in use in the selected room.' }]);
 	if ((diagnostic.includes('manufacturer_id') || diagnostic.includes('manufacturerId')) && (diagnostic.includes('serial_number') || diagnostic.includes('serialNumber'))) return failure(409, 'IT_ASSET_FIELD_CONFLICT', 'An IT asset already uses this value.', [{ field: 'serialNumber', reason: 'This serial number is already in use for the selected manufacturer.' }]);
 	return failure(409, 'IT_ASSET_FIELD_CONFLICT', 'An IT asset already uses this value.');
 }

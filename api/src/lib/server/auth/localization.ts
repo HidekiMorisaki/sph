@@ -1,8 +1,12 @@
+import en from '../locales/en.json' with { type: 'json' };
+import ja from '../locales/ja.json' with { type: 'json' };
+
 export const DEFAULT_TIME_ZONE = 'Asia/Tokyo';
 export const DEFAULT_DISPLAY_LANGUAGE = 'en';
+// Application allowlist: valid language tags are not necessarily supported UI languages.
 export const DISPLAY_LANGUAGES = [
-	{ value: 'en', label: 'English' },
-	{ value: 'ja', label: '日本語' }
+	{ value: 'en', label: en.languageName },
+	{ value: 'ja', label: ja.languageName }
 ] as const;
 
 export type DisplayLanguage = (typeof DISPLAY_LANGUAGES)[number]['value'];

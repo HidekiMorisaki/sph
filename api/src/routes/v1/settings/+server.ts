@@ -24,7 +24,7 @@ export async function PATCH({ request, locals }: import('./$types').RequestEvent
 	const body = await request.json().catch(() => null) as Record<string, unknown> | null;
 	const details = [
 		...(!isTimeZone(body?.timeZone) ? [{ field: 'timeZone', reason: 'Select a valid time zone.' }] : []),
-		...(!isDisplayLanguage(body?.displayLanguage) ? [{ field: 'displayLanguage', reason: 'Select English or Japanese.' }] : [])
+		...(!isDisplayLanguage(body?.displayLanguage) ? [{ field: 'displayLanguage', reason: 'Select a supported display language.' }] : [])
 	];
 	if (details.length || !body) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', details);
 

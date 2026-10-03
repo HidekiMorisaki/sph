@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { localeMessages } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
+	import { employeeFieldError, employeeSaveError } from '$lib/employee-messages';
 	import { apiData } from '$lib/api';
 	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
-	import { genderOptions, localization } from '$lib/localization';
+	import { genderOptions, localization, personNameFields } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
 	import DatePicker from './DatePicker.svelte';
 	import DiscardChangesDialog from './DiscardChangesDialog.svelte';
@@ -10,6 +12,10 @@
 	import ModalBackdrop from './ModalBackdrop.svelte';
 	import SearchSelect from './SearchSelect.svelte';
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
+
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
+	let text = $derived(localeMessages[$localization.displayLanguage].employees);
+	let nameFields = $derived(personNameFields($localization));
 
 	type Mode = 'create' | 'admin-edit';
 	type DateField = 'birthDate' | 'hiredAt' | 'retiredAt';
@@ -51,7 +57,7 @@
 	let form = $state(blank());
 	let missingFields = $state<string[]>([]);
 	let fieldErrors = $state<Record<string, string>>({});
-	let formError = $state('');
+	let formError = $state<{ code?: string; status: number } | 'saveConnectionFailed' | null>(null);
 	let saving = $state(false);
 	let activeDateField = $state<DateField | null>(null);
 	let initialSnapshot = $state('');
@@ -62,7 +68,7 @@
 	let hasUnsavedChanges = $derived(mode !== 'create' && initialSnapshot !== '' && formSnapshot(adminPayload()) !== initialSnapshot);
 
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
-	const fieldError = (field: string) => fieldErrors[field] ?? (missingFields.includes(field) ? (field === 'roleIds' ? 'Select at least one role.' : 'This field is required.') : '');
+	const fieldError = (field: string) => (fieldErrors[field] ? employeeFieldError(fieldErrors[field], $localization.displayLanguage) : undefined) ?? (missingFields.includes(field) ? (field === 'roleIds' ? text.roleRequired : text.required) : '');
 	function initializeForm() {
 		if (!employee) { form = blank(); return; }
 		const full = employee;
@@ -80,7 +86,7 @@
 	function clearFieldError(field: string) {
 		if (fieldErrors[field]) { const next = { ...fieldErrors }; delete next[field]; fieldErrors = next; }
 		missingFields = missingFields.filter((name) => name !== field);
-		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = '';
+		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = null;
 	}
 	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds'>, value: string) { form[field] = value; clearFieldError(field); }
 	function chooseDepartments(values: string[]) {
@@ -124,7 +130,7 @@
 	}
 	function adminPayload() { return { ...form, primaryDepartmentId: form.primaryDepartmentId || null, primaryPositionId: form.positionIds[0] ?? null }; }
 	async function save() {
-		formError = ''; fieldErrors = {};
+		formError = null; fieldErrors = {};
 		const pickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'];
 		missingFields = [...pickerFields.filter((field) => !form[field as keyof Form]), ...(!form.roleIds.length ? ['roleIds'] : [])];
 		if (missingFields.length) { focusFormField(missingFields[0]); return; }
@@ -136,7 +142,7 @@
 				const body = await response.json().catch(() => null) as ApiErrorPayload | null;
 				const details = body?.error?.details ?? [];
 				fieldErrors = Object.fromEntries(details.flatMap((detail) => detail.field ? [[detail.field, detail.reason]] : []));
-				formError = body?.error?.code === 'ROLE_ASSIGNMENT_FORBIDDEN' ? 'You cannot assign or remove the System Administrator role.' : body?.error?.code === 'LAST_SYSTEM_ADMINISTRATOR' ? 'The last System Administrator role cannot be removed.' : body?.error?.message ?? 'Unable to save the employee.';
+				formError = { code: body?.error?.code, status: response.status };
 				const firstField = details.find((detail) => detail.field)?.field;
 				if (firstField) void tick().then(() => focusFormField(firstField));
 				return;
@@ -145,7 +151,7 @@
 			await onSaved(saved);
 			onClose();
 			void tick().then(() => returnFocus?.focus());
-		} catch { formError = 'Unable to save the employee. Check your connection and try again.'; }
+		} catch { formError = 'saveConnectionFailed'; }
 		finally { saving = false; }
 	}
 	function windowKeydown(event: KeyboardEvent) {
@@ -175,28 +181,31 @@
 
 <ModalBackdrop onDismiss={requestClose} disabled={saving}>
 	<dialog bind:this={dialogElement} class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title">
-		<header><h2 id="employee-form-title">{mode === 'create' ? 'Add employee' : 'Edit employee'}</h2><button class="app-modal-close" type="button" aria-label="Close employee form" disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><button class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form class="employee-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body">
-				{#if formError}<div class="app-modal-error-summary wide" role="alert"><strong>Unable to save employee</strong><span>{formError}</span></div>{/if}
-				<FormSection title="Basic information" framed>
-					{@render textInput('Employee code', 'employeeCode', 'e.g. JPDEMO00000001', 64, true, 'text', '[A-Za-z0-9]{10,64}', 10)}
-					{@render textInput('First name', 'firstName', 'e.g. Hana', 128, true)}{@render textInput('Middle name', 'middleName', 'e.g. Marie', 128)}{@render textInput('Last name', 'lastName', 'e.g. Yamada', 128, true)}{@render textInput('Name (Kana)', 'nameKana', 'e.g. ヤマダ ハナ', 255)}{@render dateInput('Birth date', 'birthDate', form.birthDate, false, true)}{@render formSelect('Gender', 'gender', [{ value: '', label: '-' }, ...genders], true)}{@render formSelect('Blood type', 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
+				{#if formError}<div class="app-modal-error-summary wide" role="alert"><strong>{text.saveHeading}</strong><span>{typeof formError === 'string' ? text[formError] : employeeSaveError(formError.code, formError.status, $localization.displayLanguage)}</span></div>{/if}
+				<FormSection title={text.basic} framed>
+					{@render textInput(text.employeeCode, 'employeeCode', text.examples.employeeCode, 64, true, 'text', '[A-Za-z0-9]{10,64}', 10)}
+					{#each nameFields as field (field)}
+						{@render textInput(text[field], field, text.examples[field], 128, field !== 'middleName')}
+					{/each}
+					{@render textInput(text.nameKana, 'nameKana', localeMessages[$localization.displayLanguage].employeeForm.nameKanaExample, 255)}{@render dateInput(text.birthDate, 'birthDate', form.birthDate, false, true)}{@render formSelect(text.gender, 'gender', [{ value: '', label: '-' }, ...genders], true)}{@render formSelect(text.bloodType, 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
 				</FormSection>
-				<FormSection title="Contact information" framed>
-					{@render textInput('Postal code', 'postalCode', 'e.g. 100-0001', 8, false, 'text', '\\d{3}-?\\d{4}')}{@render textInput('Prefecture', 'prefecture', 'e.g. Tokyo', 64)}{@render textInput('City', 'city', 'e.g. Chiyoda', 128)}{@render textInput('Street address', 'streetAddress', 'e.g. Chiyoda 1-1', 255)}{@render textInput('Building', 'buildingName', 'e.g. Main Building 3F', 255)}{@render textInput('Mobile phone', 'mobilePhone', 'e.g. 090-1234-5678', 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput('Email', 'email', 'e.g. hana@example.com', 254, true, 'email')}
+				<FormSection title={text.contact} framed>
+					{@render textInput(text.postalCode, 'postalCode', text.examples.postalCode, 8, false, 'text', '\\d{3}-?\\d{4}')}{@render textInput(text.prefecture, 'prefecture', text.examples.prefecture, 64)}{@render textInput(text.city, 'city', text.examples.city, 128)}{@render textInput(text.streetAddress, 'streetAddress', text.examples.streetAddress, 255)}{@render textInput(text.buildingName, 'buildingName', text.examples.buildingName, 255)}{@render textInput(text.mobilePhone, 'mobilePhone', text.examples.mobilePhone, 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput(text.email, 'email', text.examples.email, 254, true, 'email')}
 				</FormSection>
-					<FormSection title="Employment" framed>
-						{@render dateInput('Hire date', 'hiredAt', form.hiredAt, false, true)}<SearchMultiSelect label="Departments" field="departmentIds" values={form.departmentIds} options={(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('departmentIds')} onOpen={() => activeDateField = null} onChange={chooseDepartments} />{@render formSelect('Primary department', 'primaryDepartmentId', [{ value: '', label: '-' }, ...selectedDepartmentOptions], false, !form.departmentIds.length)}{@render formSelect('Group', 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.primaryDepartmentId)}<SearchMultiSelect label="Positions" field="positionIds" values={form.positionIds} options={(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('positionIds') || fieldError('primaryPositionId')} onOpen={() => activeDateField = null} onChange={choosePositions} />{@render formSelect('Employment type', 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect('Branch', 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput('Retirement date', 'retiredAt', form.retiredAt, true)}
+					<FormSection title={text.employment} framed>
+						{@render dateInput(text.hiredAt, 'hiredAt', form.hiredAt, false, true)}<SearchMultiSelect label={text.departments} field="departmentIds" values={form.departmentIds} options={(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('departmentIds')} onOpen={() => activeDateField = null} onChange={chooseDepartments} />{@render formSelect(text.primaryDepartmentId, 'primaryDepartmentId', [{ value: '', label: '-' }, ...selectedDepartmentOptions], false, !form.departmentIds.length)}{@render formSelect(text.groupId, 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.primaryDepartmentId)}<SearchMultiSelect label={text.positions} field="positionIds" values={form.positionIds} options={(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('positionIds') || fieldError('primaryPositionId')} onOpen={() => activeDateField = null} onChange={choosePositions} />{@render formSelect(text.employmentTypeId, 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect(text.branchId, 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput(text.retiredAt, 'retiredAt', form.retiredAt, true)}
 					</FormSection>
-					<FormSection title="Additional information" framed>
-						<label class="wide">Notes<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder="e.g. Notes about this employee" oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
+					<FormSection title={text.additional} framed>
+						<label class="wide">{text.notes}<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder={text.examples.notes} oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
 					</FormSection>
-					<FormSection title="Access" framed>
-						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>Roles <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="checkbox" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>Only a System Administrator can change a role with system management permission.</small>{/if}</fieldset>
+					<FormSection title={text.access} framed>
+						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="checkbox" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
 					</FormSection>
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : mode === 'create' ? 'Add employee' : 'Save changes'}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>

@@ -33,7 +33,7 @@ export async function POST({ request }: import('./$types').RequestEvent) {
 		if (!invitation || invitation.emailAtIssue !== invitation.employee.email) return false;
 		const updated = await tx.employee.updateMany({ where: {
 			id: invitation.employeeId, email: invitation.emailAtIssue, deletedAt: null, accountStatus: 'unprovisioned'
-		}, data: { passwordHash, accountStatus: 'active', mustChangeCredentials: false } });
+		}, data: { passwordHash, accountStatus: 'active' } });
 		if (updated.count !== 1) return false;
 		await tx.accountInvitation.update({ where: { id: invitation.id }, data: { usedAt: new Date() } });
 		await tx.accountInvitation.updateMany({ where: {

@@ -1,0 +1,43 @@
+{
+	"errors": {
+		"hostname": "Enter a valid hostname with labels of 63 characters or fewer.",
+		"url": "Enter an absolute HTTP or HTTPS URL without embedded credentials.",
+		"ip": "Enter a valid IPv4 or IPv6 address.",
+		"validCode": "Enter a valid management code.",
+		"codeLength": "Enter 64 characters or fewer.",
+		"selectValue": "Select a value.",
+		"validValue": "Select a valid value.",
+		"validEmployee": "Select a valid employee.",
+		"date": "Enter a valid date in yyyy-mm-dd format.",
+		"disposalBeforePurchase": "Disposal date cannot be before purchase date.",
+		"existingType": "Select an existing type.",
+		"existingManufacturer": "Select an existing manufacturer.",
+		"existingCpu": "Select an existing CPU type.",
+		"existingOs": "Select an existing operating system.",
+		"existingStorage": "Select an existing storage.",
+		"existingStatus": "Select an existing status.",
+		"unsupportedCpu": "This type does not support a CPU type.",
+		"unsupportedRam": "This type does not support RAM.",
+		"unsupportedOs": "This type does not support an operating system.",
+		"statusDisposalRequired": "Select a disposal date for this status.",
+		"statusDisposalProhibited": "This status does not allow a disposal date.",
+		"activeEmployee": "Select an active employee.",
+		"validCredentials": "Enter valid credential changes.",
+		"credentialType": "Select a valid credential type.",
+		"credentialChange": "Enter a valid credential change.",
+		"credentialPassword": "Enter a password between 1 and 1024 characters, or clear the credential.",
+		"codeExhausted": "No management codes remain for this type.",
+		"codeConflict": "This management code is already in use.",
+		"ipConflict": "This IP address is already in use in the selected room.",
+		"serialConflict": "This serial number is already in use for the selected manufacturer."
+	},
+	"messages": {
+		"codeRequired": "Enter a management code.",
+		"purchaseRequired": "Select a purchase date.",
+		"ramInvalid": "Enter a whole number greater than zero.",
+		"differentIp": "Enter a different IP address for the second network interface.",
+		"passwordLength": "Enter 1024 characters or fewer.",
+		"codePrefix": "Management code must start with the selected type prefix \"{1}\".",
+		"codeDigits": "Enter {1} followed by exactly 3 digits."
+	}
+}

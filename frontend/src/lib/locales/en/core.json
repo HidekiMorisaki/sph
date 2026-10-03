@@ -1,0 +1,50 @@
+{
+	"language": {
+		"label": "English",
+		"locale": "en-US",
+		"employeeNameFallbackOrder": "givenFirst",
+		"durationPartSeparator": " ",
+		"removeDurationUnitSpacing": false,
+		"invitationEmailSubject": "{1} invitation link"
+	},
+	"calendar": {
+		"required": "required",
+		"calendar": "calendar",
+		"previousYears": "Previous 12 years",
+		"nextYears": "Next 12 years",
+		"backToCalendar": "Back to calendar",
+		"previousYear": "Previous year",
+		"previousMonth": "Previous month",
+		"chooseYear": "Choose year",
+		"nextMonth": "Next month",
+		"nextYear": "Next year",
+		"clear": "Clear",
+		"today": "Today",
+		"chooseYearLabel": "Choose year, {1}"
+	},
+	"genderLabels": {
+		"female": "Female",
+		"male": "Male",
+		"unspecified": "Unspecified"
+	},
+	"weekdays": {
+		"compact": [
+			"Su",
+			"Mo",
+			"Tu",
+			"We",
+			"Th",
+			"Fr",
+			"Sa"
+		],
+		"short": [
+			"Sun",
+			"Mon",
+			"Tue",
+			"Wed",
+			"Thu",
+			"Fri",
+			"Sat"
+		]
+	}
+}

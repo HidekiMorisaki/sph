@@ -1,13 +1,9 @@
-﻿.env
-__pycache__/
-*.pyc
+.env
+.env.install-clean
 .svelte-kit/
 node_modules/
 build/
-staticfiles/
-frontend/src/lib/server/generated/
 api/src/lib/server/generated/
-/TEMP/
-/backups/
-/sph-backups/
 *.dump
+
+.vite/

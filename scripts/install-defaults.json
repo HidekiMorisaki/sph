@@ -1,0 +1,12 @@
+{
+	"en": {
+		"firstName": "Alex",
+		"lastName": "Morgan",
+		"branch": "London"
+	},
+	"ja": {
+		"firstName": "太郎",
+		"lastName": "山田",
+		"branch": "東京"
+	}
+}

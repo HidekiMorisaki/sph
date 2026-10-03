@@ -3,7 +3,7 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals { displayLanguage?: 'en' | 'ja' }
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

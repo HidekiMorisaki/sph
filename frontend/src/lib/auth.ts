@@ -4,6 +4,8 @@ export type Capabilities = {
 	canManageSystemSettings: boolean;
 	canManageAdministration: boolean;
 	canManageAssets: boolean;
+	canReadAssetCredentials: boolean;
+	canWriteAssetCredentials: boolean;
 };
 
 export type SessionRole = { id: number; name: string };
@@ -17,7 +19,6 @@ export type SessionUser = {
 	lastName: string;
 	roles: SessionRole[];
 	capabilities: Capabilities;
-	mustChangeCredentials: boolean;
 } & LocalizationSettings;
 
 export const roleNames = (user: Pick<SessionUser, 'roles'>) => user.roles.map((role) => role.name).join(', ');

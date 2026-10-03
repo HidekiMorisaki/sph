@@ -29,11 +29,15 @@ application="$(manifest_string "$manifest_path" application)"
 archive_format="$(manifest_string "$manifest_path" archiveFormat)"
 archive_file="$(manifest_string "$manifest_path" archiveFile)"
 expected_hash="$(manifest_string "$manifest_path" sha256)"
+expected_credential_key_fingerprint="$(manifest_string "$manifest_path" credentialEncryptionKeyFingerprint)"
 manifest_database="$(manifest_string "$manifest_path" databaseName)"
 verified_restore="$(sed -n 's/^[[:space:]]*"verifiedRestore":[[:space:]]*\(true\|false\).*/\1/p' "$manifest_path" | head -n 1)"
 [[ "$format_version" == 1 && "$application" == 'SME Portal Hub' && "$archive_format" == 'postgresql-custom' && "$verified_restore" == true ]] || { echo 'The backup manifest is invalid or was not restore-verified.' >&2; exit 1; }
 [[ "$archive_file" =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'The backup archive name is invalid.' >&2; exit 1; }
 [[ "$expected_hash" =~ ^[0-9a-f]{64}$ ]] || { echo 'The backup archive checksum is invalid.' >&2; exit 1; }
+if [[ -n "$expected_credential_key_fingerprint" ]]; then
+	[[ "$expected_credential_key_fingerprint" =~ ^[0-9a-f]{64}$ && "$expected_credential_key_fingerprint" == "$(credential_encryption_key_fingerprint)" ]] || { echo 'The configured IT asset credential encryption key does not match this backup.' >&2; exit 1; }
+fi
 archive_path="$backup_directory/$archive_file"
 [[ -f "$archive_path" ]] || { echo 'The backup archive is missing.' >&2; exit 1; }
 [[ "$(sha256_file "$archive_path")" == "$expected_hash" ]] || { echo 'The backup archive checksum does not match its manifest.' >&2; exit 1; }
@@ -62,6 +66,7 @@ sph_compose exec -T db sh -c 'createdb --username="$POSTGRES_USER" "$1"' sh "$SP
 sph_compose exec -T db sh -c 'pg_restore --exit-on-error --no-owner --no-privileges --username="$POSTGRES_USER" --dbname="$1" "$2"' sh "$SPH_DATABASE_NAME" "$SPH_TEMP_ARCHIVE"
 
 sph_compose build migration api frontend
+sph_compose run --rm --no-deps --volume "$backup_directory:/baseline-backup" migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json --if-legacy
 sph_compose run --rm --no-deps migration
 invalidate_sql='UPDATE sessions SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL; UPDATE password_reset_tokens SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL; UPDATE account_invitations SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL;'
 sph_compose exec -T db psql --no-psqlrc --set ON_ERROR_STOP=1 --username "$SPH_DATABASE_USER" --dbname "$SPH_DATABASE_NAME" --command "$invalidate_sql"

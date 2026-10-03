@@ -1,16 +1,18 @@
 <script lang="ts">
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount } from 'svelte';
 	import { productName } from '$lib/brand';
 	import { roleNames, type SessionUser } from '$lib/auth';
 	import MenuItemIcon from '$lib/components/MenuItemIcon.svelte';
 	import { clearExternalLinks, externalLinks, loadExternalLinks } from '$lib/externalLinks';
 	import { formatEmployeeName, localization } from '$lib/localization';
-	import { icons, menus, parentMenuForPath, type Item, type MenuGroup } from './sidebarNavigation';
+	import { icons, localizedMenus, parentMenuForPath, type Item, type MenuGroup } from './sidebarNavigation';
 
-	let { collapsed, user, currentPath = '', home = false, onLogout }: { collapsed: boolean; user: SessionUser | null; currentPath?: string; home?: boolean; onLogout: () => void | Promise<void> } = $props();
+	let { collapsed, user, currentPath = '', onLogout }: { collapsed: boolean; user: SessionUser | null; currentPath?: string; onLogout: () => void | Promise<void> } = $props();
+	let navigationText = $derived(localeMessages[$localization.displayLanguage].navigation);
 	let canManageMasters = $derived(Boolean(user?.capabilities.canManageAdministration));
-	let sidebarMenus = $derived.by((): MenuGroup[] => menus.flatMap((group) => group.label === 'SITE MANAGEMENT' && $externalLinks.length
-		? [{ label: 'OTHER SYSTEMS', items: $externalLinks.map((link): Item => ({ text: link.name, icon: 'external', href: link.url, external: true })) }, group]
+	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length
+		? [{ id: 'otherSystems', label: navigationText.groups.otherSystems, items: $externalLinks.map((link): Item => ({ id: `external-${link.id}`, text: link.name, icon: 'external', href: link.url, external: true })) }, group]
 		: [group]));
 	let chosenMenu = $state<string | null>(null);
 	let openMenu = $derived(chosenMenu ?? parentMenuForPath(currentPath) ?? '');
@@ -28,8 +30,8 @@
 		clearTimeout(animationTimer);
 		animateMenu = false;
 	}
-	function setOpenMenu(text: string) {
-		chosenMenu = text;
+	function setOpenMenu(id: string) {
+		chosenMenu = id;
 	}
 	function showRailLabel(text: string, event: Event) {
 		if (!(collapsed || compact) || !(event.currentTarget instanceof HTMLElement)) return;
@@ -46,12 +48,12 @@
 			const triggerTop = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect().top : 0;
 			const flyoutHeight = Math.min(window.innerHeight - 16, (item.children?.length ?? 0) * 34 + 14);
 			railFlyoutTop = Math.max(8, Math.min(triggerTop, window.innerHeight - flyoutHeight - 8));
-			railFlyout = railFlyout === item.text ? '' : item.text;
+			railFlyout = railFlyout === item.id ? '' : item.id;
 			return;
 		}
 		stopMenuAnimation();
 		animateMenu = true;
-		setOpenMenu(openMenu === item.text ? '' : item.text);
+		setOpenMenu(openMenu === item.id ? '' : item.id);
 		animationTimer = setTimeout(() => animateMenu = false, 220);
 	}
 	$effect(() => {
@@ -73,6 +75,11 @@
 			railFlyout = '';
 		}
 	});
+	$effect(() => {
+		// Hover labels contain translated text; dismiss them when the language changes.
+		void $localization.displayLanguage;
+		railLabel = '';
+	});
 	onMount(() => {
 		localStorage.removeItem('asset-sidebar-open-menu');
 		localStorage.removeItem('home-masters-open');
@@ -93,20 +100,20 @@
 	});
 </script>
 
-<aside class="app-sidebar" class:collapsed aria-label="Primary navigation">
-	{#if home}<div class="brand"><span class="brand-icon">S</span><strong>{productName}</strong></div>{:else}<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>{/if}
+<aside class="app-sidebar" class:collapsed aria-label={navigationText.primaryNavigation}>
+	<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>
 	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each sidebarMenus as group}
 			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings)}
 			<div class="nav-group"><p class="nav-label">{group.label}</p>
 				{#each group.items as item}
 					{#if item.children}
-						<div class:open={openMenu === item.text} class:animate={animateMenu} class="nav-tree">
-							<button class="nav-link nav-toggle" type="button" aria-expanded={collapsed || compact ? railFlyout === item.text : openMenu === item.text} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)} onclick={(event) => toggle(item, event)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}<i class="nav-chev">›</i></button>
+						<div class:open={openMenu === item.id} class:animate={animateMenu} class="nav-tree">
+							<button class="nav-link nav-toggle" type="button" aria-expanded={collapsed || compact ? railFlyout === item.id : openMenu === item.id} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)} onclick={(event) => toggle(item, event)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}<i class="nav-chev">›</i></button>
 							<div class="nav-sub"><div class="nav-sub-inner">{#each item.children as child}<a class:active={currentPath === child.href} class="nav-sublink" href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div></div>
-							{#if (collapsed || compact) && railFlyout === item.text}<div class="rail-flyout" style:top="{railFlyoutTop}px">{#each item.children as child}<a href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div>{/if}
+							{#if (collapsed || compact) && railFlyout === item.id}<div class="rail-flyout" style:top="{railFlyoutTop}px">{#each item.children as child}<a href={child.href} onclick={stopMenuAnimation}>{child.text}</a>{/each}</div>{/if}
 						</div>
-					{:else}<a class:active={!item.external && currentPath === item.href} class="nav-link" href={item.href} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined} aria-label={item.external ? `Open ${item.text} in a new window` : undefined} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}</a>{/if}
+					{:else}<a class:active={!item.external && currentPath === item.href} class="nav-link" href={item.href} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined} aria-label={item.external ? formatLocaleTemplate(navigationText.openExternal, item.text) : undefined} onmouseenter={(event) => showRailLabel(item.text, event)} onmouseleave={() => hideRailLabel(item.text)} onfocus={(event) => showRailLabel(item.text, event)} onblur={() => hideRailLabel(item.text)}>{@html icons[item.icon]}<span class="nav-text">{item.text}</span>{#if item.badge}<em class:hot={item.badge === 'Hot'} class="badge">{item.badge}</em>{/if}</a>{/if}
 				{/each}
 			</div>
 			{/if}
@@ -116,12 +123,12 @@
 	{#if user}
 		<div class="sidebar-footer">
 			<div class="sidebar-user" bind:this={sidebarUser}>
-				<button class="account-trigger" type="button" aria-label={userMenuOpen ? 'Close account menu' : 'Open account menu'} aria-haspopup="menu" aria-expanded={userMenuOpen} onclick={() => userMenuOpen = !userMenuOpen}>
+				<button class="account-trigger" type="button" aria-label={userMenuOpen ? navigationText.closeAccount : navigationText.openAccount} aria-haspopup="menu" aria-expanded={userMenuOpen} onclick={() => userMenuOpen = !userMenuOpen}>
 					<span class="avatar">{user.username.slice(0, 1).toUpperCase()}<i></i></span>
 					<span class="sidebar-user-info"><b>{formatEmployeeName(user, $localization) || user.username}</b><small>{roleNames(user)}</small></span>
 					<span class="more-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg></span>
 				</button>
-				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><a href="/settings" role="menuitem"><MenuItemIcon name="settings" />Settings</a><button type="button" role="menuitem" onclick={onLogout}><MenuItemIcon name="sign-out" />Sign out</button></div>{/if}
+				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><a href="/settings" role="menuitem"><MenuItemIcon name="settings" />{navigationText.settings}</a><button type="button" role="menuitem" onclick={onLogout}><MenuItemIcon name="sign-out" />{navigationText.signOut}</button></div>{/if}
 			</div>
 		</div>
 	{/if}

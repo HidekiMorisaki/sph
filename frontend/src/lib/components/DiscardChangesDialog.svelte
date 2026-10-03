@@ -1,6 +1,10 @@
 <script lang="ts">
+	import { localization } from '$lib/localization';
+	import { localeMessages } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
 	import ModalBackdrop from './ModalBackdrop.svelte';
+
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 
 	let { onContinue, onDiscard }: { onContinue: () => void; onDiscard: () => void } = $props();
 	let dialogElement = $state<HTMLDialogElement>();
@@ -39,8 +43,8 @@
 <svelte:window onkeydown={handleKeydown} />
 <ModalBackdrop className="app-modal-backdrop--confirmation" onDismiss={continueEditing}>
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact app-confirm-dialog" open aria-modal="true" aria-labelledby="discard-changes-title" aria-describedby="discard-changes-description">
-		<header><h2 id="discard-changes-title">Discard changes?</h2></header>
-		<div class="app-confirm-body"><p id="discard-changes-description">Your unsaved changes will be lost. Are you sure you want to close this form?</p></div>
-		<footer class="app-modal-footer"><button bind:this={continueButton} class="secondary" type="button" onclick={continueEditing}>Continue editing</button><button class="app-danger-action" type="button" onclick={onDiscard}>Discard changes</button></footer>
+		<header><h2 id="discard-changes-title">{commonText.discardTitle}</h2></header>
+		<div class="app-confirm-body"><p id="discard-changes-description">{commonText.discardDescription}</p></div>
+		<footer class="app-modal-footer"><button bind:this={continueButton} class="secondary" type="button" onclick={continueEditing}>{commonText.continueEditing}</button><button class="app-danger-action" type="button" onclick={onDiscard}>{commonText.discard}</button></footer>
 	</dialog>
 </ModalBackdrop>

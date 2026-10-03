@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { localeMessages } from '$lib/locale-messages';
+	import { localization } from '$lib/localization';
 	import { onMount } from 'svelte';
 
 	type Breadcrumb = { label: string; href?: string };
@@ -14,6 +16,7 @@
 		onToggleSidebar: () => void;
 	} = $props();
 
+	let navigationText = $derived(localeMessages[$localization.displayLanguage].navigation);
 	let theme = $state<Theme>('dark');
 
 	function setTheme(value: Theme) {
@@ -31,7 +34,7 @@
 	<div class="head-left">
 		<button
 			class="menu"
-			aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+			aria-label={collapsed ? navigationText.expand : navigationText.collapse}
 			aria-pressed={collapsed}
 			type="button"
 			onclick={onToggleSidebar}
@@ -40,7 +43,7 @@
 				<path d="M4 6h16M4 12h16M4 18h16" />
 			</svg>
 		</button>
-		<nav class="crumb" aria-label="Breadcrumb">
+		<nav class="crumb" aria-label={navigationText.breadcrumb}>
 			{#each breadcrumbs as breadcrumb, index}
 				{#if breadcrumb.href}<a href={breadcrumb.href}>{breadcrumb.label}</a>{:else}<span>{breadcrumb.label}</span>{/if}
 				{#if index < breadcrumbs.length - 1}<b aria-hidden="true">›</b>{/if}
@@ -49,7 +52,7 @@
 	</div>
 	<button
 		class="theme"
-		aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+		aria-label={theme === 'light' ? navigationText.darkMode : navigationText.lightMode}
 		type="button"
 		onclick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
 	>

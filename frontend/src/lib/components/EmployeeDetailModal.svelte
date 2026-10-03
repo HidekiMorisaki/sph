@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import type { Snippet } from 'svelte';
 	import { apiData } from '$lib/api';
 	import type { ChangeHistoryEntry } from '$lib/change-history';
@@ -7,8 +8,10 @@
 	import EmailAddressActions from '$lib/components/EmailAddressActions.svelte';
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import { socialLinkLabel, type Employee } from '$lib/employees';
-	import { formatDate, formatGender, formatLengthOfService, formatTimestamp, localization } from '$lib/localization';
-	import { en as messages } from '$lib/ui/messages';
+	import { formatDate, formatEmployeeName, formatGender, formatLengthOfService, formatTimestamp, localization } from '$lib/localization';
+
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
+	let text = $derived(localeMessages[$localization.displayLanguage].employees);
 
 	let { employee, returnFocus = null, footer, onClose }: {
 		employee: Employee;
@@ -16,15 +19,16 @@
 		footer?: Snippet;
 		onClose: () => void;
 	} = $props();
+	const socialLabel = (platform: Employee['socialLinks'][number]['platform']) => platform === 'website' ? text.website : platform === 'blog' ? text.blog : socialLinkLabel(platform);
 	const display = (value: string | number | null | undefined) => value === null || value === undefined || value === '' ? '' : String(value);
-	const historyFields: Record<string, string> = {
-		employeeCode: 'Employee code', firstName: 'First name', middleName: 'Middle name', lastName: 'Last name', nameKana: 'Name (Kana)',
-		birthDate: 'Birth date', gender: 'Gender', bloodType: 'Blood type', postalCode: 'Postal code', prefecture: 'Prefecture', city: 'City',
-		streetAddress: 'Street address', buildingName: 'Building', mobilePhone: 'Mobile phone', email: 'Email', hiredAt: 'Hire date',
-		departments: 'Departments', primaryDepartmentId: 'Primary department', groupId: 'Group', positions: 'Positions', primaryPositionId: 'Primary position', employmentTypeId: 'Employment type', branchId: 'Branch',
-		retiredAt: 'Retirement date', notes: 'Notes', roles: 'Roles'
-	};
-	const historyActions: Record<string, string> = { create: 'Created', update: 'Updated', delete: 'Deleted' };
+	let historyFields: Record<string, string> = $derived({
+		employeeCode: text.employeeCode, firstName: text.firstName, middleName: text.middleName, lastName: text.lastName, nameKana: text.nameKana,
+		birthDate: text.birthDate, gender: text.gender, bloodType: text.bloodType, postalCode: text.postalCode, prefecture: text.prefecture, city: text.city,
+		streetAddress: text.streetAddress, buildingName: text.buildingName, mobilePhone: text.mobilePhone, email: text.email, hiredAt: text.hiredAt,
+		departments: text.departments, primaryDepartmentId: text.primaryDepartmentId, groupId: text.groupId, positions: text.positions, primaryPositionId: text.primaryPositionId, employmentTypeId: text.employmentTypeId, branchId: text.branchId,
+		retiredAt: text.retiredAt, notes: text.notes, roles: text.roles
+	});
+	let historyActions: Record<string, string> = $derived({ create: commonText.created, update: commonText.updated, delete: commonText.deleted });
 	const historyValueFormatters = { gender: (value: string) => formatGender(value, $localization) };
 	let changeHistory = $state<ChangeHistoryEntry[]>([]);
 	let historyLoading = $state(false);
@@ -58,11 +62,11 @@
 
 </script>
 
-<DetailModal title="Employee detail" titleId="employee-detail-title" closeLabel="Close employee detail" {returnFocus} actions={footer} {onClose}>
-	<section class="app-detail-section"><h3>Basic information</h3><dl class="app-detail-grid"><div><dt>Employee code</dt><dd>{employee.employeeCode}</dd></div><div><dt>First name</dt><dd>{employee.firstName}</dd></div><div><dt>Middle name</dt><dd>{display(employee.middleName)}</dd></div><div><dt>Last name</dt><dd>{employee.lastName}</dd></div><div><dt>Name (Kana)</dt><dd>{display(employee.nameKana)}</dd></div><div><dt>Birth date</dt><dd>{formatDate(employee.birthDate, $localization)}</dd></div><div><dt>{messages.employee.age}</dt><dd>{employee.age}</dd></div><div><dt>{messages.employee.lengthOfService}</dt><dd>{formatLengthOfService(employee.lengthOfService, $localization)}</dd></div><div><dt>Gender</dt><dd>{formatGender(employee.gender, $localization)}</dd></div><div><dt>Blood type</dt><dd>{display(employee.bloodType)}</dd></div></dl></section>
-	<section class="app-detail-section"><h3>Contact information</h3><dl class="app-detail-grid"><div><dt>Postal code</dt><dd>{display(employee.postalCode)}</dd></div><div><dt>Prefecture</dt><dd>{display(employee.prefecture)}</dd></div><div><dt>City</dt><dd>{display(employee.city)}</dd></div><div><dt>Street address</dt><dd>{display(employee.streetAddress)}</dd></div><div><dt>Building</dt><dd>{display(employee.buildingName)}</dd></div><div><dt>Mobile phone</dt><dd>{display(employee.mobilePhone)}</dd></div><div><dt>Email</dt><dd><EmailAddressActions email={employee.email} /></dd></div>{#if employee.socialLinks.length}<div class="app-detail-wide"><dt>Social links</dt><dd class="social-links">{#each employee.socialLinks as link}<a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${socialLinkLabel(link.platform)} in a new window`} title={socialLinkLabel(link.platform)}><SocialLinkIcon platform={link.platform} /></a>{/each}</dd></div>{/if}</dl></section>
-	<section class="app-detail-section"><h3>Employment</h3><dl class="app-detail-grid"><div><dt>Hire date</dt><dd>{formatDate(employee.hiredAt, $localization)}</dd></div><div><dt>Retirement date</dt><dd>{formatDate(employee.retiredAt, $localization)}</dd></div><div><dt>Departments</dt><dd><span class="assignment-badges">{#each employee.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</span></dd></div><div><dt>Group</dt><dd>{display(employee.group?.name)}</dd></div><div><dt>Positions</dt><dd><span class="assignment-badges">{#each employee.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</span></dd></div><div><dt>Employment type</dt><dd>{display(employee.employmentType?.name)}</dd></div><div><dt>Branch</dt><dd>{display(employee.branch?.name)}</dd></div><div class="app-detail-wide"><dt>Notes</dt><dd class="app-detail-notes">{display(employee.notes)}</dd></div></dl></section>
-	<section class="app-detail-section"><h3>System information</h3><dl class="app-detail-grid"><div><dt>Roles</dt><dd><span class="role-badges">{#each employee.roles as role}<span>{role.name}</span>{/each}</span></dd></div><div><dt>Created at</dt><dd>{formatTimestamp(employee.createdAt, $localization)}</dd></div><div><dt>Updated at</dt><dd>{formatTimestamp(employee.updatedAt, $localization)}</dd></div><div><dt>Deleted at</dt><dd>{formatTimestamp(employee.deletedAt, $localization)}</dd></div></dl></section>
+<DetailModal title={text.detail} titleId="employee-detail-title" closeLabel={text.closeDetail} {returnFocus} actions={footer} {onClose}>
+	<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid"><div><dt>{text.employeeCode}</dt><dd>{employee.employeeCode}</dd></div><div><dt>{text.employee}</dt><dd>{formatEmployeeName(employee, $localization)}</dd></div><div><dt>{text.nameKana}</dt><dd>{display(employee.nameKana)}</dd></div><div><dt>{text.birthDate}</dt><dd>{formatDate(employee.birthDate, $localization)}</dd></div><div><dt>{text.age}</dt><dd>{employee.age}</dd></div><div><dt>{text.gender}</dt><dd>{formatGender(employee.gender, $localization)}</dd></div><div><dt>{text.bloodType}</dt><dd>{display(employee.bloodType)}</dd></div><div><dt>{text.lengthOfService}</dt><dd>{formatLengthOfService(employee.lengthOfService, $localization)}</dd></div></dl></section>
+	<section class="app-detail-section"><h3>{text.contact}</h3><dl class="app-detail-grid"><div><dt>{text.postalCode}</dt><dd>{display(employee.postalCode)}</dd></div><div><dt>{text.prefecture}</dt><dd>{display(employee.prefecture)}</dd></div><div><dt>{text.city}</dt><dd>{display(employee.city)}</dd></div><div><dt>{text.streetAddress}</dt><dd>{display(employee.streetAddress)}</dd></div><div><dt>{text.buildingName}</dt><dd>{display(employee.buildingName)}</dd></div><div><dt>{text.mobilePhone}</dt><dd>{display(employee.mobilePhone)}</dd></div><div><dt>{text.email}</dt><dd><EmailAddressActions email={employee.email} /></dd></div>{#if employee.socialLinks.length}<div class="app-detail-wide"><dt>{text.socialLinks}</dt><dd class="social-links">{#each employee.socialLinks as link}<a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={formatLocaleTemplate(commonText.openExternal, socialLabel(link.platform))} title={socialLabel(link.platform)}><SocialLinkIcon platform={link.platform} /></a>{/each}</dd></div>{/if}</dl></section>
+	<section class="app-detail-section"><h3>{text.employment}</h3><dl class="app-detail-grid"><div><dt>{text.hiredAt}</dt><dd>{formatDate(employee.hiredAt, $localization)}</dd></div><div><dt>{text.retiredAt}</dt><dd>{formatDate(employee.retiredAt, $localization)}</dd></div><div><dt>{text.departments}</dt><dd><span class="assignment-badges">{#each employee.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</span></dd></div><div><dt>{text.groupId}</dt><dd>{display(employee.group?.name)}</dd></div><div><dt>{text.positions}</dt><dd><span class="assignment-badges">{#each employee.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</span></dd></div><div><dt>{text.employmentTypeId}</dt><dd>{display(employee.employmentType?.name)}</dd></div><div><dt>{text.branchId}</dt><dd>{display(employee.branch?.name)}</dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{display(employee.notes)}</dd></div></dl></section>
+	<section class="app-detail-section"><h3>{text.system}</h3><dl class="app-detail-grid"><div><dt>{text.roles}</dt><dd><span class="role-badges">{#each employee.roles as role}<span>{role.name}</span>{/each}</span></dd></div><div><dt>{text.createdAt}</dt><dd>{formatTimestamp(employee.createdAt, $localization)}</dd></div><div><dt>{text.updatedAt}</dt><dd>{formatTimestamp(employee.updatedAt, $localization)}</dd></div><div><dt>{text.deletedAt}</dt><dd>{formatTimestamp(employee.deletedAt, $localization)}</dd></div></dl></section>
 	<ChangeHistorySection entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} dateFields={['birthDate','hiredAt','retiredAt']} valueFormatters={historyValueFormatters} actionLabels={historyActions} />
 </DetailModal>
 

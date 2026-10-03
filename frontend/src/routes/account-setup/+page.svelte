@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { productName } from '$lib/brand';
+	import PageTitle from '$lib/components/PageTitle.svelte';
 
 	let token = $state('');
 	let ready = $state(false);
@@ -39,7 +39,8 @@
 	}
 </script>
 
-<svelte:head><title>Set up your account | {productName}</title><meta name="referrer" content="no-referrer" /></svelte:head>
+<PageTitle title="Set up your account" />
+<svelte:head><meta name="referrer" content="no-referrer" /></svelte:head>
 
 <main class="setup-page"><section class="setup-card">
 	{#if !ready}<p>Checking invitation…</p>

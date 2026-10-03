@@ -1,16 +1,48 @@
-import { get, writable } from 'svelte/store';
+import { localeMessages, loadActiveLocale, formatLocaleTemplate, type MessageLanguage } from '$lib/locale-messages';
+import { get, writable, type Writable } from 'svelte/store';
+import { getContext } from 'svelte';
+import { browser } from '$app/environment';
 import { productName } from '$lib/brand';
 import { formatPersonName, type PersonNameOrder, type PersonNameParts } from '$lib/person-name';
 
 export const GENDER_VALUES = ['female', 'male', 'unspecified'] as const;
 export type GenderValue = (typeof GENDER_VALUES)[number];
 
-export const DISPLAY_LANGUAGES = [
-	{ value: 'en', label: 'English', locale: 'en-US', employeeNameFallbackOrder: 'givenFirst', durationPartSeparator: ' ', removeDurationUnitSpacing: false, genderLabels: { female: 'Female', male: 'Male', unspecified: 'Unspecified' }, invitationEmailSubject: `${productName} invitation link` },
-	{ value: 'ja', label: '日本語', locale: 'ja-JP', employeeNameFallbackOrder: 'surnameFirst', durationPartSeparator: '', removeDurationUnitSpacing: true, genderLabels: { female: '女性', male: '男性', unspecified: '未指定' }, invitationEmailSubject: `${productName} への招待リンク` }
-] as const;
+type CalendarText = {
+	required: string; calendar: string; previousYears: string; nextYears: string;
+	backToCalendar: string; previousYear: string; previousMonth: string; chooseYear: string;
+	nextMonth: string; nextYear: string; clear: string; today: string;
+	chooseYearLabel: (year: number) => string;
+};
+type WeekdayLabels = readonly [string, string, string, string, string, string, string];
+type LanguageDefinition = {
+	value: string; label: string; locale: string; employeeNameFallbackOrder: PersonNameOrder;
+	durationPartSeparator: string; removeDurationUnitSpacing: boolean;
+	genderLabels: Record<GenderValue, string>; invitationEmailSubject: string;
+	weekdays: { compact: WeekdayLabels; short: WeekdayLabels };
+	calendarText: CalendarText;
+};
 
-export type DisplayLanguage = (typeof DISPLAY_LANGUAGES)[number]['value'];
+function weekdayTuple(labels: readonly string[]): WeekdayLabels {
+	if (labels.length !== 7) throw new Error('A calendar requires seven weekday labels.');
+	return [labels[0], labels[1], labels[2], labels[3], labels[4], labels[5], labels[6]];
+}
+
+function defineLanguage<Language extends MessageLanguage>(value: Language) {
+	const messages = localeMessages[value];
+	const order = messages.language.employeeNameFallbackOrder;
+	if (order !== 'givenFirst' && order !== 'surnameFirst') throw new Error('Invalid name order.');
+	return {
+		...messages.language, value, employeeNameFallbackOrder: order,
+		invitationEmailSubject: formatLocaleTemplate(messages.language.invitationEmailSubject, productName),
+		genderLabels: messages.genderLabels,
+		weekdays: { compact: weekdayTuple(messages.weekdays.compact), short: weekdayTuple(messages.weekdays.short) },
+		calendarText: { ...messages.calendar, chooseYearLabel: (year: number) => formatLocaleTemplate(messages.calendar.chooseYearLabel, year) }
+	} satisfies LanguageDefinition;
+}
+
+export const DISPLAY_LANGUAGES = [defineLanguage('en'), defineLanguage('ja')] as const;
+export type DisplayLanguage = MessageLanguage;
 
 export type LocalizationSettings = {
 	timeZone: string;
@@ -20,11 +52,45 @@ export type LocalizationSettings = {
 export type EmployeeNameParts = PersonNameParts;
 
 export const DEFAULT_LOCALIZATION: LocalizationSettings = { timeZone: 'Asia/Tokyo', displayLanguage: 'en' };
-export const localization = writable<LocalizationSettings>(DEFAULT_LOCALIZATION);
+export const LOCALIZATION_CONTEXT = Symbol('localization');
+const clientLocalization = writable<LocalizationSettings>({ ...DEFAULT_LOCALIZATION });
+let initialized = false;
 
-export function applyLocalization(settings: LocalizationSettings): void {
-	localization.set(settings);
-	if (typeof document !== 'undefined') document.documentElement.lang = settings.displayLanguage;
+function localizationStore(): Writable<LocalizationSettings> {
+	if (!browser) {
+		// SSR stores belong to the layout's component tree, never to another request.
+		try {
+			const scoped = getContext<Writable<LocalizationSettings> | undefined>(LOCALIZATION_CONTEXT);
+			if (scoped) return scoped;
+		} catch {
+			// Standalone formatting outside a component uses the default store.
+		}
+	}
+	return clientLocalization;
+}
+export const localization: Writable<LocalizationSettings> = {
+	subscribe: (run, invalidate) => localizationStore().subscribe(run, invalidate),
+	set: value => localizationStore().set(value),
+	update: updater => localizationStore().update(updater)
+};
+export function hasInitialLocalization(): boolean { return initialized; }
+export function initializeLocalization(settings: LocalizationSettings): Writable<LocalizationSettings> {
+	const initial = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage };
+	if (!browser) return writable(initial);
+	clientLocalization.set(initial);
+	initialized = true;
+	return clientLocalization;
+}
+
+let localizationRevision = 0;
+export async function applyLocalization(settings: LocalizationSettings): Promise<void> {
+	// Keep applied preferences independent from editable forms and session objects.
+	const applied: LocalizationSettings = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage };
+	const revision = ++localizationRevision;
+	await loadActiveLocale(applied.displayLanguage);
+	if (revision !== localizationRevision) return;
+	localization.set(applied);
+	if (typeof document !== 'undefined') document.documentElement.lang = applied.displayLanguage;
 }
 
 function languageDefinition(displayLanguage: DisplayLanguage) {
@@ -35,8 +101,22 @@ function locale(settings: LocalizationSettings): string {
 	return languageDefinition(settings.displayLanguage).locale;
 }
 
+export function calendarText(settings = get(localization)): CalendarText {
+	return languageDefinition(settings.displayLanguage).calendarText;
+}
+
+export function weekdayLabels(width: 'compact' | 'short' = 'short', settings = get(localization)): readonly string[] {
+	return languageDefinition(settings.displayLanguage).weekdays[width];
+}
+
 export function displayLanguageOptions() {
 	return DISPLAY_LANGUAGES.map(({ value, label }) => ({ value, label }));
+}
+
+export function personNameFields(settings = get(localization)) {
+	return languageDefinition(settings.displayLanguage).employeeNameFallbackOrder === 'surnameFirst'
+		? ['lastName', 'middleName', 'firstName'] as const
+		: ['firstName', 'middleName', 'lastName'] as const;
 }
 
 function isGenderValue(value: string): value is GenderValue {
@@ -86,12 +166,12 @@ function dateOnly(value: string): Date | null {
 	return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
 }
 
-export function formatDate(value: string | null | undefined, settings = get(localization)): string {
+export function formatDate(value: string | null | undefined, settings = get(localization), dateStyle: 'medium' | 'long' = 'medium'): string {
 	if (!value) return '';
 	const date = dateOnly(value);
 	if (!date) return '';
 	return new Intl.DateTimeFormat(locale(settings), {
-		timeZone: 'UTC', dateStyle: 'medium'
+		timeZone: 'UTC', dateStyle
 	}).format(date);
 }
 

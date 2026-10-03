@@ -18,6 +18,56 @@ tags:
   - name: Work calendars
   - name: System settings
 paths:
+  /v1/employee-analytics:
+    get:
+      tags: [Employees]
+      operationId: getEmployeeAnalytics
+      description: |
+        Available to every authenticated role, including general users.
+        Returns aggregate counts only, using non-deleted employee records.
+        Business reference date defaults to today in Asia/Tokyo. Optional referenceDate
+        is a real YYYY-MM-DD date on or before today, with no duplicates.
+        Employees are active from hiredAt
+        through the day before retiredAt. Optional fromMonth and toMonth must
+        be supplied together in YYYY-MM format, without duplicates, in ascending
+        order and no later than the reference month. The reference month
+        ends on the reference date. With a period, demographics count employees
+        active for at least one day in it, and ages use its end date. Each annual
+        row covers the intersection of the selected period with that year.
+        Headcounts use each row's end date; turnover is departures in that row
+        divided by headcount at its start date times 100 (null for zero denominator).
+        Summary cards always describe headcount at the reference date and the
+        reference year's January 1 through that date,
+        independent of the selected period. Without a period, demographics use
+        employees active at the reference date and annual rows cover at most
+        the latest 10 years up to the reference year.
+        Historical values use current employment dates, excluding deleted and
+        previous employment records. Responses never include individual employees.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: referenceDate
+          in: query
+          schema: { type: string, format: date, pattern: '^(?!0000)\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$' }
+        - name: fromMonth
+          in: query
+          schema: { type: string, pattern: '^(?!0000)\d{4}-(0[1-9]|1[0-2])$' }
+        - name: toMonth
+          in: query
+          schema: { type: string, pattern: '^(?!0000)\d{4}-(0[1-9]|1[0-2])$' }
+      responses:
+        '200':
+          description: Employee analytics (private, no-store)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, responseCode, data]
+                properties:
+                  status: { type: string, const: success }
+                  responseCode: { type: integer, const: 200 }
+                  data: { $ref: '#/components/schemas/EmployeeAnalytics' }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /v1/health:
     get:
       tags: [Health]
@@ -30,7 +80,7 @@ paths:
     get:
       tags: [System settings]
       operationId: getSystemInformation
-      description: System administrator only. Returns read-only release information for the running system.
+      description: System administrator only. Returns read-only release information with language-independent message IDs for the running system.
       security: [{ sessionCookie: [] }]
       responses:
         '200':
@@ -326,24 +376,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '401': { $ref: '#/components/responses/Error' }
-  /v1/auth/onboarding:
-    post:
-      tags: [Authentication]
-      operationId: completeOnboarding
-      security: [{ sessionCookie: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [password]
-              properties:
-                password: { type: string, minLength: 12, maxLength: 1024 }
-      responses:
-        '200': { $ref: '#/components/responses/Success' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
   /v1/auth/password:
     patch:
       tags: [Authentication]
@@ -392,11 +424,62 @@ paths:
               required: [timeZone, displayLanguage]
               properties:
                 timeZone: { type: string, minLength: 1, maxLength: 64, description: Valid IANA time-zone identifier. }
-                displayLanguage: { type: string, enum: [en, ja] }
+                displayLanguage: { $ref: '#/components/schemas/DisplayLanguage' }
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
+  /v1/settings/employee-analysis:
+    get:
+      tags: [Settings]
+      operationId: getEmployeeAnalysisSelection
+      description: All authenticated roles can retrieve their own saved reference date and independent chart periods. Returns data.employeeId, data.today (Tokyo calendar date), and data.selection (null before first save or when stored selections are invalid). Responses are private and not cached.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Settings]
+      operationId: updateEmployeeAnalysisSelection
+      description: Saves a complete selection for the session employee only, without changing localization settings. A matching owner header prevents a queued write from a previous login being applied to another employee. Reference date must be valid and on or before today; chart periods must be ordered and end on or before the reference month. Requires normal session and same-origin protections.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: x-settings-owner
+          in: header
+          required: true
+          schema: { type: integer }
+          description: Employee ID returned by GET. Used only to verify session continuity; cannot select a target employee.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [referenceDate, charts]
+              properties:
+                referenceDate: { type: string, format: date }
+                charts:
+                  type: object
+                  additionalProperties: false
+                  required: [age, gender, trend, turnover]
+                  properties:
+                    age: &analysisPeriod
+                      type: object
+                      additionalProperties: false
+                      required: [fromMonth, toMonth]
+                      properties:
+                        fromMonth: { type: string, pattern: '^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$' }
+                        toMonth: { type: string, pattern: '^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$' }
+                    gender: *analysisPeriod
+                    trend: *analysisPeriod
+                    turnover: *analysisPeriod
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /v1/employees/me:
     get:
       tags: [Employees]
@@ -423,12 +506,20 @@ paths:
     get:
       tags: [Employees]
       operationId: listEmployees
-      description: Employee representations include request-time derived `age` and `lengthOfService` values. These values are not stored in the database.
+      description: Employee representations include request-time derived `age`, `lengthOfService`, and `employmentStatus` values. Current employees are returned by default; retired and soft-deleted employees can be included independently.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
+        - name: includeRetired
+          in: query
+          description: Include non-deleted employees whose retirement date is on or before the API calculation date.
+          schema: { type: boolean, default: false }
+        - name: includeDeleted
+          in: query
+          description: Include soft-deleted employees regardless of their retirement date.
+          schema: { type: boolean, default: false }
         - name: sortBy
           in: query
           schema:
@@ -477,7 +568,7 @@ paths:
     get:
       tags: [Roles]
       operationId: listRoles
-      description: Lists active assignable roles. System administrator role changes require a system administrator; business administrators may assign roles up to business administrator.
+      description: Lists active assignable roles. System-management role changes require a system administrator; administrators without system-management permission may assign only roles that also lack system-management permission.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -751,6 +842,79 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /v1/it-assets/{id}/credentials:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Assets]
+      operationId: getItAssetCredentialStatus
+      description: System and server administrators only. Returns configured/not-configured status; no password material is returned.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/it-assets/{id}/credentials/{credentialType}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: credentialType
+        in: path
+        required: true
+        schema: { type: string, enum: [admin, login, management_console] }
+    put:
+      tags: [Assets]
+      operationId: setItAssetCredential
+      description: System and server administrators only. Encrypts and replaces an asset password; the password is never returned by this endpoint.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, minLength: 1, maxLength: 1024, writeOnly: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Assets]
+      operationId: clearItAssetCredential
+      description: System and server administrators only. Logically deletes the selected asset credential.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/it-assets/{id}/credential-accesses:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Assets]
+      operationId: revealItAssetCredential
+      description: System and server administrators only. Reauthenticates the current user and returns one asset password in a no-store response. Every successful reveal is audited.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credentialType, currentPassword]
+              properties:
+                credentialType: { type: string, enum: [admin, login, management_console] }
+                currentPassword: { type: string, maxLength: 1024, writeOnly: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/it-assets/{id}/assignments:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -967,28 +1131,92 @@ components:
                   details:
                     - { field: serialNumber, reason: This manufacturer and serial number combination is already in use. }
   schemas:
+    EmployeeAnalytics:
+      type: object
+      required: [referenceDate, fromYear, period, demographicTotal, summary, ageGroups, genders, annual]
+      properties:
+        referenceDate: { type: string, format: date }
+        fromYear: { type: integer }
+        demographicTotal: { type: integer, minimum: 0, description: Number of distinct employees in the age and gender population. }
+        period:
+          type: [object, 'null']
+          required: [fromMonth, toMonth, startDate, endDate]
+          properties:
+            fromMonth: { type: string }
+            toMonth: { type: string }
+            startDate: { type: string, format: date }
+            endDate: { type: string, format: date }
+        summary:
+          type: object
+          required: [headcount, hires, departures, turnoverRate]
+          properties:
+            headcount: { type: integer, minimum: 0 }
+            hires: { type: integer, minimum: 0 }
+            departures: { type: integer, minimum: 0 }
+            turnoverRate: { type: [number, 'null'], minimum: 0 }
+        ageGroups:
+          type: array
+          items:
+            type: object
+            required: [key, count]
+            properties:
+              key: { type: string, enum: [under20, 20s, 30s, 40s, 50s, 60plus, unknown] }
+              count: { type: integer, minimum: 0 }
+        genders:
+          type: array
+          items:
+            type: object
+            required: [key, count]
+            properties:
+              key: { type: string, enum: [female, male, unspecified, other] }
+              count: { type: integer, minimum: 0 }
+        annual:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [year, startDate, endDate, startingHeadcount, headcount, hires, departures, turnoverRate]
+            properties:
+              year: { type: integer }
+              startDate: { type: string, format: date }
+              endDate: { type: string, format: date }
+              startingHeadcount: { type: integer, minimum: 0 }
+              headcount: { type: integer, minimum: 0 }
+              hires: { type: integer, minimum: 0 }
+              departures: { type: integer, minimum: 0 }
+              turnoverRate: { type: [number, 'null'], minimum: 0 }
+    DisplayLanguage:
+      type: string
+      enum: [en, ja]
+      minLength: 2
+      maxLength: 64
+      description: Supported display-language tag. Storage accepts hyphen-separated language tags; API support is restricted to this allowlist. Add a language here together with the API allowlist and frontend translation definition.
     SystemInformation:
       type: object
-      required: [name, version, notices, repositoryUrl, revisionHistory]
+      required: [name, version, noticeIds, repositoryUrl, revisionHistory]
       properties:
         name: { type: string, minLength: 1, example: SME Portal Hub }
-        version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.1.0 }
-        notices:
+        version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.2.0 }
+        noticeIds:
+          description: Stable message IDs resolved by the frontend release dictionaries.
           type: array
-          items: { type: string, minLength: 1 }
+          uniqueItems: true
+          items: { type: string, pattern: '^[a-z][a-z0-9_]*$' }
         repositoryUrl: { type: [string, 'null'], format: uri, pattern: '^https?://' }
         revisionHistory:
           type: array
           items:
             type: object
-            required: [version, releasedAt, changes]
+            required: [version, releasedAt, changeIds]
             properties:
-              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.1.0 }
-              releasedAt: { type: string, format: date, example: '2026-09-30' }
-              changes:
+              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.2.0 }
+              releasedAt: { type: string, format: date, example: '2026-10-03' }
+              changeIds:
+                description: Ordered stable message IDs resolved by the frontend release dictionaries.
                 type: array
+                uniqueItems: true
                 minItems: 1
-                items: { type: string, minLength: 1 }
+                items: { type: string, pattern: '^[a-z][a-z0-9_]*$' }
     MasterListItem:
       type: object
       required: [usageCount]
@@ -1061,9 +1289,10 @@ components:
     EmployeeDerivedFields:
       type: object
       description: Language-neutral values calculated by the API for each employee response and never persisted.
-      required: [age, lengthOfService]
+      required: [age, lengthOfService, employmentStatus]
       properties:
         age: { type: integer, minimum: 0, description: Completed years as of the API calculation date. }
+        employmentStatus: { type: string, enum: [current, retired, deleted], description: Deleted takes precedence over retired; current includes future retirement dates. }
         lengthOfService:
           type: object
           required: [years, months]
@@ -1160,7 +1389,21 @@ components:
         loginUsername:
           type: [string, 'null']
           maxLength: 255
-          description: Allowed only when the selected IT asset type supports a login username.
+        ipAddress1: { type: [string, 'null'], maxLength: 45, description: Optional IPv4 or IPv6 address for the first network interface. }
+        ipAddress2: { type: [string, 'null'], maxLength: 45, description: Optional IPv4 or IPv6 address for the second network interface. It must differ from ipAddress1. }
+        hostname: { type: [string, 'null'], maxLength: 253 }
+        adminUsername: { type: [string, 'null'], maxLength: 255 }
+        managementConsoleUrl: { type: [string, 'null'], maxLength: 2048, format: uri, pattern: '^https?://' }
+        managementConsoleUsername: { type: [string, 'null'], maxLength: 255 }
+        credentials:
+          type: object
+          writeOnly: true
+          description: Optional atomic credential changes. Requires asset credential write permission. Omitted credential types remain unchanged.
+          additionalProperties: false
+          properties:
+            admin: { $ref: '#/components/schemas/AssetCredentialChange' }
+            login: { $ref: '#/components/schemas/AssetCredentialChange' }
+            management_console: { $ref: '#/components/schemas/AssetCredentialChange' }
         storageId: { $ref: '#/components/schemas/PositiveIdInput' }
         statusId: { $ref: '#/components/schemas/PositiveIdInput' }
         purchasedOn:
@@ -1176,6 +1419,19 @@ components:
             - { type: 'null' }
             - { type: string, maxLength: 0 }
         notes: { type: [string, 'null'], maxLength: 5000 }
+    AssetCredentialChange:
+      oneOf:
+        - type: object
+          required: [action, password]
+          additionalProperties: false
+          properties:
+            action: { const: set }
+            password: { type: string, minLength: 1, maxLength: 1024, writeOnly: true }
+        - type: object
+          required: [action]
+          additionalProperties: false
+          properties:
+            action: { const: clear }
     SuccessEnvelope:
       type: object
       required: [status, responseCode, data]

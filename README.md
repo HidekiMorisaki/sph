@@ -1,16 +1,22 @@
-# SME Portal Hub
+# SME Portal Hub ( SPH )
 
-SME Portal Hub is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and IT asset management.
+[日本語版はこちら](./README_JA.md)
+
+[![GitHub Release](https://img.shields.io/github/v/release/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/releases) [![License](https://img.shields.io/github/license/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/blob/main/LICENSE)
+
+![Dashboard](./docs/gallery/Dashboard_en.png)
+
+SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and IT asset management.
 
 > [!NOTE]
-> SME Portal Hub is currently under active development. It can be installed and evaluated, but some functionality remains incomplete and features may change.
+> SPH is currently under active development. It can be installed and evaluated, but some functionality remains incomplete. Existing features may also change substantially in future updates.
 
 | Your goal | Read this section |
 | --- | --- |
-| Install, try, or use SME Portal Hub | [Quick Start for Users](#quick-start-for-users) |
+| Install, try, or use the system | [Quick Start for Users](#quick-start-for-users) |
+| Install on a server for access from other PCs | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
 | Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
 | Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
-| Understand, verify, or modify the codebase | [Developer Guide](#developer-guide) |
 
 The system includes:
 
@@ -23,79 +29,81 @@ The system includes:
 
 ## Quick Start for Users
 
-This section contains everything needed to install and start using SME Portal Hub. If you only want to try or use the system, you do not need to read the Developer Guide.
+### 1. Prerequisites
 
-### 1. Check the prerequisites
+Git, Docker, and Docker Compose are required for installation. Install them beforehand and confirm that they work correctly.
+The web interface uses port `3000` (changeable in the installer), and the database uses port `5432`. Confirm that these ports are not already used by other software.
 
-Before continuing, make sure the following are available:
-
-- Git
-- Docker with the `docker compose` command
-- Ports `3000` and `5432` available on the host
-
-Docker installation instructions are outside the scope of this document.
-
-### 2. Download the system
+### 2. Download
 
 ```bash
 git clone https://github.com/HidekiMorisaki/sph.git
 cd sph
 ```
 
-If the repository was downloaded by another method, open a terminal in the repository root instead.
+### 3. Run the installer
 
-### 3. Create the environment file
-
-On Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-On macOS or Linux:
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and replace the example values before starting the system. At minimum, review the PostgreSQL settings and configure the initial administrator credentials below.
-
-The initial administrator settings are:
-
-| Variable | Description |
+| Platform | Run from the downloaded folder |
 | --- | --- |
-| `INITIAL_ADMIN_USERNAME` | Username used for the first sign-in. |
-| `INITIAL_ADMIN_PASSWORD` | Temporary initial password. Use at least 12 characters, including an uppercase letter, a lowercase letter, and a number. |
+| Windows | Double-click `install.bat`, or run `.\install.ps1` in PowerShell. |
+| macOS / Linux | Run `bash ./install.sh` in a terminal. |
 
-After signing in, the other initial administrator details can be changed in **Settings** for personal information and **Employees** for employment and organization information.
+The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
-Do not commit `.env` or share its passwords. The supplied `.env.example` values are examples and should not be used as production credentials.
+> [!NOTE]
+> At the "Optional fictional sample data" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
 
-### 4. Build and start the system
+## Installing on a server or another PC
 
-From the repository root, run:
+Run the download and installer steps on the machine that will host the system.
+When prompted for connection settings:
 
-```bash
-docker compose up -d --build
-```
+- **Docker host web port**: select an unused port on the server, such as `3000` or `8080`.
+- **Application URL**: enter the URL that users will open, such as `https://portal.example.internal`. Use a hostname or IP reachable from their PCs; `localhost` refers to each user's own PC.
 
-On the first start, Docker builds the images, starts PostgreSQL, runs all Prisma migrations, creates the initial system administrator, and then starts the API, frontend, and gateway. The initial startup can take a few minutes.
+Allow the selected web port through the server firewall and configure DNS if using
+a hostname. Users then open the configured application URL in their browsers.
+Database port `5432` does not need to be accessible from user PCs.
 
-### 5. Open SME Portal Hub and sign in
+Sign-in from other PCs requires HTTPS because session cookies are marked Secure.
+Configure a TLS reverse proxy separately and enter its public URL,
+such as `https://portal.example.com`. The Docker host web port remains the proxy's
+backend destination. The installer does not provision certificates or a TLS proxy.
+If the public URL check reports a warning, finish the DNS, firewall, and proxy
+configuration, then verify access from a user PC.
 
-After the containers are ready, open the following URL in a web browser:
-
-```text
-http://localhost:3000/
-```
-
-Sign in with the values configured in `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`.
-
-The initial administrator must set a new strong password after the first sign-in before using the normal system features. Once the new password has been set successfully, remove all `INITIAL_ADMIN_*` entries from `.env`. Keep the PostgreSQL and CORS settings in the file.
-
-SME Portal Hub is now ready to use.
+Connection settings are saved as `APP_ORIGIN` and `HTTP_PORT` in `.env`.
+If changing them later, update `CORS_ALLOWED_ORIGINS` to the same application URL
+and run `docker compose up -d --no-build --no-deps api frontend gateway` to apply the changes.
 
 ## Quick Start troubleshooting
+
+### The installer stopped
+
+The installer is for new installations only. Existing `.env` files, SPH containers,
+or the `sph-db-data` volume cause it to stop without replacing them. For an existing
+installation, use the normal start, update, or recovery procedures.
+
+Installation failures report the stopped stage, the failed
+operation or detected condition, and the next checks to make. Docker's raw output
+is suppressed because it can contain credentials. When the underlying cause is
+unknown, the message says so; suggested checks are not a diagnosis.
+
+If a new installation failed after saving `.env`, retain that file and database
+storage. Resolve the prerequisite or startup problem, then run
+`docker compose up -d --build --wait --wait-timeout 300` from the product repository
+root and check service status below. If no configuration or SPH storage was
+created, rerun the installer. Never generate a replacement encryption key for
+encrypted data. Keep `.env` protected and back it up separately from the database.
+
+After recovering startup, finish the removal of initial setup credentials. Remove
+only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and
+encryption key. Recreate `db` and `api` with
+`docker compose up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
+then remove the completed migration container with `docker compose rm -f migration`
+and verify the application responses below. If `.env.install-clean` remains,
+keep it protected until recovery is complete, then securely remove this temporary
+file. It may contain credentials.
 
 ### Verify the installation
 
@@ -108,7 +116,7 @@ docker compose ps -a
 The expected state is:
 
 - `db`, `api`, `frontend`, and `gateway` are running.
-- `migration` has exited with status code `0`.
+- If present, the one-time `migration` container has exited with status code `0`.
 
 If startup is still in progress or a service failed, inspect the logs:
 
@@ -117,7 +125,7 @@ docker compose logs migration
 docker compose logs api frontend gateway db
 ```
 
-Verify the API through the gateway:
+Verify the API through the gateway (replace the example port if changed):
 
 ```bash
 curl http://localhost:3000/v1/health
@@ -140,7 +148,7 @@ docker compose ps -a
 docker compose logs gateway frontend api
 ```
 
-Also confirm that port `3000` is not already used by another application.
+Also confirm that the selected web port is not already used by another application.
 
 ### The migration container failed
 
@@ -160,7 +168,7 @@ docker compose up -d --build
 
 ### A port is already in use
 
-The default Compose configuration binds the gateway to host port `3000` and PostgreSQL to host port `5432`. Stop the conflicting application or adjust the relevant port mapping in `docker-compose.yml`.
+The default Compose configuration binds the gateway to host port `3000` and PostgreSQL to host port `5432`. Select another web port in the installer. For an existing installation, change `HTTP_PORT` and the application URL settings in `.env`. Database port mappings can be changed in `docker-compose.yml`.
 
 ### Bind mounts do not work
 
@@ -210,60 +218,22 @@ git pull --ff-only
 .\scripts\update.ps1
 ```
 
-## Developer Guide
+## Gallery
 
-This section is for maintainers and contributors who need to understand, verify, or modify the application. Installation and normal use are covered by the user sections above.
+### Dashboard
+![Dashboard](./docs/gallery/Dashboard_en.png)
 
-### Architecture
+### PDF export results
+![Employee count by age group and gender](./docs/gallery/Dashboard_Exported_PDF_en_1.png)
+![Annual employee count trend](./docs/gallery/Dashboard_Exported_PDF_en_2.png)
+![Annual hiring, retirement, and turnover rates](./docs/gallery/Dashboard_Exported_PDF_en_3.png)
 
-The application runs as five Docker Compose services:
+## Employee list
+![Employee list](./docs/gallery/EmployeeList_en.png)
 
-| Service | Responsibility |
-| --- | --- |
-| `gateway` | Nginx entry point. Routes `/v1/*` to the API and all other requests to the frontend. |
-| `frontend` | SvelteKit SSR/SPA user interface. It communicates with the backend only through the REST API. |
-| `api` | Versioned REST API, authentication, authorization, business logic, and Prisma access. |
-| `migration` | Applies Prisma migrations and creates the initial system administrator. It exits after successful setup. |
-| `db` | PostgreSQL database. |
-
-The browser uses a single origin through the gateway:
-
-```text
-Browser -> http://localhost:3000 -> gateway -> frontend
-                                      `-----> api -> PostgreSQL
-```
-
-Prisma, database access, authentication, authorization, and business logic belong exclusively to the API. The frontend communicates with the backend only through the versioned REST API. Authentication uses server-side sessions stored in PostgreSQL, and application records use soft deletion for audit-oriented data management.
-
-### Technology stack
-
-- SvelteKit, Svelte, and TypeScript
-- PostgreSQL
-- Prisma ORM
-- Nginx
-- Docker Compose
-
-### API documentation
-
-The REST API is available under the versioned `/v1/` path through the gateway.
-
-- Health check: `http://localhost:3000/v1/health`
-- OpenAPI 3.1 specification: [`api/openapi/openapi.yaml`](api/openapi/openapi.yaml)
-
-### Development checks
-
-With the Compose services running, execute the project checks inside their containers:
-
-```bash
-docker compose exec frontend npm run check
-docker compose exec frontend npm run build
-docker compose exec api npm run check
-docker compose exec api npm run build
-docker compose exec api npm run db:verify
-```
-
-The Compose configuration uses development image targets and bind mounts. Before exposing the system outside a trusted development network, create a production deployment configuration with appropriate TLS, secret management, network restrictions, backups, and non-development builds.
+## Work calendars
+![Work calendars](./docs/gallery/WorkCalendars_en.png)
 
 ## Acknowledgements
 
-The UI design of SME Portal Hub was inspired by [Gentelella v4 — Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella). We are grateful to the Gentelella contributors—and to all developers who generously make high-quality design templates available to the community at no cost.
+The UI design of SPH was inspired by [Gentelella v4 - Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella). We are grateful to the Gentelella contributors—and to all developers who generously make high-quality design templates available to the community at no cost.

@@ -1,0 +1,20 @@
+.calendar-note-tooltip {
+	position: fixed;
+	z-index: 1100;
+	width: 320px;
+	max-width: calc(100vw - 16px);
+	max-height: min(360px, calc(100vh - 16px));
+	overflow: auto;
+	overscroll-behavior: contain;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	background: var(--surface-secondary);
+	box-shadow: var(--shadow);
+	color: var(--text);
+	font-size: 12px;
+	line-height: 1.6;
+	overflow-wrap: anywhere;
+}
+.calendar-note-tooltip strong { display: block; margin-bottom: 4px; font-weight: 600; }
+.calendar-note-tooltip > div { white-space: pre-wrap; }

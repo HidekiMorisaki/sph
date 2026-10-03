@@ -1,15 +1,19 @@
 <script lang="ts">
+	import { localization } from '$lib/localization';
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import MenuItemIcon from '$lib/components/MenuItemIcon.svelte';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import '$lib/styles/page-size-picker.css';
 	import '$lib/styles/action-menu.css';
 
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
+
 	type Row = { id: number; [key: string]: any };
 	type Permission = boolean | ((item: Row) => boolean);
 	type Column = { key: string; label: string; value?: (item: any) => string | number | null | undefined; cell?: Snippet<[any]>; width?: number; sortable?: boolean };
-	let { endpoint, columns, title, listHeading, description = 'Sortable, searchable, paginated.', initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, actionWidth = 5, searchParam = 'search', edgePagination = true, canManage = false, canDetail, canEdit, canDelete, actionLabel, headerActions, loadingLabel = 'Loading...', emptyLabel = 'No items found.', onDetail, onEdit, onDelete }: {
-		endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; actionWidth?: number; searchParam?: string; edgePagination?: boolean; canManage?: boolean; canDetail?: Permission; canEdit?: Permission; canDelete?: Permission; actionLabel?: (item: Row) => string; headerActions?: Snippet; loadingLabel?: string; emptyLabel?: string;
+	let { endpoint, columns, title, listHeading, description, initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, actionWidth = 5, searchParam = 'search', queryParams = {}, edgePagination = true, canManage = false, canDetail, canEdit, canDelete, actionLabel, headerActions, loadingLabel, emptyLabel, onDetail, onEdit, onDelete }: {
+		endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; actionWidth?: number; searchParam?: string; queryParams?: Record<string, string | number | boolean>; edgePagination?: boolean; canManage?: boolean; canDetail?: Permission; canEdit?: Permission; canDelete?: Permission; actionLabel?: (item: Row) => string; headerActions?: Snippet; loadingLabel?: string; emptyLabel?: string;
 		onDetail?: (item: Row, trigger: HTMLElement | null) => void;
 		onEdit?: (item: Row, trigger: HTMLButtonElement | null) => void;
 		onDelete?: (item: Row) => Promise<void> | void;
@@ -27,7 +31,7 @@
 	let activeSortBy = $derived(sortBy || initialSortBy);
 	let sortOrder = $state<'asc' | 'desc'>('asc');
 	let loading = $state(false);
-	let error = $state('');
+	let error = $state<'signInRequired' | 'loadFailed' | ''>('');
 	let sizeOpen = $state(false);
 	let sizeTrigger=$state<HTMLButtonElement>();
 	let menuItem = $state<Row | null>(null);
@@ -36,6 +40,8 @@
 	let menuTrigger: HTMLButtonElement | null = null;
 	let timer: number;
 	let controller: AbortController | null = null;
+	let queryParamsReady = false;
+	let queryParamsKey = $derived(JSON.stringify(queryParams));
 	const sizes = [10, 20, 30, 40, 50];
 	let pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
 	let first = $derived(total ? (page - 1) * pageSize + 1 : 0);
@@ -87,14 +93,15 @@
 		loading = true; error = '';
 		const params = new URLSearchParams({ offset: String((page - 1) * pageSize), limit: String(pageSize), sortBy: activeSortBy, sortOrder });
 		if (appliedSearch) params.set(searchParam, appliedSearch);
+		for (const [key, value] of Object.entries(queryParams)) params.set(key, String(value));
 		try {
 			const response = await fetch(`${endpoint}?${params}`, { signal: current.signal });
-			if (!response.ok) throw new Error(response.status===401?'Please sign in to continue.':'Unable to load data.');
+			if (!response.ok) throw new Error(response.status===401?'signInRequired':'loadFailed');
 			const payload = await response.json() as { data: Row[]; meta: { total: number } };
 			items = payload.data; total = payload.meta.total;
 			if (page > Math.max(1, Math.ceil(total / pageSize))) { page = Math.max(1, Math.ceil(total / pageSize)); void refresh(); }
 		} catch (cause) {
-			if (!(cause instanceof DOMException && cause.name === 'AbortError')) error = cause instanceof Error?cause.message:'Unable to load data.';
+			if (!(cause instanceof DOMException && cause.name === 'AbortError')) error = cause instanceof Error && cause.message === 'signInRequired' ? 'signInRequired' : 'loadFailed';
 		} finally { if (controller === current) loading = false; }
 	}
 	function searchChanged(value: string) {
@@ -109,6 +116,7 @@
 	function sizeTriggerKeydown(event:KeyboardEvent){if(['Enter',' ','ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();sizeOpen=true;focusSize(Math.max(0,sizes.indexOf(pageSize)));}}
 	function sizeOptionKeydown(event:KeyboardEvent,index:number){if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();focusSize(event.key==='Home'?0:event.key==='End'?sizes.length-1:event.key==='ArrowDown'?index+1:index-1);}else if(event.key==='Escape'){event.preventDefault();sizeOpen=false;sizeTrigger?.focus();}else if(event.key==='Tab'){sizeOpen=false;}}
 	$effect(() => { endpoint; initialSortBy; storageKey; persistedSortKey; searchParam; if (typeof window !== 'undefined') { page = 1; search = ''; appliedSearch = ''; let nextSortBy = initialSortBy; let nextSortOrder: 'asc' | 'desc' = 'asc'; if (persistedSortKey) { try { const storedSort = JSON.parse(localStorage.getItem(persistedSortKey) ?? 'null') as { field?: unknown; order?: unknown } | null; const allowed = untrack(() => columns.some((column) => column.key === storedSort?.field && column.sortable !== false)); if (storedSort && typeof storedSort.field === 'string' && allowed && (storedSort.order === 'asc' || storedSort.order === 'desc')) { nextSortBy = storedSort.field; nextSortOrder = storedSort.order; } else if (localStorage.getItem(persistedSortKey) !== null) localStorage.removeItem(persistedSortKey); } catch { localStorage.removeItem(persistedSortKey); } } sortBy = nextSortBy; sortOrder = nextSortOrder; const stored = Number(localStorage.getItem(storageKey)); pageSize = sizes.includes(stored) ? stored : 10; untrack(() => void refresh()); } });
+	$effect(() => { queryParamsKey; if (typeof window !== 'undefined') { if (queryParamsReady) { page = 1; untrack(() => void refresh()); } else queryParamsReady = true; } });
 	onMount(() => {
 		const outside = (event: MouseEvent) => { if (!(event.target as Element).closest('.master-menu,.master-kebab,.page-size-picker')) { closeMenu(); sizeOpen = false; } };
 		const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { if(menuItem)closeMenu(true);else if(sizeOpen)sizeTrigger?.focus();sizeOpen = false; } };
@@ -119,21 +127,21 @@
 </script>
 
 <div class="master-list">
-<header class="master-header"><div><h2>{listHeading ?? `All ${title.toLowerCase()}`}</h2><p>{description}</p></div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>
+<header class="master-header"><div><h2>{listHeading ?? formatLocaleTemplate(commonText.allItems, title.toLowerCase())}</h2><p>{description ?? commonText.description}</p></div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>
 <div class="master-toolbar">
-	<SearchInput label={`Search ${endpoint.split('/').at(-1)}`} value={search} onValueChange={searchChanged} />
-	<div class="page-size">Show <div class="page-size-picker"><button bind:this={sizeTrigger} class="page-size-trigger" type="button" aria-haspopup="listbox" aria-expanded={sizeOpen} onclick={() => sizeOpen = !sizeOpen} onkeydown={sizeTriggerKeydown}><span>{pageSize}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>{#if sizeOpen}<div class="page-size-options" role="listbox" aria-label="Entries per page">{#each sizes as size,index}<button type="button" role="option" aria-selected={pageSize === size} class:selected={pageSize === size} onclick={() => changeSize(size)} onkeydown={(event)=>sizeOptionKeydown(event,index)}>{size}</button>{/each}</div>{/if}</div> entries</div>
+	<SearchInput label={formatLocaleTemplate(commonText.searchLabel, title)} value={search} onValueChange={searchChanged} />
+	<div class="page-size">{commonText.showPrefix} <div class="page-size-picker"><button bind:this={sizeTrigger} class="page-size-trigger" type="button" aria-haspopup="listbox" aria-expanded={sizeOpen} onclick={() => sizeOpen = !sizeOpen} onkeydown={sizeTriggerKeydown}><span>{pageSize}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>{#if sizeOpen}<div class="page-size-options" role="listbox" aria-label={commonText.entriesPerPage}>{#each sizes as size,index}<button type="button" role="option" aria-selected={pageSize === size} class:selected={pageSize === size} onclick={() => changeSize(size)} onkeydown={(event)=>sizeOptionKeydown(event,index)}>{size}</button>{/each}</div>{/if}</div> {commonText.showSuffix}</div>
 </div>
 <div class="master-scroll" onscroll={() => closeMenu()}>
 	<table style={`min-width:${minTableWidth}px`}>
 		<colgroup>{#each columns as column}<col style={`width:${column.width ?? (showActions ? 100 - actionWidth : 100) / columns.length}%`} />{/each}{#if showActions}<col class="actions-column" style={`width:${actionWidth}%`} />{/if}</colgroup>
-		<thead><tr>{#each columns as column}<th aria-sort={column.sortable === false ? undefined : activeSortBy === column.key ? sortOrder === 'asc' ? 'ascending' : 'descending' : 'none'}>{#if column.sortable === false}<span class="column-label">{column.label}</span>{:else}<button type="button" class="sort-button" onclick={() => changeSort(column.key)}>{column.label}<span class="sort-indicator" class:ascending={activeSortBy === column.key && sortOrder === 'asc'} class:descending={activeSortBy === column.key && sortOrder === 'desc'} aria-hidden="true"></span></button>{/if}</th>{/each}{#if showActions}<th><span class="sr-only">Row actions</span></th>{/if}</tr></thead>
-		<tbody>{#if loading}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{loadingLabel}</td></tr>{:else if error}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{error}</td></tr>{:else if !items.length}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{emptyLabel}</td></tr>{:else}{#each items as item (item.id)}{@const canOpenDetail = detailAllowed(item)}<tr class:detail-row={canOpenDetail} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? `View details for ${itemLabel(item)}` : undefined} onclick={(event) => rowClick(event, item)} onkeydown={(event) => rowKeydown(event, item)}>{#each columns as column}<td>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if column.label === 'Name' && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={`Used by ${item.usageCount} ${item.usageCount === 1 ? 'record' : 'records'}`} title={`Used by ${item.usageCount} ${item.usageCount === 1 ? 'record' : 'records'}`}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}{#if showActions}<td class="actions-cell"><button class="kebab-button master-kebab" type="button" aria-label={`Actions for ${itemLabel(item)}`} aria-haspopup="menu" aria-expanded={menuItem?.id === item.id} onclick={(event) => openMenu(event, item)}><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></button></td>{/if}</tr>{/each}{/if}</tbody>
+		<thead><tr>{#each columns as column}<th aria-sort={column.sortable === false ? undefined : activeSortBy === column.key ? sortOrder === 'asc' ? 'ascending' : 'descending' : 'none'}>{#if column.sortable === false}<span class="column-label">{column.label}</span>{:else}<button type="button" class="sort-button" onclick={() => changeSort(column.key)}>{column.label}<span class="sort-indicator" class:ascending={activeSortBy === column.key && sortOrder === 'asc'} class:descending={activeSortBy === column.key && sortOrder === 'desc'} aria-hidden="true"></span></button>{/if}</th>{/each}{#if showActions}<th><span class="sr-only">{commonText.rowActions}</span></th>{/if}</tr></thead>
+		<tbody>{#if loading}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{loadingLabel ?? commonText.loading}</td></tr>{:else if error}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{commonText[error]}</td></tr>{:else if !items.length}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{emptyLabel ?? commonText.noItems}</td></tr>{:else}{#each items as item (item.id)}{@const canOpenDetail = detailAllowed(item)}<tr class:detail-row={canOpenDetail} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? formatLocaleTemplate(commonText.viewDetails, itemLabel(item)) : undefined} onclick={(event) => rowClick(event, item)} onkeydown={(event) => rowKeydown(event, item)}>{#each columns as column}<td>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if ['name', 'displayName'].includes(column.key) && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={formatLocaleTemplate(item.usageCount === 1 ? commonText.usedOne : commonText.usedMany, item.usageCount)} title={formatLocaleTemplate(item.usageCount === 1 ? commonText.usedOne : commonText.usedMany, item.usageCount)}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}{#if showActions}<td class="actions-cell"><button class="kebab-button master-kebab" type="button" aria-label={formatLocaleTemplate(commonText.actionsFor, itemLabel(item))} aria-haspopup="menu" aria-expanded={menuItem?.id === item.id} onclick={(event) => openMenu(event, item)}><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></button></td>{/if}</tr>{/each}{/if}</tbody>
 	</table>
 </div>
-<footer class="master-footer"><p>Showing {first}–{last} of {total}</p><nav aria-label={`${title} pages`}><button type="button" aria-label="First page" disabled={page === 1} onclick={() => changePage(1)}>&lt;&lt;</button><button type="button" aria-label="Previous page" disabled={page === 1} onclick={() => changePage(page - 1)}>&lt;</button>{#each pageNumbers as number}{#if number === 'ellipsis'}<span class="pagination-ellipsis" aria-hidden="true">…</span>{:else}<button type="button" aria-current={number === page ? 'page' : undefined} onclick={() => changePage(number)}>{number}</button>{/if}{/each}<button type="button" aria-label="Next page" disabled={page === pageCount} onclick={() => changePage(page + 1)}>&gt;</button><button type="button" aria-label="Last page" disabled={page === pageCount} onclick={() => changePage(pageCount)}>&gt;&gt;</button></nav></footer>
+<footer class="master-footer"><p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p><nav aria-label={formatLocaleTemplate(commonText.pages, title)}><button type="button" aria-label={commonText.firstPage} disabled={page === 1} onclick={() => changePage(1)}>&lt;&lt;</button><button type="button" aria-label={commonText.previousPage} disabled={page === 1} onclick={() => changePage(page - 1)}>&lt;</button>{#each pageNumbers as number}{#if number === 'ellipsis'}<span class="pagination-ellipsis" aria-hidden="true">…</span>{:else}<button type="button" aria-current={number === page ? 'page' : undefined} onclick={() => changePage(number)}>{number}</button>{/if}{/each}<button type="button" aria-label={commonText.nextPage} disabled={page === pageCount} onclick={() => changePage(page + 1)}>&gt;</button><button type="button" aria-label={commonText.lastPage} disabled={page === pageCount} onclick={() => changePage(pageCount)}>&gt;&gt;</button></nav></footer>
 </div>
-{#if menuItem}<div class="menu-popover master-menu" role="menu" style={`top:${menuTop}px;left:${menuLeft}px`}><button type="button" role="menuitem" disabled={!onDetail || !permitted(canDetail, Boolean(onDetail), menuItem)} onclick={() => { const item = menuItem; const trigger = menuTrigger; closeMenu(); if (item && permitted(canDetail, Boolean(onDetail), item)) onDetail?.(item, trigger); }}><MenuItemIcon name="detail" />Detail</button><button type="button" role="menuitem" disabled={!onEdit || !permitted(canEdit, canManage, menuItem)} onclick={() => { const item = menuItem; const trigger = menuTrigger; closeMenu(); if (item && permitted(canEdit, canManage, item)) onEdit?.(item, trigger); }}><MenuItemIcon name="edit" />Edit</button><div class="menu-separator"></div><button type="button" class="delete-item" role="menuitem" disabled={!onDelete || !permitted(canDelete, canManage, menuItem)} onclick={() => { const item = menuItem; closeMenu(); if (item && permitted(canDelete, canManage, item)) void onDelete?.(item); }}><MenuItemIcon name="delete" />Delete</button></div>{/if}
+{#if menuItem}<div class="menu-popover master-menu" role="menu" style={`top:${menuTop}px;left:${menuLeft}px`}><button type="button" role="menuitem" disabled={!onDetail || !permitted(canDetail, Boolean(onDetail), menuItem)} onclick={() => { const item = menuItem; const trigger = menuTrigger; closeMenu(); if (item && permitted(canDetail, Boolean(onDetail), item)) onDetail?.(item, trigger); }}><MenuItemIcon name="detail" />{commonText.detail}</button><button type="button" role="menuitem" disabled={!onEdit || !permitted(canEdit, canManage, menuItem)} onclick={() => { const item = menuItem; const trigger = menuTrigger; closeMenu(); if (item && permitted(canEdit, canManage, item)) onEdit?.(item, trigger); }}><MenuItemIcon name="edit" />{commonText.edit}</button><div class="menu-separator"></div><button type="button" class="delete-item" role="menuitem" disabled={!onDelete || !permitted(canDelete, canManage, menuItem)} onclick={() => { const item = menuItem; closeMenu(); if (item && permitted(canDelete, canManage, item)) void onDelete?.(item); }}><MenuItemIcon name="delete" />{commonText.delete}</button></div>{/if}
 
 <style>
 	.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

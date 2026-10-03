@@ -4,9 +4,10 @@
   import type { Snippet } from 'svelte';
   import { apiData } from '$lib/api';
   import type { SessionUser } from '$lib/auth';
-  import { applyLocalization, type LocalizationSettings } from '$lib/localization';
+  import { applyLocalization, localization } from '$lib/localization';
   import AppHeader from './AppHeader.svelte';
   import AppSidebar from './AppSidebar.svelte';
+  import PageTitle from './PageTitle.svelte';
   import { breadcrumbsForPath } from './sidebarNavigation';
 
   let { title, children }: { title: string; active?: string; children: Snippet } = $props();
@@ -27,23 +28,35 @@
     void (async () => {
       const response = await fetch('/v1/auth/session');
       if (response.ok) {
-        user = (await apiData<{ user: SessionUser }>(response)).user;
-        applyLocalization(user);
+        const current = (await apiData<{ user: SessionUser }>(response)).user;
+        await applyLocalization(current);
+        user = current;
       }
     })();
     const updateProfile = (event: Event) => {
       const detail = (event as CustomEvent<Pick<SessionUser, 'firstName' | 'middleName' | 'lastName'>>).detail;
       if (user && detail?.firstName && detail?.lastName) user = { ...user, ...detail };
     };
+    const updateSessionUser = async (event: Event) => {
+      const current = (event as CustomEvent<SessionUser>).detail;
+      if (!current || (user && current.id !== user.id)) return;
+      user = current;
+      await applyLocalization(current);
+    };
     window.addEventListener('profile-updated', updateProfile);
-    return () => window.removeEventListener('profile-updated', updateProfile);
+    window.addEventListener('session-user-updated', updateSessionUser);
+    return () => {
+      window.removeEventListener('profile-updated', updateProfile);
+      window.removeEventListener('session-user-updated', updateSessionUser);
+    };
   });
 </script>
 
+<PageTitle {title} />
 <div class:collapsed class="shell">
   <AppSidebar {collapsed} {user} currentPath={page.url.pathname} onLogout={logout} />
   <section class="workspace">
-    <AppHeader {collapsed} onToggleSidebar={toggle} breadcrumbs={breadcrumbsForPath(page.url.pathname, title)} />
+    <AppHeader {collapsed} onToggleSidebar={toggle} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />
     <main>{@render children()}</main>
   </section>
 </div>

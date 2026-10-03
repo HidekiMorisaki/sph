@@ -1,0 +1,17 @@
+{
+	"v0_2_0_optional_samples": "Added guided English/Japanese installers for Windows, macOS and Linux, with optional fictional sample data for evaluation.",
+	"v0_2_0_consolidated_initialization": "Improved updates and restores for existing installations with verified backups and encryption key checks.",
+	"v0_2_0_development_notice": "Version 0.2.0 is a development release. Features, data structures, and upgrade procedures may change before version 1.0.0.",
+	"v0_2_0_dashboard_pdf_export": "Added an employee dashboard for headcount, age groups and turnover, with PDF export of summaries and charts.",
+	"v0_2_0_localization": "Added English/Japanese display across major pages, shared navigation and master management.",
+	"v0_2_0_it_asset_credentials": "Added IT asset network details and encrypted password management, including a Server Administrator role and reauthentication before password display.",
+	"v0_2_0_employee_visibility": "Added options to include retired and deleted employees in lists and CSV exports, with read-only details for deleted employees.",
+	"v0_1_0_system_information": "Added product version, release notice, public repository, and revision history information to System settings.",
+	"v0_1_0_backup_and_recovery": "Added verified full-database backup, update, and disaster-recovery tools for Windows, macOS, and Linux.",
+	"v0_1_0_role_management": "Added role name management and replaced editable role codes with immutable permission identifiers.",
+	"v0_1_0_work_calendars": "Improved Work calendars with automatic public-holiday imports and responsive employee assignment controls.",
+	"v0_1_0_employee_name_formatting": "Added language-aware employee name formatting and localized gender and length-of-service labels.",
+	"v0_1_0_employee_email_and_asset_notes": "Added employee email actions and made IT asset notes easier to identify.",
+	"v0_1_0_responsive_layouts": "Improved responsive layouts across Settings, System settings, master data, and asset management screens.",
+	"v0_1_0_active_data_transfer": "Added a separate active-data export and restore workflow that preserves database date values without time-zone shifts."
+}

@@ -1,72 +1,79 @@
+import { localeMessages } from '$lib/locale-messages';
+import type { DisplayLanguage } from '$lib/localization';
+
 export type Link = { text: string; href: string };
-export type Item = { text: string; icon: string; href?: string; children?: Link[]; badge?: string; external?: boolean };
-export type MenuGroup = { label: string; items: Item[]; managerOnly?: boolean; systemAdministratorOnly?: boolean };
+export type Item = { id: string; text: string; icon: string; href?: string; children?: Link[]; badge?: string; external?: boolean };
+export type MenuGroup = { id: string; label: string; items: Item[]; managerOnly?: boolean; systemAdministratorOnly?: boolean };
 export type Breadcrumb = { label: string; href?: string };
-	export const menus: MenuGroup[] = [
-		{ label: 'GENERAL', items: [
-			{ text: 'Dashboards', icon: 'dashboard', children: [{ text: 'Operations', href: '/' }, { text: 'Analytics', href: '/analytics' }] },
-			{ text: 'Work calendars', icon: 'calendar', href: '/work-calendars' },
-			{ text: 'Employees', icon: 'table', href: '/employees' }
+export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
+	const text = localeMessages[language].navigation;
+	return [
+		{ id: 'general', label: text.groups.general, items: [
+			{ id: 'dashboard', text: text.items.dashboard, icon: 'dashboard', href: '/' },
+			{ id: 'myPage', text: text.items.myPage, icon: 'dashboard', href: '/mypage' },
+			{ id: 'workCalendars', text: text.items.workCalendars, icon: 'calendar', href: '/work-calendars' },
+			{ id: 'employees', text: text.items.employees, icon: 'table', href: '/employees' }
 		] },
-		{ label: 'ASSETS', items: [
-			{ text: 'Dashboard', icon: 'dashboard', href: '/asset-dashboard' },
-			{ text: 'IT', icon: 'dashboard', href: '/it-assets' }
+		{ id: 'assets', label: text.groups.assets, items: [
+			{ id: 'itAssets', text: text.items.itAssets, icon: 'dashboard', href: '/it-assets' }
 		] },
-		{ label: 'SITE MANAGEMENT', systemAdministratorOnly: true, items: [
-			{ text: 'System settings', icon: 'settings', href: '/system-settings' }
+		{ id: 'siteManagement', label: text.groups.siteManagement, systemAdministratorOnly: true, items: [
+			{ id: 'systemSettings', text: text.items.systemSettings, icon: 'settings', href: '/system-settings' }
 		] },
-		{ label: 'MASTER MANAGEMENT', managerOnly: true, items: [
-			{ text: 'Employment', icon: 'list', children: [
-				{ text: 'Types', href: '/employee-masters/employment-types' },
-				{ text: 'Positions', href: '/employee-masters/positions' },
-				{ text: 'Departments', href: '/employee-masters/departments' },
-				{ text: 'Groups', href: '/employee-masters/employee-groups' }
+		{ id: 'masterManagement', label: text.groups.masterManagement, managerOnly: true, items: [
+			{ id: 'employment', text: text.items.employment, icon: 'list', children: [
+				{ text: text.items.employmentTypes, href: '/employee-masters/employment-types' },
+				{ text: text.items.positions, href: '/employee-masters/positions' },
+				{ text: text.items.departments, href: '/employee-masters/departments' },
+				{ text: text.items.employeeGroups, href: '/employee-masters/employee-groups' }
 			] },
-			{ text: 'Locations', icon: 'list', children: [
-				{ text: 'Branches', href: '/branches' },
-				{ text: 'Rooms', href: '/rooms' },
-				{ text: 'Storages', href: '/storages' }
+			{ id: 'locations', text: text.items.locations, icon: 'list', children: [
+				{ text: text.items.branches, href: '/branches' },
+				{ text: text.items.rooms, href: '/rooms' },
+				{ text: text.items.storages, href: '/storages' }
 			] },
-			{ text: 'IT', icon: 'list', children: [
-				{ text: 'Types', href: '/it-asset-masters/it-asset-types' },
-				{ text: 'Manufacturers', href: '/it-asset-masters/manufacturers' },
-				{ text: 'CPU types', href: '/it-asset-masters/cpu-types' },
-				{ text: 'Operating systems', href: '/it-asset-masters/operating-systems' },
-				{ text: 'Statuses', href: '/it-asset-masters/it-asset-statuses' }
+			{ id: 'itMasters', text: text.items.itMasters, icon: 'list', children: [
+				{ text: text.items.itAssetTypes, href: '/it-asset-masters/it-asset-types' },
+				{ text: text.items.manufacturers, href: '/it-asset-masters/manufacturers' },
+				{ text: text.items.cpuTypes, href: '/it-asset-masters/cpu-types' },
+				{ text: text.items.operatingSystems, href: '/it-asset-masters/operating-systems' },
+				{ text: text.items.statuses, href: '/it-asset-masters/it-asset-statuses' }
 			] }
 		] }
 	];
+}
 
-	export function breadcrumbsForPath(path: string, title: string): Breadcrumb[] {
-		const breadcrumbs: Breadcrumb[] = [{ label: 'HOME', ...(path === '/' ? {} : { href: '/' }) }];
-		for (const group of menus) {
-			for (const item of group.items) {
-				if (item.href === path) return [...breadcrumbs, { label: group.label }, { label: item.text }];
-				const child = item.children?.find((link) => link.href === path);
-				if (child) {
-					return [...breadcrumbs, { label: group.label }, { label: item.text }, { label: child.text }];
-				}
-			}
-		}
-		return [...breadcrumbs, { label: title }];
-	}
+export const menus = localizedMenus('en');
 
-	export function groupLabelForPath(path: string): string {
-		const normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : path;
-		for (const group of menus) {
-			if (group.items.some((item) => item.href === normalizedPath || item.children?.some((child) => child.href === normalizedPath))) return group.label;
+export function breadcrumbsForPath(path: string, title: string, language: DisplayLanguage = 'en'): Breadcrumb[] {
+	const breadcrumbs: Breadcrumb[] = [{ label: localeMessages[language].navigation.home, ...(path === '/' ? {} : { href: '/' }) }];
+	for (const group of localizedMenus(language)) {
+		for (const item of group.items) {
+			if (item.href === path) return [...breadcrumbs, { label: group.label }, { label: item.text }];
+			const child = item.children?.find((link) => link.href === path);
+			if (child) return [...breadcrumbs, { label: group.label }, { label: item.text }, { label: child.text }];
 		}
-		return '';
 	}
+	return [...breadcrumbs, { label: title }];
+}
 
-	export function parentMenuForPath(path: string): string | null {
-		for (const group of menus) {
-			for (const item of group.items) {
-				if (item.children?.some((child) => child.href === path)) return item.text;
-			}
-		}
-		return null;
+export function groupLabelForPath(path: string, language: DisplayLanguage = 'en'): string {
+	const normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : path;
+	for (const group of localizedMenus(language)) {
+		if (group.items.some((item) => item.href === normalizedPath || item.children?.some((child) => child.href === normalizedPath))) return group.label;
 	}
+	return '';
+}
+
+// Return a stable ID rather than a translated label for accordion/flyout state.
+export function parentMenuForPath(path: string): string | null {
+	for (const group of menus) {
+		for (const item of group.items) {
+			if (item.children?.some((child) => child.href === path)) return item.id;
+		}
+	}
+	return null;
+}
 
 	const svg = (body: string) => `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${body}</svg>`;
 	export const icons: Record<string, string> = {

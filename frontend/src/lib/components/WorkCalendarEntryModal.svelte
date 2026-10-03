@@ -5,6 +5,9 @@
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import { apiData } from '$lib/api';
+	import { localization } from '$lib/localization';
+	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { calendarErrorKey } from '$lib/work-calendar-errors';
 	import { formSnapshot } from '$lib/modalForm';
 
 	export type WorkCalendarEntry = { id: number; workDate: string; entryType: 'working_day' | 'company_holiday'; title: string; note: string | null };
@@ -18,6 +21,10 @@
 		onSaved: (date: string, action: 'created' | 'updated' | 'deleted') => void;
 	} = $props();
 
+	let text = $derived(localeMessages[$localization.displayLanguage].workCalendars);
+	let common = $derived(localeMessages[$localization.displayLanguage].common);
+	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
+
 	let entryType = $state(untrack(() => entry?.entryType ?? 'working_day'));
 	let title = $state(untrack(() => entry?.title ?? ''));
 	let note = $state(untrack(() => entry?.note ?? ''));
@@ -30,15 +37,12 @@
 	const initialSnapshot = untrack(() => formSnapshot({ entryType, title, note }));
 	let hasUnsavedChanges = $derived(Boolean(entry) && formSnapshot({ entryType, title, note }) !== initialSnapshot);
 
-	const typeOptions = [
-		{ value: 'working_day', label: 'Working day' },
-		{ value: 'company_holiday', label: 'Company holiday' }
-	];
+	let typeOptions = $derived([
+		{ value: 'working_day', label: text.workingDay },
+		{ value: 'company_holiday', label: text.companyHoliday }
+	]);
 
-	async function responseError(response: Response, fallback: string) {
-		const payload = await response.clone().json().catch(() => null) as { error?: { message?: string } } | null;
-		return payload?.error?.message ?? fallback;
-	}
+	async function responseError(response: Response, fallback: string) { const key = await calendarErrorKey(response); return key === 'unknown' ? fallback : text[key]; }
 
 	function closeImmediately() {
 		confirmingDiscard = false;
@@ -53,7 +57,7 @@
 	}
 
 	function validate() {
-		titleError = title.trim() ? '' : 'Title is required.';
+		titleError = title.trim() ? '' : text.titleRequired;
 		if (titleError) { void tick().then(() => titleElement?.focus()); return false; }
 		return true;
 	}
@@ -61,24 +65,26 @@
 	async function save() {
 		if (!validate()) return;
 		saving = true; formError = '';
-		const url = entry ? `/v1/work-calendars/${calendarId}/entries/${entry.id}` : `/v1/work-calendars/${calendarId}/entries`;
-		const response = await fetch(url, {
-			method: entry ? 'PATCH' : 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ workDate, entryType, title: title.trim(), note: note.trim() || null })
-		});
-		if (!response.ok) formError = await responseError(response, 'Unable to save the calendar entry.');
-		else { await apiData<WorkCalendarEntry>(response); onSaved(workDate, entry ? 'updated' : 'created'); }
-		saving = false;
+		try {
+			const url = entry ? `/v1/work-calendars/${calendarId}/entries/${entry.id}` : `/v1/work-calendars/${calendarId}/entries`;
+			const response = await fetch(url, {
+				method: entry ? 'PATCH' : 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ workDate, entryType, title: title.trim(), note: note.trim() || null })
+			});
+			if (!response.ok) formError = await responseError(response, text.entrySaveFailed);
+			else { await apiData<WorkCalendarEntry>(response); onSaved(workDate, entry ? 'updated' : 'created'); }
+		} catch { formError = text.entrySaveFailed; } finally { saving = false; }
 	}
 
 	async function remove() {
-		if (!entry || !confirm(`Delete “${entry.title}”?`)) return;
+		if (!entry || !confirm(t('entryDeleteConfirm', entry.title))) return;
 		saving = true; formError = '';
-		const response = await fetch(`/v1/work-calendars/${calendarId}/entries/${entry.id}`, { method: 'DELETE' });
-		if (!response.ok) formError = await responseError(response, 'Unable to delete the calendar entry.');
-		else onSaved(workDate, 'deleted');
-		saving = false;
+		try {
+			const response = await fetch(`/v1/work-calendars/${calendarId}/entries/${entry.id}`, { method: 'DELETE' });
+			if (!response.ok) formError = await responseError(response, text.entryDeleteFailed);
+			else onSaved(workDate, 'deleted');
+		} catch { formError = text.entryDeleteFailed; } finally { saving = false; }
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -99,18 +105,18 @@
 <svelte:window onkeydown={handleKeydown} />
 <ModalBackdrop onDismiss={requestClose} disabled={saving}>
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact entry-dialog" open aria-modal="true" aria-labelledby="entry-dialog-title">
-		<header><h2 id="entry-dialog-title">{entry ? 'Edit calendar entry' : 'Add calendar entry'}</h2><button class="app-modal-close" type="button" aria-label="Close calendar entry form" disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="entry-dialog-title">{entry ? text.editEntry : text.addEntry}</h2><button class="app-modal-close" type="button" aria-label={text.closeEntry} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body entry-form-body">
-				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>Unable to save calendar entry</strong><span>{formError}</span></div>{/if}
-				<FormSection title="Calendar entry" columns={2} framed>
-					<label>Date<input value={workDate} readonly aria-readonly="true" /></label>
-					<SearchSelect label="Day type" field="entryType" value={entryType} options={typeOptions} required disabled={saving} onSelect={(value) => entryType = value as typeof entryType} />
-					<label class="wide"><span>Title <span class="required" aria-hidden="true">*</span></span><input bind:this={titleElement} class:invalid={Boolean(titleError)} maxlength="128" bind:value={title} aria-invalid={Boolean(titleError)} aria-describedby={titleError ? 'entry-title-error' : undefined} placeholder="e.g. Head office day" />{#if titleError}<small id="entry-title-error" class="field-error" role="alert">{titleError}</small>{/if}</label>
-					<label class="wide">Note<textarea maxlength="5000" rows="5" bind:value={note} placeholder="Optional details"></textarea></label>
+				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.entrySaveHeading}</strong><span>{formError}</span></div>{/if}
+				<FormSection title={text.entryDetails} columns={2} framed>
+					<label>{text.date}<input value={workDate} readonly aria-readonly="true" /></label>
+					<SearchSelect label={text.dayType} field="entryType" value={entryType} options={typeOptions} required disabled={saving} onSelect={(value) => entryType = value as typeof entryType} />
+					<label class="wide"><span>{text.entryTitle} <span class="required" aria-hidden="true">*</span></span><input bind:this={titleElement} class:invalid={Boolean(titleError)} maxlength="128" bind:value={title} aria-invalid={Boolean(titleError)} aria-describedby={titleError ? 'entry-title-error' : undefined} placeholder={text.titlePlaceholder} />{#if titleError}<small id="entry-title-error" class="field-error" role="alert">{titleError}</small>{/if}</label>
+					<label class="wide">{text.note}<textarea maxlength="5000" rows="5" bind:value={note} placeholder={text.notePlaceholder}></textarea></label>
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer">{#if entry}<button class="delete-action" type="button" disabled={saving} onclick={() => void remove()}>Delete</button>{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>Cancel</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></footer>
+			<footer class="app-modal-footer">{#if entry}<button class="delete-action" type="button" disabled={saving} onclick={() => void remove()}>{common.delete}</button>{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? common.saving : text.save}</button></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>

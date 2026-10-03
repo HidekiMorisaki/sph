@@ -31,6 +31,18 @@ function Assert-MaintenancePrerequisites {
 	Invoke-Compose -Arguments @('version') -Capture | Out-Null
 	Invoke-Compose -Arguments @('config', '--quiet')
 	if (-not (Test-Path -LiteralPath (Join-Path $script:RepositoryRoot '.env') -PathType Leaf)) { throw '.env is required in the repository root.' }
+	Get-CredentialEncryptionKeyFingerprint | Out-Null
+}
+
+function Get-CredentialEncryptionKeyFingerprint {
+	$envPath = Join-Path $script:RepositoryRoot '.env'
+	$lines = @(Get-Content -LiteralPath $envPath | Where-Object { $_ -match '^IT_ASSET_CREDENTIAL_ENCRYPTION_KEY=' })
+	if ($lines.Count -ne 1) { throw 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY must be configured exactly once in .env.' }
+	$value = $lines[0].Substring($lines[0].IndexOf('=') + 1).Trim()
+	if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) { $value = $value.Substring(1, $value.Length - 2) }
+	if ($value -notmatch '^[A-Za-z0-9_-]{43}$') { throw 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY must be a canonical base64url-encoded 32-byte key.' }
+	$hash = [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($value))
+	return [Convert]::ToHexString($hash).ToLowerInvariant()
 }
 
 function Get-ComposeContainerId {
@@ -103,6 +115,7 @@ function New-SphFullBackup {
 	$manifestPath = Join-Path $backupDirectory 'manifest.json'
 	$containerArchive = "/tmp/$backupId.dump"
 	$verificationDatabase = "$($identity.Database)_backup_verify"
+	$credentialKeyFingerprint = Get-CredentialEncryptionKeyFingerprint
 	if ($verificationDatabase -notmatch '^[A-Za-z_][A-Za-z0-9_]*_backup_verify$') { throw 'The verification database name is invalid.' }
 	if (Test-Path -LiteralPath $backupDirectory) { throw "The backup directory already exists: $backupDirectory" }
 	[IO.Directory]::CreateDirectory($backupDirectory) | Out-Null
@@ -140,6 +153,7 @@ function New-SphFullBackup {
 			archiveFile = 'database.dump'
 			archiveFormat = 'postgresql-custom'
 			sha256 = $hash
+			credentialEncryptionKeyFingerprint = $credentialKeyFingerprint
 			verifiedRestore = $true
 		}
 		[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4) + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))

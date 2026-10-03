@@ -1,3 +1,5 @@
+name: sph
+
 x-logging: &logging
   driver: "json-file"
   options:
@@ -54,7 +56,7 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-      target: development
+      target: production
     pull_policy: build
     container_name: sph-api
     restart: unless-stopped
@@ -63,21 +65,17 @@ services:
     environment:
       TZ: Asia/Tokyo
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-      ORIGIN: http://localhost:3000
-    volumes:
-      - ./api:/app
-      - ./VERSION:/run/sph/VERSION:ro
-      - ./release-metadata.json:/run/sph/release-metadata.json:ro
-      - api_node_modules:/app/node_modules
+      IT_ASSET_CREDENTIAL_ENCRYPTION_KEY: ${IT_ASSET_CREDENTIAL_ENCRYPTION_KEY}
+      ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
     expose:
-      - "5174"
+      - "3000"
     networks:
       - app-network
     depends_on:
       migration:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5174/v1/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/v1/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -88,21 +86,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: production
     pull_policy: build
     container_name: sph-frontend
     restart: unless-stopped
     environment:
       TZ: Asia/Tokyo
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      API_INTERNAL_ORIGIN: http://api:3000
     expose:
-      - "5173"
+      - "3000"
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -116,7 +113,7 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "3000:80"
+      - "${HTTP_PORT:-3000}:80"
     networks:
       - app-network
     depends_on:

@@ -47,7 +47,6 @@ model Employee {
   username                String?                 @unique
   passwordHash            String?                 @map("password_hash")
   accountStatus           AccountStatus           @default(unprovisioned) @map("account_status")
-  mustChangeCredentials   Boolean                 @default(false) @map("must_change_credentials")
   createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt               DateTime?               @map("deleted_at") @db.Timestamptz(3)
@@ -78,14 +77,15 @@ model Employee {
 }
 
 model EmployeeSettings {
-  id              Int       @id @default(autoincrement())
-  employeeId      Int       @unique @map("employee_id")
-  timeZone        String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
-  displayLanguage String    @default("en") @map("display_language") @db.VarChar(64)
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
-  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  id                 Int       @id @default(autoincrement())
+  employeeId         Int       @unique @map("employee_id")
+  timeZone           String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
+  displayLanguage    String    @default("en") @map("display_language") @db.VarChar(64)
+  analyticsSelection Json?     @map("analytics_selection") @db.JsonB
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
   @@map("employee_settings")
 }
@@ -401,16 +401,17 @@ model Branch {
 }
 
 model Room {
-  id        Int       @id @default(autoincrement())
-  name      String
-  sortOrder Int       @default(9999) @map("sort_order")
-  notes     String?
-  branchId  Int       @map("branch_id")
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
-  branch    Branch    @relation(fields: [branchId], references: [id])
-  storage   Storage[]
+  id                 Int                @id @default(autoincrement())
+  name               String
+  sortOrder          Int                @default(9999) @map("sort_order")
+  notes              String?
+  branchId           Int                @map("branch_id")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  branch             Branch             @relation(fields: [branchId], references: [id])
+  storage            Storage[]
+  itAssetIpAddresses ItAssetIpAddress[]
 
   @@unique([branchId, name])
   @@unique([branchId, id])
@@ -419,33 +420,39 @@ model Room {
 }
 
 model ItAsset {
-  id                Int                     @id @default(autoincrement())
-  assetTag          String                  @unique @map("asset_tag")
-  typeId            Int                     @map("type_id")
-  manufacturerId    Int?                    @map("manufacturer_id")
-  modelNumber       String?                 @map("model_number")
-  serialNumber      String?                 @map("serial_number")
-  cpuTypeId         Int?                    @map("cpu_type_id")
-  ramGb             Int?                    @map("ram_gb")
-  operatingSystemId Int?                    @map("operating_system_id")
-  loginUsername     String?                 @map("login_username")
-  storageId         Int                     @map("storage_id")
-  statusId          Int                     @map("status_id")
-  purchasedOn       DateTime                @map("purchased_on") @db.Date
-  disposalOn        DateTime?               @map("disposal_on") @db.Date
-  notes             String?
-  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt         DateTime?               @map("deleted_at") @db.Timestamptz(3)
-  type              ItAssetType             @relation(fields: [typeId], references: [id])
-  manufacturer      Manufacturer?           @relation(fields: [manufacturerId], references: [id])
-  cpuType           CpuType?                @relation(fields: [cpuTypeId], references: [id])
-  operatingSystem   OperatingSystem?        @relation(fields: [operatingSystemId], references: [id])
-  storage           Storage                 @relation(fields: [storageId], references: [id])
-  status            ItAssetStatus           @relation(fields: [statusId], references: [id])
-  assignments       ItAssetAssignment[]
-  changeHistory     ItAssetChangeHistory[]
-  managementCodes   ItAssetManagementCode[]
+  id                        Int                     @id @default(autoincrement())
+  assetTag                  String                  @unique @map("asset_tag")
+  typeId                    Int                     @map("type_id")
+  manufacturerId            Int?                    @map("manufacturer_id")
+  modelNumber               String?                 @map("model_number")
+  serialNumber              String?                 @map("serial_number")
+  cpuTypeId                 Int?                    @map("cpu_type_id")
+  ramGb                     Int?                    @map("ram_gb")
+  operatingSystemId         Int?                    @map("operating_system_id")
+  loginUsername             String?                 @map("login_username")
+  hostname                  String?                 @db.VarChar(253)
+  adminUsername             String?                 @map("admin_username") @db.VarChar(255)
+  managementConsoleUrl      String?                 @map("management_console_url") @db.VarChar(2048)
+  managementConsoleUsername String?                 @map("management_console_username") @db.VarChar(255)
+  storageId                 Int                     @map("storage_id")
+  statusId                  Int                     @map("status_id")
+  purchasedOn               DateTime                @map("purchased_on") @db.Date
+  disposalOn                DateTime?               @map("disposal_on") @db.Date
+  notes                     String?
+  createdAt                 DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                 DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  type                      ItAssetType             @relation(fields: [typeId], references: [id])
+  manufacturer              Manufacturer?           @relation(fields: [manufacturerId], references: [id])
+  cpuType                   CpuType?                @relation(fields: [cpuTypeId], references: [id])
+  operatingSystem           OperatingSystem?        @relation(fields: [operatingSystemId], references: [id])
+  storage                   Storage                 @relation(fields: [storageId], references: [id])
+  status                    ItAssetStatus           @relation(fields: [statusId], references: [id])
+  assignments               ItAssetAssignment[]
+  changeHistory             ItAssetChangeHistory[]
+  managementCodes           ItAssetManagementCode[]
+  ipAddresses               ItAssetIpAddress[]
+  credentials               ItAssetCredential[]
 
   @@unique([manufacturerId, serialNumber])
   @@index([typeId])
@@ -455,6 +462,41 @@ model ItAsset {
   @@index([storageId])
   @@index([statusId])
   @@map("it_assets")
+}
+
+model ItAssetIpAddress {
+  id        Int       @id @default(autoincrement())
+  assetId   Int       @map("asset_id")
+  slot      Int       @db.SmallInt
+  roomId    Int       @map("room_id")
+  ipAddress String    @map("ip_address") @db.VarChar(45)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  asset     ItAsset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@unique([assetId, slot])
+  @@index([roomId])
+  @@map("it_asset_ip_addresses")
+}
+
+model ItAssetCredential {
+  id                   Int       @id @default(autoincrement())
+  assetId              Int       @map("asset_id")
+  credentialType       String    @map("credential_type") @db.VarChar(32)
+  ciphertext           String    @db.Text
+  initializationVector String    @map("initialization_vector") @db.VarChar(32)
+  authenticationTag    String    @map("authentication_tag") @db.VarChar(32)
+  keyVersion           Int       @default(1) @map("key_version")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(3)
+  asset                ItAsset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([assetId, credentialType])
+  @@index([assetId])
+  @@map("it_asset_credentials")
 }
 
 model ItAssetManagementCode {

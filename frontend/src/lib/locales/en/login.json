@@ -1,0 +1,13 @@
+{
+	"identifierRequired": "Username or email is required.",
+	"passwordRequired": "Password is required.",
+	"invalidCredentials": "Invalid username or password.",
+	"loginFailed": "Sign-in failed. Please try again.",
+	"metaDescription": "Workplace asset management",
+	"checkingSession": "Checking your session…",
+	"loginDescription": "Sign in to manage workplace assets.",
+	"identifier": "Username or email",
+	"password": "Password",
+	"signingIn": "Signing in…",
+	"signIn": "Sign in"
+}

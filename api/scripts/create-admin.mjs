@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync } from 'node:crypto';
 import { Client } from 'pg';
+import { assertSampleDatabaseEmpty, catalogFor, initializeRequiredData, installSamples } from './install-data.mjs';
 
 const input = {
 	username: process.env.INITIAL_ADMIN_USERNAME?.trim(),
@@ -12,7 +13,8 @@ const input = {
 	email: process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase(),
 	hiredAt: process.env.INITIAL_ADMIN_HIRED_AT?.trim(),
 	employmentType: process.env.INITIAL_ADMIN_EMPLOYMENT_TYPE?.trim(),
-	branch: process.env.INITIAL_ADMIN_BRANCH?.trim()
+	branch: process.env.INITIAL_ADMIN_BRANCH?.trim(),
+	displayLanguage: process.env.INITIAL_ADMIN_DISPLAY_LANGUAGE?.trim() || 'en'
 };
 
 const validDate = (value) => {
@@ -31,27 +33,35 @@ try {
 	if (accounts.rows[0].count === 0) {
 		if (Object.values(input).some((value) => !value)) throw new Error('The initial administrator profile is required.');
 		if (!/^[A-Za-z0-9]{10,64}$/.test(input.employeeCode) || input.username.length > 64 ||
-			input.password.length < 12 || !/[a-z]/.test(input.password) || !/[A-Z]/.test(input.password) || !/[0-9]/.test(input.password) ||
-			!validDate(input.birthDate) || !validDate(input.hiredAt) || !['female', 'male', 'unspecified'].includes(input.gender) ||
+			input.password.length < 12 || input.password.length > 1024 || /[\x00-\x1f\x7f]/.test(input.password) || !/[a-z]/.test(input.password) || !/[A-Z]/.test(input.password) || !/[0-9]/.test(input.password) ||
+			!validDate(input.birthDate) || !validDate(input.hiredAt) || !['female', 'male', 'unspecified'].includes(input.gender) || !['en', 'ja'].includes(input.displayLanguage) ||
 			!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
 			throw new Error('The initial administrator profile does not meet the requirements.');
 		}
+		const samples = process.env.INITIAL_ADMIN_SAMPLE_DATA ?? 'no';
+		if (!['no', 'yes'].includes(samples)) throw new Error('Invalid sample data selection.');
+		if (samples === 'yes') await assertSampleDatabaseEmpty(client);
+		const catalog = catalogFor(input.displayLanguage);
+		const employmentTypeId = await initializeRequiredData(client, catalog, input);
 		const salt = randomBytes(16).toString('base64url');
 		const passwordHash = `scrypt$${salt}$${scryptSync(input.password, salt, 64).toString('base64url')}`;
-		const employmentType = await client.query('SELECT id FROM employment_types WHERE name = $1 AND deleted_at IS NULL', [input.employmentType]);
-		const branch = await client.query('SELECT id FROM branches WHERE name = $1 AND deleted_at IS NULL', [input.branch]);
 		const role = await client.query(`SELECT DISTINCT r.id FROM roles r
 			JOIN role_permissions rp ON rp.role_id = r.id AND rp.deleted_at IS NULL
 			JOIN permissions p ON p.id = rp.permission_id AND p.deleted_at IS NULL
 			JOIN permission_operations po ON po.permission_id = p.id AND po.operation = 'system.manage' AND po.deleted_at IS NULL
 			WHERE r.deleted_at IS NULL`);
-		if (employmentType.rowCount !== 1 || branch.rowCount !== 1 || role.rowCount !== 1) throw new Error('The initial administrator master data is unavailable or ambiguous.');
+		if (role.rowCount !== 1) throw new Error('The initial administrator master data is unavailable or ambiguous.');
+		// Reuse an active branch when provisioning an existing database. Never revive a deleted branch.
+		let branch = await client.query('SELECT id FROM branches WHERE name = $1 AND deleted_at IS NULL', [input.branch]);
+		if (branch.rowCount === 0) branch = await client.query('INSERT INTO branches (name) VALUES ($1) RETURNING id', [input.branch]);
 		const created = await client.query(
-			`INSERT INTO employees (employee_code, first_name, last_name, birth_date, gender, email, hired_at, employment_type_id, branch_id, username, password_hash, account_status, must_change_credentials)
-			 VALUES ($1, $2, $3, $4::date, $5, $6, $7::date, $8, $9, $10, $11, 'active'::"AccountStatus", true) RETURNING id`,
-			[input.employeeCode, input.firstName, input.lastName, input.birthDate, input.gender, input.email, input.hiredAt, employmentType.rows[0].id, branch.rows[0].id, input.username, passwordHash]
+			`INSERT INTO employees (employee_code, first_name, last_name, birth_date, gender, email, hired_at, employment_type_id, branch_id, username, password_hash, account_status)
+			 VALUES ($1, $2, $3, $4::date, $5, $6, $7::date, $8, $9, $10, $11, 'active'::"AccountStatus") RETURNING id`,
+			[input.employeeCode, input.firstName, input.lastName, input.birthDate, input.gender, input.email, input.hiredAt, employmentTypeId, branch.rows[0].id, input.username, passwordHash]
 		);
 		await client.query('INSERT INTO employee_roles (employee_id, role_id) VALUES ($1, $2)', [created.rows[0].id, role.rows[0].id]);
+		await client.query('INSERT INTO employee_settings (employee_id, display_language) VALUES ($1, $2)', [created.rows[0].id, input.displayLanguage]);
+		if (samples === 'yes') await installSamples(client, catalog, { adminId: created.rows[0].id, branchId: branch.rows[0].id, displayLanguage: input.displayLanguage });
 	}
 	await client.query('COMMIT');
 } catch (error) {

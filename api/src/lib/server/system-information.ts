@@ -4,12 +4,12 @@ import { resolve } from 'node:path';
 type RevisionHistoryEntry = {
 	version: string;
 	releasedAt: string;
-	changes: string[];
+	changeIds: string[];
 };
 
 type ReleaseMetadata = {
 	name: string;
-	notices: string[];
+	noticeIds: string[];
 	repositoryUrl: string | null;
 	revisionHistory: RevisionHistoryEntry[];
 };
@@ -32,28 +32,33 @@ function readProjectFile(name: string): string {
 	throw new Error(`Required system information file is unavailable: ${name}`);
 }
 
-function parseMetadata(): ReleaseMetadata {
-	const parsed = JSON.parse(readProjectFile('release-metadata.json')) as Partial<ReleaseMetadata>;
+function validMessageIds(value: unknown, allowEmpty = true): value is string[] {
+	return Array.isArray(value) && (allowEmpty || value.length > 0) && value.every((id) => typeof id === 'string' && /^[a-z][a-z0-9_]*$/.test(id)) && new Set(value).size === value.length;
+}
+
+export function parseReleaseMetadata(value: unknown): ReleaseMetadata {
+	if (!value || typeof value !== 'object') throw new Error('Release metadata is invalid.');
+	const parsed = value as Partial<ReleaseMetadata>;
 	if (typeof parsed.name !== 'string' || !parsed.name.trim()) throw new Error('System name is invalid.');
-	if (!Array.isArray(parsed.notices) || parsed.notices.some((notice) => typeof notice !== 'string' || !notice.trim())) throw new Error('Version notices are invalid.');
+	if (!validMessageIds(parsed.noticeIds)) throw new Error('Version notice IDs are invalid.');
 	if (parsed.repositoryUrl !== null && typeof parsed.repositoryUrl !== 'string') throw new Error('Repository URL is invalid.');
 	if (parsed.repositoryUrl) {
 		const url = new URL(parsed.repositoryUrl);
 		if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) throw new Error('Repository URL is invalid.');
 	}
-	if (!Array.isArray(parsed.revisionHistory) || parsed.revisionHistory.some((entry) =>
+	if (!Array.isArray(parsed.revisionHistory) || !parsed.revisionHistory.length || parsed.revisionHistory.some((entry) =>
 		!entry || typeof entry !== 'object' || !VERSION_PATTERN.test(entry.version) || !/^\d{4}-\d{2}-\d{2}$/.test(entry.releasedAt) ||
-		!Array.isArray(entry.changes) || !entry.changes.length || entry.changes.some((change) => typeof change !== 'string' || !change.trim())
+		!validMessageIds(entry.changeIds, false)
 	)) throw new Error('Revision history is invalid.');
 	if (new Set(parsed.revisionHistory.map((entry) => entry.version)).size !== parsed.revisionHistory.length) throw new Error('Revision history versions must be unique.');
 	return {
 		name: parsed.name.trim(),
-		notices: parsed.notices.map((notice) => notice.trim()),
+		noticeIds: [...parsed.noticeIds],
 		repositoryUrl: parsed.repositoryUrl?.trim() || null,
 		revisionHistory: parsed.revisionHistory.map((entry) => ({
 			version: entry.version,
 			releasedAt: entry.releasedAt,
-			changes: entry.changes.map((change) => change.trim())
+			changeIds: [...entry.changeIds]
 		}))
 	};
 }
@@ -61,7 +66,9 @@ function parseMetadata(): ReleaseMetadata {
 function loadSystemInformation(): SystemInformation {
 	const version = readProjectFile('VERSION').trim();
 	if (!VERSION_PATTERN.test(version)) throw new Error('Product version is invalid.');
-	return { ...parseMetadata(), version };
+	const metadata = parseReleaseMetadata(JSON.parse(readProjectFile('release-metadata.json')));
+	if (metadata.revisionHistory[0].version !== version) throw new Error('Product version and current revision history version do not match.');
+	return { ...metadata, version };
 }
 
 export const systemInformation = Object.freeze(loadSystemInformation());

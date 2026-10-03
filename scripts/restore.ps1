@@ -21,6 +21,8 @@ try {
 	}
 	if ($manifest.archiveFile -notmatch '^[A-Za-z0-9._-]+$') { throw 'The backup archive name is invalid.' }
 	if ($manifest.sha256 -notmatch '^[0-9a-f]{64}$') { throw 'The backup archive checksum is invalid.' }
+	$credentialKeyFingerprint = if ($manifest.PSObject.Properties.Name -contains 'credentialEncryptionKeyFingerprint') { [string]$manifest.credentialEncryptionKeyFingerprint } else { '' }
+	if ($credentialKeyFingerprint -and ($credentialKeyFingerprint -notmatch '^[0-9a-f]{64}$' -or $credentialKeyFingerprint -cne (Get-CredentialEncryptionKeyFingerprint))) { throw 'The configured IT asset credential encryption key does not match this backup.' }
 	$archivePath = Join-Path $backupDirectory $manifest.archiveFile
 	if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) { throw 'The backup archive is missing.' }
 	$actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -45,6 +47,7 @@ try {
 	Invoke-Compose -Arguments @('exec', '-T', 'db', 'sh', '-c', "pg_restore --exit-on-error --no-owner --no-privileges --username=`"`$POSTGRES_USER`" --dbname=$($identity.Database) $containerArchive")
 
 	Invoke-Compose -Arguments @('build', 'migration', 'api', 'frontend')
+	Invoke-Compose -Arguments @('run', '--rm', '--no-deps', '--volume', "${backupDirectory}:/baseline-backup", 'migration', 'node', 'scripts/baseline-existing.mjs', '/baseline-backup/manifest.json', '--if-legacy')
 	Invoke-Compose -Arguments @('run', '--rm', '--no-deps', 'migration')
 	$invalidateSql = "UPDATE sessions SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL; UPDATE password_reset_tokens SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL; UPDATE account_invitations SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL;"
 	Invoke-Compose -Arguments @('exec', '-T', 'db', 'psql', '--no-psqlrc', '--set', 'ON_ERROR_STOP=1', '--username', $identity.User, '--dbname', $identity.Database, '--command', $invalidateSql)

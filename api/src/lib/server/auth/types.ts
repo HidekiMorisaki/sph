@@ -10,7 +10,6 @@ export type AuthenticatedUser = {
 	roles: Array<{ id: number; name: string }>;
 	permissionIdentifiers: string[];
 	permissionOperations: string[];
-	mustChangeCredentials: boolean;
 	timeZone: string;
 	displayLanguage: DisplayLanguage;
 };

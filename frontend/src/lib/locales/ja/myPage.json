@@ -1,0 +1,15 @@
+{
+	"title": "マイページ",
+	"underDevelopment": "このページは開発途中です",
+	"welcome": "おかえりなさい、{1}さん",
+	"assetOverview": "資産概要",
+	"ready": "管理を開始できます",
+	"inventory": "資産情報を最新の状態に保ちましょう",
+	"attention": "確認事項",
+	"noAlerts": "重大なアラートはありません",
+	"assignments": "割り当て状況を定期的に確認しましょう",
+	"account": "アカウント",
+	"emailUnset": "メールアドレス未設定",
+	"management": "管理",
+	"sidebarHelp": "サイドメニューから従業員、場所、資産を管理できます。"
+}
