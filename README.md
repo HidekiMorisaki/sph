@@ -72,6 +72,11 @@ backend destination. The installer does not provision certificates or a TLS prox
 If the public URL check reports a warning, finish the DNS, firewall, and proxy
 configuration, then verify access from a user PC.
 
+For use on the installation PC, `http://localhost:<port>` supports account
+invitations and asset credential access. An invitation link created at this
+address can only be opened on that same PC. To invite someone on another PC,
+open the system through its HTTPS application URL before creating the link.
+
 Connection settings are saved as `APP_ORIGIN` and `HTTP_PORT` in `.env`.
 If changing them later, update `CORS_ALLOWED_ORIGINS` to the same application URL
 and run `docker compose up -d --no-build --no-deps api frontend gateway` to apply the changes.

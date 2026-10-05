@@ -3,6 +3,7 @@ import { requireAssetCredentialReadApi, writeAuditLog } from '$lib/server/api/ad
 import { decryptPassword, isAssetCredentialType } from '$lib/server/api/it-asset-credentials';
 import { parseId } from '$lib/server/api/database';
 import { failure, success } from '$lib/server/api/response';
+import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
 import { verifyPassword } from '$lib/server/auth/session';
 import { getPrisma } from '$lib/server/prisma';
 
@@ -12,7 +13,7 @@ function reauthenticationFailed() {
 
 export async function POST({ params, locals, request, url }: import('./$types').RequestEvent) {
 	const actor = requireAssetCredentialReadApi(locals.user);
-	if (!dev && url.protocol !== 'https:' && request.headers.get('x-forwarded-proto') !== 'https') return failure(403, 'HTTPS_REQUIRED', 'Asset credentials require HTTPS.');
+	if (!dev && !allowsSensitiveRequest(url, request) && request.headers.get('x-forwarded-proto') !== 'https') return failure(403, 'HTTPS_REQUIRED', 'Asset credentials require HTTPS.');
 	const assetId = parseId(params.id);
 	if (!assetId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const body = await request.json().catch(() => null) as Record<string, unknown> | null;

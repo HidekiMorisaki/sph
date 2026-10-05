@@ -2,12 +2,13 @@ import { dev } from '$app/environment';
 import { requireSystemAdminApi } from '$lib/server/api/admin';
 import { parseId } from '$lib/server/api/database';
 import { failure, success } from '$lib/server/api/response';
+import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
 import { INVITATION_DAILY_LIMIT, issueInvitation } from '$lib/server/auth/invitation';
 import { getPrisma } from '$lib/server/prisma';
 
-export async function POST({ params, locals, url }: import('./$types').RequestEvent) {
+export async function POST({ params, locals, request, url }: import('./$types').RequestEvent) {
 	const actor = requireSystemAdminApi(locals.user);
-	if (!dev && url.protocol !== 'https:') return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
+	if (!dev && !allowsSensitiveRequest(url, request)) return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async tx => {

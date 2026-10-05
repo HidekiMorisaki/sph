@@ -13,6 +13,7 @@ import { issueInvitation } from '$lib/server/auth/invitation';
 import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success, throwApiError } from '$lib/server/api/response';
+import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 
@@ -350,7 +351,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 
 export async function POST({ request, locals, url }: import('./$types').RequestEvent) {
 	const actor = requireAdminApi(locals.user);
-	if (hasPermissionOperation(actor, permissionOperations.systemManagement) && !dev && url.protocol !== 'https:') return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
+	if (hasPermissionOperation(actor, permissionOperations.systemManagement) && !dev && !allowsSensitiveRequest(url, request)) return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
 	const parsed = parseEmployeeInput(await request.json().catch(() => null));
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;

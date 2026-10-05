@@ -1,7 +1,9 @@
 {
 	"v0_2_0_optional_samples": "Added guided English/Japanese installers for Windows, macOS and Linux, with optional fictional sample data for evaluation.",
 	"v0_2_0_consolidated_initialization": "Improved updates and restores for existing installations with verified backups and encryption key checks.",
-	"v0_2_0_development_notice": "Version 0.2.0 is a development release. Features, data structures, and upgrade procedures may change before version 1.0.0.",
+	"v0_2_1_development_notice": "Version 0.2.1 is a development release. Existing features may also change significantly in future updates.",
+	"v0_2_1_japan_holiday_translation": "Japanese holiday names now appear in English when English is selected as the display language.",
+	"v0_2_1_localhost_https": "Fixed some data registration actions requiring HTTPS when the system is running on localhost.",
 	"v0_2_0_dashboard_pdf_export": "Added an employee dashboard for headcount, age groups and turnover, with PDF export of summaries and charts.",
 	"v0_2_0_localization": "Added English/Japanese display across major pages, shared navigation and master management.",
 	"v0_2_0_it_asset_credentials": "Added IT asset network details and encrypted password management, including a Server Administrator role and reauthentication before password display.",
