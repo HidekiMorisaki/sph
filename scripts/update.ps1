@@ -48,7 +48,6 @@ try {
 	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
 	Write-Host "Update completed successfully. Backup retained at: $backupDirectory"
 } catch {
-	Write-Error $_
 	if ($servicesStopped -and -not $sourceUpdated) {
 		try {
 			Invoke-Compose -Arguments @('start', 'api', 'frontend', 'gateway')

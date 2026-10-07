@@ -173,7 +173,7 @@ wait_migration_succeeded() {
 	local deadline=$((SECONDS + timeout_seconds))
 	local container_id state
 	while (( SECONDS < deadline )); do
-		container_id="$(compose_container_id migration)"
+		container_id="$(sph_compose ps --all -q migration)"
 		if [[ -n "$container_id" ]]; then
 			state="$(docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$container_id")"
 			[[ "$state" == 'exited 0' ]] && return 0

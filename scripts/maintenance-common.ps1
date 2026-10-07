@@ -41,8 +41,10 @@ function Get-CredentialEncryptionKeyFingerprint {
 	$value = $lines[0].Substring($lines[0].IndexOf('=') + 1).Trim()
 	if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) { $value = $value.Substring(1, $value.Length - 2) }
 	if ($value -notmatch '^[A-Za-z0-9_-]{43}$') { throw 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY must be a canonical base64url-encoded 32-byte key.' }
-	$hash = [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($value))
-	return [Convert]::ToHexString($hash).ToLowerInvariant()
+	$sha256 = [Security.Cryptography.SHA256]::Create()
+	try { $hash = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($value)) }
+	finally { $sha256.Dispose() }
+	return ([BitConverter]::ToString($hash) -replace '-', '').ToLowerInvariant()
 }
 
 function Get-ComposeContainerId {
@@ -72,12 +74,12 @@ function Assert-DatabaseReady {
 }
 
 function Get-DatabaseIdentity {
-	$output = Invoke-Compose -Arguments @('exec', '-T', 'db', 'sh', '-c', 'printf "%s\n%s\n" "$POSTGRES_DB" "$POSTGRES_USER"') -Capture
-	$lines = @($output -split "`r?`n")
-	if ($lines.Count -ne 2 -or $lines[0] -notmatch '^[A-Za-z_][A-Za-z0-9_]*$' -or $lines[1] -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+	$database = Invoke-Compose -Arguments @('exec', '-T', 'db', 'printenv', 'POSTGRES_DB') -Capture
+	$user = Invoke-Compose -Arguments @('exec', '-T', 'db', 'printenv', 'POSTGRES_USER') -Capture
+	if ($database -notmatch '^[A-Za-z_][A-Za-z0-9_]*$' -or $user -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
 		throw 'The configured PostgreSQL database or user name is not safe for maintenance automation.'
 	}
-	return @{ Database = $lines[0]; User = $lines[1] }
+	return @{ Database = $database; User = $user }
 }
 
 function Get-DatabaseScalar {
@@ -92,7 +94,11 @@ function Get-DefaultBackupRoot {
 function Resolve-BackupRoot {
 	param([string]$BackupRoot)
 	$requested = if ($BackupRoot) { $BackupRoot } else { Get-DefaultBackupRoot }
-	$fullPath = [IO.Path]::GetFullPath($requested, $script:RepositoryRoot)
+	$fullPath = if ([IO.Path]::IsPathRooted($requested)) {
+		[IO.Path]::GetFullPath($requested)
+	} else {
+		[IO.Path]::GetFullPath((Join-Path $script:RepositoryRoot $requested))
+	}
 	$repositoryPrefix = $script:RepositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 	if ($fullPath.Equals($script:RepositoryRoot, [StringComparison]::OrdinalIgnoreCase) -or $fullPath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
 		throw 'Backups must be stored outside the Git repository.'
@@ -174,7 +180,7 @@ function Wait-MigrationSucceeded {
 	param([int]$TimeoutSeconds = 180)
 	$deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 	do {
-		$containerId = Get-ComposeContainerId -Service 'migration'
+		$containerId = (Invoke-Compose -Arguments @('ps', '--all', '-q', 'migration') -Capture).Trim()
 		if ($containerId) {
 			$state = Invoke-ExternalCommand -FilePath 'docker' -Arguments @('inspect', '--format', '{{.State.Status}} {{.State.ExitCode}}', $containerId) -Capture
 			if ($state -eq 'exited 0') { return }
@@ -191,7 +197,7 @@ function Assert-RunningVersion {
 	$deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 	do {
 		try {
-			$response = Invoke-RestMethod -Uri 'http://localhost:3000/v1/health' -Method Get -TimeoutSec 5
+			$response = Invoke-Compose -Arguments @('exec', '-T', 'gateway', 'wget', '-qO-', 'http://127.0.0.1/v1/health') -Capture | ConvertFrom-Json
 			if ($response.status -eq 'success' -and $response.responseCode -eq 200 -and $response.data.healthy -eq $true -and $response.data.version -eq $expectedVersion) { return }
 		} catch { }
 		Start-Sleep -Seconds 2
