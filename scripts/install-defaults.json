@@ -2,11 +2,11 @@
 	"en": {
 		"firstName": "Alex",
 		"lastName": "Morgan",
-		"branch": "London"
+		"branch": "London Headquarters"
 	},
 	"ja": {
 		"firstName": "太郎",
 		"lastName": "山田",
-		"branch": "東京"
+		"branch": "東京本社"
 	}
 }

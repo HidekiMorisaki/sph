@@ -1,4 +1,5 @@
-import { requireAdminApi, requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireAdminApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
@@ -12,7 +13,7 @@ import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.employeeRead);
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const item = await getPrisma().employee.findFirst({ where: { id, deletedAt: null }, select: employeeSafeSelect });

@@ -1,4 +1,5 @@
 import { requireAuthenticatedApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { duplicateField } from '$lib/server/api/database';
 import { parseExternalLinkInput } from '$lib/server/api/external-link-input';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
@@ -7,7 +8,7 @@ import type { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 
 const sortFields = ['name', 'url', 'sortOrder', 'createdAt', 'updatedAt'] as const;
-const select = { id: true, name: true, url: true, sortOrder: true, createdAt: true, updatedAt: true } as const;
+const select = { id: true, name: true, url: true, sortOrder: true, notes: true, createdAt: true, updatedAt: true } as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	requireAuthenticatedApi(locals.user);
@@ -39,10 +40,12 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 		const result = await getPrisma().$transaction(async (tx) => {
 			const existing = await tx.externalLink.findUnique({ where: { name: parsed.data.name }, select: { id: true, deletedAt: true } });
 			if (existing && !existing.deletedAt) return 'duplicate' as const;
+			const before = existing ? await readMasterSnapshot(tx, 'external_link', existing.id) : null;
 			const item = existing
 				? await tx.externalLink.update({ where: { id: existing.id }, data: { ...parsed.data, deletedAt: null }, select })
 				: await tx.externalLink.create({ data: parsed.data, select });
 			await writeAuditLog(tx, actor.id, existing ? 'restore' : 'create', 'external_link', item.id);
+			await recordMasterChange(tx, 'external_link', item.id, actor.id, existing ? 'restore' : 'create', before, await readMasterSnapshot(tx, 'external_link', item.id));
 			return item;
 		}, { isolationLevel: 'Serializable' });
 		return result === 'duplicate'

@@ -1,4 +1,5 @@
-import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '$lib/server/api/it-asset-credentials';
 import { parseId } from '$lib/server/api/database';
 import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
@@ -10,7 +11,7 @@ import { itAssetOutput } from '$lib/server/api/it-asset-output';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
 
-export async function GET({ params, locals }: import('./$types').RequestEvent) { requireAuthenticatedApi(locals.user); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const item = await getPrisma().itAsset.findFirst({ where: { id, deletedAt: null }, include: itAssetInclude }); return item ? success(itAssetOutput(item)) : failure(404, 'NOT_FOUND', 'Not found.'); }
+export async function GET({ params, locals }: import('./$types').RequestEvent) { requireOperationApi(locals.user, permissionOperations.assetRead); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const item = await getPrisma().itAsset.findFirst({ where: { id, deletedAt: null }, include: itAssetInclude }); return item ? success(itAssetOutput(item)) : failure(404, 'NOT_FOUND', 'Not found.'); }
 export async function PATCH({ params, locals, request }: import('./$types').RequestEvent) {
 	const actor = requireAssetWriteApi(locals.user);
 	const id = parseId(params.id);

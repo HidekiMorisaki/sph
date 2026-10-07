@@ -37,6 +37,7 @@ line() {
 started=$SECONDS
 step=0 stage='' active=''
 failure_key='error.unexpected'
+holiday_jp=false holiday_us=false
 begin_step() {
 	failure_key='error.unexpected'
 	step=$((step + 1)); stage=$(message "$1")
@@ -116,6 +117,10 @@ failure_key='error.start'
 progress "${compose[@]}" up -d --no-build --wait --wait-timeout 300
 failure_key='error.migration'
 [[ "$(docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' sph-migration 2>/dev/null)" == 'exited 0' ]]
+migration_log=$(docker logs sph-migration 2>/dev/null)
+if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_HOLIDAY_WARNING=JP'; then holiday_jp=true; fi
+if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_HOLIDAY_WARNING=US'; then holiday_us=true; fi
+unset migration_log
 complete_step
 begin_step 'stage.check'
 failure_key='error.health'
@@ -148,4 +153,6 @@ fi
 complete_step
 printf '\n'
 line 32 'complete' "$origin"
+if [[ "$holiday_jp" == true ]]; then line 33 'warning.holidayJP'; fi
+if [[ "$holiday_us" == true ]]; then line 33 'warning.holidayUS'; fi
 line 37 'complete.notice'

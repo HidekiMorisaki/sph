@@ -1,4 +1,5 @@
-import { requireAuthenticatedApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
@@ -8,7 +9,7 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['workDate', 'entryType', 'title', 'createdAt', 'updatedAt'] as const;
 
 export async function GET({ locals, params, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.calendarRead);
 	const calendarId = parseId(params.id);
 	if (!calendarId || !await getPrisma().workCalendar.count({ where: { id: calendarId, deletedAt: null } })) return failure(404, 'NOT_FOUND', 'Work calendar not found.');
 	const query = parseListQuery(url, sortFields, 'workDate');

@@ -1,5 +1,5 @@
 {
-	"socialDescription": "Add the websites, blogs, and social profiles shown on your employee detail. Leave a field blank to remove it.",
+	"socialDescription": "Add the social profiles shown on your employee detail. Leave a field blank to remove it.",
 	"profileDescription": "Update the personal and contact information associated with your employee record.",
 	"description": "Manage your personal profile, localization preferences, and account security.",
 	"localizationDescription": "Choose the time zone for dates and your display language.",
@@ -111,7 +111,5 @@
 	"invalidField": "Check the value of this field.",
 	"signInRequired": "Sign in again to continue.",
 	"forbidden": "You do not have permission to perform this action.",
-	"notFound": "The requested data could not be found.",
-	"website": "Website",
-	"blog": "Blog"
+	"notFound": "The requested data could not be found."
 }

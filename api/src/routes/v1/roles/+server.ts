@@ -1,15 +1,16 @@
-import { requireAdminApi } from '$lib/server/api/admin';
+import { requireOperationApi } from '$lib/server/api/admin';
+import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
 import { success } from '$lib/server/api/response';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 import { roleOutput, roleSelect } from '$lib/server/api/role-output';
 
-const sortFields = ['name'] as const;
+const sortFields = ['name', 'sortOrder'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireAdminApi(locals.user);
-	const query = parseListQuery(url, sortFields, 'name');
+	if (!locals.user || !hasPermissionOperation(locals.user, permissionOperations.systemManagement)) requireOperationApi(locals.user, permissionOperations.roleRead);
+	const query = parseListQuery(url, sortFields, 'sortOrder');
 	const search = parseSearch(url);
 	const where: Prisma.RoleWhereInput = {
 		deletedAt: null,
@@ -20,7 +21,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 		getPrisma().role.findMany({
 			where,
 			select: roleSelect,
-			orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'asc' }],
+			orderBy: [{ [query.sortBy]: query.sortOrder }, ...(query.sortBy === 'sortOrder' ? [{ name: 'asc' as const }] : []), { id: 'asc' }],
 			skip: query.offset,
 			take: query.limit
 		})

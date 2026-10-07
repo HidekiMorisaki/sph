@@ -124,7 +124,5 @@
 		"forbidden": "You do not have permission to perform this action.",
 		"notFound": "The employee could not be found.",
 		"invalidRequest": "Invalid request."
-	},
-	"website": "Website",
-	"blog": "Blog"
+	}
 }

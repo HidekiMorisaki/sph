@@ -12,7 +12,7 @@
 	background: var(--surface-secondary);
 	box-shadow: var(--shadow);
 	color: var(--text);
-	font-size: 12px;
+	font-size:var(--font-size-support);
 	line-height: 1.6;
 	overflow-wrap: anywhere;
 }

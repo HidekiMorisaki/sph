@@ -9,6 +9,7 @@ export async function calendarErrorKey(response: Response) {
   case 'INVALID_EMPLOYEE': return 'invalidEmployee' as const;
   case 'INVALID_REQUEST': return 'invalidRequest' as const;
   case 'HOLIDAY_IMPORT_FAILED': return 'holidayFailed' as const;
+  case 'HOLIDAY_YEAR_UNAVAILABLE': return 'holidayYearUnavailable' as const;
   default: return 'unknown' as const;
  }
 }

@@ -3,17 +3,20 @@
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import AnalyticsChart from '$lib/components/AnalyticsChart.svelte';
+	import AnalyticsHeadcountAgeChart from '$lib/components/AnalyticsHeadcountAgeChart.svelte';
 	import AnalyticsPeriodControls from '$lib/components/AnalyticsPeriodControls.svelte';
 	import AnalyticsTurnoverChart from '$lib/components/AnalyticsTurnoverChart.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
+	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { analyticsRequestGate, AnalyticsRequestError, requestAnalytics, type AnalyticsFailure } from '$lib/analyticsRequests';
 	import { analyticsChartKeys, analyticsSelectionSaver, readAnalyticsSelection, type AnalyticsSelection, type ChartKey, type SaveStatus } from '$lib/analyticsSelection';
-	import { analyticsPeriodError, analyticsText, genderPieSlices, type AnalyticsData } from '$lib/analytics';
-	import { DISPLAY_LANGUAGES, formatDate, formatMonthYear, localization } from '$lib/localization';
+	import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '$lib/analytics';
+	import { DISPLAY_LANGUAGES, localization } from '$lib/localization';
 
 	let data = $state<AnalyticsData | null>(null);
 	let loading = $state(true);
 	let error = $state<AnalyticsFailure | 'restoreFailed' | null>(null);
+	let errorDismissed = $state(false);
 	let referenceDate = $state('');
 	let today = $state('');
 	let referenceDateOpen = $state(false);
@@ -23,7 +26,9 @@
 	let savedSelection = $state.raw<AnalyticsSelection | null>(null);
 	let saveStatus = $state<SaveStatus | null>(null);
 	let pdfBusy = $state(false);
+	let pdfBusyDismissed = $state(false);
 	let pdfError = $state<AnalyticsFailure | 'pdfError' | null>(null);
+	let periodErrorDismissed = $state(false);
 	let fromMonth = $state('');
 	let toMonth = $state('');
 	let periodError = $state<AnalyticsFailure | null>(null);
@@ -40,19 +45,47 @@
 	let locale = $derived(DISPLAY_LANGUAGES.find((language) => language.value === $localization.displayLanguage)!.locale);
 	let integers = $derived(new Intl.NumberFormat(locale));
 	let percentages = $derived(new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }));
+	let ages = $derived(new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 	const count = (value: number) => integers.format(value);
 	const rate = (value: number | null) => value === null ? text.unavailable : percentages.format(value / 100);
-	let slices = $derived(charts.gender.result ? genderPieSlices(charts.gender.result.genders, charts.gender.result.demographicTotal) : []);
-	const monthLabel = (value: string) => formatMonthYear(Number(value.slice(0, 4)), Number(value.slice(5)) - 1, $localization);
+	const age = (value: number | null) => value === null ? text.unavailable : `${ages.format(value)} ${text.averageAgeUnit}`;
+	let referenceAverageAge = $derived(data?.annual.at(-1)?.averageAge ?? null);
+	let slices = $derived(charts.gender.result ? genderPieSlices(charts.gender.result.genders.filter((group) => group.key !== 'other'), charts.gender.result.demographicTotal) : []);
+	let visibleSlices = $derived(slices.filter((slice) => slice.count > 0));
+	let selectedPie = $state<number | null>(null);
+	let pieAreaWidth = $state(300), pieAreaHeight = $state(240);
+	let pieTooltipX = $state(150), pieTooltipY = $state(0);
+	let pieTooltipWidth = $state(150), pieTooltipHeight = $state(60);
+	function trackPiePointer(event: PointerEvent) {
+		if (!visibleSlices.length) return;
+		const bounds = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+		pieTooltipX = event.clientX - bounds.left;
+		pieTooltipY = event.clientY - bounds.top;
+		const segment = event.target instanceof Element ? event.target.closest('.pie-segment') : null;
+		if (segment) {
+			selectedPie = Number(segment.getAttribute('data-slice-index'));
+			return;
+		}
+		const x = pieTooltipX / bounds.width * 350 - 45;
+		const y = pieTooltipY / bounds.height * 280;
+		if (Math.hypot(x - 130, y - 130) < 25) { selectedPie ??= 0; return; }
+		const angle = (Math.atan2(y - 130, x - 130) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+		let end = 0;
+		for (const [index, slice] of visibleSlices.entries()) {
+			end += slice.share * Math.PI * 2;
+			if (angle <= end) { selectedPie = index; return; }
+		}
+		selectedPie = visibleSlices.length - 1;
+	}
 	let turnoverPoints = $derived(charts.turnover.result?.annual.map((item) => ({ ...item, tooltip: [
-		String(item.year), `${text.appliedPeriod}: ${formatDate(item.startDate, $localization)} – ${formatDate(item.endDate, $localization)}`,
+		String(item.year),
 		`${text.hiresLabel}: ${count(item.hires)}`, `${text.departuresLabel}: ${count(item.departures)}`,
-		`${text.turnoverLabel}: ${rate(item.turnoverRate)}`, `${text.periodStartHeadcount}: ${count(item.startingHeadcount)}`
+		`${text.turnoverLabel}: ${rate(item.turnoverRate)}`
 	].join('\n') })) ?? []);
 	async function updateCharts() {
 		if (!data) return;
 		pdfError = null;
-		periodError = analyticsPeriodError(fromMonth, toMonth, data.referenceDate.slice(0, 7));
+		periodErrorDismissed = false; periodError = analyticsPeriodError(fromMonth, toMonth, data.referenceDate.slice(0, 7));
 		if (periodError) return;
 		const request = requests.advance();
 		for (const key of analyticsChartKeys) charts[key].loading = true;
@@ -60,7 +93,7 @@
 			const result = await requestAnalytics({ fromMonth, toMonth, referenceDate: data.referenceDate });
 			if (requests.isCurrent(request)) for (const key of analyticsChartKeys) charts[key].result = result;
 		} catch (failure) {
-			if (requests.isCurrent(request)) periodError = failure instanceof AnalyticsRequestError ? failure.reason : 'error';
+			if (requests.isCurrent(request)) { periodErrorDismissed = false; periodError = failure instanceof AnalyticsRequestError ? failure.reason : 'error'; }
 		} finally {
 			if (requests.isCurrent(request)) for (const key of analyticsChartKeys) charts[key].loading = false;
 		}
@@ -68,7 +101,7 @@
 	async function load() {
 		const request = requests.advance();
 		const selectedReferenceDate = referenceDate;
-		loading = true; error = null;
+		loading = true; error = null; errorDismissed = false;
 		try {
 			const result = await requestAnalytics({ referenceDate: selectedReferenceDate });
 			if (!requests.isCurrent(request)) return;
@@ -97,7 +130,7 @@
 		void saver.enqueue(savedSelection);
 	}
 	function applyPeriod() {
-		periodError = analyticsPeriodError(fromMonth, toMonth, referenceDate.slice(0, 7));
+		periodErrorDismissed = false; periodError = analyticsPeriodError(fromMonth, toMonth, referenceDate.slice(0, 7));
 		if (periodError) return;
 		save();
 		void updateCharts();
@@ -118,14 +151,16 @@
 		const selection = { referenceDate, fromMonth, toMonth };
 		const settings = { ...$localization };
 		pdfBusy = true;
+		pdfBusyDismissed = false;
 		pdfError = null;
 		referenceDateOpen = false;
 		try {
 			const { prepareAnalyticsPdfDownload } = await import('$lib/analyticsPdfDownload');
 			const result = await prepareAnalyticsPdfDownload(selection, settings);
+			const referenceResult = await requestAnalytics({ referenceDate: selection.referenceDate });
 			if (!mounted || !requests.isCurrent(request)) return;
-			// Keep the screen and report consistent if employee data changed since the page loaded.
-			data = result.data;
+			// Keep the summary at the reference date even when the PDF uses a shorter chart period.
+			data = referenceResult;
 			for (const key of analyticsChartKeys) charts[key].result = result.data;
 			await result.document.save(result.fileName, { returnPromise: true });
 		} catch (failure) {
@@ -133,7 +168,7 @@
 		} finally { if (mounted) pdfBusy = false; }
 	}
 	async function initialize() {
-		loading = true; error = null;
+		loading = true; error = null; errorDismissed = false;
 		try {
 			const settings = await readAnalyticsSelection();
 			if (!mounted) return;
@@ -152,12 +187,8 @@
 	onMount(() => { mounted = true; void initialize(); return () => { mounted = false; requests.advance(); }; });
 </script>
 
-{#snippet periodStatus(key: ChartKey)}
+{#snippet chartStatus(key: ChartKey)}
 	{#if charts[key].loading}<p role="status">{text.loading}</p>{/if}
-	{#if charts[key].result?.period}
-		{@const period = charts[key].result!.period!}
-		<p>{text.appliedPeriod}: {monthLabel(period.fromMonth)} – {monthLabel(period.toMonth)} · {text.asOf}: {formatDate(period.endDate, $localization)}</p>
-	{/if}
 {/snippet}
 
 {#snippet pdfActions()}
@@ -170,8 +201,8 @@
 {/snippet}
 <AssetManagementShell title={text.title} active="">
 	<MasterPageHeader title={text.title} description={text.description} actions={pdfActions} />
-	{#if pdfBusy}<p class="selection-status" role="status">{text.pdfGenerating}</p>{/if}
-	{#if pdfError}<p class="period-error" role="alert">{text[pdfError]}</p>{/if}
+	{#if pdfBusy && !pdfBusyDismissed}<StatusNotice message={text.pdfGenerating} tone="info" onDismiss={() => pdfBusyDismissed = true} />{/if}
+	{#if pdfError}<StatusNotice message={text[pdfError]} tone="error" onDismiss={() => pdfError = null} />{/if}
 	{#if today}
 		<div class="analysis-controls">
 		<div class="reference-controls"><DatePicker label={text.asOf} helpText={text.referenceDateHelp} helpLabel={`${text.asOf}: ${text.information}`} field="analytics-reference-date" value={referenceDate} min="0001-01-01" max={today} required disabled={updating || !savedSelection} open={referenceDateOpen} onToggle={() => referenceDateOpen = !referenceDateOpen} onSelect={selectReferenceDate} /></div>
@@ -179,74 +210,83 @@
 			<div class="shared-period-controls"><AnalyticsPeriodControls id="analytics-period" bind:fromMonth bind:toMonth maxMonth={data.referenceDate.slice(0, 7)} loading={updating} onApply={applyPeriod} /></div>
 		{/if}
 		</div>
-		{#if periodError}<p class="period-error" role="alert">{text[periodError]}</p>{/if}
+		{#if periodError && !periodErrorDismissed}<StatusNotice message={text[periodError]} tone="error" onDismiss={() => periodErrorDismissed = true} />{/if}
 	{/if}
-	{#if saveStatus && saveStatus !== 'saved'}<p class="selection-status" role={saveStatus === 'saveFailed' ? 'alert' : 'status'}>{text[saveStatus]} {#if saveStatus === 'saveFailed'}<button class="app-primary-action" onclick={save}>{text.retry}</button>{/if}</p>{/if}
+	{#if saveStatus && saveStatus !== 'saved'}<StatusNotice message={text[saveStatus]} tone={saveStatus === 'saveFailed' ? 'error' : 'info'} onDismiss={() => saveStatus = null} />{#if saveStatus === 'saveFailed'}<button class="app-primary-action" onclick={save}>{text.retry}</button>{/if}{/if}
 	{#if loading}
 		<p class="status" role="status">{text.loading}</p>
 	{:else if error}
-		<div class="status" role="alert"><p>{text[error]}</p>{#if error !== 'forbidden'}<button class="app-primary-action" onclick={() => initialized ? load() : initialize()}>{text.retry}</button>{/if}</div>
+		<div class="status">{#if !errorDismissed}<StatusNotice message={text[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}{#if error !== 'forbidden'}<button class="app-primary-action" onclick={() => initialized ? load() : initialize()}>{text.retry}</button>{/if}</div>
 	{:else if data}
 		<div class="analytics-context">
 			<p class="limitation">{text.limitation}</p>
 		</div>
 		<div class="metrics">
 			{#each [
-				{ label: text.headcount, value: count(data.summary.headcount), note: text.current },
-				{ label: text.hires, value: count(data.summary.hires), note: text.ytd },
-				{ label: text.departures, value: count(data.summary.departures), note: text.ytd },
-				{ label: text.turnover, value: rate(data.summary.turnoverRate), note: text.ytd }
+				{ label: text.headcount, value: count(data.summary.headcount), unit: text.peopleUnit, note: text.current },
+				{ label: text.hires, value: count(data.summary.hires), unit: text.peopleUnit, note: text.ytd },
+				{ label: text.departures, value: count(data.summary.departures), unit: text.peopleUnit, note: text.ytd },
+				{ label: text.referenceAverageAge, value: referenceAverageAge === null ? text.unavailable : ages.format(referenceAverageAge), unit: referenceAverageAge === null ? '' : text.averageAgeUnit, note: text.referenceAverageAgeNote },
+				{ label: text.turnover, value: data.summary.turnoverRate === null ? text.unavailable : rate(data.summary.turnoverRate).replace(/\s*%$/, ''), unit: data.summary.turnoverRate === null ? '' : '%', note: text.ytd }
 			] as metric}
-				<section class="metric" title={metric.label === text.turnover ? text.summaryFormula : undefined}><h2>{metric.label}</h2><strong>{metric.value}</strong><p>{metric.note}</p></section>
+				<section class="metric" title={metric.label === text.turnover ? text.summaryFormula : undefined}><h2>{metric.label}</h2><strong>{metric.value}{#if metric.unit}<span class="metric-unit">{metric.unit}</span>{/if}</strong><p>{metric.note}</p></section>
 			{/each}
 		</div>
 		<div class="charts">
-			<section class="panel" aria-busy={charts.age.loading}>
-				<header class="panel-header"><h2>{text.age}</h2></header>
-				<p>{text.ageNote}</p>
-				{@render periodStatus('age')}
-				{#if charts.age.result}
-					{#if charts.age.result.demographicTotal}
-						<AnalyticsChart title={text.age} type="bar" axisLabel={text.employees} formatTick={count} showValues points={charts.age.result.ageGroups.map((group) => ({ label: text.ageLabels[group.key], value: group.count, formatted: count(group.count) }))} />
-					{:else}<p class="empty">{text.empty}</p>{/if}
-				{/if}
+			<section class="panel turnover-panel" aria-busy={charts.turnover.loading}>
+				<header class="panel-header"><h2>{text.rates}</h2></header>
+				{@render chartStatus('turnover')}
+				{#if charts.turnover.result}<AnalyticsTurnoverChart points={turnoverPoints} formatCount={count} formatRate={rate} />{/if}
+				<p>{text.formula}</p>
 			</section>
-			<section class="panel" aria-busy={charts.gender.loading}>
+			<section class="panel gender-panel" aria-busy={charts.gender.loading}>
 				<header class="panel-header"><h2>{text.gender}</h2></header>
 				<p>{text.genderNote}</p>
-				{@render periodStatus('gender')}
+				{@render chartStatus('gender')}
 				{#if charts.gender.result}
 				{#if charts.gender.result.demographicTotal}
 					<div class="gender-chart">
-						<svg viewBox="-45 0 350 280" role="img" aria-label={text.gender}><title>{text.gender}</title><desc>{text.total}: {count(charts.gender.result.demographicTotal)}; {slices.map((slice) => `${text.genderLabels[slice.key]}: ${count(slice.count)} (${rate(slice.share * 100)})`).join('; ')}</desc>
-							{#each slices.filter((slice) => slice.count > 0) as slice}
-								{#if slice.share === 1}<circle cx="130" cy="130" r="110" fill={slice.color}><title>{text.genderLabels[slice.key]}: {count(slice.count)} ({rate(slice.share * 100)})</title></circle>
-								{:else}<path d={slice.path} fill={slice.color}><title>{text.genderLabels[slice.key]}: {count(slice.count)} ({rate(slice.share * 100)})</title></path>{/if}
+						<div class="pie-visual" role="group" aria-label={text.gender} bind:clientWidth={pieAreaWidth} bind:clientHeight={pieAreaHeight} onpointerenter={trackPiePointer} onpointermove={trackPiePointer} onpointerleave={() => selectedPie = null}>
+						<svg viewBox="-45 0 350 280" role="group" aria-label={text.gender}><desc>{text.total}: {count(charts.gender.result.demographicTotal)}; {slices.map((slice) => `${text.genderLabels[slice.key]}: ${count(slice.count)} (${rate(slice.share * 100)})`).join('; ')}</desc>
+							{#each visibleSlices as slice, index}
+								<g class="pie-segment" data-slice-index={index} class:pie-active={selectedPie === index} tabindex="0" role="button" aria-label={`${text.genderLabels[slice.key]}: ${count(slice.count)} (${rate(slice.share * 100)})`} onfocus={() => selectedPie = index} onblur={() => selectedPie = null} onclick={() => selectedPie = index} onkeydown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectedPie = index; } else if (event.key === 'Escape') selectedPie = null; }}>
+									{#if slice.share === 1}<circle cx="130" cy="130" r="110" fill={slice.color} />
+									{:else}<path d={slice.path} fill={slice.color} />{/if}
+								</g>
 							{/each}
 							<circle cx="130" cy="130" r="48" class="pie-center" />
 							<text x="130" y="119" text-anchor="middle" class="pie-total-label">{text.total}</text>
 							<text x="130" y="147" text-anchor="middle" class="pie-total-count">{count(charts.gender.result.demographicTotal)}</text>
-							{#each slices.filter((slice) => slice.count > 0) as slice}
+							{#each visibleSlices as slice}
 								{#if slice.outside}<path d={`M${slice.edgeX},${slice.edgeY} L${slice.right ? 248 : 12},${slice.labelY}`} class="pie-callout" />{/if}
 								<text x={slice.labelX} y={slice.labelY - 3} text-anchor={slice.outside ? slice.right ? 'start' : 'end' : 'middle'} class="pie-value" class:outside={slice.outside}><tspan x={slice.labelX}>{count(slice.count)}</tspan><tspan x={slice.labelX} dy="14">{rate(slice.share * 100)}</tspan></text>
 							{/each}
 						</svg>
-						<ul class="legend">{#each slices as slice}<li><span class="swatch" style:background={slice.color}></span><span>{text.genderLabels[slice.key]}</span><strong>{count(slice.count)} <small>({rate(slice.share * 100)})</small></strong></li>{/each}</ul>
+						{#if selectedPie !== null && visibleSlices[selectedPie]}
+							{@const selectedSlice = visibleSlices[selectedPie]}
+							<div class="pie-tooltip" role="tooltip" bind:clientWidth={pieTooltipWidth} bind:clientHeight={pieTooltipHeight} style:left={`${Math.max(pieTooltipWidth / 2 + 8, Math.min(pieAreaWidth - pieTooltipWidth / 2 - 8, pieTooltipX))}px`} style:top={`${Math.max(8, Math.min(pieAreaHeight - pieTooltipHeight - 8, pieTooltipY + 12))}px`}><strong>{text.genderLabels[selectedSlice.key]}</strong><span class="pie-tooltip-value"><i class="pie-color-ball" style:background={selectedSlice.color} aria-hidden="true"></i>{count(selectedSlice.count)} · {rate(selectedSlice.share * 100)}</span></div>
+						{/if}
+						</div>
+						<ul class="legend">{#each slices as slice}<li><span class="swatch" style:background={slice.color}></span><span>{text.genderLabels[slice.key]}</span></li>{/each}</ul>
 					</div>
 				{:else}<p class="empty">{text.empty}</p>{/if}
 				{/if}
 			</section>
-			<section class="panel" aria-busy={charts.trend.loading}>
-				<header class="panel-header"><h2>{text.trend}</h2></header>
-				<p>{text.trendNote}</p>
-				{@render periodStatus('trend')}
-				{#if charts.trend.result}<AnalyticsChart title={text.trend} type="line" axisLabel={text.employees} formatTick={count} showValues points={charts.trend.result.annual.map((item) => ({ label: String(item.year), value: item.headcount, formatted: `${count(item.headcount)} · ${formatDate(item.endDate, $localization)}` }))} />{/if}
+			<section class="panel combined-panel" aria-busy={charts.trend.loading}>
+				<header class="panel-header"><h2>{text.headcountAgeTrend}</h2></header>
+				<p>{text.headcountAgeNote}</p>
+				{@render chartStatus('trend')}
+				{#if charts.trend.result}<div class="chart-visual"><AnalyticsHeadcountAgeChart points={charts.trend.result.annual} formatCount={count} formatAge={age} /></div>{/if}
 			</section>
-			<section class="panel" aria-busy={charts.turnover.loading}>
-				<header class="panel-header"><h2>{text.rates}</h2></header>
-				{@render periodStatus('turnover')}
-				{#if charts.turnover.result}<AnalyticsTurnoverChart points={turnoverPoints} formatCount={count} formatRate={rate} />{/if}
-				<p>{text.formula}</p>
+			<section class="panel age-panel" aria-busy={charts.age.loading}>
+				<header class="panel-header"><h2>{text.age}</h2></header>
+				<p>{text.ageNote}</p>
+				{@render chartStatus('age')}
+				{#if charts.age.result}
+					{#if charts.age.result.demographicTotal}
+						<div class="chart-visual"><AnalyticsChart title={text.age} type="bar" axisLabel={text.employees} formatTick={count} showValues points={visibleAgeGroups(charts.age.result.ageGroups).map((group) => ({ label: text.ageLabels[group.key], value: group.count, formatted: count(group.count) }))} /></div>
+					{:else}<p class="empty">{text.empty}</p>{/if}
+				{/if}
 			</section>
 		</div>
 	{/if}
@@ -258,30 +298,40 @@
 	.analysis-controls :global(.custom-date .required){display:none}
 	.reference-controls{width:180px;max-width:100%;min-width:0}
 	.shared-period-controls{width:340px;max-width:100%;min-width:0}
-	.period-error{font-size:12px;color:var(--danger);margin:0 0 16px;overflow-wrap:anywhere}
-	.selection-status{font-size:12px;color:var(--muted);margin:0 0 16px;overflow-wrap:anywhere}
+
 	.analytics-context{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 24px;min-width:0}
-	.limitation{margin:0;min-width:0;color:var(--muted);font-size:12px;overflow-wrap:anywhere;flex:1 1 420px}
-	.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:20px 0}
+	.limitation{margin:0;min-width:0;color:var(--muted);font-size:var(--font-size-support);overflow-wrap:anywhere;flex:1 1 420px}
+	.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:20px 0}
 	.metric,.panel{min-width:0;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
-	.metric h2{margin:0 0 10px;font-size:13px;font-weight:500;color:var(--muted)}
+	.metric h2{margin:0 0 10px;font-size:var(--font-size-section);font-weight:500;color:var(--muted)}
 	.metric strong{font-size:30px;line-height:1.3;overflow-wrap:anywhere}
-	.metric p,.panel p{font-size:12px;color:var(--muted);margin:8px 0 14px;overflow-wrap:anywhere}
-	.metric p{margin-bottom:0}.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-	.panel h2{margin:0;font-size:16px;font-weight:600}
+	.metric-unit{margin-left:6px;font-size:16px;font-weight:500;color:var(--muted)}
+	.metric p,.panel p{font-size:var(--font-size-support);color:var(--muted);margin:8px 0 14px;overflow-wrap:anywhere}
+	.metric p{margin-bottom:0}.charts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
+	.panel h2{margin:0;font-size:var(--font-size-section);font-weight:600}
+	.turnover-panel,.combined-panel{grid-column:span 3}
+	.gender-panel,.age-panel{grid-column:span 2}
+	.combined-panel,.age-panel{display:flex;flex-direction:column}
+	.chart-visual{margin-top:auto;min-width:0}
 	.panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;min-width:0}
 	.panel-header h2{flex:1;min-width:0;overflow-wrap:anywhere}
-	.gender-chart{display:flex;align-items:center;justify-content:center;gap:16px;min-height:270px;flex-wrap:wrap}
-	.gender-chart svg{width:300px;max-width:100%;flex:0 1 300px}
-	.pie-center{fill:var(--surface)}.pie-total-label{fill:var(--muted);font-size:11px}.pie-total-count{fill:var(--text);font-size:27px;font-weight:700}
-	.pie-value{fill:#fff;font-size:12px;font-weight:600}.pie-value.outside{fill:var(--text)}.pie-callout{fill:none;stroke:var(--muted);stroke-width:1}
-	.legend{list-style:none;padding:0;margin:0;min-width:0;flex:1 1 180px;max-width:100%;font-size:12px}
-	.legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:8px;margin:12px 0}
-	.legend span,.legend strong{overflow-wrap:anywhere}.swatch{width:10px;height:10px;border-radius:2px}
-	.legend small{font-weight:400;color:var(--muted)}
+	.gender-chart{display:flex;align-items:center;justify-content:center;gap:16px;min-height:270px;padding-top:20px;flex-wrap:wrap}
+	.pie-visual{position:relative;width:334px;max-width:100%;flex:0 1 334px}.gender-chart svg{display:block;width:100%;max-width:100%}
+	.pie-segment{transform-box:view-box;transform-origin:175px 130px;transition:filter .18s,transform .18s;cursor:pointer}.pie-segment.pie-active,.pie-segment:focus-visible{filter:brightness(1.14);transform:scale(1.025);outline:none}
+	.pie-segment path,.pie-segment circle{transform-box:view-box;transform-origin:175px 130px;animation:pie-enter .75s cubic-bezier(.2,.7,.2,1) both}
+	.pie-tooltip{position:absolute;z-index:1;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;width:max-content;max-width:85%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.16);color:var(--text);font-size:var(--font-size-support);pointer-events:none;overflow-wrap:anywhere;transform:translateX(-50%);transition:left .14s ease-out,top .14s ease-out}.pie-tooltip strong{font-weight:500;color:var(--muted)}.pie-tooltip-value{display:flex;align-items:center;gap:7px;color:var(--text-secondary)}.pie-color-ball{flex:none;width:9px;height:9px;border-radius:50%}
+	@keyframes pie-enter{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+	@media(prefers-reduced-motion:reduce){.pie-segment,.pie-tooltip{transition:none}.pie-segment path,.pie-segment circle{animation:none}}
+	.pie-center{fill:var(--surface)}.pie-total-label{fill:var(--muted);font-size:var(--font-size-support)}.pie-total-count{fill:var(--text);font-size:27px;font-weight:700}
+	.pie-value{fill:#fff;font-size:var(--font-size-support);font-weight:600}.pie-value.outside{fill:var(--text)}.pie-callout{fill:none;stroke:var(--muted);stroke-width:1}
+	.legend{list-style:none;padding:0;margin:0;min-width:0;flex:1 1 180px;max-width:100%;font-size:var(--font-size-support)}
+	.legend li{display:grid;grid-template-columns:10px minmax(0,1fr);align-items:center;gap:8px;margin:12px 0}
+	.legend span{overflow-wrap:anywhere}.swatch{width:10px;height:10px;border-radius:2px}
 	.status{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
 	.empty{display:grid;place-items:center;min-height:200px}
-	@media(max-width:1100px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.charts{grid-template-columns:minmax(0,1fr)}}
+	@media(max-width:1280px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}.turnover-panel,.gender-panel,.combined-panel,.age-panel{grid-column:span 1}}
+	@media(max-width:1100px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+	@media(max-width:1000px){.charts{grid-template-columns:minmax(0,1fr)}.combined-panel,.age-panel{align-self:start}.chart-visual{margin-top:0}}
 	@media(max-width:700px){.reference-controls,.shared-period-controls,.pdf-download{width:100%}}
 	@media(max-width:500px){.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
 </style>

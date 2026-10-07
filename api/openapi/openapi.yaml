@@ -96,21 +96,55 @@ paths:
                   data: { $ref: '#/components/schemas/SystemInformation' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /v1/system-information/latest-release:
+    get:
+      tags: [System settings]
+      operationId: getLatestSystemRelease
+      description: System administrator only. Checks the latest published full GitHub release. Distinguishes an installed latest version, an available update, and an unavailable upstream check. Results are cached on the API server.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200':
+          description: Release status and available update for the running product version
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, responseCode, data]
+                properties:
+                  status: { type: string, const: success }
+                  responseCode: { type: integer, const: 200 }
+                  data:
+                    type: object
+                    required: [releaseStatus, availableUpdate]
+                    properties:
+                      releaseStatus: { type: string, enum: [latest, update_available, unavailable] }
+                      availableUpdate:
+                        oneOf:
+                          - type: 'null'
+                          - type: object
+                            required: [version, url]
+                            properties:
+                              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$', example: 0.3.0 }
+                              url: { type: string, format: uri, pattern: '^https://github\.com/HidekiMorisaki/sph/releases/tag/' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /v1/work-calendars:
     get:
       tags: [Work calendars]
       operationId: listWorkCalendars
-      description: Available to every authenticated role.
+      description: Requires calendars.read. Set assignedToMe=true to return only calendars assigned to the authenticated employee.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
+        - { name: assignedToMe, in: query, description: Restrict results to calendars assigned to the authenticated employee., schema: { type: boolean, default: false } }
         - { name: search, in: query, schema: { type: string, maxLength: 255 } }
         - { name: sortBy, in: query, schema: { type: string, enum: [id, code, name, createdAt, updatedAt], default: name } }
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [Work calendars]
@@ -130,15 +164,17 @@ paths:
     get:
       tags: [Work calendars]
       operationId: getWorkCalendar
+      description: Requires calendars.read.
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     patch:
       tags: [Work calendars]
       operationId: updateWorkCalendar
-      description: System administrator only.
+      description: System administrator only. Calendar year and holiday country are immutable after creation.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/WorkCalendarWrite' }
       responses:
@@ -148,6 +184,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     delete:
       tags: [Work calendars]
       operationId: deleteWorkCalendar
@@ -164,6 +201,7 @@ paths:
     get:
       tags: [Work calendars]
       operationId: listWorkCalendarEntries
+      description: Requires calendars.read.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -173,6 +211,7 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
     post:
@@ -219,7 +258,7 @@ paths:
     get:
       tags: [Work calendars]
       operationId: listCalendarDateAttributes
-      description: Returns stored weekend and public-holiday attributes from 2011 onward. Available to every authenticated role.
+      description: Requires calendars.read. Returns public holidays for the selected country from 2011 onward.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -227,30 +266,34 @@ paths:
         - $ref: '#/components/parameters/SortOrder'
         - { name: from, in: query, required: true, schema: { type: string, format: date, minimum: '2011-01-01' } }
         - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: countryCode, in: query, description: Holiday country; defaults to Japan for existing clients., schema: { type: string, enum: [JP, US], default: JP } }
         - { name: sortBy, in: query, schema: { type: string, enum: [calendarDate, kind, name], default: calendarDate } }
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
   /v1/calendar-holiday-imports:
     get:
       tags: [Work calendars]
       operationId: listCalendarHolidayImports
-      description: Available to every authenticated role.
+      description: Requires calendars.read.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
+        - { name: countryCode, in: query, description: Holiday country; defaults to Japan for existing clients., schema: { type: string, enum: [JP, US], default: JP } }
         - { name: sortBy, in: query, schema: { type: string, enum: [completedAt, status, createdAt], default: completedAt } }
       responses:
         '200': { $ref: '#/components/responses/ListSuccess' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [Work calendars]
       operationId: importCalendarHolidays
-      description: System administrator only. Imports Cabinet Office public holidays for the year of the specified active work calendar and keeps existing data when the source fails. Calendars in the same year share public-holiday data.
+      description: System administrator only. Imports Japanese Cabinet Office or U.S. OPM federal holidays for the active work calendar's country and year. Existing data is kept if the source fails. Calendars with the same country and year share holiday data. U.S. years not published by OPM return HOLIDAY_YEAR_UNAVAILABLE.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/CalendarHolidayImportWrite' }
       responses:
@@ -259,6 +302,7 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
         '502': { $ref: '#/components/responses/Error' }
   /v1/work-calendars/{id}/employees:
     parameters:
@@ -266,7 +310,7 @@ paths:
     get:
       tags: [Work calendars]
       operationId: listWorkCalendarEmployees
-      description: Available to every authenticated role.
+      description: Requires calendars.read.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -276,11 +320,12 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/Success' }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     put:
       tags: [Work calendars]
       operationId: replaceWorkCalendarEmployees
-      description: System administrator only. Each employee is assigned to at most one work calendar.
+      description: Requires system.manage and calendars.assign. Each employee is assigned to at most one work calendar.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/WorkCalendarEmployeesWrite' }
       responses:
@@ -371,7 +416,7 @@ paths:
     get:
       tags: [Authentication]
       operationId: getSession
-      description: Returns the authenticated employee with separate firstName, middleName, and lastName fields. No preformatted name field is returned.
+      description: Returns the authenticated employee with separate firstName, middleName, and lastName fields. No preformatted name field is returned. The canAssignCalendars capability is true only when both system.manage and calendars.assign are granted.
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
@@ -512,6 +557,12 @@ paths:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
+        - { name: search, in: query, schema: { type: string, maxLength: 200 } }
+        - name: visibleSearch
+          in: query
+          description: Comma-separated allowlisted fields displayed by the employee list. When supplied with search, only these fields are searched, including derived age and length of service.
+          schema: { type: string }
+        - { name: searchLocale, in: query, schema: { type: string, enum: [en, ja], default: en } }
         - name: includeRetired
           in: query
           description: Include non-deleted employees whose retirement date is on or before the API calculation date.
@@ -568,7 +619,7 @@ paths:
     get:
       tags: [Roles]
       operationId: listRoles
-      description: Lists active assignable roles. System-management role changes require a system administrator; administrators without system-management permission may assign only roles that also lack system-management permission.
+      description: Lists active assignable roles and their operation codes. Requires roles.read or system.manage. Administrators without system management cannot assign system management roles.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -589,7 +640,7 @@ paths:
     patch:
       tags: [Roles]
       operationId: updateRoleName
-      description: System administrator only. Updates the role name, which is the role natural key. Permission identifiers and assignments are not exposed or editable through this endpoint.
+      description: System administrator only. Updates the role name and notes; permissions are edited through /v1/roles/{id}/permissions.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/RoleNameWrite' }
       responses:
@@ -604,6 +655,7 @@ paths:
     get:
       tags: [Employee masters]
       operationId: listEmployeeMaster
+      description: Operating systems return vendor, product, version, edition, and architecture without a displayName field. Clients compose the visible name from these parts.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/Offset'
@@ -614,14 +666,14 @@ paths:
           description: Allowed values depend on the selected master. Employee groups additionally allow department. All master resources allow sortOrder and use it as the default. Branches additionally allow openedOn and closedOn.
           schema:
             type: string
-            enum: [id, department, name, openedOn, closedOn, displayName, managementCodePrefix, vendor, product, version, officialUrl, disposalDatePolicy, sortOrder, createdAt, updatedAt]
+            enum: [id, department, name, openedOn, closedOn, managementCodePrefix, vendor, product, version, officialUrl, disposalDatePolicy, sortOrder, createdAt, updatedAt]
       responses:
         '200': { $ref: '#/components/responses/MasterListSuccess' }
         '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [Employee masters]
       operationId: createEmployeeMaster
-      description: All employee, location branch, and IT asset masters accept a non-negative integer sortOrder and default it to 9999 when omitted. Employee groups require name and departmentId. For branches, the request follows BranchWrite. A branch created with closedOn is immediately soft-deleted and omitted from active lists.
+      description: All employee, location branch, and IT asset masters accept a non-negative integer sortOrder and default it to 9999 when omitted. Employee groups require name and departmentId. Operating systems require vendor, product, and version; displayName is not accepted. For branches, the request follows BranchWrite. A branch created with closedOn is immediately soft-deleted and omitted from active lists.
       security: [{ sessionCookie: [] }]
       requestBody: { $ref: '#/components/requestBodies/JsonResource' }
       responses:
@@ -648,6 +700,64 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/{master}/{id}/history:
+    parameters:
+      - $ref: '#/components/parameters/HistoryMaster'
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Employee masters]
+      operationId: listMasterChangeHistory
+      description: Lists recorded create, update, delete and restore events. Earlier audit events have action, time and actor but no field differences. Role history requires administrator access.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [changedAt, id], default: changedAt }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/permissions:
+    get:
+      tags: [Roles]
+      operationId: listEditablePermissions
+      description: System administrator only. Lists the operation codes that can be selected for a role. system.manage is fixed and omitted.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/roles/{id}/permissions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Roles]
+      operationId: replaceRolePermissions
+      description: System administrator only. Replaces editable operation permissions and optionally updates the role name and notes in one transaction. system.manage remains fixed; branches.manage and calendars.assign can only belong to a system management role. calendars.assign requires calendars.read. The role's updatedAt is used for optimistic concurrency.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissionCodes, expectedUpdatedAt]
+              properties:
+                permissionCodes: { type: array, uniqueItems: true, items: { type: string } }
+                name: { type: string, minLength: 1, maxLength: 128 }
+                notes: { type: string, nullable: true, maxLength: 5000 }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /v1/storage:
@@ -778,7 +888,13 @@ paths:
             default: assetTag
         - name: q
           in: query
+          description: Limited to 200 characters when visibleSearch is supplied.
           schema: { type: string }
+        - name: visibleSearch
+          in: query
+          description: Comma-separated allowlisted fields displayed by the IT asset list. When supplied with q, only these fields are searched.
+          schema: { type: string }
+        - { name: searchLocale, in: query, schema: { type: string, enum: [en, ja], default: en } }
         - name: typeId
           in: query
           schema: { type: integer, minimum: 1 }
@@ -973,6 +1089,13 @@ components:
       schema:
         type: string
         enum: [departments, employee-groups, positions, employment-types, branches, it-asset-types, manufacturers, cpu-types, operating-systems, it-asset-statuses]
+    HistoryMaster:
+      name: master
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [departments, employee-groups, positions, employment-types, branches, rooms, storage, it-asset-types, manufacturers, cpu-types, operating-systems, it-asset-statuses, roles, external-links]
     Offset:
       name: offset
       in: query
@@ -1196,7 +1319,7 @@ components:
       required: [name, version, noticeIds, repositoryUrl, revisionHistory]
       properties:
         name: { type: string, minLength: 1, example: SME Portal Hub }
-        version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.2.0 }
+        version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.3.0 }
         noticeIds:
           description: Stable message IDs resolved by the frontend release dictionaries.
           type: array
@@ -1209,8 +1332,8 @@ components:
             type: object
             required: [version, releasedAt, changeIds]
             properties:
-              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.2.0 }
-              releasedAt: { type: string, format: date, example: '2026-10-03' }
+              version: { type: string, pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$', example: 0.3.0 }
+              releasedAt: { type: [string, 'null'], format: date, description: 'Null only for the current unreleased version.' }
               changeIds:
                 description: Ordered stable message IDs resolved by the frontend release dictionaries.
                 type: array
@@ -1228,10 +1351,12 @@ components:
       additionalProperties: true
     WorkCalendarWrite:
       type: object
-      required: [code, name]
+      required: [name, calendarYear, scheduledWorkMinutesPerDay]
       properties:
-        code: { type: string, minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
         name: { type: string, minLength: 1, maxLength: 128 }
+        calendarYear: { type: integer, minimum: 2011, maximum: 9999 }
+        countryCode: { type: string, enum: [JP, US], default: JP }
+        scheduledWorkMinutesPerDay: { type: integer, minimum: 15, maximum: 1440, multipleOf: 15 }
         description: { type: [string, 'null'], maxLength: 1000 }
     WorkCalendarEntryWrite:
       type: object
@@ -1248,6 +1373,7 @@ components:
         name: { type: string, minLength: 1, maxLength: 128 }
         url: { type: string, format: uri, maxLength: 2048, pattern: '^https?://' }
         sortOrder: { type: integer, minimum: 0, maximum: 2147483647, default: 9999 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
     BranchWrite:
       type: object
       required: [name]
@@ -1274,10 +1400,12 @@ components:
         notes: { type: [string, 'null'], maxLength: 5000 }
     Role:
       type: object
-      required: [id, name, isSystemManagement, createdAt, updatedAt]
+      required: [id, name, permissionCodes, isSystemManagement, createdAt, updatedAt]
       properties:
         id: { type: integer, minimum: 1 }
         name: { type: string, minLength: 1, maxLength: 128 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        permissionCodes: { type: array, uniqueItems: true, items: { type: string }, description: Active operation codes assigned to the role. }
         isSystemManagement: { type: boolean, description: Server-derived assignment guard. Internal permission identifiers are never returned. }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -1286,6 +1414,7 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 128 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
     EmployeeDerivedFields:
       type: object
       description: Language-neutral values calculated by the API for each employee response and never persisted.

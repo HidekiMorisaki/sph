@@ -5,7 +5,7 @@
 .kebab-button svg{width:14px;height:14px}
 .menu-popover{position:fixed;z-index:1100;display:flex;min-width:160px;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(15,23,42,.16);animation:menu-in 140ms cubic-bezier(.2,0,0,1)}
 @keyframes menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.menu-popover > [role='menuitem']{display:flex;box-sizing:border-box;min-height:34px;align-items:center;gap:9px;margin:0;padding:7px 10px;color:var(--text)!important;border-radius:4px;text-align:left;font-size:13px;line-height:1.4286}
+.menu-popover > [role='menuitem']{display:flex;box-sizing:border-box;min-height:34px;align-items:center;gap:9px;margin:0;padding:7px 10px;color:var(--text)!important;border-radius:4px;text-align:left;font-size:var(--font-size-body);line-height:1.4286}
 .menu-popover > button[role='menuitem']{width:100%;background:transparent!important;border:0}
 .menu-popover > a[role='menuitem']{text-decoration:none}
 .menu-popover > [role='menuitem']:hover,.menu-popover > [role='menuitem']:focus-visible{background:var(--surface-secondary)!important}

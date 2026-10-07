@@ -1,4 +1,5 @@
-import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { applyCredentialChanges, parseCredentialChanges } from '$lib/server/api/it-asset-credentials';
 import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
 import { reserveManagementCode, resolveManagementCode } from '$lib/server/api/it-asset-management-code';
@@ -7,12 +8,14 @@ import { changeAssignee, readAssetFields, recordAssetChange } from '$lib/server/
 import { syncAssetIpAddresses } from '$lib/server/api/it-asset-network';
 import { itAssetOutput } from '$lib/server/api/it-asset-output';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
+import { containsPattern, parseVisibleSearch } from '$lib/server/api/visible-list-search';
+import { failure, success, throwApiError } from '$lib/server/api/response';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 
 const sortFields = ['id', 'assetTag', 'type', 'manufacturer', 'modelNumber', 'serialNumber', 'branch', 'room', 'storage', 'user', 'status', 'ramGb', 'purchasedOn', 'disposalOn', 'createdAt', 'updatedAt'] as const;
 type SortField = (typeof sortFields)[number];
+const visibleSearchKeys = ['assetTag', 'notes', 'type', 'manufacturer', 'modelNumber', 'branch', 'room', 'storage', 'user', 'status'] as const;
 function assetOrderBy(field: SortField, direction: 'asc' | 'desc'): Prisma.ItAssetOrderByWithRelationInput[] {
 	switch (field) {
 		case 'type': return [{ type: { name: direction } }, { id: 'asc' }];
@@ -25,8 +28,63 @@ function assetOrderBy(field: SortField, direction: 'asc' | 'desc'): Prisma.ItAss
 	}
 }
 const filterId = (url: URL, key: string) => { const raw = url.searchParams.get(key); return raw && /^\d+$/.test(raw) ? Number(raw) : undefined; };
+async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: string, keys: string[], sortBy: SortField, sortOrder: 'asc' | 'desc', offset: number, limit: number) {
+	const pattern = containsPattern(search);
+	const fields: Record<(typeof visibleSearchKeys)[number], Prisma.Sql> = {
+		assetTag: Prisma.sql`asset.asset_tag ILIKE ${pattern}`,
+		notes: Prisma.sql`asset.notes ILIKE ${pattern}`,
+		type: Prisma.sql`type.name ILIKE ${pattern}`,
+		manufacturer: Prisma.sql`manufacturer.name ILIKE ${pattern}`,
+		modelNumber: Prisma.sql`asset.model_number ILIKE ${pattern}`,
+		branch: Prisma.sql`branch.name ILIKE ${pattern}`,
+		room: Prisma.sql`room.name ILIKE ${pattern}`,
+		storage: Prisma.sql`location.name ILIKE ${pattern}`,
+		user: Prisma.sql`(assignee.first_name ILIKE ${pattern} OR assignee.middle_name ILIKE ${pattern} OR assignee.last_name ILIKE ${pattern}
+			OR concat_ws(' ', assignee.first_name, assignee.middle_name, assignee.last_name) ILIKE ${pattern}
+			OR concat_ws(' ', assignee.last_name, assignee.middle_name, assignee.first_name) ILIKE ${pattern})`,
+		status: Prisma.sql`status.name ILIKE ${pattern}`
+	};
+	const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`, Prisma.sql`(${Prisma.join(keys.map((key) => fields[key as keyof typeof fields]), ' OR ')})`];
+	for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
+		const value = filterId(url, field);
+		if (value) conditions.push(Prisma.sql`${column} = ${value}`);
+	}
+	const from = Prisma.sql`FROM it_assets asset
+		JOIN it_asset_types type ON type.id = asset.type_id
+		LEFT JOIN manufacturers manufacturer ON manufacturer.id = asset.manufacturer_id
+		JOIN storage location ON location.id = asset.storage_id
+		JOIN rooms room ON room.id = location.room_id
+		JOIN branches branch ON branch.id = room.branch_id
+		JOIN it_asset_statuses status ON status.id = asset.status_id
+		LEFT JOIN LATERAL (
+			SELECT employee.first_name, employee.middle_name, employee.last_name FROM it_asset_assignments assignment
+			JOIN employees employee ON employee.id = assignment.employee_id
+			WHERE assignment.asset_id = asset.id AND assignment.returned_at IS NULL AND assignment.deleted_at IS NULL
+			ORDER BY assignment.assigned_at DESC LIMIT 1
+		) assignee ON TRUE`;
+	const where = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
+	const count = await tx.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total ${from} ${where}`);
+	const orderFields: Record<SortField, Prisma.Sql> = {
+		id: Prisma.sql`asset.id`, assetTag: Prisma.sql`asset.asset_tag`, type: Prisma.sql`type.name`, manufacturer: Prisma.sql`manufacturer.name`,
+		modelNumber: Prisma.sql`asset.model_number`, serialNumber: Prisma.sql`asset.serial_number`, branch: Prisma.sql`branch.name`,
+		room: Prisma.sql`room.name`, storage: Prisma.sql`location.name`, user: Prisma.sql`assignee.first_name`, status: Prisma.sql`status.name`,
+		ramGb: Prisma.sql`asset.ram_gb`, purchasedOn: Prisma.sql`asset.purchased_on`, disposalOn: Prisma.sql`asset.disposal_on`,
+		createdAt: Prisma.sql`asset.created_at`, updatedAt: Prisma.sql`asset.updated_at`
+	};
+	const direction = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+	const ordering = sortBy === 'manufacturer' ? Prisma.sql`manufacturer.name ${direction}, asset.model_number ${direction}`
+		: sortBy === 'user' ? Prisma.sql`assignee.first_name ${direction} NULLS LAST, assignee.last_name ${direction} NULLS LAST`
+		: Prisma.sql`${orderFields[sortBy]} ${direction} NULLS LAST`;
+	const ordered = await tx.$queryRaw<Array<{ id: number }>>(Prisma.sql`SELECT asset.id ${from} ${where} ORDER BY ${ordering}, asset.id ASC OFFSET ${offset} LIMIT ${limit}`);
+	const ids = ordered.map((row) => row.id);
+	const records = await tx.itAsset.findMany({ where: { id: { in: ids } }, include: itAssetInclude });
+	const byId = new Map(records.map((record) => [record.id, record]));
+	return [count[0]?.total ?? 0, ids.flatMap((id) => byId.has(id) ? [byId.get(id)!] : [])] as const;
+}
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
+	requireOperationApi(locals.user, permissionOperations.assetRead); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
+	const visibleSearch = parseVisibleSearch(url, visibleSearchKeys);
+	if (visibleSearch && search && search.length > 200) throwApiError(422, 'INVALID_SEARCH', 'q must be 200 characters or fewer for visible list search.', [{ field: 'q', reason: 'TOO_LONG' }]);
 	const contains = search ? { contains: search, mode: 'insensitive' as const } : undefined;
 	const where: Prisma.ItAssetWhereInput = {
 		deletedAt: null,
@@ -45,6 +103,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	};
 	const prisma = getPrisma();
 	const [total, items] = await prisma.$transaction(async tx => {
+		if (visibleSearch && search) return visibleAssetPage(tx, url, search, visibleSearch.keys, query.sortBy, query.sortOrder, query.offset, query.limit);
 		const total = await tx.itAsset.count({ where });
 		if (query.sortBy !== 'user') return [total, await tx.itAsset.findMany({ where, include: itAssetInclude, orderBy: assetOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit })] as const;
 		const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`];

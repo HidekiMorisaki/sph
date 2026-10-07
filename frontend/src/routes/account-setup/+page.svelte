@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import StatusNotice from '$lib/components/StatusNotice.svelte';
 
 	let token = $state('');
 	let ready = $state(false);
@@ -50,7 +51,7 @@
 		<form novalidate onsubmit={(event) => { event.preventDefault(); void complete(); }}>
 			<label>New password<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="new-password" minlength="12" maxlength="1024" aria-invalid={!!passwordError} aria-describedby={passwordError?'setup-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="setup-password-error" class="field-error">{passwordError}</small>{/if}</label>
 			<label>Confirm password<input bind:this={confirmInput} bind:value={confirmPassword} type="password" autocomplete="new-password" minlength="12" maxlength="1024" aria-invalid={!!confirmError} aria-describedby={confirmError?'setup-confirm-error':undefined} oninput={()=>confirmError=''} />{#if confirmError}<small id="setup-confirm-error" class="field-error">{confirmError}</small>{/if}</label>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
 			<button type="submit" disabled={loading}>{loading ? 'Setting up…' : 'Set password'}</button>
 		</form>
 	{/if}
@@ -59,8 +60,8 @@
 <style>
 	.setup-page{min-height:100dvh;display:grid;place-items:center;padding:24px;background:var(--bg)}
 	.setup-card{display:grid;gap:16px;width:min(100%,440px);padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow)}
-	h1,p{margin:0}h1{font-size:24px}.setup-card>p{color:var(--muted);font-size:13px;line-height:1.5}
-	form{display:grid;gap:15px}label{display:grid;gap:6px;font-size:13px;font-weight:600}input{width:100%;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:11px;font-weight:400}
-	button,a{display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:9px 14px;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none}
-	button{background:#337ab7;color:#fff;border:1px solid #286090}button:disabled{opacity:.6;cursor:wait}a{width:max-content;background:#337ab7;color:#fff}.error{color:var(--danger);font-size:12px}
+	h1,p{margin:0}h1{font-size:24px}.setup-card>p{color:var(--muted);font-size:var(--font-size-body);line-height:1.5}
+	form{display:grid;gap:15px}label{display:grid;gap:6px;font-size:var(--font-size-support);font-weight:600}input{width:100%;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:400}
+	button,a{display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:9px 14px;border-radius:4px;font-size:var(--font-size-body);font-weight:600;text-decoration:none}
+	button{background:#337ab7;color:#fff;border:1px solid #286090}button:disabled{opacity:.6;cursor:wait}a{width:max-content;background:#337ab7;color:#fff}
 </style>

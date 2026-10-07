@@ -28,6 +28,7 @@ model Employee {
   lastName                String                  @map("last_name")
   nameKana                String?                 @map("name_kana")
   birthDate               DateTime                @map("birth_date") @db.Date
+  /// Migrations m0013 and m0014 reject blank values and allow only female, male, or unspecified.
   gender                  String
   bloodType               String?                 @map("blood_type")
   postalCode              String?                 @map("postal_code") @db.VarChar(8)
@@ -61,6 +62,7 @@ model Employee {
   socialLinks             EmployeeSocialLink[]
   passwordResetTokens     PasswordResetToken[]
   auditLogs               AuditLog[]
+  masterChangeHistory     MasterChangeHistory[]
   roleGrants              EmployeeRole[]          @relation("Grantee")
   departmentAssignments   EmployeeDepartment[]
   positionAssignments     EmployeePosition[]
@@ -109,6 +111,7 @@ model EmployeeSocialLink {
 model ExternalLink {
   id        Int       @id @default(autoincrement())
   name      String    @unique @db.VarChar(128)
+  notes     String?   @db.VarChar(5000)
   url       String    @db.VarChar(2048)
   sortOrder Int       @default(9999) @map("sort_order")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -123,6 +126,7 @@ model WorkCalendar {
   id                         Int               @id @default(autoincrement())
   name                       String            @unique @db.VarChar(128)
   calendarYear               Int               @map("calendar_year")
+  countryCode                String            @default("JP") @map("country_code") @db.VarChar(2)
   scheduledWorkMinutesPerDay Int               @default(465) @map("scheduled_work_minutes_per_day")
   description                String?           @db.VarChar(1000)
   createdAt                  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -155,6 +159,7 @@ model WorkCalendarDay {
 model CalendarDateAttribute {
   id           Int       @id @default(autoincrement())
   calendarDate DateTime  @map("calendar_date") @db.Date
+  countryCode  String    @default("JP") @map("country_code") @db.VarChar(2)
   kind         String    @db.VarChar(32)
   name         String    @db.VarChar(128)
   source       String    @db.VarChar(32)
@@ -163,7 +168,7 @@ model CalendarDateAttribute {
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  @@unique([calendarDate, kind])
+  @@unique([countryCode, calendarDate, kind])
   @@index([calendarDate])
   @@map("calendar_date_attributes")
 }
@@ -171,6 +176,7 @@ model CalendarDateAttribute {
 model CalendarHolidayImport {
   id            Int       @id @default(autoincrement())
   importKey     String    @unique @default(dbgenerated("gen_random_uuid()")) @map("import_key") @db.Uuid
+  countryCode   String    @default("JP") @map("country_code") @db.VarChar(2)
   sourceUrl     String    @map("source_url") @db.VarChar(500)
   rangeStart    DateTime? @map("range_start") @db.Date
   rangeEnd      DateTime? @map("range_end") @db.Date
@@ -183,18 +189,23 @@ model CalendarHolidayImport {
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   @@index([completedAt])
+  @@index([countryCode, completedAt])
   @@map("calendar_holiday_imports")
 }
 
 model Role {
   id          Int              @id @default(autoincrement())
   name        String           @unique
+  defaultKey  String?          @unique @map("default_key")
+  notes       String?          @db.VarChar(5000)
+  sortOrder   Int              @default(2147483647) @map("sort_order")
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(3)
   grants      EmployeeRole[]
   permissions RolePermission[]
 
+  @@index([sortOrder, name])
   @@map("roles")
 }
 
@@ -214,7 +225,7 @@ model Permission {
 model PermissionOperation {
   id           Int        @id @default(autoincrement())
   operation    String     @unique
-  permissionId Int        @map("permission_id")
+  permissionId Int        @unique @map("permission_id")
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
@@ -265,6 +276,7 @@ model EmployeeRole {
 model Department {
   id                  Int                  @id @default(autoincrement())
   name                String               @unique
+  notes               String?              @db.VarChar(5000)
   sortOrder           Int                  @default(9999) @map("sort_order")
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -296,6 +308,7 @@ model EmployeeGroup {
   id           Int         @id @default(autoincrement())
   departmentId Int?        @map("department_id")
   name         String
+  notes        String?     @db.VarChar(5000)
   sortOrder    Int         @default(9999) @map("sort_order")
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -310,6 +323,7 @@ model EmployeeGroup {
 model Position {
   id                  Int                @id @default(autoincrement())
   name                String             @unique
+  notes               String?            @db.VarChar(5000)
   sortOrder           Int                @default(9999) @map("sort_order")
   createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -338,6 +352,7 @@ model EmployeePosition {
 model EmploymentType {
   id        Int        @id @default(autoincrement())
   name      String     @unique
+  notes     String?    @db.VarChar(5000)
   sortOrder Int        @default(9999) @map("sort_order")
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -515,6 +530,7 @@ model ItAssetManagementCode {
 model ItAssetType {
   id                    Int       @id @default(autoincrement())
   name                  String    @unique
+  notes                 String?   @db.VarChar(5000)
   managementCodePrefix  String    @unique @map("management_code_prefix") @db.VarChar(5)
   nextManagementNumber  Int       @default(1) @map("next_management_number")
   supportsCpu           Boolean   @default(false) @map("supports_cpu")
@@ -533,6 +549,7 @@ model ItAssetType {
 model Manufacturer {
   id              Int       @id @default(autoincrement())
   name            String    @unique
+  notes           String?   @db.VarChar(5000)
   officialUrl     String?   @map("official_url")
   sourceCheckedOn DateTime? @map("source_checked_on") @db.Date
   sortOrder       Int       @default(9999) @map("sort_order")
@@ -551,6 +568,7 @@ model CpuType {
   series          String
   modelNumber     String       @map("model_number")
   name            String       @unique
+  notes           String?      @db.VarChar(5000)
   officialUrl     String?      @map("official_url")
   sourceCheckedOn DateTime?    @map("source_checked_on") @db.Date
   sortOrder       Int          @default(9999) @map("sort_order")
@@ -565,14 +583,27 @@ model CpuType {
   @@map("cpu_types")
 }
 
+model OperatingSystemVendor {
+  id               Int               @id @default(autoincrement())
+  name             String            @unique @db.VarChar(128)
+  sortOrder        Int               @default(9999) @map("sort_order")
+  notes            String?           @db.VarChar(5000)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  operatingSystems OperatingSystem[]
+
+  @@map("operating_system_vendors")
+}
+
 model OperatingSystem {
   id              Int       @id @default(autoincrement())
-  vendor          String
+  vendorId        Int       @map("vendor_id")
   product         String
   version         String
   edition         String?
   architecture    String?
-  displayName     String    @unique @map("display_name")
+  notes           String?   @db.VarChar(5000)
   officialUrl     String?   @map("official_url")
   sourceCheckedOn DateTime? @map("source_checked_on") @db.Date
   sortOrder       Int       @default(9999) @map("sort_order")
@@ -580,13 +611,18 @@ model OperatingSystem {
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
   assets          ItAsset[]
+  vendor          OperatingSystemVendor @relation(fields: [vendorId], references: [id])
 
+  // m0011 creates this natural key with NULLS NOT DISTINCT for optional fields.
+  @@unique([vendorId, product, version, edition, architecture], map: "operating_systems_natural_key")
+  @@index([vendorId])
   @@map("operating_systems")
 }
 
 model ItAssetStatus {
   id                 Int                @id @default(autoincrement())
   name               String             @unique
+  notes              String?            @db.VarChar(5000)
   disposalDatePolicy DisposalDatePolicy @default(prohibited) @map("disposal_date_policy")
   sortOrder          Int                @default(9999) @map("sort_order")
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -668,6 +704,25 @@ model AuditLog {
 
   @@index([resource, resourceId])
   @@map("audit_logs")
+}
+
+model MasterChangeHistory {
+  id              Int       @id @default(autoincrement())
+  eventKey        String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  resource        String
+  resourceId      Int       @map("resource_id")
+  actorId         Int       @map("actor_id")
+  action          String    @db.VarChar(20)
+  changes         Json
+  changedAt       DateTime  @default(now()) @map("changed_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  actor           Employee  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([resource, resourceId, changedAt])
+  @@index([actorId])
+  @@map("master_change_history")
 }
 
 model Session {

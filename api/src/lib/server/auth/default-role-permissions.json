@@ -1,0 +1,18 @@
+[
+	{
+		"key": "system_administrator",
+		"permissionCodes": ["system.manage", "employees.read", "employees.manage", "masters.read", "masters.manage", "branches.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "calendars.read", "calendars.assign"]
+	},
+	{
+		"key": "business_administrator",
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "assets.manage", "calendars.read"]
+	},
+	{
+		"key": "general_user",
+		"permissionCodes": ["employees.read", "masters.read", "assets.read", "assets.manage", "calendars.read"]
+	},
+	{
+		"key": "server_administrator",
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "calendars.read"]
+	}
+]

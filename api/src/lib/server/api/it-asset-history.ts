@@ -1,6 +1,7 @@
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { ItAssetValidationError } from './it-asset-errors';
 import { itAssetInclude } from './it-asset-input';
+import { operatingSystemName } from './operating-system-name';
 import { writeAuditLog } from './admin';
 
 type EmployeeNameParts = { firstName: string; middleName: string | null; lastName: string };
@@ -24,7 +25,7 @@ export async function readAssetFields(tx: Prisma.TransactionClient, assetId: num
 		serialNumber: field(asset.serialNumber),
 		cpuTypeId: field(asset.cpuTypeId, asset.cpuType?.name ?? null),
 		ramGb: field(asset.ramGb),
-		operatingSystemId: field(asset.operatingSystemId, asset.operatingSystem?.displayName ?? null),
+		operatingSystemId: field(asset.operatingSystemId, asset.operatingSystem ? operatingSystemName(asset.operatingSystem) : null),
 		loginUsername: field(asset.loginUsername),
 		ipAddress1: field(asset.ipAddresses.find((item) => item.slot === 1)?.ipAddress),
 		ipAddress2: field(asset.ipAddresses.find((item) => item.slot === 2)?.ipAddress),

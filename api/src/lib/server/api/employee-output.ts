@@ -1,5 +1,6 @@
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { employeeDerivedValues, employeeReferenceDate } from '$lib/server/api/employee-derived';
+import { socialLinkPlatforms } from '$lib/server/api/social-links';
 
 export const employeeSafeSelect = {
 	id: true,
@@ -42,7 +43,7 @@ export const employeeSafeSelect = {
 	employmentType: { select: { id: true, name: true } },
 	branch: { select: { id: true, name: true } },
 	socialLinks: {
-		where: { deletedAt: null },
+		where: { deletedAt: null, platform: { in: [...socialLinkPlatforms] } },
 		select: { platform: true, url: true },
 		orderBy: { id: 'asc' }
 	},

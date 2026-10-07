@@ -8,7 +8,7 @@ const select = { platform: true, url: true } as const;
 export async function GET({ locals }: import('./$types').RequestEvent) {
 	const actor = requireAuthenticatedApi(locals.user);
 	const links = await getPrisma().employeeSocialLink.findMany({
-		where: { employeeId: actor.id, deletedAt: null },
+		where: { employeeId: actor.id, deletedAt: null, platform: { in: [...socialLinkPlatforms] } },
 		select,
 		orderBy: { id: 'asc' }
 	});
@@ -26,7 +26,7 @@ export async function PUT({ request, locals }: import('./$types').RequestEvent) 
 		const now = new Date();
 		const activePlatforms = parsed.data.map((link) => link.platform);
 		await tx.employeeSocialLink.updateMany({
-			where: { employeeId: actor.id, deletedAt: null, ...(activePlatforms.length ? { platform: { notIn: activePlatforms } } : {}) },
+			where: { employeeId: actor.id, deletedAt: null, platform: { in: [...socialLinkPlatforms], ...(activePlatforms.length ? { notIn: activePlatforms } : {}) } },
 			data: { deletedAt: now }
 		});
 		for (const link of parsed.data) {
@@ -37,7 +37,7 @@ export async function PUT({ request, locals }: import('./$types').RequestEvent) 
 			});
 		}
 		await writeAuditLog(tx, actor.id, 'update_social_links', 'employee', actor.id);
-		return tx.employeeSocialLink.findMany({ where: { employeeId: actor.id, deletedAt: null }, select, orderBy: { id: 'asc' } });
+		return tx.employeeSocialLink.findMany({ where: { employeeId: actor.id, deletedAt: null, platform: { in: [...socialLinkPlatforms] } }, select, orderBy: { id: 'asc' } });
 	}, { isolationLevel: 'Serializable' });
 
 	const order = new Map(socialLinkPlatforms.map((platform, index) => [platform, index]));

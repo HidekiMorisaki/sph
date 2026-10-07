@@ -17,28 +17,14 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 		{ id: 'assets', label: text.groups.assets, items: [
 			{ id: 'itAssets', text: text.items.itAssets, icon: 'dashboard', href: '/it-assets' }
 		] },
-		{ id: 'siteManagement', label: text.groups.siteManagement, systemAdministratorOnly: true, items: [
-			{ id: 'systemSettings', text: text.items.systemSettings, icon: 'settings', href: '/system-settings' }
-		] },
 		{ id: 'masterManagement', label: text.groups.masterManagement, managerOnly: true, items: [
-			{ id: 'employment', text: text.items.employment, icon: 'list', children: [
-				{ text: text.items.employmentTypes, href: '/employee-masters/employment-types' },
-				{ text: text.items.positions, href: '/employee-masters/positions' },
-				{ text: text.items.departments, href: '/employee-masters/departments' },
-				{ text: text.items.employeeGroups, href: '/employee-masters/employee-groups' }
-			] },
-			{ id: 'locations', text: text.items.locations, icon: 'list', children: [
-				{ text: text.items.branches, href: '/branches' },
-				{ text: text.items.rooms, href: '/rooms' },
-				{ text: text.items.storages, href: '/storages' }
-			] },
-			{ id: 'itMasters', text: text.items.itMasters, icon: 'list', children: [
-				{ text: text.items.itAssetTypes, href: '/it-asset-masters/it-asset-types' },
-				{ text: text.items.manufacturers, href: '/it-asset-masters/manufacturers' },
-				{ text: text.items.cpuTypes, href: '/it-asset-masters/cpu-types' },
-				{ text: text.items.operatingSystems, href: '/it-asset-masters/operating-systems' },
-				{ text: text.items.statuses, href: '/it-asset-masters/it-asset-statuses' }
-			] }
+			{ id: 'employment', text: text.items.employment, icon: 'list', href: '/employee-masters/employment-types' },
+			{ id: 'locations', text: text.items.locations, icon: 'list', href: '/locations' },
+			{ id: 'itMasters', text: text.items.itMasters, icon: 'list', href: '/it-asset-masters' }
+		] },
+		{ id: 'siteManagement', label: text.groups.siteManagement, systemAdministratorOnly: true, items: [
+			{ id: 'systemInformation', text: text.items.systemInformation, icon: 'list', href: '/system-information' },
+			{ id: 'systemSettings', text: text.items.systemSettings, icon: 'settings', href: '/system-settings' }
 		] }
 	];
 }

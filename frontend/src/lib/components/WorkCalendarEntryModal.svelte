@@ -4,6 +4,7 @@
 	import FormSection from '$lib/components/FormSection.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { apiData } from '$lib/api';
 	import { localization } from '$lib/localization';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
@@ -35,7 +36,8 @@
 	let titleElement = $state<HTMLInputElement>();
 	let confirmingDiscard = $state(false);
 	const initialSnapshot = untrack(() => formSnapshot({ entryType, title, note }));
-	let hasUnsavedChanges = $derived(Boolean(entry) && formSnapshot({ entryType, title, note }) !== initialSnapshot);
+	let hasDraftChanges = $derived(formSnapshot({ entryType, title, note }) !== initialSnapshot);
+	let hasUnsavedChanges = $derived(Boolean(entry) && hasDraftChanges);
 
 	let typeOptions = $derived([
 		{ value: 'working_day', label: text.workingDay },
@@ -89,7 +91,7 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.defaultPrevented || confirmingDiscard || !dialogElement) return;
-		if (event.key === 'Escape') { event.preventDefault(); requestClose(); return; }
+		if (event.key === 'Escape') { event.preventDefault(); if (!entry && hasDraftChanges && !saving) confirmingDiscard = true; else requestClose(); return; }
 		if (event.key !== 'Tab') return;
 		const focusable = [...dialogElement.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
 			.filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
@@ -103,12 +105,12 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<ModalBackdrop onDismiss={requestClose} disabled={saving}>
+<ModalBackdrop>
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact entry-dialog" open aria-modal="true" aria-labelledby="entry-dialog-title">
 		<header><h2 id="entry-dialog-title">{entry ? text.editEntry : text.addEntry}</h2><button class="app-modal-close" type="button" aria-label={text.closeEntry} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body entry-form-body">
-				{#if formError}<div class="app-modal-error-summary" role="alert"><strong>{text.entrySaveHeading}</strong><span>{formError}</span></div>{/if}
+				{#if formError}<StatusNotice title={text.entrySaveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
 				<FormSection title={text.entryDetails} columns={2} framed>
 					<label>{text.date}<input value={workDate} readonly aria-readonly="true" /></label>
 					<SearchSelect label={text.dayType} field="entryType" value={entryType} options={typeOptions} required disabled={saving} onSelect={(value) => entryType = value as typeof entryType} />
@@ -116,12 +118,12 @@
 					<label class="wide">{text.note}<textarea maxlength="5000" rows="5" bind:value={note} placeholder={text.notePlaceholder}></textarea></label>
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer">{#if entry}<button class="delete-action" type="button" disabled={saving} onclick={() => void remove()}>{common.delete}</button>{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? common.saving : text.save}</button></footer>
+			<footer class="app-modal-footer">{#if entry}<button class="delete-action" type="button" disabled={saving} onclick={() => void remove()}>{common.delete}</button>{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(entry) && !hasUnsavedChanges)}>{saving ? common.saving : text.save}</button></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>
 {#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeImmediately} />{/if}
 
 <style>
-	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:16px}.wide{grid-column:1/-1}.footer-spacer{flex:1}.delete-action{display:inline-flex;align-items:center;justify-content:center;height:32px;margin:0;padding:0 12px;background:var(--danger)!important;color:#fff!important;border:1px solid var(--danger);border-radius:4px;font-size:12.5px;font-weight:500}.delete-action:disabled{opacity:.65}
+	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:16px}.wide{grid-column:1/-1}.footer-spacer{flex:1}.delete-action{display:inline-flex;align-items:center;justify-content:center;height:32px;margin:0;padding:0 12px;background:var(--danger)!important;color:#fff!important;border:1px solid var(--danger);border-radius:4px;font-size:var(--font-size-body);font-weight:500}.delete-action:disabled{opacity:.65}
 </style>

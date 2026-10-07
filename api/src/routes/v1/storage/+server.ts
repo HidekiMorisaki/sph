@@ -1,4 +1,6 @@
-import { requireAdminApi, requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireMasterManagementApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
+import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
 import type { Prisma } from '$lib/server/generated/prisma/client';
@@ -19,7 +21,7 @@ function input(value: unknown): { name: string; notes: string | null; branchId: 
 const sortFields = ['id', 'name', 'branch', 'room', 'sortOrder', 'notes', 'createdAt', 'updatedAt'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.masterRead);
 	const query = parseListQuery(url, sortFields, 'sortOrder');
 	const search = parseSearch(url);
 	const where: Prisma.StorageWhereInput = { deletedAt: null, ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }, { room: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }, { room: { is: { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } } } }] } : {}) };
@@ -35,12 +37,12 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 }
 
 export async function POST({ request, locals }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user); const value = input(await request.json().catch(() => null));
+	const actor = requireMasterManagementApi(locals.user); const value = input(await request.json().catch(() => null));
 	if (!value) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	try {
 		const item = await getPrisma().$transaction(async (tx) => {
 			if (!await tx.room.count({ where: { id: value.roomId, branchId: value.branchId, deletedAt: null, branch: { deletedAt: null } } })) throw new Error('inactive room');
-			const created = await tx.storage.create({ data: value }); await writeAuditLog(tx, actor.id, 'create', 'storage', created.id); return created;
+			const created = await tx.storage.create({ data: value }); await writeAuditLog(tx, actor.id, 'create', 'storage', created.id); await recordMasterChange(tx, 'storage', created.id, actor.id, 'create', null, await readMasterSnapshot(tx, 'storage', created.id)); return created;
 		});
 		return success(item, 201);
 	} catch (error) { const field = duplicateField(error); return field ? failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]) : failure(400, 'INVALID_REQUEST', 'Invalid request.'); }

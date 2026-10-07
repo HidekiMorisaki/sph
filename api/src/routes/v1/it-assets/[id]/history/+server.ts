@@ -1,4 +1,5 @@
-import { requireAuthenticatedApi } from '$lib/server/api/admin';
+import { requireOperationApi } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
@@ -7,7 +8,7 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['changedAt', 'id'] as const;
 
 export async function GET({ params, locals, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.assetRead);
 	const assetId = parseId(params.id);
 	if (!assetId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const query = parseListQuery(url, sortFields, 'changedAt');

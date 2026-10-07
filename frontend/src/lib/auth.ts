@@ -3,6 +3,11 @@ import type { LocalizationSettings } from '$lib/localization';
 export type Capabilities = {
 	canManageSystemSettings: boolean;
 	canManageAdministration: boolean;
+	canManageEmployees: boolean;
+	canManageMasters: boolean;
+	canManageBranches: boolean;
+	canReadCalendars: boolean;
+	canAssignCalendars: boolean;
 	canManageAssets: boolean;
 	canReadAssetCredentials: boolean;
 	canWriteAssetCredentials: boolean;

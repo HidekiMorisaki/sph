@@ -133,7 +133,7 @@ export function requireUser(user: AuthenticatedUser | null): AuthenticatedUser {
 
 export function requireAdmin(user: AuthenticatedUser | null): AuthenticatedUser {
 	const authenticatedUser = requireUser(user);
-	if (!hasPermissionOperation(authenticatedUser, permissionOperations.administrationManagement)) {
+	if (!hasPermissionOperation(authenticatedUser, permissionOperations.employeeManagement)) {
 		throwApiError(403, 'ADMIN_REQUIRED', 'Administrator access is required.');
 	}
 

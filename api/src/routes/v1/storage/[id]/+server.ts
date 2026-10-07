@@ -1,4 +1,5 @@
-import { requireAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireMasterManagementApi, writeAuditLog } from '$lib/server/api/admin';
+import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { duplicateField, parseId } from '$lib/server/api/database';
 import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
@@ -15,24 +16,26 @@ function input(value: unknown): { name: string; notes: string | null; branchId: 
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user); const id = parseId(params.id); const data = input(await request.json().catch(() => null));
+	const actor = requireMasterManagementApi(locals.user); const id = parseId(params.id); const data = input(await request.json().catch(() => null));
 	if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	try {
 		const item = await getPrisma().$transaction(async (tx) => {
 			if (!await tx.room.count({ where: { id: data.roomId, branchId: data.branchId, deletedAt: null, branch: { deletedAt: null } } })) return null;
+			const before = await readMasterSnapshot(tx, 'storage', id);
 			const changed = await tx.storage.updateMany({ where: { id, deletedAt: null }, data }); if (!changed.count) return null;
-			await writeAuditLog(tx, actor.id, 'update', 'storage', id); return { id, ...data };
+			await writeAuditLog(tx, actor.id, 'update', 'storage', id); await recordMasterChange(tx, 'storage', id, actor.id, 'update', before, await readMasterSnapshot(tx, 'storage', id)); return { id, ...data };
 		});
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
 	} catch (error) { const field = duplicateField(error); return field ? failure(409, 'DUPLICATE_VALUE', 'This value already exists.', [{ field, reason: 'DUPLICATE_VALUE' }]) : failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
+	const actor = requireMasterManagementApi(locals.user); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async (tx) => {
 		if (await tx.itAsset.count({ where: { storageId: id, deletedAt: null } })) return 'referenced';
+		const before = await readMasterSnapshot(tx, 'storage', id);
 		const changed = await tx.storage.updateMany({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } }); if (!changed.count) return 'not_found';
-		await writeAuditLog(tx, actor.id, 'delete', 'storage', id); return 'deleted';
+		await writeAuditLog(tx, actor.id, 'delete', 'storage', id); await recordMasterChange(tx, 'storage', id, actor.id, 'delete', before, null); return 'deleted';
 	}, { isolationLevel: 'Serializable' });
 	if (result === 'referenced') return failure(409, 'RESOURCE_IN_USE', 'The storage is still referenced.');
 	return result === 'deleted' ? success({ id, deleted: true }) : failure(404, 'NOT_FOUND', 'Not found.');

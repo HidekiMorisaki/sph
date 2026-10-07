@@ -12,6 +12,7 @@
 	import ModalBackdrop from './ModalBackdrop.svelte';
 	import SearchSelect from './SearchSelect.svelte';
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
+	import StatusNotice from './StatusNotice.svelte';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
@@ -65,7 +66,8 @@
 	let genders = $derived(genderOptions($localization));
 	let availableGroups = $derived((masters['employee-groups'] ?? []).filter((item) => item.departmentId != null && String(item.departmentId) === form.primaryDepartmentId));
 	let selectedDepartmentOptions = $derived((masters.departments ?? []).filter((item) => form.departmentIds.includes(String(item.id))).map((item) => ({ value: String(item.id), label: item.name })));
-	let hasUnsavedChanges = $derived(mode !== 'create' && initialSnapshot !== '' && formSnapshot(adminPayload()) !== initialSnapshot);
+	let hasDraftChanges = $derived(initialSnapshot !== '' && formSnapshot(adminPayload()) !== initialSnapshot);
+	let hasUnsavedChanges = $derived(mode !== 'create' && hasDraftChanges);
 
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
 	const fieldError = (field: string) => (fieldErrors[field] ? employeeFieldError(fieldErrors[field], $localization.displayLanguage) : undefined) ?? (missingFields.includes(field) ? (field === 'roleIds' ? text.roleRequired : text.required) : '');
@@ -157,7 +159,8 @@
 	function windowKeydown(event: KeyboardEvent) {
 		if (event.defaultPrevented || confirmingDiscard || event.key !== 'Escape') return;
 		if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusFormField(field)); return; }
-		requestClose();
+		if (mode === 'create' && hasDraftChanges && !saving) confirmingDiscard = true;
+		else requestClose();
 	}
 
 	onMount(() => {
@@ -179,12 +182,12 @@
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
-<ModalBackdrop onDismiss={requestClose} disabled={saving}>
+<ModalBackdrop>
 	<dialog bind:this={dialogElement} class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title">
 		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><button class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 		<form class="employee-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body">
-				{#if formError}<div class="app-modal-error-summary wide" role="alert"><strong>{text.saveHeading}</strong><span>{typeof formError === 'string' ? text[formError] : employeeSaveError(formError.code, formError.status, $localization.displayLanguage)}</span></div>{/if}
+				{#if formError}<StatusNotice title={text.saveHeading} message={typeof formError === 'string' ? text[formError] : employeeSaveError(formError.code, formError.status, $localization.displayLanguage)} tone="error" onDismiss={() => formError = null} />{/if}
 				<FormSection title={text.basic} framed>
 					{@render textInput(text.employeeCode, 'employeeCode', text.examples.employeeCode, 64, true, 'text', '[A-Za-z0-9]{10,64}', 10)}
 					{#each nameFields as field (field)}
@@ -205,7 +208,7 @@
 						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="checkbox" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
 					</FormSection>
 			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>
+			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (mode !== 'create' && !hasUnsavedChanges)}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>
@@ -213,5 +216,5 @@
 
 <style>
 	.wide{grid-column:1/-1}
-	.roles-field{display:grid;gap:8px;margin:0;padding:12px;border:1px solid var(--border);border-radius:5px}.roles-field.invalid{border-color:var(--danger)}.roles-field legend{padding:0 4px;color:var(--text);font-size:12px;font-weight:500}.roles-field>small{color:var(--muted);font-size:11px}.role-options{display:flex;flex-wrap:wrap;gap:8px 18px}.role-options label{display:flex;align-items:center;gap:7px;color:var(--text-secondary);font-size:12px;font-weight:400}.role-options label.locked{color:var(--muted)}.role-options input{width:15px;height:15px;margin:0;accent-color:#1abb9c}.role-options input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
+	.roles-field{display:grid;gap:8px;margin:0;padding:12px;border:1px solid var(--border);border-radius:5px}.roles-field.invalid{border-color:var(--danger)}.roles-field legend{padding:0 4px;color:var(--text);font-size:var(--font-size-support);font-weight:500}.roles-field>small{color:var(--muted);font-size:var(--font-size-support)}.role-options{display:flex;flex-wrap:wrap;gap:8px 18px}.role-options label{display:flex;align-items:center;gap:7px;color:var(--text-secondary);font-size:var(--font-size-support);font-weight:400}.role-options label.locked{color:var(--muted)}.role-options input{width:15px;height:15px;margin:0;accent-color:#1abb9c}.role-options input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
 </style>

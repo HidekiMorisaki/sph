@@ -1,12 +1,13 @@
 import type { RequestHandler } from './$types';
-import { requireAuthenticatedApi } from '$lib/server/api/admin';
+import { requireOperationApi } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { employeeAnalytics, parseAnalyticsPeriod, parseAnalyticsReferenceDate } from '$lib/server/api/employee-analytics';
 import { employeeReferenceDate } from '$lib/server/api/employee-derived';
 import { success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
 
 export const GET: RequestHandler = async ({ locals, url, setHeaders }) => {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.employeeRead);
 	const referenceDate = parseAnalyticsReferenceDate(url, employeeReferenceDate().toISOString().slice(0, 10));
 	const period = parseAnalyticsPeriod(url, referenceDate);
 	const employees = await getPrisma().$queryRaw<{

@@ -3,6 +3,40 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.3.0",
+			"releasedAt": "2026-10-07",
+			"changeGroups": {
+				"newFeatures": [
+					"v0_3_0_role_permissions",
+					"v0_3_0_detail_notes",
+					"v0_3_0_us_federal_holidays"
+				],
+				"improvements": [
+					"v0_3_0_employee_average_age",
+					"v0_3_0_os_vendor_master",
+					"v0_3_0_visible_list_search",
+					"v0_3_0_sample_calendar_holidays",
+					"v0_3_0_accessible_font_sizes",
+					"v0_3_0_master_management_consolidation",
+					"v0_3_0_top_pagination",
+					"v0_3_0_system_information_page",
+					"v0_3_0_social_links",
+					"v0_3_0_status_notices",
+					"v0_3_0_assigned_work_calendars",
+					"v0_3_0_it_asset_assignee_selector"
+				],
+				"bugFixes": [
+					"v0_3_0_modal_picker_visibility",
+					"v0_3_0_powershell_75_installation",
+					"v0_3_0_powershell_maintenance",
+					"v0_3_0_external_links_mobile_layout",
+					"v0_3_0_master_history_relationship",
+					"v0_3_0_api_dependency_security",
+					"v0_3_0_sidebar_navigation_flicker"
+				]
+			}
+		},
+		{
 			"version": "0.2.1",
 			"releasedAt": "2026-10-05",
 			"changeIds": [
@@ -38,6 +72,6 @@
 		}
 	],
 	"noticeIds": [
-		"v0_2_1_development_notice"
+		"v0_3_0_development_notice"
 	]
 }

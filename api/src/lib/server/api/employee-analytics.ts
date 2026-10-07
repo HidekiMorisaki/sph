@@ -68,11 +68,18 @@ export function employeeAnalytics(employees: AnalyticsEmployee[], referenceDate:
 	const toYear = period ? Number(period.toMonth.slice(0, 4)) : year;
 	const annualValues = (itemYear: number, startDate: string, endDate: string) => {
 		const startingHeadcount = employees.filter((employee) => activeAt(employee, startDate)).length;
+		const atEnd = employees.filter((employee) => activeAt(employee, endDate));
+		const ages = atEnd.flatMap((employee) => {
+			if (!employee.birthDate || employee.birthDate > endDate) return [];
+			const birthdayPending = endDate.slice(5) < employee.birthDate.slice(5);
+			return [Number(endDate.slice(0, 4)) - Number(employee.birthDate.slice(0, 4)) - Number(birthdayPending)];
+		});
 		const departures = employees.filter((employee) => employee.retiredAt && employee.retiredAt >= startDate && employee.retiredAt <= endDate).length;
 		const hires = employees.filter((employee) => employee.hiredAt >= startDate && employee.hiredAt <= endDate).length;
 		return {
 			year: itemYear, startDate, endDate, startingHeadcount,
-			headcount: employees.filter((employee) => activeAt(employee, endDate)).length,
+			headcount: atEnd.length, averageAge: ages.length ? ages.reduce((sum, age) => sum + age, 0) / ages.length : null,
+			averageAgeCount: ages.length,
 			hires, departures, turnoverRate: startingHeadcount ? departures / startingHeadcount * 100 : null
 		};
 	};

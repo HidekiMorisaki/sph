@@ -41,7 +41,7 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<ModalBackdrop className="app-modal-backdrop--confirmation" onDismiss={continueEditing}>
+<ModalBackdrop className="app-modal-backdrop--confirmation">
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact app-confirm-dialog" open aria-modal="true" aria-labelledby="discard-changes-title" aria-describedby="discard-changes-description">
 		<header><h2 id="discard-changes-title">{commonText.discardTitle}</h2></header>
 		<div class="app-confirm-body"><p id="discard-changes-description">{commonText.discardDescription}</p></div>

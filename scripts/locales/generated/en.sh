@@ -79,7 +79,7 @@ installer_template() {
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' 'Do not add samples (initial administrator and required settings only)' ;;
 		'samples.prompt') printf '%s' 'Optional fictional sample data' ;;
-		'samples.yes') printf '%s' 'Add localized samples: 360 employees, six branches, 128 IT assets, notes and history' ;;
+		'samples.yes') printf '%s' 'Add localized samples: 360 employees, 3 branches, 128 IT assets, notes and history' ;;
 		'stage.build') printf '%s' 'Building service images' ;;
 		'stage.check') printf '%s' 'Checking local application responses' ;;
 		'stage.cleanup') printf '%s' 'Removing initial setup credentials and refreshing services' ;;
@@ -89,6 +89,8 @@ installer_template() {
 		'stage.start') printf '%s' 'Initializing the database and starting services' ;;
 		'title') printf '%s' 'INSTALLATION' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — INSTALLATION' ;;
+		'warning.holidayJP') printf '%s' 'The Japanese Cabinet Office holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
+		'warning.holidayUS') printf '%s' 'The U.S. Office of Personnel Management (OPM) federal holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.publicUrl') printf '%s' 'Local startup succeeded. Public URL could not be verified; check DNS, firewall and HTTPS proxy settings.' ;;
 		*) return 1 ;;
 	esac

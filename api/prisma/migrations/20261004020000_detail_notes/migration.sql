@@ -1,0 +1,11 @@
+ALTER TABLE public.external_links ADD COLUMN notes varchar(5000);
+ALTER TABLE public.roles ADD COLUMN notes varchar(5000);
+ALTER TABLE public.employment_departments ADD COLUMN notes varchar(5000);
+ALTER TABLE public.employee_groups ADD COLUMN notes varchar(5000);
+ALTER TABLE public.employment_positions ADD COLUMN notes varchar(5000);
+ALTER TABLE public.employment_types ADD COLUMN notes varchar(5000);
+ALTER TABLE public.it_asset_types ADD COLUMN notes varchar(5000);
+ALTER TABLE public.manufacturers ADD COLUMN notes varchar(5000);
+ALTER TABLE public.cpu_types ADD COLUMN notes varchar(5000);
+ALTER TABLE public.operating_systems ADD COLUMN notes varchar(5000);
+ALTER TABLE public.it_asset_statuses ADD COLUMN notes varchar(5000);

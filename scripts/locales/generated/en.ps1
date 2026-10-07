@@ -78,7 +78,7 @@
 	'prompt.selection' = '{1}:'
 	'samples.no' = 'Do not add samples (initial administrator and required settings only)'
 	'samples.prompt' = 'Optional fictional sample data'
-	'samples.yes' = 'Add localized samples: 360 employees, six branches, 128 IT assets, notes and history'
+	'samples.yes' = 'Add localized samples: 360 employees, 3 branches, 128 IT assets, notes and history'
 	'stage.build' = 'Building service images'
 	'stage.check' = 'Checking local application responses'
 	'stage.cleanup' = 'Removing initial setup credentials and refreshing services'
@@ -88,5 +88,7 @@
 	'stage.start' = 'Initializing the database and starting services'
 	'title' = 'INSTALLATION'
 	'title.banner' = '     SME Portal Hub — INSTALLATION'
+	'warning.holidayJP' = 'The Japanese Cabinet Office holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.'
+	'warning.holidayUS' = 'The U.S. Office of Personnel Management (OPM) federal holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.'
 	'warning.publicUrl' = 'Local startup succeeded. Public URL could not be verified; check DNS, firewall and HTTPS proxy settings.'
 }

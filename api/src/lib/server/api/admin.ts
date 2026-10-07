@@ -5,8 +5,23 @@ import { throwApiError } from '$lib/server/api/response';
 
 export function requireAdminApi(user: AuthenticatedUser | null): AuthenticatedUser {
 	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
-	if (!hasPermissionOperation(user, permissionOperations.administrationManagement)) throwApiError(403, 'ADMIN_REQUIRED', 'Administrator access is required.');
+	if (!hasPermissionOperation(user, permissionOperations.employeeManagement)) throwApiError(403, 'ADMIN_REQUIRED', 'Administrator access is required.');
 	return user;
+}
+
+export function requireOperationApi(user: AuthenticatedUser | null, operation: string): AuthenticatedUser {
+	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
+	if (!hasPermissionOperation(user, operation)) throwApiError(403, 'PERMISSION_REQUIRED', 'Permission is required.');
+	return user;
+}
+
+export function requireBranchManagementApi(user: AuthenticatedUser | null): AuthenticatedUser {
+	const actor = requireSystemAdminApi(user);
+	return requireOperationApi(actor, permissionOperations.branchManagement);
+}
+
+export function requireMasterManagementApi(user: AuthenticatedUser | null): AuthenticatedUser {
+	return requireOperationApi(user, permissionOperations.masterManagement);
 }
 
 export function requireSystemAdminApi(user: AuthenticatedUser | null): AuthenticatedUser {

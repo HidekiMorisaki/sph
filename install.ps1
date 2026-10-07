@@ -30,6 +30,7 @@ $timer = [Diagnostics.Stopwatch]::StartNew()
 $step = 0
 $stage = ''
 $failureKey = 'error.unexpected'
+$holidayWarnings = @()
 function Stop-Installation([string]$Key) { $script:failureKey = $Key; throw 'Installation failed.' }
 function Write-InstallerLine([string]$Text, [string]$Color = 'Gray', [switch]$Inline) {
 	if ($useColor) { Write-Host $Text -ForegroundColor $Color -NoNewline:$Inline }
@@ -106,7 +107,10 @@ try {
 	$containers = (Invoke-DockerCaptured -CommandArguments @('ps', '-a', '--format', '{{.Names}}')) -split "`n"
 	if ('sph-db-data' -in $volumes -or @($containers | Where-Object { $_ -in @('sph-db', 'sph-api', 'sph-frontend', 'sph-gateway', 'sph-migration') }).Count -gt 0) { Stop-Installation 'error.existingResources' }
 	$keys = @('APP_ORIGIN', 'HTTP_PORT', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT', 'CORS_ALLOWED_ORIGINS', 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY') + @(Get-ChildItem Env: | Where-Object Name -Like 'INITIAL_ADMIN_*' | Select-Object -ExpandProperty Name)
-	foreach ($key in $keys) { $savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key); [Environment]::SetEnvironmentVariable($key, $null) }
+	foreach ($key in $keys) {
+		$savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key)
+		Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
+	}
 	Complete-Step
 	Start-Step 'stage.setup'
 	$failureKey = 'error.pull'
@@ -133,6 +137,11 @@ try {
 	$failureKey = 'error.migration'
 	$migration = Invoke-DockerCaptured -CommandArguments @('inspect', '--format', '{{.State.Status}} {{.State.ExitCode}}', 'sph-migration')
 	if ($migration.Trim() -ne 'exited 0') { Stop-Installation 'error.migration' }
+	$migrationLog = Invoke-DockerCaptured -CommandArguments @('logs', 'sph-migration')
+	foreach ($countryCode in @('JP', 'US')) {
+		if (@($migrationLog -split '\r?\n' | Where-Object { $_ -ceq "SPH_SAMPLE_HOLIDAY_WARNING=$countryCode" }).Count -gt 0) { $holidayWarnings += $countryCode }
+	}
+	$migrationLog = $null
 	Complete-Step
 	Start-Step 'stage.check'
 	$failureKey = 'error.health'
@@ -167,6 +176,7 @@ try {
 	catch { Write-InstallerLine (Get-InstallerMessage 'warning.publicUrl') Yellow }
 	Complete-Step
 	Write-InstallerLine ("`n" + (Get-InstallerMessage 'complete' @($config.origin))) Green
+	foreach ($countryCode in $holidayWarnings) { Write-InstallerLine (Get-InstallerMessage "warning.holiday$countryCode") Yellow }
 	Write-InstallerLine (Get-InstallerMessage 'complete.notice')
 } catch {
 	Write-InstallerLine (Get-InstallerMessage 'error.stoppedWindows') Red
@@ -175,7 +185,10 @@ try {
 	Write-InstallerLine (Get-InstallerMessage $failureKey) Red
 	exit 1
 } finally {
-	foreach ($key in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key, $savedEnvironment[$key]) }
+	foreach ($key in $savedEnvironment.Keys) {
+		if ($null -eq $savedEnvironment[$key]) { Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue }
+		else { [Environment]::SetEnvironmentVariable($key, $savedEnvironment[$key]) }
+	}
 	Pop-Location
 	if ($WaitAtExit) { Read-Host (Get-InstallerMessage 'exit.prompt') | Out-Null }
 }

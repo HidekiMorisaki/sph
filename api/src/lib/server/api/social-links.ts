@@ -1,6 +1,6 @@
 import type { ApiErrorDetail } from '$lib/server/api/response';
 
-export const socialLinkPlatforms = ['website', 'blog', 'github', 'linkedin', 'x', 'facebook', 'instagram', 'youtube', 'qiita', 'note'] as const;
+export const socialLinkPlatforms = ['github', 'linkedin', 'x', 'threads', 'bluesky', 'mastodon', 'facebook', 'instagram', 'youtube', 'qiita', 'note'] as const;
 export type SocialLinkPlatform = (typeof socialLinkPlatforms)[number];
 
 const platformSet = new Set<string>(socialLinkPlatforms);

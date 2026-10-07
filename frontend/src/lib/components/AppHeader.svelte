@@ -71,7 +71,7 @@
 	.menu:hover,.theme:hover{background:var(--bg)}
 	.menu svg{width:18px;height:18px;transition:transform .2s}
 	.theme svg{width:20px;height:20px}
-	.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+	.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--font-size-support)}
 	.crumb a{color:inherit;text-decoration:none}
 	.crumb a:hover{color:var(--text)}
 	.crumb b{font-weight:600}
@@ -79,5 +79,5 @@
 	.app-header.collapsed .menu svg{transform:rotate(180deg)}
 	:global(html[data-asset-sidebar-collapsed='true']) .app-header{left:64px}
 	:global(html[data-asset-sidebar-collapsed='true']) .menu svg{transform:rotate(180deg)}
-	@media(max-width:760px){.app-header{left:64px;padding:0 16px}.crumb{font-size:13px}}
+	@media(max-width:760px){.app-header{left:64px;padding:0 16px}.crumb{font-size:var(--font-size-support)}}
 </style>

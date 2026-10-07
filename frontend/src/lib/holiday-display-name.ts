@@ -1,6 +1,20 @@
 import type { DisplayLanguage } from '$lib/localization';
 
-// Keep the imported Japanese name so the display language can change without rewriting holiday data.
+// Source names stay in the database so an imported holiday can be displayed in either language.
+const usNamesInJapanese: Record<string, string> = {
+	"New Year's Day": '元日',
+	'Birthday of Martin Luther King, Jr.': 'マーティン・ルーサー・キング・ジュニア誕生日',
+	"Washington's Birthday": 'ワシントン誕生日',
+	'Memorial Day': '戦没将兵追悼記念日',
+	'Juneteenth National Independence Day': 'ジューンティーンス独立記念日',
+	'Independence Day': '独立記念日',
+	'Labor Day': '労働者の日',
+	'Columbus Day': 'コロンブス・デー',
+	'Veterans Day': '退役軍人の日',
+	'Thanksgiving Day': '感謝祭',
+	'Christmas Day': 'クリスマス'
+};
+
 const japanNamesInEnglish: Record<string, string> = {
 	'元日': "New Year's Day",
 	'成人の日': 'Coming of Age Day',
@@ -27,6 +41,8 @@ const japanNamesInEnglish: Record<string, string> = {
 	'大喪の礼': 'Imperial funeral ceremony'
 };
 
-export function holidayDisplayName(name: string, language: DisplayLanguage): string {
-	return language === 'en' ? japanNamesInEnglish[name] ?? name : name;
+export function holidayDisplayName(countryCode: 'JP' | 'US', name: string, language: DisplayLanguage): string {
+	if (countryCode === 'US' && language === 'ja') return usNamesInJapanese[name.replaceAll('’', "'")] ?? name;
+	if (countryCode === 'JP' && language === 'en') return japanNamesInEnglish[name] ?? name;
+	return name;
 }

@@ -15,20 +15,23 @@
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
+	import { operatingSystemName, type OperatingSystemParts } from '$lib/operating-system-name';
 
 	let text = $derived(localeMessages[$localization.displayLanguage].assets);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
 	function t(key: keyof Omit<typeof text, 'errors' | 'credentialStatus'>, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
-	type Named = { id: number; code?: string; name: string; displayName?: string; managementCodePrefix?: string; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
+	type Named = { id: number; code?: string; name: string; managementCodePrefix?: string; supportsCpu?: boolean; supportsRam?: boolean; supportsOs?: boolean; supportsLoginUsername?: boolean; disposalDatePolicy?: string };
+	type OperatingSystem = OperatingSystemParts & { id: number };
 	type Branch = Named;
 	type Room = Named & { branchId: number };
 	type Storage = Named & { branchId: number; roomId: number; room: { id: number; branchId: number; name: string; branch: { id: number; name: string } } };
 	type Assignee = { id: number; employeeCode: string; firstName: string; middleName: string | null; lastName: string };
 	type Assignment = { id: number; employee: Assignee };
-	type Asset = { id: number; assetTag: string; typeId: number; manufacturerId: number | null; modelNumber: string | null; serialNumber: string | null; cpuTypeId: number | null; ramGb: number | null; operatingSystemId: number | null; ipAddress1: string | null; ipAddress2: string | null; hostname: string | null; adminUsername: string | null; loginUsername: string | null; managementConsoleUrl: string | null; managementConsoleUsername: string | null; storageId: number; statusId: number; purchasedOn: string | null; disposalOn: string | null; notes: string | null; type: Named; manufacturer: Named | null; cpuType: Named | null; operatingSystem: Named | null; status: Named; storage: Storage; assignments: Assignment[] };
+	type Asset = { id: number; assetTag: string; typeId: number; manufacturerId: number | null; modelNumber: string | null; serialNumber: string | null; cpuTypeId: number | null; ramGb: number | null; operatingSystemId: number | null; ipAddress1: string | null; ipAddress2: string | null; hostname: string | null; adminUsername: string | null; loginUsername: string | null; managementConsoleUrl: string | null; managementConsoleUsername: string | null; storageId: number; statusId: number; purchasedOn: string | null; disposalOn: string | null; notes: string | null; type: Named; manufacturer: Named | null; cpuType: Named | null; operatingSystem: OperatingSystem | null; status: Named; storage: Storage; assignments: Assignment[] };
 	type CredentialType = 'admin' | 'login' | 'management_console';
 	type CredentialStatus = Record<CredentialType, { configured: boolean }>;
 	let credentialStatusText = $derived(localeMessages[$localization.displayLanguage].assets.credentialStatus);
@@ -56,6 +59,7 @@
 	}
 	const iso = (value: string | null) => value ? value.slice(0, 10) : '';
 	const employeeName = (employee: Assignee) => formatEmployeeName(employee, $localization);
+	const employeeOptionLabel = (employee: Assignee) => `${employeeName(employee)} (${employee.employeeCode})`;
 	const assigneeName = (assignment: Assignment | undefined) => assignment ? employeeName(assignment.employee) : text.unassigned;
 	const invalidRam = (value: string) => value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1);
 
@@ -63,7 +67,7 @@
 	let types = $state<Named[]>([]);
 	let manufacturers = $state<Named[]>([]);
 	let cpus = $state<Named[]>([]);
-	let systems = $state<Named[]>([]);
+	let systems = $state<OperatingSystem[]>([]);
 	let statuses = $state<Named[]>([]);
 	let branches = $state<Branch[]>([]);
 	let rooms = $state<Room[]>([]);
@@ -84,6 +88,7 @@
 	let credentialStatus = $state<CredentialStatus>(blankCredentialStatus());
 	let credentialsLoading = $state(false);
 	let credentialsError = $state('');
+	let credentialsErrorDismissed = $state(false);
 	let credentialRequestId = 0;
 	let branchId = $state('');
 	let roomId = $state('');
@@ -94,6 +99,7 @@
 	let open = $state(false);
 	let saving = $state(false);
 	let message = $state('');
+	let messageTone = $state<'success' | 'error'>('error');
 	let formError = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 	let assignEmployeeId = $state('');
@@ -113,22 +119,26 @@
 	const selectedStatus = $derived(statuses.find((item) => String(item.id) === form.statusId));
 	const availableRooms = $derived(rooms.filter((item) => String(item.branchId) === branchId));
 	const availableStorage = $derived(storageItems.filter((item) => String(item.roomId) === roomId && String(item.branchId) === branchId));
-	let hasUnsavedChanges = $derived(Boolean(editing) && canManageAssets && initialSnapshot !== '' && formSnapshot({ form, branchId, roomId, assignEmployeeId, credentialPasswords, credentialClears }) !== initialSnapshot);
+	let hasDraftChanges = $derived(open && canManageAssets && initialSnapshot !== '' && formChangesSnapshot() !== initialSnapshot);
+	let hasUnsavedChanges = $derived(Boolean(editing) && hasDraftChanges);
+	function formChangesSnapshot() {
+		return formSnapshot({ form: managementCodeAutomatic ? { ...form, assetTag: '' } : form, branchId, roomId, assignEmployeeId, credentialPasswords, credentialClears });
+	}
 
 	async function load() {
 		const session = await fetch('/v1/auth/session');
-		if (!session.ok) { message = text.signInRequired; return; }
+		if (!session.ok) { messageTone = 'error'; message = text.signInRequired; return; }
 		const capabilities = (await apiData<{ user: { capabilities: { canManageAssets: boolean; canReadAssetCredentials: boolean; canWriteAssetCredentials: boolean } } }>(session)).user.capabilities;
 		canManageAssets = capabilities.canManageAssets;
 		canReadAssetCredentials = capabilities.canReadAssetCredentials;
 		canWriteAssetCredentials = capabilities.canWriteAssetCredentials;
 		const names = ['it-asset-types', 'manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'];
 		const responses = await Promise.all(names.map(endpoint));
-		if (responses.some((response) => !response.ok)) { message = text.loadFailed; return; }
+		if (responses.some((response) => !response.ok)) { messageTone = 'error'; message = text.loadFailed; return; }
 		const data = await Promise.all(responses.map((response) => apiData<unknown[]>(response)));
-		[types, manufacturers, cpus, systems, statuses] = data as unknown as [Named[], Named[], Named[], Named[], Named[]];
+		[types, manufacturers, cpus, systems, statuses] = data as unknown as [Named[], Named[], Named[], OperatingSystem[], Named[]];
 		try { [branches, rooms, storageItems] = await Promise.all([allPages<Branch>('branches'), allPages<Room>('rooms'), allPages<Storage>('storage')]); }
-		catch { message = text.locationLoadFailed; return; }
+		catch { messageTone = 'error'; message = text.locationLoadFailed; return; }
 		if (canManageAssets) {
 			const response = await fetch('/v1/it-asset-assignees');
 			if (response.ok) employees = await apiData<Assignee[]>(response);
@@ -174,9 +184,9 @@
 		formError = '';
 		fieldErrors = {};
 		activeDateField = null;
-		initialSnapshot = '';
 		confirmingDiscard = false;
 		managementCodeAutomatic = true;
+		initialSnapshot = formChangesSnapshot();
 		open = true;
 		focusForm();
 		void refreshCodePreview(form.typeId);
@@ -198,7 +208,7 @@
 		formError = '';
 		fieldErrors = {};
 		activeDateField = null;
-		initialSnapshot = formSnapshot({ form, branchId, roomId, assignEmployeeId, credentialPasswords, credentialClears });
+		initialSnapshot = formChangesSnapshot();
 		confirmingDiscard = false;
 		open = true;
 		focusForm();
@@ -228,7 +238,7 @@
 			if (!response.ok) throw new Error();
 			const status = await apiData<CredentialStatus>(response);
 			if (requestId === credentialRequestId) credentialStatus = status;
-		} catch { if (requestId === credentialRequestId) credentialsError = text.credentialsLoadFailed; }
+		} catch { if (requestId === credentialRequestId) { credentialsErrorDismissed = false; credentialsError = text.credentialsLoadFailed; } }
 		finally { if (requestId === credentialRequestId) credentialsLoading = false; }
 	}
 	function openCredentialAccess(type: CredentialType) {
@@ -368,7 +378,7 @@
 			const saved = await apiData<Asset>(response);
 			const result = editing ? t('updated', saved.assetTag) : t('created', saved.assetTag);
 			closeFormImmediately();
-			message = result;
+			messageTone = 'success'; message = result;
 			await assetList?.refresh();
 		} catch {
 			formError = text.saveRetry;
@@ -382,11 +392,11 @@
 			const response = await fetch(`/v1/it-assets/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) {
 				const body = await response.json().catch(() => null) as { error?: { code?: string } } | null;
-				message = assetErrorMessage(body?.error?.code, response.status, text, text.deleteFailed);
+				messageTone = 'error'; message = assetErrorMessage(body?.error?.code, response.status, text, text.deleteFailed);
 				return;
 			}
-			message = text.deleted;
-		} catch { message = text.deleteFailed; return; }
+			messageTone = 'success'; message = text.deleted;
+		} catch { messageTone = 'error'; message = text.deleteFailed; return; }
 		await assetList?.refresh();
 	}
 	function chooseDate(field: DateField, value: string) {
@@ -450,11 +460,11 @@
 		}
 		if (detailAsset) return;
 		if (!open) return;
-		if (event.key === 'Escape') { event.preventDefault(); if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusField(field)); } else requestCloseForm(); return; }
+		if (event.key === 'Escape') { event.preventDefault(); if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusField(field)); } else if (!editing && hasDraftChanges && !saving) confirmingDiscard = true; else requestCloseForm(); return; }
 		if (event.key === 'Tab') trapDialogTab(event, dialogElement);
 	}
 
-	onMount(() => { void load().catch(() => message = text.loadFailed); });
+	onMount(() => { void load().catch(() => { messageTone = 'error'; message = text.loadFailed; }); });
 </script>
 
 <svelte:window onkeydown={modalKeydown} />
@@ -477,24 +487,24 @@
 
 <AssetManagementShell title={text.title}>
 	<MasterPageHeader title={text.title} description={text.description} actions={pageActions} />
-	{#if message}<p class="notice">{message}</p>{/if}
+	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
 	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={canManageAssets} canDelete={canManageAssets} actionLabel={(item) => (item as Asset).assetTag} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
-		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell },
-		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
-		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell },
-		{ key: 'branch', label: text.branch, width: 11, value: (item) => (item as Asset).storage.room.branch.name },
-		{ key: 'room', label: text.room, width: 10, value: (item) => (item as Asset).storage.room.name },
-		{ key: 'storage', label: text.storage, width: 12, value: (item) => (item as Asset).storage.name },
-		{ key: 'user', label: text.user, width: 12, value: (item) => (item as Asset).assignments[0] ? assigneeName((item as Asset).assignments[0]) : '' },
-		{ key: 'status', label: text.status, width: 9, cell: statusCell }
+		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
+		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name, searchKeys: ['type'] },
+		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },
+		{ key: 'branch', label: text.branch, width: 11, value: (item) => (item as Asset).storage.room.branch.name, searchKeys: ['branch'] },
+		{ key: 'room', label: text.room, width: 10, value: (item) => (item as Asset).storage.room.name, searchKeys: ['room'] },
+		{ key: 'storage', label: text.storage, width: 12, value: (item) => (item as Asset).storage.name, searchKeys: ['storage'] },
+		{ key: 'user', label: text.user, width: 12, value: (item) => (item as Asset).assignments[0] ? assigneeName((item as Asset).assignments[0]) : '', searchKeys: ['user'] },
+		{ key: 'status', label: text.status, width: 9, cell: statusCell, searchKeys: ['status'] }
 	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} onEdit={(item, trigger) => edit(item as Asset, trigger)} onDelete={(item) => remove(item as Asset)} />
 	{#if open}
-		<ModalBackdrop onDismiss={requestCloseForm} disabled={saving}>
+		<ModalBackdrop>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
 				<header><h2 id="asset-form-title">{editing ? (canManageAssets ? text.edit : text.details) : text.add}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestCloseForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 				<form class="asset-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
 					<div class="asset-form-body app-modal-form-body">
-						{#if formError}<div class="form-error-summary app-modal-error-summary wide" role="alert"><strong>{text.saveHeading}</strong><span>{formError}</span></div>{/if}
+						{#if formError}<StatusNotice title={text.saveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
 						<FormSection title={text.basic} framed>
 						{@render searchableSelect(text.type, 'typeId', types.map(item => ({ value: String(item.id), label: item.name })), true)}
 						<label><span>{text.assetTag} <span class="required" aria-hidden="true">*</span></span><input name="assetTag" value={form.assetTag} maxlength="64" class:invalid={Boolean(fieldErrors.assetTag)} aria-invalid={Boolean(fieldErrors.assetTag)} aria-describedby={fieldErrors.assetTag ? 'assetTag-error' : 'assetTag-hint'} placeholder={codeLoading ? text.preparingCode : text.selectTypePlaceholder} disabled={!canManageAssets || codeLoading} oninput={(event) => updateManagementCode(event.currentTarget.value)}/>{#if fieldErrors.assetTag}<span id="assetTag-error" class="field-error" role="alert">{fieldErrors.assetTag}</span>{:else}<small id="assetTag-hint" class="field-hint">{editing && form.assetTag === editing.assetTag && /-[0-9]{4}$/.test(form.assetTag) ? text.legacyCodeHint : text.codeHint}</small>{/if}</label>
@@ -507,7 +517,7 @@
 							<FormSection title={text.hardware} framed>
 							{#if selectedType?.supportsCpu}{@render searchableSelect(text.cpuType, 'cpuTypeId', [{ value: '', label: '-' }, ...cpus.map(item => ({ value: String(item.id), label: item.name }))])}{/if}
 							{#if selectedType?.supportsRam}<label>{text.ramGb}<input name="ramGb" value={form.ramGb} oninput={(event) => updateField('ramGb', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.ramGb)} aria-invalid={Boolean(fieldErrors.ramGb)} aria-describedby={fieldErrors.ramGb ? 'ramGb-error' : undefined} type="number" min="1" step="1" placeholder={text.ramExample} disabled={!canManageAssets}/>{#if fieldErrors.ramGb}<span id="ramGb-error" class="field-error" role="alert">{fieldErrors.ramGb}</span>{/if}</label>{/if}
-							{#if selectedType?.supportsOs}{@render searchableSelect(text.operatingSystem, 'operatingSystemId', [{ value: '', label: '-' }, ...systems.map(item => ({ value: String(item.id), label: item.displayName ?? item.name }))])}{/if}
+							{#if selectedType?.supportsOs}{@render searchableSelect(text.operatingSystem, 'operatingSystemId', [{ value: '', label: '-' }, ...systems.map(item => ({ value: String(item.id), label: operatingSystemName(item) }))])}{/if}
 							</FormSection>
 						{/if}
 						<FormSection title={text.network} framed>
@@ -522,7 +532,7 @@
 							<div class="credential-field"><label>{text.adminPassword}<input name="adminPassword" value={credentialPasswords.admin} oninput={(event) => updateCredentialPassword('admin', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.admin.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.admin} aria-invalid={Boolean(fieldErrors.adminPassword)} aria-describedby={fieldErrors.adminPassword ? 'adminPassword-error' : undefined}/>{#if fieldErrors.adminPassword}<span id="adminPassword-error" class="field-error" role="alert">{fieldErrors.adminPassword}</span>{/if}</label>{#if editing && credentialStatus.admin.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.admin}/> {text.clearPassword}</label>{/if}</div>
 							<div class="credential-field"><label>{text.loginPassword}<input name="loginPassword" value={credentialPasswords.login} oninput={(event) => updateCredentialPassword('login', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.login.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.login} aria-invalid={Boolean(fieldErrors.loginPassword)} aria-describedby={fieldErrors.loginPassword ? 'loginPassword-error' : undefined}/>{#if fieldErrors.loginPassword}<span id="loginPassword-error" class="field-error" role="alert">{fieldErrors.loginPassword}</span>{/if}</label>{#if editing && credentialStatus.login.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.login}/> {text.clearPassword}</label>{/if}</div>
 							<div class="credential-field"><label>{text.consolePassword}<input name="management_consolePassword" value={credentialPasswords.management_console} oninput={(event) => updateCredentialPassword('management_console', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.management_console.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.management_console} aria-invalid={Boolean(fieldErrors.management_consolePassword)} aria-describedby={fieldErrors.management_consolePassword ? 'management_consolePassword-error' : undefined}/>{#if fieldErrors.management_consolePassword}<span id="management_consolePassword-error" class="field-error" role="alert">{fieldErrors.management_consolePassword}</span>{/if}</label>{#if editing && credentialStatus.management_console.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.management_console}/> {text.clearPassword}</label>{/if}</div>
-							{#if credentialsError}<p class="credential-error wide" role="alert">{credentialsError}</p>{/if}
+							{#if credentialsError && !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}
 						{/if}
 						</FormSection>
 						<FormSection title={text.location} framed>
@@ -536,10 +546,12 @@
 						<label class="wide">{text.notes}<textarea bind:value={form.notes} placeholder={text.notesExample} disabled={!canManageAssets}></textarea></label>
 						</FormSection>
 						<FormSection title={text.assign} framed>
-						{@render searchableSelect(text.employee, 'assignEmployeeId', [{ value: '', label: text.unassigned }, ...employees.map(employee => ({ value: String(employee.id), label: employeeName(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName] }))])}
+						<div class="wide">
+							{@render searchableSelect(text.employee, 'assignEmployeeId', [{ value: '', label: text.unassigned }, ...employees.map(employee => ({ value: String(employee.id), label: employeeOptionLabel(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName, employee.employeeCode] }))])}
+						</div>
 						</FormSection>
 					</div>
-					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{canManageAssets ? common.cancel : common.close}</button>{#if canManageAssets}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading || credentialsLoading}>{saving ? common.saving : editing ? common.saveChanges : text.add}</button>{/if}</footer>
+					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{canManageAssets ? common.cancel : common.close}</button>{#if canManageAssets}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading || credentialsLoading || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? common.saving : editing ? common.saveChanges : text.add}</button>{/if}</footer>
 				</form>
 			</dialog>
 		</ModalBackdrop>
@@ -559,7 +571,7 @@
 				<section class="app-detail-section"><h3>{text.hardware}</h3><dl class="app-detail-grid">
 							{#if detailAsset.type.supportsCpu}{@render detailField(text.cpuType, detailAsset.cpuType?.name)}{/if}
 							{#if detailAsset.type.supportsRam}{@render detailField(text.ramGb, detailAsset.ramGb)}{/if}
-							{#if detailAsset.type.supportsOs}{@render detailField(text.operatingSystem, detailAsset.operatingSystem?.displayName ?? detailAsset.operatingSystem?.name)}{/if}
+							{#if detailAsset.type.supportsOs}{@render detailField(text.operatingSystem, detailAsset.operatingSystem ? operatingSystemName(detailAsset.operatingSystem) : null)}{/if}
 				</dl></section>
 			{/if}
 			<section class="app-detail-section"><h3>{text.location}</h3><dl class="app-detail-grid">
@@ -582,7 +594,7 @@
 			</dl>
 			{#if canReadAssetCredentials}
 				<div class="credential-statuses" aria-label={text.storedCredentials}>
-					{#if credentialsLoading}<p>{text.loadingCredentials}</p>{:else if credentialsError}<p class="credential-error" role="alert">{credentialsError}</p>{:else}
+					{#if credentialsLoading}<p>{text.loadingCredentials}</p>{:else if credentialsError}{#if !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}{:else}
 						{#each [['admin',text.adminPassword],['login',text.loginPassword],['management_console',text.consolePassword]] as credential}
 							{@const type = credential[0] as CredentialType}
 							<div><span>{credential[1]}</span><span class:configured={credentialStatus[type].configured}>{credentialStatus[type].configured ? credentialStatusText.configured : credentialStatusText.unconfigured}</span>{#if credentialStatus[type].configured}<button type="button" onclick={() => openCredentialAccess(type)}>{text.reveal}</button>{/if}</div>
@@ -595,13 +607,13 @@
 		</DetailModal>
 	{/if}
 	{#if revealType}
-		<ModalBackdrop onDismiss={closeCredentialAccess} disabled={revealing}>
+		<ModalBackdrop>
 			<dialog bind:this={credentialDialogElement} class="credential-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="credential-dialog-title">
 				<header><h2 id="credential-dialog-title">{text.revealTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closePassword} disabled={revealing} onclick={closeCredentialAccess}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 				<div class="credential-dialog-body">
 					<p>{text.revealGuidance}</p>
 					{#if revealedPassword}<label>{text.storedPassword}<input value={revealedPassword} type="text" readonly autocomplete="off"/></label>{:else}<label>{text.currentPassword}<input bind:value={currentPassword} type="password" maxlength="1024" autocomplete="current-password" onkeydown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void revealCredential(); } }}/></label>{/if}
-					{#if revealError}<p class:success-message={revealError === text.passwordCopied} class="credential-error" role="status">{revealError}</p>{/if}
+					{#if revealError}<StatusNotice message={revealError} tone={revealError === text.passwordCopied ? 'success' : 'error'} onDismiss={() => revealError = ''} />{/if}
 				</div>
 				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={revealing} onclick={closeCredentialAccess}>{common.close}</button>{#if revealedPassword}<button class="app-primary-action" type="button" onclick={() => void copyRevealedPassword()}>{text.copyPassword}</button>{:else}<button class="app-primary-action" type="button" disabled={revealing || !currentPassword} onclick={() => void revealCredential()}>{revealing ? text.verifying : text.reveal}</button>{/if}</footer>
 			</dialog>
@@ -610,7 +622,7 @@
 </AssetManagementShell>
 
 <style>
-	.notice{color:var(--muted);font-size:12px}.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:11px}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:11px}
+	.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:var(--font-size-support)}
 	.wide{grid-column:1/-1}
-	.credential-field{display:grid;gap:6px}.clear-credential{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}.clear-credential input{width:14px;height:14px}.credential-error{margin:0;color:var(--danger);font-size:11.5px}.success-message{color:var(--success,#169f85)}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:12px}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,#169f85)}.credential-statuses button{height:28px;padding:0 10px;border:1px solid var(--action-primary);border-radius:4px;background:transparent;color:var(--action-primary);font-size:11.5px}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:14px;padding:18px 24px 24px}.credential-dialog-body p{margin:0;color:var(--muted);font-size:12px}.credential-dialog-body label{display:grid;gap:6px;font-size:12px}.credential-dialog-body input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
+	.credential-field{display:grid;gap:6px}.clear-credential{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-size-support)}.clear-credential input{width:14px;height:14px}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:var(--font-size-support)}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,#169f85)}.credential-statuses button{height:28px;padding:0 10px;border:1px solid var(--action-primary);border-radius:4px;background:transparent;color:var(--action-primary);font-size:var(--font-size-body)}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:14px;padding:18px 24px 24px}.credential-dialog-body p{margin:0;color:var(--muted);font-size:var(--font-size-support)}.credential-dialog-body label{display:grid;gap:6px;font-size:var(--font-size-support)}.credential-dialog-body input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
 </style>

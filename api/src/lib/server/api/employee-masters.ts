@@ -1,4 +1,5 @@
 import { writeAuditLog } from '$lib/server/api/admin';
+import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { getPrisma } from '$lib/server/prisma';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { ListQuery } from '$lib/server/api/query';
@@ -140,6 +141,8 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 	if (typeof body.name !== 'string') return null;
 	const name = body.name.trim();
 	if (!name || name.length > 128) return null;
+	const notes = optionalText(body, 'notes', 5000);
+	if (notes === undefined) return null;
 	let sortOrder: number | undefined;
 	if (body.sortOrder !== undefined) {
 		const raw = body.sortOrder;
@@ -148,9 +151,9 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 	}
 	if (resource === 'employee-groups') {
 		const departmentId = optionalId(body, 'departmentId');
-		return typeof departmentId === 'number' ? { name, departmentId, ...(sortOrder === undefined ? {} : { sortOrder }) } : null;
+		return typeof departmentId === 'number' ? { name, departmentId, notes, ...(sortOrder === undefined ? {} : { sortOrder }) } : null;
 	}
-	if (resource !== 'branches') return { name, ...(sortOrder === undefined ? {} : { sortOrder }) };
+	if (resource !== 'branches') return { name, notes, ...(sortOrder === undefined ? {} : { sortOrder }) };
 	const values = {
 		openedOn: optionalDate(body, 'openedOn'),
 		closedOn: optionalDate(body, 'closedOn'),
@@ -261,16 +264,17 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 export async function createMaster(resource: EmployeeMasterResource, data: EmployeeMasterInput, actorId: number) {
 	return getPrisma().$transaction(async (tx) => {
 		let item: { id: number; name: string; notes?: string | null };
+		const sortOrder = data.sortOrder ?? 2_147_483_647;
 		switch (resource) {
-			case 'departments': item = await tx.department.create({ data: { name: data.name, sortOrder: data.sortOrder ?? 9999 } }); break;
+			case 'departments': item = await tx.department.create({ data: { name: data.name, notes: data.notes, sortOrder } }); break;
 			case 'employee-groups': {
 				const departmentId = data.departmentId!;
 				if (await tx.department.count({ where: { id: departmentId, deletedAt: null } }) !== 1) throw new EmployeeGroupDepartmentReferenceError();
-				item = await tx.employeeGroup.create({ data: { name: data.name, departmentId, sortOrder: data.sortOrder ?? 9999 }, include: employeeGroupRelations });
+				item = await tx.employeeGroup.create({ data: { name: data.name, departmentId, notes: data.notes, sortOrder }, include: employeeGroupRelations });
 				break;
 			}
-			case 'positions': item = await tx.position.create({ data: { name: data.name, sortOrder: data.sortOrder ?? 9999 } }); break;
-			case 'employment-types': item = await tx.employmentType.create({ data: { name: data.name, sortOrder: data.sortOrder ?? 9999 } }); break;
+			case 'positions': item = await tx.position.create({ data: { name: data.name, notes: data.notes, sortOrder } }); break;
+			case 'employment-types': item = await tx.employmentType.create({ data: { name: data.name, notes: data.notes, sortOrder: 2_147_483_647 } }); break;
 			case 'branches': {
 				await validateBranchEmployees(tx, data);
 				const branch = branchData(data);
@@ -283,16 +287,21 @@ export async function createMaster(resource: EmployeeMasterResource, data: Emplo
 			}
 		}
 		await writeAuditLog(tx, actorId, 'create', resource, item.id);
-		if (resource === 'branches' && data.closedOn) await writeAuditLog(tx, actorId, 'delete', resource, item.id);
+		await recordMasterChange(tx, resource, item.id, actorId, 'create', null, await readMasterSnapshot(tx, resource, item.id));
+		if (resource === 'branches' && data.closedOn) {
+			await writeAuditLog(tx, actorId, 'delete', resource, item.id);
+			await recordMasterChange(tx, resource, item.id, actorId, 'delete', await readMasterSnapshot(tx, resource, item.id), null);
+		}
 		return item;
 	}, { isolationLevel: 'Serializable' });
 }
 
 export async function updateMaster(resource: EmployeeMasterResource, id: number, data: EmployeeMasterInput, actorId: number) {
 	return getPrisma().$transaction(async (tx) => {
+		const before = await readMasterSnapshot(tx, resource, id);
 		let result: { count: number };
 		switch (resource) {
-			case 'departments': result = await tx.department.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
+			case 'departments': result = await tx.department.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, notes: data.notes, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
 			case 'employee-groups': {
 				const departmentId = data.departmentId!;
 				if (await tx.department.count({ where: { id: departmentId, deletedAt: null } }) !== 1) throw new EmployeeGroupDepartmentReferenceError();
@@ -300,11 +309,11 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 					where: { groupId: id, deletedAt: null, departmentAssignments: { none: { departmentId, isPrimary: true, deletedAt: null } } }
 				});
 				if (conflictingEmployees > 0) throw new EmployeeGroupDepartmentConflictError();
-				result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, departmentId, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } });
+				result = await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, departmentId, notes: data.notes, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } });
 				break;
 			}
-			case 'positions': result = await tx.position.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
-			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
+			case 'positions': result = await tx.position.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, notes: data.notes, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
+			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, notes: data.notes, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
 			case 'branches': {
 				await validateBranchEmployees(tx, data);
 				if (data.closedOn && await branchReferenceCount(tx, id) > 0) throw new BranchInUseError();
@@ -318,6 +327,7 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 		}
 		if (result.count !== 1) return null;
 		await writeAuditLog(tx, actorId, resource === 'branches' && data.closedOn ? 'delete' : 'update', resource, id);
+		await recordMasterChange(tx, resource, id, actorId, resource === 'branches' && data.closedOn ? 'delete' : 'update', before, resource === 'branches' && data.closedOn ? null : await readMasterSnapshot(tx, resource, id));
 		if (resource === 'branches') return tx.branch.findUniqueOrThrow({ where: { id }, include: branchRelations });
 		if (resource === 'employee-groups') return tx.employeeGroup.findUniqueOrThrow({ where: { id }, include: employeeGroupRelations });
 		return { id, name: data.name, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) };
@@ -326,6 +336,7 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 
 export async function softDeleteMaster(resource: EmployeeMasterResource, id: number, actorId: number): Promise<'deleted' | 'not_found' | 'referenced'> {
 	return getPrisma().$transaction(async (tx) => {
+		const before = await readMasterSnapshot(tx, resource, id);
 		let referenced = 0;
 		switch (resource) {
 			case 'departments': {
@@ -351,6 +362,7 @@ export async function softDeleteMaster(resource: EmployeeMasterResource, id: num
 		}
 		if (result.count !== 1) return 'not_found';
 		await writeAuditLog(tx, actorId, 'delete', resource, id);
+		await recordMasterChange(tx, resource, id, actorId, 'delete', before, null);
 		return 'deleted';
 	}, { isolationLevel: 'Serializable' });
 }

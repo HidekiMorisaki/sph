@@ -18,6 +18,7 @@ SME Portal Hub ( 略称：SPH ) は、中小企業が社内向けのポータル
 | 他の PC から利用できるようにサーバーへインストールする | [サーバーまたは別の PC へのインストール](#installing-on-a-server-or-another-pc) |
 | インストール時の問題を調べる | [クイックスタートのトラブルシューティング](#quick-start-troubleshooting) |
 | インストール済みのシステムを起動・停止する | [システムの起動と停止](#starting-and-stopping-the-system) |
+| インストール済みのシステムを更新する | [最新バージョンへの更新](#upgrading-to-the-latest-version) |
 
 本システムには、次の機能があります。
 
@@ -55,6 +56,7 @@ cd sph
 
 > [!NOTE]
 > "架空のサンプルデータ（任意）" で "2：追加する" を選択することで、選択した言語に合わせたサンプルデータを自動的に追加することができます。SPH の評価にお役立てください。
+> サンプルの勤務カレンダーには、当年の内閣府の祝日と米国人事管理局（OPM）の連邦祝日も取り込みます。どちらかの公開元に接続できない場合も、他のサンプルデータは登録されます。ログイン後、該当する勤務カレンダーで「祝日を更新」を実行してください。
 
 <a id="installing-on-a-server-or-another-pc"></a>
 
@@ -192,15 +194,38 @@ docker compose up -d
 
 データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
 
+<a id="upgrading-to-the-latest-version"></a>
+
 ## 最新バージョンへの更新
 
-以前のバージョンから更新する場合は、Windows の PowerShell で、リポジトリのルートから次のコマンドを実行してください。
+インストール済みの環境を更新する場合は、リポジトリのルートから使用中の OS に対応するコマンドを実行してください。更新スクリプトがサービスを停止し、検証付きバックアップを作成してから、ソースの取得・再起動を行います。事前に Git の作業ツリーをクリーンにし、追跡先のブランチを設定してください。
+
+Windows PowerShell:
 
 ```powershell
-docker compose stop gateway frontend api
-git pull --ff-only
 .\scripts\update.ps1
 ```
+
+macOS／Linux:
+
+```bash
+./scripts/update.sh
+```
+
+### v0.2.1 から更新する場合
+
+公開済みの元の v0.2.1 に含まれる PowerShell スクリプトは Windows PowerShell 5.1 に対応していません。先に v0.2.1 向け保守修正を取得し、その後、追跡先を v0.3.0 のリリースブランチに設定してください。v0.3.0 が `main` に公開されたら、リポジトリのルートで次を実行します。
+
+```powershell
+git fetch origin
+git pull --ff-only origin bugfix/v0.2.1
+git branch --set-upstream-to=origin/main
+.\scripts\update.ps1
+```
+
+macOS／Linux では同じ Git コマンドを実行し、最後のコマンドを `./scripts/update.sh` に置き換えてください。更新スクリプトは v0.3.0 のソースを取得する前に、データベースのバックアップを作成・検証します。ローカルに変更がある場合は事前に内容を確認して解消し、更新のために無断で破棄しないでください。
+
+バックアップ先の指定や復旧方法は[バックアップ・更新・復元手順](./docs/Backup_Update_and_Restore_JA.md)を参照してください。
 
 ## ギャラリー
 

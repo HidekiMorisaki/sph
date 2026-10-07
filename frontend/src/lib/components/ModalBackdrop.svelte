@@ -3,13 +3,9 @@
 
 	let {
 		children,
-		onDismiss,
-		disabled = false,
 		className = ''
 	}: {
 		children: Snippet;
-		onDismiss: () => void;
-		disabled?: boolean;
 		className?: string;
 	} = $props();
 	let backdropElement = $state<HTMLDivElement>();
@@ -28,10 +24,6 @@
 	} | null = null;
 	let offsetX = 0;
 	let offsetY = 0;
-
-	function handleClick(event: MouseEvent) {
-		if (!disabled && event.target === event.currentTarget) onDismiss();
-	}
 
 	function applyPosition(dialog: HTMLDialogElement) {
 		dialog.style.setProperty('--app-modal-translate-x', `${offsetX}px`);
@@ -92,6 +84,6 @@
 
 <svelte:window onresize={resetPosition} />
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={backdropElement} class={`app-modal-backdrop ${className}`.trim()} role="presentation" onclick={handleClick} onpointerdown={handlePointerDown} onpointermove={handlePointerMove} onpointerup={(event) => finishDrag(event.pointerId)} onpointercancel={(event) => finishDrag(event.pointerId)}>
+<div bind:this={backdropElement} class={`app-modal-backdrop ${className}`.trim()} role="presentation" onpointerdown={handlePointerDown} onpointermove={handlePointerMove} onpointerup={(event) => finishDrag(event.pointerId)} onpointercancel={(event) => finishDrag(event.pointerId)}>
 	{@render children()}
 </div>

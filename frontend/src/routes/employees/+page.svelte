@@ -11,8 +11,10 @@
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
 	import { formatEmployeeName, formatLengthOfService, formatTimestamp, invitationEmailSubject, localization } from '$lib/localization';
+	import { inferPersonNameLocale } from '$lib/person-name';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
@@ -37,6 +39,7 @@
 	let invitationError = $state<'invitationRateLimited' | 'invitationFailed' | ''>('');
 	let issuingInvitation = $state(false);
 	let copyMessage = $state<'linkCopied' | 'linkCopyFailed' | ''>('');
+	let invitationWarningDismissed = $state(false);
 	let message = $state<'created' | 'updated' | 'removed' | 'deleteFailed' | 'exportFailed' | ''>('');
 	let masters = $state<Record<string, EmployeeMaster[]>>({});
 	let roles = $state<EmployeeRole[]>([]);
@@ -51,7 +54,15 @@
 
 	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 	const fullName = (employee: Employee) => formatEmployeeName(employee, $localization);
-	const initials = (item: Employee) => `${item.firstName.charAt(0)}${item.lastName.charAt(0)}`.toUpperCase();
+	const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+	function monogram(item: Employee): string {
+		// CLDR short, formal monogram: Japanese uses given; other supported names use surname.
+		const nameLocale = item.nameKana?.trim() ? 'ja' : inferPersonNameLocale(item);
+		const name = nameLocale === 'ja' ? item.firstName : item.lastName;
+		const first = graphemes.segment(name.trim())[Symbol.iterator]().next().value?.segment ?? '';
+		const upper = first.toLocaleUpperCase(nameLocale === 'ja' ? 'ja' : 'en');
+		return [...graphemes.segment(upper)].length === 1 ? upper : first;
+	}
 	async function loadMasters() {
 		const responses = await Promise.all(resources.map((resource) => fetch(`/v1/${resource}?limit=500`)));
 		masters = Object.fromEntries(await Promise.all(responses.map(async (response, index) => [resources[index], response.ok ? await apiData<EmployeeMaster[]>(response) : []])));
@@ -60,8 +71,8 @@
 		const [roleResponse, sessionResponse] = await Promise.all([fetch('/v1/roles?sortBy=name&sortOrder=asc&limit=100'), fetch('/v1/auth/session')]);
 		if (roleResponse.ok) roles = await apiData<EmployeeRole[]>(roleResponse);
 		if (sessionResponse.ok) {
-			const current = (await apiData<{ user: { id: number; capabilities: { canManageAdministration: boolean; canManageSystemSettings: boolean } } }>(sessionResponse)).user;
-			canManageAdministration = current.capabilities.canManageAdministration;
+			const current = (await apiData<{ user: { id: number; capabilities: { canManageEmployees: boolean; canManageSystemSettings: boolean } } }>(sessionResponse)).user;
+			canManageAdministration = current.capabilities.canManageEmployees;
 			canManageSystemSettings = current.capabilities.canManageSystemSettings;
 			currentUserId = current.id;
 		}
@@ -83,7 +94,7 @@
 				const response = await fetch('/v1/auth/session', { cache: 'no-store' });
 				if (!response.ok) throw new Error('Session refresh failed.');
 				const current = (await apiData<{ user: SessionUser }>(response)).user;
-				canManageAdministration = current.capabilities.canManageAdministration;
+				canManageAdministration = current.capabilities.canManageEmployees;
 				canManageSystemSettings = current.capabilities.canManageSystemSettings;
 				currentUserId = current.id;
 				window.dispatchEvent(new CustomEvent<SessionUser>('session-user-updated', { detail: current }));
@@ -105,6 +116,7 @@
 		if (url.origin !== window.location.origin || url.pathname !== '/account-setup') throw new Error('Invalid invitation URL.');
 		invitation = { url: url.href, email, expiresAt: payload.invitationExpiresAt };
 		copyMessage = '';
+		invitationWarningDismissed = false;
 		detailOpen = false;
 		void tick().then(() => invitationDialogElement?.querySelector<HTMLInputElement>('input')?.focus());
 	}
@@ -173,44 +185,44 @@
 </script>
 
 <svelte:window onkeydown={windowKeydown} />
-{#snippet employeeCell(item: Employee)}<div class="employee-cell"><span class="avatar">{initials(item)}</span><div><div class="employee-name"><strong>{fullName(item)}</strong>{#if item.employmentStatus === 'retired'}<span class="employee-status retired">{text.retired}</span>{:else if item.employmentStatus === 'deleted'}<span class="employee-status deleted">{text.deleted}</span>{/if}</div><small>{item.employeeCode}</small></div></div>{/snippet}
+{#snippet employeeCell(item: Employee)}<div class="employee-cell"><span class="avatar" aria-hidden="true">{monogram(item)}</span><div><div class="employee-name"><strong>{fullName(item)}</strong>{#if item.employmentStatus === 'retired'}<span class="employee-status retired">{text.retired}</span>{:else if item.employmentStatus === 'deleted'}<span class="employee-status deleted">{text.deleted}</span>{/if}</div><small>{item.employeeCode}</small></div></div>{/snippet}
 {#snippet rolesCell(item: Employee)}<div class="role-badges">{#each item.roles as role}<span>{role.name}</span>{/each}</div>{/snippet}
 {#snippet positionsCell(item: Employee)}<div class="position-badges">{#each item.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</div>{/snippet}
 {#snippet departmentsCell(item: Employee)}<div class="position-badges">{#each item.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</div>{/snippet}
 {#snippet pageActions()}<AddButton label={text.add} disabled={!canManageEmployees} onclick={create} />{/snippet}
 {#snippet exportAction()}<div class="employee-list-actions"><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div><button class="export-button" type="button" disabled={exporting || !canManageEmployees} onclick={() => void exportCsv()}>{exporting ? commonText.exporting : commonText.exportCsv}</button></div>{/snippet}
-{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<span role="alert">{text[invitationError]}</span>{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
+{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
 
 <AssetManagementShell title={text.title} active="Employees">
 	<div class="employees-page">
 	<MasterPageHeader title={text.title} actions={pageActions} />
-	{#if message}<p class="notice">{text[message]}</p>{/if}
+	{#if message}<StatusNotice message={text[message]} tone={message === 'created' || message === 'updated' || message === 'removed' ? 'success' : 'error'} onDismiss={() => message = ''} />{/if}
 	<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={(item) => (item as Employee).employmentStatus !== 'deleted' && (canManageEmployees || item.id === currentUserId)} canDelete={(item) => canManageEmployees && (item as Employee).employmentStatus !== 'deleted'} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
-		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell },
-		{ key: 'age', label: text.age, width: 6, value: (item) => (item as Employee).age },
-		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization) },
-		{ key: 'department', label: text.departments, width: 12, cell: departmentsCell },
-		{ key: 'group', label: text.groupId, width: 9, value: (item) => (item as Employee).group?.name },
-		{ key: 'position', label: text.positions, width: 12, cell: positionsCell },
-		{ key: 'employmentType', label: text.employmentTypeId, width: 11, value: (item) => (item as Employee).employmentType?.name },
-		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name },
-		{ key: 'roles', label: text.roles, width: 11, cell: rolesCell }
+		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell, searchKeys: ['name', 'employeeCode', 'employmentStatus'] },
+		{ key: 'age', label: text.age, width: 6, value: (item) => (item as Employee).age, searchKeys: ['age'] },
+		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization), searchKeys: ['lengthOfService'] },
+		{ key: 'department', label: text.departments, width: 12, cell: departmentsCell, searchKeys: ['department'] },
+		{ key: 'group', label: text.groupId, width: 9, value: (item) => (item as Employee).group?.name, searchKeys: ['group'] },
+		{ key: 'position', label: text.positions, width: 12, cell: positionsCell, searchKeys: ['position'] },
+		{ key: 'employmentType', label: text.employmentTypeId, width: 11, value: (item) => (item as Employee).employmentType?.name, searchKeys: ['employmentType'] },
+		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name, searchKeys: ['branch'] },
+		{ key: 'roles', label: text.roles, width: 11, cell: rolesCell, searchKeys: ['roles'] }
 	]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />
 	</div>
 
 	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
 
 	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canManageSystemSettings && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
-	{#if invitation}<ModalBackdrop onDismiss={closeInvitation}><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label><p class="invitation-warning">{text.invitationWarning}</p>{#if copyMessage}<p role="status">{text[copyMessage]}</p>{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
+	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
 <style>
 	.employee-cell>div{min-width:0}
-	.employee-name{display:flex;min-width:0;align-items:center;gap:6px}.employee-status{display:inline-flex;flex:none;align-items:center;min-height:18px;padding:1px 6px;border:1px solid;border-radius:999px;font-size:9px;font-weight:700;line-height:1.2;text-transform:uppercase}.employee-status.retired{background:rgba(243,156,18,.12);color:#c87f0a;border-color:rgba(243,156,18,.3)}.employee-status.deleted{background:rgba(231,76,60,.12);color:#d13b2d;border-color:rgba(231,76,60,.3)}
-	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:10px;font-weight:600;line-height:1.2}
-	.position-badges{display:flex;flex-wrap:wrap;gap:4px}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;font-size:10px;font-weight:500;line-height:1.2}.position-badges>span.primary{background:rgba(51,122,183,.12);color:#337ab7;border-color:rgba(51,122,183,.28)}
-	.employees-page{display:flex;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 12px}.employee-visibility label{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:11.5px;white-space:nowrap;cursor:pointer}.employee-visibility input{width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);font-size:12.5px;font-weight:500;line-height:1;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.notice{flex:none;margin:0 0 14px;color:#169f85}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:9px;font-weight:600}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:11px}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions,.export-button{width:100%}.employee-visibility{align-items:flex-start;flex-direction:column}}
+	.employee-name{display:flex;min-width:0;align-items:center;gap:6px}.employee-status{display:inline-flex;flex:none;align-items:center;min-height:18px;padding:1px 6px;border:1px solid;border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1.2;text-transform:uppercase}.employee-status.retired{background:rgba(243,156,18,.12);color:#c87f0a;border-color:rgba(243,156,18,.3)}.employee-status.deleted{background:rgba(231,76,60,.12);color:#d13b2d;border-color:rgba(231,76,60,.3)}
+	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:600;line-height:1.2}
+	.position-badges{display:flex;flex-wrap:wrap;gap:4px}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;font-size:var(--font-size-support);font-weight:500;line-height:1.2}.position-badges>span.primary{background:rgba(51,122,183,.12);color:#337ab7;border-color:rgba(51,122,183,.28)}
+	.employees-page{display:flex;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 12px}.employee-visibility label{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap;cursor:pointer}.employee-visibility input{width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);font-size:var(--font-size-body);font-weight:500;line-height:1;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:var(--font-size-support);font-weight:600}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions,.export-button{width:100%}.employee-visibility{align-items:flex-start;flex-direction:column}}
 	/* Keep the actions visible while the fields scroll. */
-	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:13px}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px}.invitation-warning{color:var(--danger)!important}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:12px}
+	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
 	.export-button:disabled{cursor:not-allowed;opacity:.5}
 </style>

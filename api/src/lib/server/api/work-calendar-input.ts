@@ -8,11 +8,12 @@ export function parseWorkCalendarInput(value: unknown) {
 	const body = value as Record<string, unknown>;
 	const name = typeof body.name === 'string' ? body.name.trim() : '';
 	const calendarYear = typeof body.calendarYear === 'number' ? body.calendarYear : Number.NaN;
+	const countryCode = body.countryCode === undefined ? 'JP' : body.countryCode;
 	const scheduledWorkMinutesPerDay = typeof body.scheduledWorkMinutesPerDay === 'number' ? body.scheduledWorkMinutesPerDay : Number.NaN;
 	if (body.description !== undefined && body.description !== null && typeof body.description !== 'string') return null;
 	const description = typeof body.description === 'string' && body.description.trim() ? body.description.trim() : null;
-	if (!name || name.length > 128 || !Number.isInteger(calendarYear) || calendarYear < WORK_CALENDAR_MIN_YEAR || calendarYear > WORK_CALENDAR_MAX_YEAR || !Number.isInteger(scheduledWorkMinutesPerDay) || scheduledWorkMinutesPerDay < 15 || scheduledWorkMinutesPerDay > 1440 || scheduledWorkMinutesPerDay % 15 !== 0 || (description?.length ?? 0) > 1000) return null;
-	return { name, calendarYear, scheduledWorkMinutesPerDay, description };
+	if (!name || name.length > 128 || !['JP', 'US'].includes(countryCode as string) || !Number.isInteger(calendarYear) || calendarYear < WORK_CALENDAR_MIN_YEAR || calendarYear > WORK_CALENDAR_MAX_YEAR || !Number.isInteger(scheduledWorkMinutesPerDay) || scheduledWorkMinutesPerDay < 15 || scheduledWorkMinutesPerDay > 1440 || scheduledWorkMinutesPerDay % 15 !== 0 || (description?.length ?? 0) > 1000) return null;
+	return { name, calendarYear, countryCode: countryCode as 'JP' | 'US', scheduledWorkMinutesPerDay, description };
 }
 
 export function workDateIsInCalendarYear(workDate: Date, calendarYear: number) {

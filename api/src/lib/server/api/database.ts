@@ -16,7 +16,6 @@ export function duplicateField(error: unknown): string | null {
 	const columns = `${Array.isArray(target) ? target.map(String).join(' ') : String(target ?? '')} ${String(error)}`;
 	for (const [column, field] of [
 		['management_code_prefix', 'managementCodePrefix'],
-		['display_name', 'displayName'],
 		['model_number', 'modelNumber'],
 		['name', 'name'],
 		['code', 'code']

@@ -5,6 +5,7 @@ export type ExternalLink = {
 	id: number;
 	name: string;
 	url: string;
+	notes: string | null;
 	sortOrder: number;
 	createdAt: string;
 	updatedAt: string;

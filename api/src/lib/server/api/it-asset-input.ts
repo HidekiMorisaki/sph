@@ -103,7 +103,7 @@ export async function itAssetReferenceErrors(tx: Prisma.TransactionClient, data:
 }
 
 export const itAssetInclude = {
-	type: true, manufacturer: true, cpuType: true, operatingSystem: true, status: true,
+	type: true, manufacturer: true, cpuType: true, operatingSystem: { include: { vendor: { select: { id: true, name: true } } } }, status: true,
 	storage: { include: { room: { include: { branch: true } } } },
 	ipAddresses: { where: { deletedAt: null }, orderBy: { slot: 'asc' as const } },
 	assignments: { where: { returnedAt: null, deletedAt: null }, include: { employee: { select: { id: true, employeeCode: true, firstName: true, middleName: true, lastName: true } } }, take: 1 }

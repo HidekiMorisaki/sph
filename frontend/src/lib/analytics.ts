@@ -9,7 +9,7 @@ export type AnalyticsData = {
 	summary: { headcount: number; hires: number; departures: number; turnoverRate: number | null };
 	ageGroups: { key: string; count: number }[];
 	genders: { key: string; count: number }[];
-	annual: { year: number; startDate: string; endDate: string; startingHeadcount: number; headcount: number; hires: number; departures: number; turnoverRate: number | null }[];
+	annual: { year: number; startDate: string; endDate: string; startingHeadcount: number; headcount: number; averageAge: number | null; averageAgeCount: number; hires: number; departures: number; turnoverRate: number | null }[];
 };
 
 type AnalyticsText = Omit<typeof localeMessages.en.analytics, 'ageLabels' | 'genderLabels'> & {
@@ -27,6 +27,10 @@ export function analyticsPeriodError(fromMonth: string, toMonth: string, maxMont
 	if (fromMonth > toMonth) return 'reversedPeriod';
 	if (toMonth > maxMonth) return 'futureMonth';
 	return null;
+}
+
+export function visibleAgeGroups(groups: AnalyticsData['ageGroups']): AnalyticsData['ageGroups'] {
+	return groups.filter((group) => group.key !== 'unknown' || group.count > 0);
 }
 
 export function genderPieSlices(genders: AnalyticsData['genders'], total: number) {

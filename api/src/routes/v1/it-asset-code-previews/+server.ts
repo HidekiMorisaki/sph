@@ -1,11 +1,12 @@
-import { requireAuthenticatedApi } from '$lib/server/api/admin';
+import { requireOperationApi } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { ManagementCodeExhaustedError, formatManagementCode } from '$lib/server/api/it-asset-management-code';
 import { itAssetErrorResponse } from '$lib/server/api/it-asset-errors';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.assetManagement);
 	const raw = url.searchParams.get('typeId');
 	const typeId = raw && /^\d+$/.test(raw) ? Number(raw) : NaN;
 	if (!Number.isSafeInteger(typeId) || typeId < 1) return failure(400, 'VALIDATION_ERROR', 'Select a valid type.', [{ field: 'typeId', reason: 'Select a valid type.' }]);

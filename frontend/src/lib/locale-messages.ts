@@ -32,9 +32,10 @@ export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/employees') return ['employees', 'employeeForm'];
 	if (path === '/work-calendars') return ['workCalendars'];
 	if (path === '/system-settings') return ['systemSettings', 'systemReleases'];
+	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
 	if (path === '/settings') return ['settings'];
-	if (path === '/branches') return ['masters', 'employees'];
-	if (path === '/rooms' || path === '/storages' || path.startsWith('/employee-masters/') || path.startsWith('/it-asset-masters/')) return ['masters'];
+	if (path === '/locations') return ['masters', 'employees'];
+	if (path.startsWith('/employee-masters/') || path === '/it-asset-masters') return ['masters'];
 	if (path === '/it-assets') return ['assets'];
 	return [];
 }

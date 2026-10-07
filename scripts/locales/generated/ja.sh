@@ -79,7 +79,7 @@ installer_template() {
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' '追加しない（初期管理者と必須設定のみ）' ;;
 		'samples.prompt') printf '%s' '架空のサンプルデータ（任意）' ;;
-		'samples.yes') printf '%s' '追加する：従業員360人、拠点6件、IT資産128件、メモ・履歴' ;;
+		'samples.yes') printf '%s' '追加する：従業員360人、拠点3件、IT資産128件、メモ・履歴' ;;
 		'stage.build') printf '%s' 'サービスイメージの構築' ;;
 		'stage.check') printf '%s' 'ローカルでの起動確認' ;;
 		'stage.cleanup') printf '%s' '初期管理者情報の削除・サービスの再作成' ;;
@@ -89,6 +89,8 @@ installer_template() {
 		'stage.start') printf '%s' 'データベースの初期化・サービスの起動' ;;
 		'title') printf '%s' 'インストール' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — インストール' ;;
+		'warning.holidayJP') printf '%s' '内閣府の祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
+		'warning.holidayUS') printf '%s' '米国人事管理局（OPM）の連邦祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.publicUrl') printf '%s' 'ローカル起動は正常です。公開URLを確認できませんでした。DNS・ファイアウォール・HTTPSプロキシ設定を確認してください。' ;;
 		*) return 1 ;;
 	esac

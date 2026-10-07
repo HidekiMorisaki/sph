@@ -5,10 +5,20 @@
 	"total": "Total employees",
 	"hires": "Hires in reference year",
 	"departures": "Departures in reference year",
+	"referenceAverageAge": "Average age in reference year",
+	"referenceAverageAgeNote": "Active employees at reference date",
 	"turnover": "Turnover in reference year",
 	"age": "Employees by age group",
 	"gender": "Gender distribution",
 	"trend": "Annual employee headcount",
+	"headcountAgeTrend": "Annual headcount and average age",
+	"headcountAgeNote": "Headcount and average full age at the end of each year's selected period. Former employees are included in years when they were active. Employees without a birth date are excluded from the average.",
+	"averageAge": "Annual average age",
+	"averageAgeAxis": "Average age (years)",
+	"averageAgeUnit": "years",
+	"peopleUnit": "people",
+	"averageAgeCount": "Employees counted",
+	"averageAgeNote": "Average full age of employees active at the end of each year's selected period. Former employees are included in years when they were active. Employees without a birth date are excluded from the average.",
 	"rates": "Annual hires, departures and turnover",
 	"loading": "Loading dashboard…",
 	"error": "Unable to load the dashboard.",
@@ -30,7 +40,7 @@
 	"asOf": "Reference date",
 	"period": "Default years",
 	"ageNote": "Employees who were active for at least one day in the selected period are counted. Ages are calculated at the end of the period.",
-	"genderNote": "Employees who were active for at least one day in the selected period are counted, including unset gender.",
+	"genderNote": "Employees who were active for at least one day in the selected period are counted, including unspecified gender.",
 	"trendNote": "Headcount at the end of each year’s selected period. The reference month is counted through the reference date.",
 	"formula": "Turnover rate = departures in each year’s selected period ÷ employees at the start of that period × 100. A zero denominator is not calculable.",
 	"summaryFormula": "Turnover rate = departures from January 1 through the reference date ÷ employees on January 1 of the reference year × 100.",
@@ -73,7 +83,6 @@
 	"genderLabels": {
 		"female": "Female",
 		"male": "Male",
-		"unspecified": "Unset / unspecified",
-		"other": "Other"
+		"unspecified": "Unspecified"
 	}
 }

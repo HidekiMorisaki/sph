@@ -1,4 +1,5 @@
-import { requireAuthenticatedApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
+import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { failure, success } from '$lib/server/api/response';
 import { parseEmployeeIdsInput } from '$lib/server/api/work-calendar-input';
@@ -9,7 +10,7 @@ const employeeSelect = { id: true, employeeCode: true, firstName: true, middleNa
 const sortFields = ['employee', 'employeeCode'] as const;
 
 export async function GET({ locals, params, url }: import('./$types').RequestEvent) {
-	requireAuthenticatedApi(locals.user);
+	requireOperationApi(locals.user, permissionOperations.calendarRead);
 	const calendarId = parseId(params.id);
 	if (!calendarId || !await getPrisma().workCalendar.count({ where: { id: calendarId, deletedAt: null } })) return failure(404, 'NOT_FOUND', 'Work calendar not found.');
 	const query = parseListQuery(url, sortFields, 'employee');
@@ -25,7 +26,7 @@ export async function GET({ locals, params, url }: import('./$types').RequestEve
 }
 
 export async function PUT({ locals, params, request }: import('./$types').RequestEvent) {
-	const actor = requireSystemAdminApi(locals.user);
+	const actor = requireOperationApi(requireSystemAdminApi(locals.user), permissionOperations.calendarAssignment);
 	const calendarId = parseId(params.id);
 	const employeeIds = parseEmployeeIdsInput(await request.json().catch(() => null));
 	if (!calendarId || !employeeIds) return failure(400, 'INVALID_REQUEST', 'Invalid employee assignment data.');

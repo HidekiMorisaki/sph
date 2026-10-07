@@ -66,7 +66,7 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<ModalBackdrop onDismiss={close}>
+<ModalBackdrop>
 	<dialog bind:this={dialogElement} class={`app-modal app-detail-modal ${dialogClass}`} class:app-modal--compact={compact} open aria-modal="true" aria-labelledby={titleId}>
 		<header>
 			<div>

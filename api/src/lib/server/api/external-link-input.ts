@@ -1,6 +1,6 @@
 import type { ApiErrorDetail } from '$lib/server/api/response';
 
-export type ExternalLinkInput = { name: string; url: string; sortOrder: number };
+export type ExternalLinkInput = { name: string; url: string; sortOrder: number; notes: string | null };
 export type ExternalLinkInputResult =
 	| { success: true; data: ExternalLinkInput }
 	| { success: false; errors: ApiErrorDetail[] };
@@ -11,6 +11,9 @@ export function parseExternalLinkInput(value: unknown): ExternalLinkInputResult 
 	}
 	const body = value as Record<string, unknown>;
 	const errors: ApiErrorDetail[] = [];
+	if (body.notes != null && typeof body.notes !== 'string') errors.push({ field: 'notes', reason: 'Enter valid notes.' });
+	const notes = typeof body.notes === 'string' ? body.notes.trim() : '';
+	if (notes.length > 5000) errors.push({ field: 'notes', reason: 'Enter 5000 characters or fewer.' });
 	const name = typeof body.name === 'string' ? body.name.trim() : '';
 	if (!name) errors.push({ field: 'name', reason: 'Enter a name.' });
 	else if (name.length > 128) errors.push({ field: 'name', reason: 'Enter 128 characters or fewer.' });
@@ -38,5 +41,5 @@ export function parseExternalLinkInput(value: unknown): ExternalLinkInputResult 
 	if (!Number.isSafeInteger(sortOrder) || sortOrder < 0 || sortOrder > 2_147_483_647) {
 		errors.push({ field: 'sortOrder', reason: 'Enter a whole number from 0 to 2147483647.' });
 	}
-	return errors.length ? { success: false, errors } : { success: true, data: { name, url, sortOrder } };
+	return errors.length ? { success: false, errors } : { success: true, data: { name, url, sortOrder, notes: notes || null } };
 }

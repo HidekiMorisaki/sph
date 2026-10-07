@@ -17,6 +17,7 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Install on a server for access from other PCs | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
 | Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
 | Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
+| Upgrade an existing installation | [Upgrading to the latest version](#upgrading-to-the-latest-version) |
 
 The system includes:
 
@@ -52,6 +53,7 @@ The installer supports English and Japanese. After selecting the display languag
 
 > [!NOTE]
 > At the "Optional fictional sample data" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
+> The sample Work calendars also attempt to import the current year's Japanese Cabinet Office and U.S. OPM holidays. If either source is unavailable, the other samples are still installed. After signing in, select **Refresh holidays** on the affected Work calendar.
 
 ## Installing on a server or another PC
 
@@ -215,13 +217,34 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 
 ## Upgrading to the latest version
 
-To upgrade from any earlier version, run the following commands from the repository root in Windows PowerShell:
+To update an installed system, run the command for your operating system from the repository root. The update script stops services, creates and verifies a backup, then pulls source changes and restarts the system. Make sure the Git working tree is clean and the branch has an upstream remote.
+
+Windows PowerShell:
 
 ```powershell
-docker compose stop gateway frontend api
-git pull --ff-only
 .\scripts\update.ps1
 ```
+
+macOS or Linux:
+
+```bash
+./scripts/update.sh
+```
+
+### Updating from v0.2.1
+
+The original v0.2.1 PowerShell script is incompatible with Windows PowerShell 5.1. Fetch the v0.2.1 maintenance fix first, then point the checkout at the v0.3.0 release branch. After v0.3.0 is published on `main`, run these commands from the repository root:
+
+```powershell
+git fetch origin
+git pull --ff-only origin bugfix/v0.2.1
+git branch --set-upstream-to=origin/main
+.\scripts\update.ps1
+```
+
+On macOS/Linux, use the same Git commands and run `./scripts/update.sh` for the final command. The update script creates and verifies a database backup before it pulls v0.3.0. If the checkout has local changes, resolve them before starting; do not discard them as part of the update.
+
+For backup locations and recovery steps, see [Backup, update, and restore](./docs/Backup_Update_and_Restore.md).
 
 ## Gallery
 

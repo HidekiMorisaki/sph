@@ -19,3 +19,9 @@ The frontend's Node.js development type definitions are pinned to `@types/node`
 notices, registry sources, and package integrity values are retained under
 [`node-types/`](node-types/). They are development dependencies; production
 dependency installation excludes them.
+
+The public holiday data sources and usage are recorded in
+[`holiday-data.md`](holiday-data.md).
+
+The API dependency override sources, exact versions, and redistribution conditions
+are recorded in [`api-dependency-overrides.md`](api-dependency-overrides.md).
