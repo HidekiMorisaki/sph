@@ -3,6 +3,8 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { failure } from '$lib/server/api/response';
 import { authenticateRequest } from '$lib/server/auth/request';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
+import { granularOperationForRoute } from '$lib/server/auth/route-operation';
+import { ownBranchOperations } from '$lib/server/auth/permissions';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -20,6 +22,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.session = principal
 		? { id: principal.authentication.credentialId, expiresAt: principal.authentication.expiresAt }
 		: null;
+	const granularOperation = granularOperationForRoute(event.route.id, event.request.method, event.params);
+	if (granularOperation) {
+		if (!event.locals.user) return failure(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
+		event.locals.user.activeOperation = granularOperation;
+		if (!event.locals.user.permissionOperations.includes(granularOperation) &&
+			!(ownBranchOperations.has(granularOperation) && event.locals.user.ownBranchPermissionOperations.includes(granularOperation))) {
+			return failure(403, 'PERMISSION_REQUIRED', 'Permission is required.');
+		}
+	}
 
 	const response = await resolve(event);
 	if (event.url.pathname.startsWith('/v1/') && response.status >= 400) {

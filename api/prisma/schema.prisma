@@ -83,6 +83,7 @@ model EmployeeSettings {
   employeeId         Int       @unique @map("employee_id")
   timeZone           String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
   displayLanguage    String    @default("en") @map("display_language") @db.VarChar(64)
+  displayCurrency    String    @default("USD") @map("display_currency") @db.VarChar(3)
   analyticsSelection Json?     @map("analytics_selection") @db.JsonB
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -239,6 +240,7 @@ model RolePermission {
   id           Int        @id @default(autoincrement())
   roleId       Int        @map("role_id")
   permissionId Int        @map("permission_id")
+  scopeType    String     @default("global") @map("scope_type")
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
@@ -407,12 +409,78 @@ model Branch {
   deletedAt               DateTime?  @map("deleted_at") @db.Timestamptz(3)
   rooms                   Room[]
   employees               Employee[]
+  financialMonths          FinancialMonth[]
+  financialPublications    FinancialPublication[]
   manager                 Employee?  @relation("BranchManager", fields: [managerEmployeeId], references: [id], onDelete: Restrict)
   deputyManager           Employee?  @relation("BranchDeputyManager", fields: [deputyManagerEmployeeId], references: [id], onDelete: Restrict)
 
   @@index([managerEmployeeId])
   @@index([deputyManagerEmployeeId])
   @@map("branches")
+}
+
+model FinancialPeriodSetting {
+  id               Int       @id @default(autoincrement())
+  key              String    @unique @default("main") @db.VarChar(32)
+  basis            String    @default("calendar") @db.VarChar(16)
+  fiscalStartMonth Int       @default(4) @map("fiscal_start_month")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("financial_period_settings")
+}
+
+model FinancialMonth {
+  id           Int       @id @default(autoincrement())
+  branchId     Int       @map("branch_id")
+  month        DateTime  @db.Date
+  currency     String    @db.VarChar(3)
+  revenue      Decimal   @db.Decimal(20, 2)
+  variableCost Decimal   @map("variable_cost") @db.Decimal(20, 2)
+  fixedCost    Decimal   @map("fixed_cost") @db.Decimal(20, 2)
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  branch       Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([branchId, month])
+  @@index([month])
+  @@map("financial_months")
+}
+
+model FinancialExchangeRate {
+  id            Int       @id @default(autoincrement())
+  month         DateTime  @db.Date
+  baseCurrency  String    @map("base_currency") @db.VarChar(3)
+  quoteCurrency String    @map("quote_currency") @db.VarChar(3)
+  rate          Decimal   @db.Decimal(20, 8)
+  source        String    @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@unique([month, baseCurrency, quoteCurrency])
+  @@map("financial_exchange_rates")
+}
+
+model FinancialPublication {
+  id               Int       @id @default(autoincrement())
+  branchId         Int       @map("branch_id")
+  basis            String    @db.VarChar(16)
+  fiscalStartMonth Int       @map("fiscal_start_month")
+  year             Int
+  published        Boolean   @default(false)
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+  branch           Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([branchId, basis, fiscalStartMonth, year])
+  @@index([basis, fiscalStartMonth, year])
+  @@map("financial_publications")
 }
 
 model Room {
@@ -613,7 +681,7 @@ model OperatingSystem {
   assets          ItAsset[]
   vendor          OperatingSystemVendor @relation(fields: [vendorId], references: [id])
 
-  // m0011 creates this natural key with NULLS NOT DISTINCT for optional fields.
+  // m0012 creates this natural key with NULLS NOT DISTINCT for optional fields.
   @@unique([vendorId, product, version, edition, architecture], map: "operating_systems_natural_key")
   @@index([vendorId])
   @@map("operating_systems")

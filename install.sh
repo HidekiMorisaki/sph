@@ -89,10 +89,10 @@ docker compose version >/dev/null 2>&1
 failure_key='error.docker'
 volumes=$(docker volume ls --format '{{.Name}}' 2>/dev/null)
 containers=$(docker ps -a --format '{{.Names}}' 2>/dev/null)
-if printf '%s\n' "$volumes" | grep -qx 'sph-db-data' || printf '%s\n' "$containers" | grep -Eq '^sph-(db|api|frontend|gateway|migration)$'; then
+if printf '%s\n' "$volumes" | grep -Eq '^sph-(db-data|gateway-data|gateway-config)$' || printf '%s\n' "$containers" | grep -Eq '^sph-(db|api|frontend|gateway|migration)$'; then
 	failure_key='error.existingResources'; failure
 fi
-unset APP_ORIGIN HTTP_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_HOST POSTGRES_PORT CORS_ALLOWED_ORIGINS IT_ASSET_CREDENTIAL_ENCRYPTION_KEY
+unset APP_ORIGIN HTTP_PORT GATEWAY_TLS_MODE GATEWAY_HTTP_PUBLISH GATEWAY_HTTPS_PUBLISH ACME_EMAIL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_HOST POSTGRES_PORT CORS_ALLOWED_ORIGINS IT_ASSET_CREDENTIAL_ENCRYPTION_KEY
 for key in ${!INITIAL_ADMIN_@}; do unset "$key"; done
 compose=(docker compose -f docker-compose.yml --env-file .env -p sph)
 maintenance=(docker run --rm --add-host host.docker.internal:host-gateway --user "$(id -u):$(id -g)" --mount "type=bind,source=$PWD,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-maintenance.mjs)
@@ -101,12 +101,26 @@ begin_step 'stage.setup'
 failure_key='error.pull'
 progress docker pull node:22-alpine
 failure_key='error.setup'
-docker run --rm -it --network none -e NO_COLOR -e TERM --user "$(id -u):$(id -g)" --mount "type=bind,source=$PWD,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-config.mjs "$locale" 2>/dev/null
+host_name=$(hostname 2>/dev/null || true)
+host_ipv4=''
+if [[ $(uname -s) == Darwin ]]; then
+	host_ipv4=$(/sbin/ifconfig -a 2>/dev/null | awk '/^[^[:space:]]/ { active = /<[^>]*UP[^>]*>/ } active && /^[[:space:]]*inet[[:space:]]/ { print $2 }' || true)
+elif command -v ip >/dev/null 2>&1; then
+	host_ipv4=$(ip -o -4 addr show up 2>/dev/null | awk '{ sub(/\/.*/, "", $4); print $4 }' || true)
+elif command -v hostname >/dev/null 2>&1; then
+	host_ipv4=$(hostname -I 2>/dev/null || true)
+fi
+host_ipv4=${host_ipv4//$'\n'/,}
+docker run --rm -it --network none -e NO_COLOR -e TERM -e "SPH_INSTALL_HOST_IPV4=$host_ipv4" -e "SPH_INSTALL_HOSTNAME=$host_name" --user "$(id -u):$(id -g)" --mount "type=bind,source=$PWD,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-config.mjs "$locale" 2>/dev/null
 failure_key='error.permissions'
 chmod 600 .env 2>/dev/null
 failure_key='error.settings'
 connection=$("${maintenance[@]}" settings-shell 2>/dev/null)
-port=${connection%%$'\n'*}; origin=${connection#*$'\n'}
+port=${connection%%$'\n'*}; remainder=${connection#*$'\n'}; origin=${remainder%%$'\n'*}; connection_mode=${remainder#*$'\n'}
+failure_key='error.networkPreflight'
+progress "${maintenance[@]}" preflight
+failure_key='error.gatewayConfig'
+"${maintenance[@]}" gateway-config >/dev/null 2>&1
 complete_step
 begin_step 'stage.build'
 failure_key='error.build'
@@ -123,6 +137,17 @@ if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_HOLIDAY_WARNING=US'; th
 unset migration_log
 complete_step
 begin_step 'stage.check'
+if [[ "$connection_mode" == internal ]]; then
+	failure_key='error.caExport'
+	mkdir -p .runtime/ca
+	chmod 700 .runtime/ca
+	for ((attempt=0; attempt<30; attempt++)); do
+		if docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt >/dev/null 2>&1; then break; fi
+		sleep 1
+	done
+	[[ -s .runtime/ca/root.crt ]]
+	chmod 644 .runtime/ca/root.crt
+fi
 failure_key='error.health'
 progress "${maintenance[@]}" check
 complete_step

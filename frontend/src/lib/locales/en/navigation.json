@@ -1,19 +1,22 @@
 {
 	"groups": {
+		"dashboard": "DASHBOARD",
 		"general": "GENERAL",
-		"assets": "ASSETS",
+		"assets": "ASSET MANAGEMENT",
 		"siteManagement": "SITE MANAGEMENT",
 		"masterManagement": "MASTER MANAGEMENT",
 		"otherSystems": "OTHER SYSTEMS"
 	},
 	"items": {
-		"dashboard": "Dashboard",
+		"employeeAnalytics": "Employee analytics",
+		"financialTrends": "Business performance",
 		"myPage": "My Page",
 		"workCalendars": "Work calendars",
 		"employees": "Employee list",
 		"itAssets": "IT",
 		"systemSettings": "System settings",
 		"systemInformation": "System information",
+		"businessOverview": "Business overview registration",
 		"employment": "Workforce",
 		"employmentTypes": "Types",
 		"positions": "Positions",

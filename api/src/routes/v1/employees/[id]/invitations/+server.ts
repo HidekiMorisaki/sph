@@ -1,5 +1,5 @@
 import { dev } from '$app/environment';
-import { requireSystemAdminApi } from '$lib/server/api/admin';
+import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { parseId } from '$lib/server/api/database';
 import { failure, success } from '$lib/server/api/response';
 import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
@@ -7,7 +7,7 @@ import { INVITATION_DAILY_LIMIT, issueInvitation } from '$lib/server/auth/invita
 import { getPrisma } from '$lib/server/prisma';
 
 export async function POST({ params, locals, request, url }: import('./$types').RequestEvent) {
-	const actor = requireSystemAdminApi(locals.user);
+	const { actor, branchId } = requireScopedOperationApi(locals.user, 'employees.manage');
 	if (!dev && !allowsSensitiveRequest(url, request)) return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
@@ -16,8 +16,9 @@ export async function POST({ params, locals, request, url }: import('./$types').
 		if (!locked.length) return { status: 'not_found' as const };
 		const employee = await tx.employee.findFirst({ where: {
 			id, deletedAt: null, accountStatus: 'unprovisioned',
+			...(branchId === null ? {} : { branchId }),
 			OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
-			roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } } }
+			roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null, ...(branchId === null ? {} : { defaultKey: 'general_user' }) } } }
 		}, select: { email: true } });
 		if (!employee) return { status: 'unavailable' as const };
 		const [issuedToday] = await tx.$queryRaw<Array<{ count: bigint }>>`SELECT count(*)::bigint AS count FROM account_invitations WHERE employee_id = ${id} AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'`;

@@ -13,7 +13,9 @@
 	let canManageMasters = $derived(Boolean(user?.capabilities.canManageMasters || user?.capabilities.canManageBranches));
 	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'general'
 		? { ...group, items: group.items.filter((item) => item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) }
-		: group).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length
+		: group.id === 'siteManagement' && !user?.capabilities.canManageSystemSettings
+			? { ...group, items: group.items.filter((item) => item.id === 'businessOverview' && user?.capabilities.canManageBranches) }
+			: group).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length
 		? [{ id: 'otherSystems', label: navigationText.groups.otherSystems, items: $externalLinks.map((link): Item => ({ id: `external-${link.id}`, text: link.name, icon: 'external', href: link.url, external: true })) }, group]
 		: [group]));
 	let chosenMenu = $state<string | null>(null);
@@ -107,7 +109,7 @@
 	<a class="brand" href="/"><span class="brand-icon">S</span><strong>{productName}</strong></a>
 	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each sidebarMenus as group}
-			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings)}
+			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings || group.id === 'siteManagement' && user?.capabilities.canManageBranches)}
 			<div class="nav-group"><p class="nav-label">{group.label}</p>
 				{#each group.items as item}
 					{#if item.children}

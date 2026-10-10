@@ -25,7 +25,7 @@
 	"copy": "コピー",
 	"copyEmail": "メールアドレスをコピー",
 	"emailCopied": "メールアドレスをコピーしました。",
-	"emailCopyFailed": "メールアドレスをコピーできませんでした。",
+	"emailCopyFailed": "メールアドレスをコピーできませんでした。表示されたアドレスを選択して手動でコピーしてください。",
 	"discardTitle": "変更を破棄しますか？",
 	"discardDescription": "保存していない変更は失われます。このフォームを閉じますか？",
 	"continueEditing": "編集を続ける",

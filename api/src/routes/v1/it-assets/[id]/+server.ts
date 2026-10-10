@@ -1,4 +1,5 @@
-import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '$lib/server/api/it-asset-credentials';
 import { parseId } from '$lib/server/api/database';
@@ -11,22 +12,23 @@ import { itAssetOutput } from '$lib/server/api/it-asset-output';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
 
-export async function GET({ params, locals }: import('./$types').RequestEvent) { requireOperationApi(locals.user, permissionOperations.assetRead); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const item = await getPrisma().itAsset.findFirst({ where: { id, deletedAt: null }, include: itAssetInclude }); return item ? success(itAssetOutput(item)) : failure(404, 'NOT_FOUND', 'Not found.'); }
+export async function GET({ params, locals }: import('./$types').RequestEvent) { const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetRead); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const item = await getPrisma().itAsset.findFirst({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) }, include: itAssetInclude }); return item ? success(itAssetOutput(item)) : failure(404, 'NOT_FOUND', 'Not found.'); }
 export async function PATCH({ params, locals, request }: import('./$types').RequestEvent) {
-	const actor = requireAssetWriteApi(locals.user);
+	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetManagement);
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const body = await request.json().catch(() => null);
 	const parsed = parseItAssetInput(body);
 	const credentialInput = parseCredentialChanges(body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).credentials : undefined);
-	if (Object.keys(credentialInput.changes).length) requireAssetCredentialWriteApi(locals.user);
+	if (Object.keys(credentialInput.changes).length) requireScopedOperationApi(locals.user, permissionOperations.assetCredentialWrite);
 	const data = parsed.data;
 	if (!data || credentialInput.details.length) return failure(400, 'VALIDATION_ERROR', 'Invalid IT asset input.', [...parsed.details, ...credentialInput.details]);
 	try {
 		const item = await getPrisma().$transaction(async tx => {
 			await tx.$queryRaw`SELECT id FROM it_assets WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`;
-			const existing = await tx.itAsset.findFirst({ where: { id, deletedAt: null }, select: { id: true, typeId: true, assetTag: true } });
+			const existing = await tx.itAsset.findFirst({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) }, select: { id: true, typeId: true, assetTag: true } });
 			if (!existing) return null;
+			if (branchId !== null && (!await tx.storage.count({ where: { id: data.storageId, branchId, deletedAt: null } }) || typeof parsed.assigneeId === 'number' && !await tx.employee.count({ where: { id: parsed.assigneeId, branchId, deletedAt: null } }))) return null;
 			const before = await readAssetFields(tx, id);
 			const details = await itAssetReferenceErrors(tx, data);
 			if (details.length) throw new ItAssetValidationError(details);
@@ -49,5 +51,5 @@ export async function PATCH({ params, locals, request }: import('./$types').Requ
 	}
 }
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
-	const actor = requireAssetWriteApi(locals.user); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const result = await getPrisma().$transaction(async tx => { const locked = await tx.$queryRaw<Array<{ id: number }>>`SELECT id FROM it_assets WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`; if (!locked.length) return 'not_found'; if (await tx.itAssetAssignment.count({ where: { assetId: id, returnedAt: null, deletedAt: null } })) return 'referenced'; const before = await readAssetFields(tx, id); await softDeleteAssetIpAddresses(tx, id); await softDeleteAssetCredentials(tx, id, actor.id); await tx.itAsset.update({ where: { id }, data: { deletedAt: new Date() } }); await recordAssetChange(tx, id, actor.id, 'delete', before, null); await writeAuditLog(tx, actor.id, 'delete', 'it_asset', id); return 'deleted'; }, { isolationLevel: 'ReadCommitted' }); return result === 'referenced' ? failure(409, 'RESOURCE_IN_USE', 'The asset is currently assigned.') : result === 'not_found' ? failure(404, 'NOT_FOUND', 'Not found.') : success({ id, deleted: true });
+	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetManagement); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const result = await getPrisma().$transaction(async tx => { const locked = await tx.$queryRaw<Array<{ id: number }>>`SELECT id FROM it_assets WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`; if (!locked.length || !await tx.itAsset.count({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) } })) return 'not_found'; if (await tx.itAssetAssignment.count({ where: { assetId: id, returnedAt: null, deletedAt: null } })) return 'referenced'; const before = await readAssetFields(tx, id); await softDeleteAssetIpAddresses(tx, id); await softDeleteAssetCredentials(tx, id, actor.id); await tx.itAsset.update({ where: { id }, data: { deletedAt: new Date() } }); await recordAssetChange(tx, id, actor.id, 'delete', before, null); await writeAuditLog(tx, actor.id, 'delete', 'it_asset', id); return 'deleted'; }, { isolationLevel: 'ReadCommitted' }); return result === 'referenced' ? failure(409, 'RESOURCE_IN_USE', 'The asset is currently assigned.') : result === 'not_found' ? failure(404, 'NOT_FOUND', 'Not found.') : success({ id, deleted: true });
 }

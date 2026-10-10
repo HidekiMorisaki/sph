@@ -1,4 +1,5 @@
 import type { AuthenticatedUser } from './types';
+import granularOperations from './granular-operations.json';
 
 export const permissionOperations = {
 	systemManagement: 'system.manage',
@@ -18,34 +19,51 @@ export const permissionOperations = {
 
 export const editablePermissionCatalog = [
 	{ code: permissionOperations.employeeRead, category: 'employees' },
-	{ code: permissionOperations.employeeManagement, category: 'employees' },
 	{ code: permissionOperations.masterRead, category: 'masters' },
-	{ code: permissionOperations.masterManagement, category: 'masters' },
-	{ code: permissionOperations.branchManagement, category: 'masters' },
 	{ code: permissionOperations.calendarRead, category: 'calendars' },
-	{ code: permissionOperations.calendarAssignment, category: 'calendars' },
 	{ code: permissionOperations.roleRead, category: 'system' },
 	{ code: permissionOperations.assetRead, category: 'assets' },
-	{ code: permissionOperations.assetManagement, category: 'assets' },
-	{ code: permissionOperations.assetCredentialRead, category: 'assets' },
-	{ code: permissionOperations.assetCredentialWrite, category: 'assets' }
-] as const;
+	...granularOperations.filter((operation) => !operation.systemOnly).map(({ code, category }) => ({ code, category }))
+];
+
+export const ownBranchOperations = new Set([
+	'employees.read', 'employees.manage', 'employees.create', 'employees.update', 'employees.delete', 'employees.invite',
+	'masters.read', 'branches.manage', 'branches.update', 'branches.delete',
+	'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
+	'assets.read', 'assets.manage', 'assets.create', 'assets.update', 'assets.delete', 'assets.assign', 'assets.return',
+	'assets.credentials.read', 'assets.credentials.write', 'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
+	'calendars.read', 'calendars.assign', 'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
+]);
 
 export function hasPermissionOperation(user: AuthenticatedUser, operation: string): boolean {
-	return user.permissionOperations.includes(operation);
+	return user.permissionOperations.includes(operation) ||
+		(['masters.read', 'calendars.read'].includes(operation) && hasOwnBranchPermissionOperation(user, operation));
+}
+
+export function hasOwnBranchPermissionOperation(user: AuthenticatedUser, operation: string): boolean {
+	return user.ownBranchPermissionOperations?.includes(operation) ?? false;
+}
+
+export function hasScopedPermissionOperation(user: AuthenticatedUser, operation: string, branchId: number): boolean {
+	return user.permissionOperations.includes(operation) ||
+		(hasOwnBranchPermissionOperation(user, operation) && user.branchId === branchId);
 }
 
 export function capabilitiesFor(user: AuthenticatedUser) {
 	return {
 		canManageSystemSettings: hasPermissionOperation(user, permissionOperations.systemManagement),
-		canManageAdministration: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasPermissionOperation(user, permissionOperations.masterManagement),
-		canManageEmployees: hasPermissionOperation(user, permissionOperations.employeeManagement),
+		canManageAdministration: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasPermissionOperation(user, permissionOperations.masterManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.employeeManagement),
+		canManageEmployees: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.employeeManagement),
+		canInviteEmployees: hasPermissionOperation(user, 'employees.invite') || hasOwnBranchPermissionOperation(user, 'employees.invite'),
+		canAssignEmployeeRoles: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, 'roles.assign'),
 		canManageMasters: hasPermissionOperation(user, permissionOperations.masterManagement),
-		canManageBranches: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement),
+		canManageBranches: (hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement)) || hasOwnBranchPermissionOperation(user, permissionOperations.branchManagement),
+		canCreateBranches: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement),
+		canDeleteBranches: hasPermissionOperation(user, 'branches.delete') || hasOwnBranchPermissionOperation(user, 'branches.delete'),
 		canReadCalendars: hasPermissionOperation(user, permissionOperations.calendarRead),
-		canAssignCalendars: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.calendarAssignment),
-		canManageAssets: hasPermissionOperation(user, permissionOperations.assetManagement),
-		canReadAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialRead),
-		canWriteAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialWrite)
+		canAssignCalendars: (hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.calendarAssignment)) || hasOwnBranchPermissionOperation(user, permissionOperations.calendarAssignment),
+		canManageAssets: hasPermissionOperation(user, permissionOperations.assetManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.assetManagement),
+		canReadAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialRead) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialRead),
+		canWriteAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialWrite) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialWrite)
 	};
 }

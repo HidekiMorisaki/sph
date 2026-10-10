@@ -3,6 +3,31 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.4.0",
+			"releasedAt": "2026-10-11",
+			"changeGroups": {
+				"newFeatures": [
+					"v0_4_0_role_creation_deletion",
+					"v0_4_0_branch_administrator",
+					"v0_4_0_installation_modes",
+					"v0_4_0_display_currency",
+					"v0_4_0_boj_exchange_conversion",
+					"v0_4_0_financial_trends"
+				],
+				"improvements": [
+					"v0_4_0_single_role_granular_permissions",
+					"v0_4_0_employee_branch_filter",
+					"v0_4_0_role_detail_permissions",
+					"v0_4_0_role_assignment_counts",
+					"v0_4_0_branch_manager_details"
+				],
+				"bugFixes": [
+				"v0_4_0_settings_profile_examples",
+				"v0_4_0_invitation_setup_redirect"
+				]
+			}
+		},
+		{
 			"version": "0.3.0",
 			"releasedAt": "2026-10-07",
 			"changeGroups": {
@@ -72,6 +97,6 @@
 		}
 	],
 	"noticeIds": [
-		"v0_3_0_development_notice"
+		"v0_4_0_development_notice"
 	]
 }

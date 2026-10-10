@@ -87,7 +87,7 @@ export function createAnalyticsPdf(data: AnalyticsData, settings: LocalizationSe
 			label(formatter(value), right ? left + width + 12 : left - 12, y + 3, 10, colors.muted, right ? 'left' : 'right');
 		}
 	}
-	header('', 1, pageHeight);
+	header(text.title, 1, pageHeight);
 	const referenceAverageAge = data.annual.at(-1)?.averageAge ?? null;
 	const metrics = [
 		{ name: text.headcount, value: count(data.summary.headcount), unit: text.peopleUnit, note: text.current },

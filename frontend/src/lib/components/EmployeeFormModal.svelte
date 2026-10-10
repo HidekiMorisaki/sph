@@ -32,6 +32,7 @@
 		masters = {},
 		roles = [],
 		canManageSystemSettings = false,
+		canAssignEmployeeRoles = true,
 		returnFocus = null,
 		onClose,
 		onSaved
@@ -41,6 +42,7 @@
 		masters?: Record<string, EmployeeMaster[]>;
 		roles?: EmployeeRole[];
 		canManageSystemSettings?: boolean;
+		canAssignEmployeeRoles?: boolean;
 		returnFocus?: HTMLElement | null;
 		onClose: () => void;
 		onSaved: (employee: SavedEmployee) => void | Promise<void>;
@@ -72,7 +74,7 @@
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
 	const fieldError = (field: string) => (fieldErrors[field] ? employeeFieldError(fieldErrors[field], $localization.displayLanguage) : undefined) ?? (missingFields.includes(field) ? (field === 'roleIds' ? text.roleRequired : text.required) : '');
 	function initializeForm() {
-		if (!employee) { form = blank(); return; }
+		if (!employee) { form = blank(); if (!canAssignEmployeeRoles) form.roleIds = roles.filter((role) => role.isGeneralUser).map((role) => String(role.id)); return; }
 		const full = employee;
 		form = {
 			employeeCode: full?.employeeCode ?? '', firstName: employee.firstName, middleName: employee.middleName ?? '', lastName: employee.lastName,
@@ -106,11 +108,11 @@
 		clearFieldError('groupId');
 	}
 	function chooseDate(field: DateField, value: string) { form[field] = value; clearFieldError(field); activeDateField = null; }
-	function roleIsLocked(role: EmployeeRole) { return Boolean(role.isSystemManagement) && !canManageSystemSettings; }
+	function roleIsLocked(role: EmployeeRole) { return !canAssignEmployeeRoles || Boolean(role.isSystemManagement || role.isBranchAdministrator) && !canManageSystemSettings; }
 	function toggleRole(role: EmployeeRole) {
 		if (roleIsLocked(role)) return;
 		const roleId = String(role.id);
-		form.roleIds = form.roleIds.includes(roleId) ? form.roleIds.filter((id) => id !== roleId) : [...form.roleIds, roleId];
+		form.roleIds = [roleId];
 		clearFieldError('roleIds');
 	}
 	function closeImmediately() {
@@ -205,7 +207,7 @@
 						<label class="wide">{text.notes}<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder={text.examples.notes} oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
 					</FormSection>
 					<FormSection title={text.access} framed>
-						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="checkbox" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
+						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="radio" name="employee-role" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
 					</FormSection>
 			</div>
 			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (mode !== 'create' && !hasUnsavedChanges)}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>

@@ -1,4 +1,5 @@
-import { requireMasterManagementApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { referenceBranchScope, requireLocationManagementApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
@@ -21,10 +22,10 @@ function input(value: unknown): { name: string; notes: string | null; branchId: 
 const sortFields = ['id', 'name', 'branch', 'room', 'sortOrder', 'notes', 'createdAt', 'updatedAt'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.masterRead);
+	const branchId = referenceBranchScope(locals.user);
 	const query = parseListQuery(url, sortFields, 'sortOrder');
 	const search = parseSearch(url);
-	const where: Prisma.StorageWhereInput = { deletedAt: null, ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }, { room: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }, { room: { is: { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } } } }] } : {}) };
+	const where: Prisma.StorageWhereInput = { deletedAt: null, ...(branchId === null ? {} : { branchId }), ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }, { room: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }, { room: { is: { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } } } }] } : {}) };
 	const first = query.sortBy === 'branch' ? { room: { branch: { name: query.sortOrder } } } : query.sortBy === 'room' ? { room: { name: query.sortOrder } } : { [query.sortBy]: query.sortOrder };
 	const orderBy = [first, ...(query.sortBy === 'id' ? [] : [{ id: 'asc' as const }])] as Prisma.StorageOrderByWithRelationInput[];
 	const db = getPrisma();
@@ -37,8 +38,9 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 }
 
 export async function POST({ request, locals }: import('./$types').RequestEvent) {
-	const actor = requireMasterManagementApi(locals.user); const value = input(await request.json().catch(() => null));
+	const { actor, branchId } = requireLocationManagementApi(locals.user); const value = input(await request.json().catch(() => null));
 	if (!value) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
+	if (branchId !== null && value.branchId !== branchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try {
 		const item = await getPrisma().$transaction(async (tx) => {
 			if (!await tx.room.count({ where: { id: value.roomId, branchId: value.branchId, deletedAt: null, branch: { deletedAt: null } } })) throw new Error('inactive room');

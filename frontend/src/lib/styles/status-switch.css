@@ -1,0 +1,25 @@
+button.app-status-switch[role='switch'] {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	width: var(--app-status-switch-width, 136px);
+	height: 32px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: 18px;
+	background: var(--surface-secondary);
+	color: var(--text-secondary);
+	font: inherit;
+	cursor: pointer;
+}
+
+button.app-status-switch[role='switch']:hover:not(:disabled) { background: var(--border); }
+button.app-status-switch[role='switch'].is-on { border-color: #1abb9c; background: #1abb9c; color: #fff; }
+button.app-status-switch[role='switch'].is-on:hover:not(:disabled) { background: #159a80; }
+button.app-status-switch[role='switch']:focus-visible { outline: 2px solid var(--action-primary); outline-offset: 2px; }
+button.app-status-switch[role='switch']:disabled { opacity: .55; cursor: not-allowed; }
+
+.app-status-switch__text { position: absolute; right: 12px; font-size: var(--font-size-support); font-weight: 700; line-height: 1; }
+.app-status-switch.is-on .app-status-switch__text { right: auto; left: 12px; }
+.app-status-switch__knob { position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.app-status-switch.is-on .app-status-switch__knob { left: auto; right: 5px; border-color: #fff; }

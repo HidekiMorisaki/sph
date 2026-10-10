@@ -1,5 +1,4 @@
-import { dev } from '$app/environment';
-import { createSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from '$lib/server/auth/session';
+import { createSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieSecure, verifyPassword } from '$lib/server/auth/session';
 import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
@@ -35,7 +34,7 @@ export async function POST({ request, cookies }: import('./$types').RequestEvent
 			deletedAt: null,
 			accountStatus: 'active',
 			OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
-			roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } } }
+			roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
 		},
 		select: { id: true, passwordHash: true }
 	});
@@ -48,7 +47,7 @@ export async function POST({ request, cookies }: import('./$types').RequestEvent
 	cookies.set(SESSION_COOKIE_NAME, session.token, {
 		path: '/',
 		httpOnly: true,
-		secure: !dev,
+		secure: sessionCookieSecure(),
 		sameSite: 'lax',
 		maxAge: SESSION_MAX_AGE_SECONDS
 	});

@@ -1,5 +1,4 @@
 import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { getPrisma } from '$lib/server/prisma';
 import { isItAssetMasterResource, type ItAssetMasterResource } from '$lib/server/api/it-asset-masters';
 import { parseWorkforceOrder } from '$lib/server/api/workforce-order';
@@ -22,7 +21,6 @@ export async function reorderItAssetMasters(resource: ItAssetMasterResource, exp
 		for (const [index, id] of orderedIds.entries()) {
 			const sortOrder = index + 1;
 			if (rows.find((row) => row.id === id)?.sortOrder === sortOrder) continue;
-			const before = await readMasterSnapshot(tx, resource, id);
 			const data = { sortOrder };
 			const result = resource === 'it-asset-types' ? await tx.itAssetType.updateMany({ where: { id, deletedAt: null }, data })
 				: resource === 'manufacturers' ? await tx.manufacturer.updateMany({ where: { id, deletedAt: null }, data })
@@ -32,7 +30,6 @@ export async function reorderItAssetMasters(resource: ItAssetMasterResource, exp
 				: await tx.itAssetStatus.updateMany({ where: { id, deletedAt: null }, data });
 			if (result.count !== 1) throw new ItAssetOrderConflictError();
 			await writeAuditLog(tx, actorId, 'update', resource, id);
-			await recordMasterChange(tx, resource, id, actorId, 'update', before, await readMasterSnapshot(tx, resource, id));
 		}
 		return orderedIds;
 	}, { isolationLevel: 'Serializable' });

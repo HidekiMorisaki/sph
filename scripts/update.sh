@@ -45,6 +45,7 @@ printf 'Verified update backup: %s\n' "$SPH_CREATED_BACKUP"
 git pull --ff-only
 current_commit="$(git rev-parse HEAD)"
 [[ "$current_commit" != "$previous_commit" ]] && source_updated=true
+docker run --rm --user "$(id -u):$(id -g)" --mount "type=bind,source=$PWD,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-maintenance.mjs gateway-config
 sph_compose rm --force --stop migration
 sph_compose build
 sph_compose run --rm --no-deps --volume "$SPH_CREATED_BACKUP:/baseline-backup" migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json --if-legacy

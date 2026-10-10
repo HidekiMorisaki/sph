@@ -27,7 +27,7 @@ export async function POST({ request }: import('./$types').RequestEvent) {
 			employee: {
 				deletedAt: null, accountStatus: 'unprovisioned',
 				OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
-				roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } } }
+				roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
 			}
 		}, select: { id: true, employeeId: true, emailAtIssue: true, employee: { select: { email: true } } } });
 		if (!invitation || invitation.emailAtIssue !== invitation.employee.email) return false;

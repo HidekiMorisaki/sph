@@ -1,5 +1,6 @@
 import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
 import { permissionOperations } from '$lib/server/auth/permissions';
+import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { duplicateField } from '$lib/server/api/database';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
@@ -10,7 +11,7 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['id', 'name', 'calendarYear', 'createdAt', 'updatedAt'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	const actor = requireOperationApi(locals.user, permissionOperations.calendarRead);
+	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.calendarRead);
 	const query = parseListQuery(url, sortFields, 'name');
 	const search = parseSearch(url);
 	const where: Prisma.WorkCalendarWhereInput = {
@@ -24,7 +25,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 			where,
 			select: {
 				id: true, name: true, calendarYear: true, countryCode: true, scheduledWorkMinutesPerDay: true, description: true, createdAt: true, updatedAt: true,
-				_count: { select: { employees: { where: { deletedAt: null } }, entries: { where: { deletedAt: null } } } }
+				_count: { select: { employees: { where: { deletedAt: null, ...(branchId === null ? {} : { branchId }) } }, entries: { where: { deletedAt: null } } } }
 			},
 			orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'asc' }],
 			skip: query.offset,

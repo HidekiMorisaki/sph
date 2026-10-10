@@ -7,10 +7,21 @@ installer_template() {
 		'complete.notice') printf '%s' '入力したユーザー名とパスワードでログインしてください。.envを安全に保管し、DBとは別にバックアップしてください。' ;;
 		'configuration.failed') printf '%s' '設定入力または設定の保存に失敗しました。直前のメッセージとフォルダーへの書き込み権限を確認してください。既存の.envは上書きしません。' ;;
 		'configuration.saved') printf '%s' $'設定を保存しました。秘密情報は表示していません。.envを安全に保管し、DBとは別にバックアップしてください。\n' ;;
-		'connection.httpsNotice') printf '%s' '別PCからのログインには、安全なセッションCookieのためHTTPSが必要です。利用前にTLSプロキシとHTTPSのアプリURLを設定してください。' ;;
-		'connection.notice') printf '%s' '接続設定は後から.envで変更できます。HTTPSには別途TLS対応のリバースプロキシが必要です。' ;;
+		'connection.acmeAgreement') printf '%s' 'https://letsencrypt.org/repository/ のLet'\''s Encrypt利用規約を確認してください。同意して続行する場合はYESと入力: ' ;;
+		'connection.acmeEmail') printf '%s' 'Let'\''s Encryptのアカウント連絡先メール' ;;
+		'connection.internalHttpExample') printf '%s' '入力例: {1}。これは例です。実際の端末のプライベートIPv4アドレスを入力してください。' ;;
+		'connection.internalHttpNotice') printf '%s' 'パスワード、セッション Cookie、社員・資産情報を含む全通信は暗号化されません。サーバーのプライベート IPv4 アドレスを固定し、ローカルエリアネットワーク上の端末のみからアクセスを許可してください。サーバー証明書は不要です。' ;;
+		'connection.internalHttpsExample') printf '%s' '入力例: https://sph-server。これは例です。実際の端末のホスト名を入力してください。' ;;
+		'connection.internalTrustNotice') printf '%s' 'インストーラーは公開 CA ルート証明書を .runtime/ca/root.crt に出力します。管理者はサーバー上で証明書の同一性を確認し、各利用端末へ安全に配布して信頼設定を行ってください。' ;;
+		'connection.ipAddress') printf '%s' 'この端末のプライベートIPv4アドレスを選択' ;;
+		'connection.mode') printf '%s' '接続方式' ;;
+		'connection.modeInternal') printf '%s' '社内 HTTPS' ;;
+		'connection.modeInternalHttp') printf '%s' '社内 HTTP' ;;
+		'connection.modeLocal') printf '%s' 'ローカル限定' ;;
+		'connection.modePublic') printf '%s' '公開ドメイン' ;;
+		'connection.notice') printf '%s' '接続方式を選択してください。ローカル限定はこのPCのみ、社内HTTPはローカルエリアネットワーク内で通信が暗号化されず、社内HTTPSは各端末でCAルート証明書の信頼設定が必要です。公開ドメインは公開DNS、外部からのTCP 80・443への到達性、ACME連絡先メールアドレスの入力とLet'\''s Encrypt利用規約への同意が必要です。' ;;
 		'connection.port') printf '%s' 'Dockerホストの公開ポート' ;;
-		'connection.url') printf '%s' 'アプリのURL（別PCから利用する場合はサーバーのホスト名またはIP）' ;;
+		'connection.url') printf '%s' 'アプリのURL' ;;
 		'employment.contract') printf '%s' '契約社員' ;;
 		'employment.employeeCode') printf '%s' '社員コード（英数字10〜64文字）' ;;
 		'employment.hireDate') printf '%s' '入社日（YYYY-MM-DD）' ;;
@@ -19,19 +30,23 @@ installer_template() {
 		'employment.regular') printf '%s' '正社員' ;;
 		'employment.temporary') printf '%s' '派遣' ;;
 		'employment.type') printf '%s' '雇用形態' ;;
+		'error.acmeDeclined') printf '%s' 'Let'\''s Encryptの利用規約に同意されなかったため、設定を保存せず終了しました。' ;;
 		'error.build') printf '%s' 'サービスイメージのビルドに失敗しました。詳細な原因は安全に特定できませんでした。ネットワーク接続、Dockerの空き容量、リリースファイルの不足を確認してください。' ;;
+		'error.caExport') printf '%s' '内部認証局の公開証明書を出力できませんでした。gatewayの保存ボリュームを保持して再試行してください。認証局の秘密鍵は配布しないでください。' ;;
 		'error.cleanup') printf '%s' '初期設定用の認証情報を取り除くための.envの準備または置き換えに失敗しました。書き込み権限と.env.install-cleanの有無を確認してください。これらのファイルには秘密情報が含まれる可能性があるため、安全に保護してください。' ;;
 		'error.compose') printf '%s' 'Dockerにはアクセスできましたが、docker compose versionが失敗しました。Docker Compose v2を導入または修復し、このターミナルでdocker compose versionが成功することを確認してください。' ;;
 		'error.docker') printf '%s' '既存のコンテナー・保存領域の確認中にDockerの操作が失敗しました。詳細な原因は安全に特定できませんでした。Dockerの起動状態と操作権限を確認してください。' ;;
 		'error.dockerConnection') printf '%s' 'docker infoが失敗し、Dockerにアクセスできませんでした。Docker DesktopまたはDockerデーモンの起動状態、Docker contextの接続先、操作権限を確認してください。' ;;
 		'error.dockerRequired') printf '%s' 'dockerコマンドが見つからないため、インストールを開始できません。DockerとDocker Composeを導入し、ターミナルを開き直してDockerを起動してください。' ;;
 		'error.existingConfiguration') printf '%s' 'インストール先に既存の.envファイルがあるため、新規インストールを開始できません。このインストーラーは既存の設定を上書きしません。.envとデータベース保存領域を保持してください。' ;;
-		'error.existingResources') printf '%s' 'SPHのコンテナーまたはsph-db-dataボリュームが既に存在するため、既存データを保護して新規インストールを停止しました。これらを保持してください。' ;;
+		'error.existingResources') printf '%s' 'SPHのコンテナーまたは保存ボリュームが既に存在するため、既存データを保護して新規インストールを停止しました。これらを保持してください。' ;;
+		'error.gatewayConfig') printf '%s' 'gatewayの設定を生成できませんでした。保存済みの.envを保持し、接続設定を確認してから復旧してください。' ;;
 		'error.health') printf '%s' 'ローカルのAPIまたはアプリケーションから期待する応答を取得できませんでした。gateway・frontend・api・dbの状態とHTTP_PORTの設定を確認してください。' ;;
 		'error.initialCredentials') printf '%s' '初期設定用の認証情報がサービスに残っているため、インストールを完了扱いにできません。INITIAL_ADMIN_*の設定を除去して対象サービスを再作成してください。データベース保存領域は削除しないでください。' ;;
 		'error.inspectCredentials') printf '%s' 'サービス設定を検査できず、初期設定用の認証情報の除去を確認できませんでした。インストールは完了扱いにできません。Dockerへのアクセスとdb・apiの状態を確認してください。' ;;
 		'error.interrupted') printf '%s' '中断シグナルを受信したため、インストールを停止しました。設定やデータベース保存領域が作成済みの可能性があります。' ;;
 		'error.migration') printf '%s' 'データベースのmigrationジョブの正常終了を確認できませんでした。migrationサービスの状態とデータベースへの接続を確認してください。.envとデータベース保存領域は保持してください。' ;;
+		'error.networkPreflight') printf '%s' '公開ドメインの名前解決ができませんでした。公開DNSを設定してから再試行してください。保存済みの.envは復旧のため保持してください。' ;;
 		'error.permissions') printf '%s' '設定ファイルのアクセス権限を制限できませんでした。フォルダーの所有者、書き込み権限、セキュリティソフトの制限を確認してください。' ;;
 		'error.pull') printf '%s' '設定用イメージnode:22-alpineの取得に失敗しました。詳細な原因は安全に特定できませんでした。レジストリへの接続、プロキシ設定、Dockerの空き容量を確認し、docker pull node:22-alpineを再実行してください。' ;;
 		'error.refreshApi') printf '%s' '初期設定用の認証情報を除いたapiサービスの再作成が失敗したか、300秒以内に正常状態になりませんでした。apiとdbの状態を確認してください。' ;;
@@ -91,7 +106,7 @@ installer_template() {
 		'title.banner') printf '%s' '     SME Portal Hub — インストール' ;;
 		'warning.holidayJP') printf '%s' '内閣府の祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.holidayUS') printf '%s' '米国人事管理局（OPM）の連邦祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
-		'warning.publicUrl') printf '%s' 'ローカル起動は正常です。公開URLを確認できませんでした。DNS・ファイアウォール・HTTPSプロキシ設定を確認してください。' ;;
+		'warning.publicUrl') printf '%s' 'ローカル起動は正常ですが、インストーラーからアプリURLを確認できませんでした。利用端末のDNS・ファイアウォール・証明書信頼設定を確認してください。' ;;
 		*) return 1 ;;
 	esac
 }

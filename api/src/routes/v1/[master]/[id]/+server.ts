@@ -1,4 +1,5 @@
 import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
+import { requireBranchAccess } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { duplicateField, parseId } from '$lib/server/api/database';
 import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
@@ -11,15 +12,15 @@ function resource(value: string) {
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
-	const actor = params.master === 'branches' ? requireBranchManagementApi(locals.user) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	const selected = resource(params.master);
 	const id = parseId(params.id);
+	const actor = selected === 'branches' && id ? requireBranchAccess(locals.user, permissionOperations.branchManagement, id) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	const value = await request.json().catch(() => null);
 	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(selected, value);
 	if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (isItAssetMasterResource(selected) && value && typeof value === 'object' && !Object.hasOwn(value, 'sortOrder')) delete data.sortOrder;
 	try {
-		const item = isItAssetMasterResource(selected) ? await updateItAssetMaster(selected, id, data, actor.id) : await updateMaster(selected, id, data as EmployeeMasterInput, actor.id);
+		const item = isItAssetMasterResource(selected) ? await updateItAssetMaster(selected, id, data, actor.id) : await updateMaster(selected, id, data as EmployeeMasterInput, actor.id, selected === 'branches' && !actor.permissionOperations.includes(permissionOperations.branchManagement) ? actor.branchId : null);
 		return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
 	} catch (error) {
 		if (error instanceof InactiveOperatingSystemVendorError) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', [{ field: 'vendorId', reason: 'Select an active OS vendor.' }]);
@@ -37,11 +38,11 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
-	const actor = params.master === 'branches' ? requireBranchManagementApi(locals.user) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	const selected = resource(params.master);
 	const id = parseId(params.id);
+	const actor = selected === 'branches' && id ? requireBranchAccess(locals.user, permissionOperations.branchManagement, id) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
-	const result = isItAssetMasterResource(selected) ? await deleteItAssetMaster(selected, id, actor.id) : await softDeleteMaster(selected, id, actor.id);
+	const result = isItAssetMasterResource(selected) ? await deleteItAssetMaster(selected, id, actor.id) : await softDeleteMaster(selected, id, actor.id, selected === 'branches' && !actor.permissionOperations.includes(permissionOperations.branchManagement) ? actor.branchId : null);
 	if (result === 'referenced') return failure(409, 'RESOURCE_IN_USE', 'The item is still referenced.');
 	if (result === 'not_found') return failure(404, 'NOT_FOUND', 'Not found.');
 	return success({ id, deleted: true });

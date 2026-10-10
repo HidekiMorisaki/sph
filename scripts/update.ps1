@@ -25,6 +25,7 @@ try {
 	Invoke-ExternalCommand -FilePath 'git' -Arguments @('-C', $script:RepositoryRoot, 'pull', '--ff-only')
 	$currentCommit = Invoke-ExternalCommand -FilePath 'git' -Arguments @('-C', $script:RepositoryRoot, 'rev-parse', 'HEAD') -Capture
 	$sourceUpdated = $currentCommit -ne $previousCommit
+	Invoke-ExternalCommand -FilePath 'docker' -Arguments @('run', '--rm', '--mount', "type=bind,source=$script:RepositoryRoot,target=/workspace", '--workdir', '/workspace', 'node:22-alpine', 'node', 'scripts/install-maintenance.mjs', 'gateway-config')
 
 	Invoke-Compose -Arguments @('rm', '--force', '--stop', 'migration')
 	Invoke-Compose -Arguments @('build')

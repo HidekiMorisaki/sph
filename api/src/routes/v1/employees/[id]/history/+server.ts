@@ -1,4 +1,4 @@
-import { requireOperationApi } from '$lib/server/api/admin';
+import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
@@ -8,12 +8,12 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['changedAt', 'id'] as const;
 
 export async function GET({ params, locals, url }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.employeeRead);
+	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
 	const employeeId = parseId(params.id);
 	if (!employeeId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const query = parseListQuery(url, sortFields, 'changedAt');
 	const prisma = getPrisma();
-	if (!await prisma.employee.count({ where: { id: employeeId } })) return failure(404, 'NOT_FOUND', 'Not found.');
+	if (!await prisma.employee.count({ where: { id: employeeId, ...(branchId === null ? {} : { branchId }) } })) return failure(404, 'NOT_FOUND', 'Not found.');
 	const where = { employeeId, deletedAt: null };
 	const [total, items] = await prisma.$transaction([
 		prisma.employeeChangeHistory.count({ where }),

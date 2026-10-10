@@ -1,4 +1,4 @@
-import type { DisplayLanguage } from './localization';
+import type { DisplayCurrency, DisplayLanguage } from './localization';
 
 export type AuthenticatedUser = {
 	id: number;
@@ -10,8 +10,12 @@ export type AuthenticatedUser = {
 	roles: Array<{ id: number; name: string }>;
 	permissionIdentifiers: string[];
 	permissionOperations: string[];
+	activeOperation?: string;
+	branchId: number;
+	ownBranchPermissionOperations: string[];
 	timeZone: string;
 	displayLanguage: DisplayLanguage;
+	displayCurrency: DisplayCurrency;
 };
 
 export type AuthenticatedSession = {

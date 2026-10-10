@@ -1,6 +1,4 @@
-import { dev } from '$app/environment';
-
-import { invalidateSessionToken, SESSION_COOKIE_NAME } from '$lib/server/auth/session';
+import { invalidateSessionToken, SESSION_COOKIE_NAME, sessionCookieSecure } from '$lib/server/auth/session';
 import { success } from '$lib/server/api/response';
 
 export async function POST({ cookies }: import('./$types').RequestEvent) {
@@ -8,7 +6,7 @@ export async function POST({ cookies }: import('./$types').RequestEvent) {
 	cookies.delete(SESSION_COOKIE_NAME, {
 		path: '/',
 		httpOnly: true,
-		secure: !dev,
+		secure: sessionCookieSecure(),
 		sameSite: 'lax'
 	});
 

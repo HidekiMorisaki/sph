@@ -1,4 +1,5 @@
 import { requireOperationApi } from '$lib/server/api/admin';
+import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
@@ -8,12 +9,12 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['changedAt', 'id'] as const;
 
 export async function GET({ params, locals, url }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.assetRead);
+	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetRead);
 	const assetId = parseId(params.id);
 	if (!assetId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const query = parseListQuery(url, sortFields, 'changedAt');
 	const prisma = getPrisma();
-	if (!await prisma.itAsset.count({ where: { id: assetId, deletedAt: null } })) return failure(404, 'NOT_FOUND', 'Not found.');
+	if (!await prisma.itAsset.count({ where: { id: assetId, deletedAt: null, ...assetBranchWhere(branchId) } })) return failure(404, 'NOT_FOUND', 'Not found.');
 	const where = { assetId, deletedAt: null };
 	const [total, items] = await prisma.$transaction([
 		prisma.itAssetChangeHistory.count({ where }),

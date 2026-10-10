@@ -6,8 +6,8 @@
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 
 	type Option = { value: string; label: string; searchTerms?: string[] };
-	let { label, field, name, value, options, onSelect, onOpen, required = false, disabled = false, error = '', searchPlaceholder, emptyText }: {
-		label: string; field: string; name?: string; value: string; options: Option[]; onSelect: (value: string) => void; onOpen?: () => void; required?: boolean; disabled?: boolean; error?: string; searchPlaceholder?: string; emptyText?: string;
+	let { label, field, name, value, options, onSelect, onOpen, required = false, disabled = false, error = '', searchPlaceholder, emptyText, searchable = true }: {
+		label: string; field: string; name?: string; value: string; options: Option[]; onSelect: (value: string) => void; onOpen?: () => void; required?: boolean; disabled?: boolean; error?: string; searchPlaceholder?: string; emptyText?: string; searchable?: boolean;
 	} = $props();
 
 	let open = $state(false);
@@ -49,7 +49,7 @@
 		await tick();
 		panel?.showPopover();
 		positionPanel();
-		await tick(); input?.focus();
+		await tick(); if (searchable) input?.focus();
 	}
 	function choose(option: Option) { onSelect(option.value); close(true); }
 	function moveActive(next: number) { active = Math.max(0, Math.min(next, filtered.length - 1)); void tick().then(() => root?.querySelectorAll<HTMLElement>('[role="option"]')[active]?.scrollIntoView({ block: 'nearest' })); }
@@ -57,9 +57,9 @@
 		if (disabled) return;
 		if (event.key === 'Escape' && open) { event.preventDefault(); close(true); return; }
 		if (event.key === 'Tab' && open) { close(); return; }
-		if (open) return;
+		if (open) { if (!searchable) listKeydown(event); return; }
 		if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); void show(); return; }
-		if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) { event.preventDefault(); void show(event.key); }
+		if (searchable && event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) { event.preventDefault(); void show(event.key); }
 	}
 	function listKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') { event.preventDefault(); close(true); return; }
@@ -85,7 +85,7 @@
 	<span id={`${field}-label`}>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span>
 	<div class="form-select-picker" data-field={field}>
 		<button bind:this={trigger} {name} type="button" role="combobox" class="form-select-trigger" class:unselected class:invalid={Boolean(error)} {disabled} aria-labelledby={`${field}-label`} aria-haspopup="listbox" aria-controls={`${field}-options`} aria-expanded={open} aria-required={required} aria-invalid={Boolean(error)} aria-describedby={error ? `${field}-error` : undefined} onclick={() => open ? close(true) : void show()} onkeydown={triggerKeydown}><span>{selected?.label ?? '-'}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>
-		{#if open}<div bind:this={panel} class="form-select-options" popover="manual" style={panelStyle}><input bind:this={input} class="form-select-search" type="search" value={query} aria-label={formatLocaleTemplate(commonText.searchLabel, label)} aria-controls={`${field}-options`} aria-activedescendant={filtered[active] ? `${field}-option-${active}` : undefined} placeholder={searchPlaceholder ?? commonText.search} oninput={(event) => { query = event.currentTarget.value; active = 0; }} onkeydown={listKeydown} /><div id={`${field}-options`} class="option-list" role="listbox" aria-label={label}>{#each filtered as option, index}<button id={`${field}-option-${index}`} type="button" role="option" tabindex="-1" class:active={active === index} class:selected={value === option.value} aria-selected={value === option.value} onpointerdown={(event) => event.preventDefault()} onclick={() => choose(option)} onmouseenter={() => active = index} onkeydown={listKeydown}>{option.label}</button>{:else}<p class="form-select-empty">{emptyText ?? commonText.noOptions}</p>{/each}</div></div>{/if}
+		{#if open}<div bind:this={panel} class="form-select-options" popover="manual" style={panelStyle}>{#if searchable}<input bind:this={input} class="form-select-search" type="search" value={query} aria-label={formatLocaleTemplate(commonText.searchLabel, label)} aria-controls={`${field}-options`} aria-activedescendant={filtered[active] ? `${field}-option-${active}` : undefined} placeholder={searchPlaceholder ?? commonText.search} oninput={(event) => { query = event.currentTarget.value; active = 0; }} onkeydown={listKeydown} />{/if}<div id={`${field}-options`} class="option-list" role="listbox" aria-label={label}>{#each filtered as option, index}<button id={`${field}-option-${index}`} type="button" role="option" tabindex="-1" class:active={active === index} class:selected={value === option.value} aria-selected={value === option.value} onpointerdown={(event) => event.preventDefault()} onclick={() => choose(option)} onmouseenter={() => active = index} onkeydown={listKeydown}>{option.label}</button>{:else}<p class="form-select-empty">{emptyText ?? commonText.noOptions}</p>{/each}</div></div>{/if}
 	</div>
 	{#if error}<small id={`${field}-error`} class="field-error" role="alert">{error}</small>{/if}
 </div>

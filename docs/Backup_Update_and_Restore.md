@@ -10,6 +10,7 @@ The maintenance tools in `scripts/` are intended for operators of installed SME 
 - Restore is a destructive disaster-recovery operation. Use it only when recovery from a known backup is required.
 - Backups contain employee, authentication, session, history, and logically deleted data. Store them as confidential data, restrict access, and copy important backups to separately protected storage.
 - `.env` is intentionally not included. Keep a separate, protected copy of the deployment configuration and secrets.
+- In HTTPS installations, also back up the Docker `gateway_data` volume and `.runtime/gateway/Caddyfile` separately. The database dump does not include certificates or the internal CA. Losing the internal CA requires a new client trust deployment.
 - The tools do not automatically roll back Git source code. If an update fails after the pull, preserve the backup and diagnose the failure before choosing a source revision or restoring data.
 - Never use `docker compose down --volumes` as part of an update.
 
@@ -60,7 +61,7 @@ The tool performs these operations in order:
 4. Creates a PostgreSQL custom-format dump containing the complete database.
 5. Restores that dump into a guarded temporary database, compares table and migration counts, writes a SHA-256 checksum and manifest, and removes the temporary database.
 6. Runs `git pull --ff-only`.
-7. Rebuilds services, adopts the consolidated baseline when the verified database has the supported legacy history and matching schema, then starts services and runs the migration job.
+7. Generates the gateway configuration from `.env`, rebuilds services, adopts the consolidated baseline when the verified database has the supported legacy history and matching schema, then starts services and runs the migration job.
 8. Waits for the API and frontend health checks and confirms that `/v1/health` reports the version in `VERSION`.
 
 If the update fails before Git changes the checked-out revision, the tool attempts to restart the previous application containers. If a verified backup was created, its location is printed and it is retained. Do not immediately restore it: first inspect the error and container logs.

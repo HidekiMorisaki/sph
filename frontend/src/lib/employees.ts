@@ -7,7 +7,7 @@ export type EmployeeMaster = {
 	departmentId?: number | null;
 	department?: { id: number; name: string } | null;
 };
-export type EmployeeRole = { id: number; name: string; isSystemManagement?: boolean };
+export type EmployeeRole = { id: number; name: string; isSystemManagement?: boolean; isBranchAdministrator?: boolean; isGeneralUser?: boolean };
 export type SocialLinkPlatform = 'github' | 'linkedin' | 'x' | 'threads' | 'bluesky' | 'mastodon' | 'facebook' | 'instagram' | 'youtube' | 'qiita' | 'note';
 export type EmployeeSocialLink = { platform: SocialLinkPlatform; url: string };
 

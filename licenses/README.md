@@ -25,3 +25,6 @@ The public holiday data sources and usage are recorded in
 
 The API dependency override sources, exact versions, and redistribution conditions
 are recorded in [`api-dependency-overrides.md`](api-dependency-overrides.md).
+
+The gateway's pinned Caddy runtime, Go modules, and CA certificate notices are
+recorded in [`caddy/`](caddy/README.md).

@@ -150,7 +150,7 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 
 	const parsedRoleIds = readIds(body, 'roleIds', errors);
 	const roleIds = parsedRoleIds ?? [];
-	if (!parsedRoleIds || roleIds.length === 0) invalid(errors, 'roleIds', 'Select at least one role.');
+	if (!parsedRoleIds || roleIds.length !== 1) invalid(errors, 'roleIds', 'Select exactly one role.');
 
 	if (errors.length || !employeeCode || !firstName || !lastName || !birthDate || !gender || !email || !hiredAt || !employmentTypeId || !branchId) {
 		return { success: false, errors };

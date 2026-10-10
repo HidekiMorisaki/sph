@@ -1,5 +1,4 @@
 import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { parseWorkforceOrder } from '$lib/server/api/workforce-order';
 import { getPrisma } from '$lib/server/prisma';
 
@@ -24,13 +23,11 @@ export async function reorderSystemSettings(resource: SystemSettingOrderResource
 			const sortOrder = index + 1;
 			if (rows.find((row) => row.id === id)?.sortOrder === sortOrder) continue;
 			const historyResource = resource === 'roles' ? 'role' : 'external_link';
-			const before = await readMasterSnapshot(tx, historyResource, id);
 			const result = resource === 'roles'
 				? await tx.role.updateMany({ where: { id, deletedAt: null }, data: { sortOrder } })
 				: await tx.externalLink.updateMany({ where: { id, deletedAt: null }, data: { sortOrder } });
 			if (result.count !== 1) throw new SystemSettingOrderConflictError();
 			await writeAuditLog(tx, actorId, 'update', historyResource, id);
-			await recordMasterChange(tx, historyResource, id, actorId, 'update', before, await readMasterSnapshot(tx, historyResource, id));
 		}
 		return orderedIds;
 	}, { isolationLevel: 'Serializable' });

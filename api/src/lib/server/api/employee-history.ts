@@ -49,7 +49,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 			employmentType: { select: { name: true } },
 			branch: { select: { name: true } },
 			roleGrants: {
-				where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
+				where: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } },
 				select: { role: { select: { id: true, name: true } } }
 			}
 		}

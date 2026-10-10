@@ -2,7 +2,13 @@ openapi: 3.1.0
 info:
   title: SME Portal Hub REST API
   version: 1.0.0
-  description: Version 1 API for equipment and employee management.
+  description: |
+    Version 1 API for equipment and employee management.
+    The built-in Branch Administrator role uses an own_branch grant tied to the
+    authenticated employee's current branch. Branch-scoped employee, location,
+    IT asset, calendar-assignment, and financial operations check that branch on
+    the server. Moving an asset to another branch is rejected. Role assignment,
+    branch creation, and global configuration require a system administrator.
 servers:
   - url: http://localhost:3000
     description: Local gateway
@@ -416,7 +422,7 @@ paths:
     get:
       tags: [Authentication]
       operationId: getSession
-      description: Returns the authenticated employee with separate firstName, middleName, and lastName fields. No preformatted name field is returned. The canAssignCalendars capability is true only when both system.manage and calendars.assign are granted.
+      description: Returns the authenticated employee with separate firstName, middleName, and lastName fields. No preformatted name field is returned. canAssignCalendars is also available to Branch Administrators for employees in their current branch.
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
@@ -558,9 +564,13 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/SortOrder'
         - { name: search, in: query, schema: { type: string, maxLength: 200 } }
+        - name: branchIds
+          in: query
+          description: Comma-separated distinct positive branch IDs. Omit to include all branches; the same filter applies to totals, sorting, and pagination.
+          schema: { type: string, example: '1,2' }
         - name: visibleSearch
           in: query
-          description: Comma-separated allowlisted fields displayed by the employee list. When supplied with search, only these fields are searched, including derived age and length of service.
+          description: Comma-separated allowlisted fields displayed by the employee list, excluding branch. When supplied with search, only these fields are searched, including derived age and length of service.
           schema: { type: string }
         - { name: searchLocale, in: query, schema: { type: string, enum: [en, ja], default: en } }
         - name: includeRetired
@@ -593,6 +603,24 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/EmployeeConflict' }
+  /v1/employees/branch-options:
+    get:
+      tags: [Employees]
+      operationId: listEmployeeBranchOptions
+      description: Lists active branch IDs and names for the employee list filter. Requires employees.read; the response omits other branch details.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [sortOrder, name], default: sortOrder }
+      responses:
+        '200': { $ref: '#/components/responses/ListSuccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /v1/employees/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -634,6 +662,18 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Roles]
+      operationId: createRole
+      description: System administrator only. Creates a role with the selected operations. system.manage, branches.manage, and calendars.assign cannot be assigned. Permission dependencies are enforced. Names remain reserved after logical deletion.
+      security: [{ sessionCookie: [] }]
+      requestBody: { $ref: '#/components/requestBodies/RoleCreate' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /v1/roles/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -649,6 +689,17 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Roles]
+      operationId: deleteRole
+      description: System administrator only. Logically deletes an unassigned role. Roles with system.manage or any active employee assignment cannot be deleted.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /v1/{master}:
     parameters:
       - $ref: '#/components/parameters/Master'
@@ -727,7 +778,7 @@ paths:
     get:
       tags: [Roles]
       operationId: listEditablePermissions
-      description: System administrator only. Lists the operation codes that can be selected for a role. system.manage is fixed and omitted.
+      description: System administrator only. Lists selectable read and granular action codes. Protected system operations and legacy aggregate write codes are omitted.
       security: [{ sessionCookie: [] }]
       responses:
         '200': { $ref: '#/components/responses/Success' }
@@ -739,7 +790,7 @@ paths:
     put:
       tags: [Roles]
       operationId: replaceRolePermissions
-      description: System administrator only. Replaces editable operation permissions and optionally updates the role name and notes in one transaction. system.manage remains fixed; branches.manage and calendars.assign can only belong to a system management role. calendars.assign requires calendars.read. The role's updatedAt is used for optimistic concurrency.
+      description: System administrator only. Replaces selectable operation permissions and optionally updates the role name and notes in one transaction. The API derives legacy aggregate guards and required read codes. Protected system operations remain fixed. The role's updatedAt is used for optimistic concurrency.
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1152,6 +1203,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/RoleNameWrite' }
+    RoleCreate:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RoleCreate' }
     EmployeeWrite:
       required: true
       content:
@@ -1415,6 +1471,13 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 128 }
         notes: { type: [string, 'null'], maxLength: 5000 }
+    RoleCreate:
+      allOf:
+        - $ref: '#/components/schemas/RoleNameWrite'
+        - type: object
+          required: [permissionCodes]
+          properties:
+            permissionCodes: { type: array, uniqueItems: true, items: { type: string }, description: Selected read and granular action codes from GET /v1/permissions. An empty array creates a role with no permissions. }
     EmployeeDerivedFields:
       type: object
       description: Language-neutral values calculated by the API for each employee response and never persisted.
@@ -1470,8 +1533,9 @@ components:
         roleIds:
           type: array
           minItems: 1
+          maxItems: 1
           uniqueItems: true
-          description: Active role identifiers returned by GET /v1/roles.
+          description: Exactly one active role identifier returned by GET /v1/roles. The array shape is retained for v1 compatibility.
           items: { $ref: '#/components/schemas/PositiveIdInput' }
     PositiveIdInput:
       description: A positive database identifier. Digit strings are accepted because browser form values are serialized as strings.

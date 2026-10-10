@@ -1,5 +1,4 @@
 import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { getPrisma } from '$lib/server/prisma';
 
 export const workforceOrderResources = ['employment-types', 'positions', 'departments', 'employee-groups'] as const;
@@ -33,7 +32,6 @@ export async function reorderWorkforce(resource: WorkforceOrderResource, expecte
 		for (const [index, id] of orderedIds.entries()) {
 			const sortOrder = index + 1;
 			if (rows.find((row) => row.id === id)?.sortOrder === sortOrder) continue;
-			const before = await readMasterSnapshot(tx, resource, id);
 			const data = { sortOrder };
 			const result = resource === 'employment-types' ? await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data })
 				: resource === 'positions' ? await tx.position.updateMany({ where: { id, deletedAt: null }, data })
@@ -41,7 +39,6 @@ export async function reorderWorkforce(resource: WorkforceOrderResource, expecte
 				: await tx.employeeGroup.updateMany({ where: { id, deletedAt: null }, data });
 			if (result.count !== 1) throw new WorkforceOrderConflictError();
 			await writeAuditLog(tx, actorId, 'update', resource, id);
-			await recordMasterChange(tx, resource, id, actorId, 'update', before, await readMasterSnapshot(tx, resource, id));
 		}
 		return orderedIds;
 	}, { isolationLevel: 'Serializable' });

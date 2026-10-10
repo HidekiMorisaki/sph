@@ -4,6 +4,7 @@ import { getContext } from 'svelte';
 import { browser } from '$app/environment';
 import { productName } from '$lib/brand';
 import { formatPersonName, type PersonNameOrder, type PersonNameParts } from '$lib/person-name';
+import type { FinancialCurrency } from '$lib/financial-currency';
 
 export const GENDER_VALUES = ['female', 'male', 'unspecified'] as const;
 export type GenderValue = (typeof GENDER_VALUES)[number];
@@ -47,11 +48,12 @@ export type DisplayLanguage = MessageLanguage;
 export type LocalizationSettings = {
 	timeZone: string;
 	displayLanguage: DisplayLanguage;
+	displayCurrency: FinancialCurrency;
 };
 
 export type EmployeeNameParts = PersonNameParts;
 
-export const DEFAULT_LOCALIZATION: LocalizationSettings = { timeZone: 'Asia/Tokyo', displayLanguage: 'en' };
+export const DEFAULT_LOCALIZATION: LocalizationSettings = { timeZone: 'Asia/Tokyo', displayLanguage: 'en', displayCurrency: 'USD' };
 export const LOCALIZATION_CONTEXT = Symbol('localization');
 const clientLocalization = writable<LocalizationSettings>({ ...DEFAULT_LOCALIZATION });
 let initialized = false;
@@ -75,7 +77,7 @@ export const localization: Writable<LocalizationSettings> = {
 };
 export function hasInitialLocalization(): boolean { return initialized; }
 export function initializeLocalization(settings: LocalizationSettings): Writable<LocalizationSettings> {
-	const initial = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage };
+	const initial = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage, displayCurrency: settings.displayCurrency };
 	if (!browser) return writable(initial);
 	clientLocalization.set(initial);
 	initialized = true;
@@ -85,7 +87,7 @@ export function initializeLocalization(settings: LocalizationSettings): Writable
 let localizationRevision = 0;
 export async function applyLocalization(settings: LocalizationSettings): Promise<void> {
 	// Keep applied preferences independent from editable forms and session objects.
-	const applied: LocalizationSettings = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage };
+	const applied: LocalizationSettings = { timeZone: settings.timeZone, displayLanguage: settings.displayLanguage, displayCurrency: settings.displayCurrency };
 	const revision = ++localizationRevision;
 	await loadActiveLocale(applied.displayLanguage);
 	if (revision !== localizationRevision) return;

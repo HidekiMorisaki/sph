@@ -4,6 +4,30 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.4.0] - 2026-10-11
+
+### New features
+
+- System administrators can now add and delete roles freely. Permissions for newly added roles can be configured freely, except for the System Administrator and Branch Administrator roles.
+- Added Branch Administrator as a default role. Its initial permissions allow management of employees, locations, IT assets, financial periods, and more within the assigned branch. The Branch Administrator role's permissions cannot be changed in System settings.
+- Added internal HTTP, internal HTTPS, and public domain installation modes.
+- You can now choose a display currency in the Localization section of personal Settings.
+- Added JPY/USD amount conversion using exchange rates from the Bank of Japan Time-Series Data Search API.
+- Added a business performance analysis page. Entering amounts in Business performance visualizes business performance. You can choose whether to make business performance public or private. The visualization uses STRAC charts.
+
+### Existing feature improvements
+
+- Editable roles now support selecting permissions for individual operations. As part of this change, employees can be assigned only one role each.
+- Added a branch selector beside search in the employee list. You can select multiple branches, and the selection is restored when you return to the page. Branch names are no longer included in text search.
+- In the Roles section of System settings, you can now click a role name to view the permissions assigned to that role.
+- Improved the Roles section of System settings to show each role's assignment count as a badge.
+- In Locations, you can now click the primary or deputy responsible person's name in a branch detail modal to view that employee's details.
+
+### Bug fixes
+
+- Fixed missing input examples in the profile section of the Settings page.
+- Fixed an issue where opening an invitation link showed the sign-in page instead of the password setup form.
+
 ## [v0.3.0] - 2026-10-07
 
 ### New features

@@ -186,7 +186,7 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 	return { name, ...(sortOrder === undefined ? {} : { sortOrder }), ...(values as BranchContactInput & { notes: string | null }) };
 }
 
-export async function listMasters(resource: EmployeeMasterResource, query: ListQuery<MasterSortField>, search = '') {
+export async function listMasters(resource: EmployeeMasterResource, query: ListQuery<MasterSortField>, search = '', branchScope: number | null = null) {
 	const db = getPrisma();
 	const orderBy = [
 		{ [query.sortBy]: query.sortOrder },
@@ -233,7 +233,7 @@ export async function listMasters(resource: EmployeeMasterResource, query: ListQ
 			return { total, items: items.map(withUsageCount) };
 		}
 		case 'branches': {
-			const where: Prisma.BranchWhereInput = { deletedAt: null, ...(search ? { OR: [
+			const where: Prisma.BranchWhereInput = { deletedAt: null, ...(branchScope === null ? {} : { id: branchScope }), ...(search ? { OR: [
 				{ name: { contains: search, mode: 'insensitive' } },
 				{ postalCode: { contains: search, mode: 'insensitive' } },
 				{ prefecture: { contains: search, mode: 'insensitive' } },
@@ -296,8 +296,9 @@ export async function createMaster(resource: EmployeeMasterResource, data: Emplo
 	}, { isolationLevel: 'Serializable' });
 }
 
-export async function updateMaster(resource: EmployeeMasterResource, id: number, data: EmployeeMasterInput, actorId: number) {
+export async function updateMaster(resource: EmployeeMasterResource, id: number, data: EmployeeMasterInput, actorId: number, branchScope: number | null = null) {
 	return getPrisma().$transaction(async (tx) => {
+		if (resource === 'branches' && branchScope !== null && (id !== branchScope || !await tx.branch.count({ where: { id, deletedAt: null } }))) return null;
 		const before = await readMasterSnapshot(tx, resource, id);
 		let result: { count: number };
 		switch (resource) {
@@ -316,6 +317,10 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 			case 'employment-types': result = await tx.employmentType.updateMany({ where: { id, deletedAt: null }, data: { name: data.name, notes: data.notes, ...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }) } }); break;
 			case 'branches': {
 				await validateBranchEmployees(tx, data);
+				if (branchScope !== null) {
+					const managerIds = [data.managerEmployeeId, data.deputyManagerEmployeeId].filter((value): value is number => typeof value === 'number');
+					if (managerIds.length && await tx.employee.count({ where: { id: { in: managerIds }, branchId: branchScope, deletedAt: null } }) !== managerIds.length) throw new BranchEmployeeReferenceError('managerEmployeeId');
+				}
 				if (data.closedOn && await branchReferenceCount(tx, id) > 0) throw new BranchInUseError();
 				const branch = branchData(data);
 				if (data.closedOn) {
@@ -334,8 +339,9 @@ export async function updateMaster(resource: EmployeeMasterResource, id: number,
 	}, { isolationLevel: 'Serializable' });
 }
 
-export async function softDeleteMaster(resource: EmployeeMasterResource, id: number, actorId: number): Promise<'deleted' | 'not_found' | 'referenced'> {
+export async function softDeleteMaster(resource: EmployeeMasterResource, id: number, actorId: number, branchScope: number | null = null): Promise<'deleted' | 'not_found' | 'referenced'> {
 	return getPrisma().$transaction(async (tx) => {
+		if (resource === 'branches' && branchScope !== null && (id !== branchScope || !await tx.branch.count({ where: { id, deletedAt: null } }))) return 'not_found';
 		const before = await readMasterSnapshot(tx, resource, id);
 		let referenced = 0;
 		switch (resource) {

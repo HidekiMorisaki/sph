@@ -11,6 +11,7 @@
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
+	import FinancialPeriodSettingsSection from '$lib/components/system-settings/FinancialPeriodSettingsSection.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { loadExternalLinks, type ExternalLink } from '$lib/externalLinks';
 	import { formatTimestamp, localization } from '$lib/localization';
@@ -24,8 +25,8 @@
 
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
 	type FormField = 'name' | 'url' | 'notes';
-	type SystemSettingsSection = 'roles' | 'external-links';
-	const systemSettingsSections: SystemSettingsSection[] = ['roles', 'external-links'];
+	type SystemSettingsSection = 'roles' | 'external-links' | 'financial-period';
+	const systemSettingsSections: SystemSettingsSection[] = ['roles', 'external-links', 'financial-period'];
 	const emptyForm = () => ({ name: '', url: '', sortOrder: '9999', notes: '' });
 
 	let loading = $state(true);
@@ -199,12 +200,13 @@
 		{:else}
 			{#each notices as message, index}<StatusNotice {message} tone={noticeIsError ? 'error' : 'success'} onDismiss={() => notices = notices.filter((_, noticeIndex) => noticeIndex !== index)} />{/each}
 			<div class="settings-layout">
-				<nav class="settings-nav" aria-label={text.sections}><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>{text.roles}</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>{text.links}</a></nav>
+				<nav class="settings-nav" aria-label={text.sections}><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>{text.roles}</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>{text.links}</a><a class:active={activeSection === 'financial-period'} href="#financial-period" aria-current={activeSection === 'financial-period' ? 'location' : undefined} onclick={(event) => selectSection(event, 'financial-period')}>{localeMessages[$localization.displayLanguage].financial.periodSettings}</a></nav>
 				<div class="settings-content">
 					<section id="roles" class="settings-card" aria-label={text.roleSettings}><RoleManagementSection onNotice={(messages) => { notices = messages; noticeIsError = false; }} /></section>
 					<section id="external-links" class="settings-card" aria-label={text.linkSettings}>
 						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} actionWidth={14} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel={text.noLinks} />
 					</section>
+					<section id="financial-period" class="settings-card" aria-label={localeMessages[$localization.displayLanguage].financial.periodSettings}><FinancialPeriodSettingsSection /></section>
 				</div>
 			</div>
 		{/if}
@@ -213,7 +215,7 @@
 
 {#if mode === 'detail' && selected}
 	<DetailModal title={text.linkDetails} titleId="external-link-detail-title" closeLabel={text.closeLinkDetails} {returnFocus} compact dialogClass="external-link-dialog" onClose={closeDetail}>
-		<section class="app-detail-section"><h3>{text.linkInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div class="app-detail-wide"><dt>{text.url}</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? '-'}</dd></div><div><dt>{text.created}</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>{text.updated}</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
+		<section class="app-detail-section"><h3>{text.linkInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div class="app-detail-wide"><dt>{text.url}</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div><div><dt>{text.created}</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>{text.updated}</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
 		<MasterHistorySection endpoint="/v1/external-links" itemId={selected.id} fieldLabels={{ name: text.name, url: text.url, notes: text.notes }} hiddenFields={['sortOrder']} />
 	</DetailModal>
 {:else if mode}

@@ -3,6 +3,12 @@ import ja from '../locales/ja.json' with { type: 'json' };
 
 export const DEFAULT_TIME_ZONE = 'Asia/Tokyo';
 export const DEFAULT_DISPLAY_LANGUAGE = 'en';
+export const DEFAULT_DISPLAY_CURRENCY = 'USD';
+export type DisplayCurrency = 'JPY' | 'USD';
+
+export function isDisplayCurrency(value: unknown): value is DisplayCurrency {
+	return value === 'JPY' || value === 'USD';
+}
 // Application allowlist: valid language tags are not necessarily supported UI languages.
 export const DISPLAY_LANGUAGES = [
 	{ value: 'en', label: en.languageName },

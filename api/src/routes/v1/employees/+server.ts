@@ -1,5 +1,6 @@
 import { dev } from '$app/environment';
-import { requireAdminApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
 import { employeeReferenceDate } from '$lib/server/api/employee-derived';
@@ -49,7 +50,7 @@ const employeeColumnKeys: Record<string, string> = {
 };
 
 type EmployeeSortField = (typeof sortFields)[number];
-const visibleSearchKeys = ['name', 'employeeCode', 'employmentStatus', 'age', 'lengthOfService', 'department', 'group', 'position', 'employmentType', 'branch', 'roles'] as const;
+const visibleSearchKeys = ['name', 'employeeCode', 'employmentStatus', 'age', 'lengthOfService', 'department', 'group', 'position', 'employmentType', 'roles'] as const;
 type DatabaseColumn = { columnName: string; comment: string | null };
 
 function parseSearch(url: URL) {
@@ -71,7 +72,17 @@ function parseBooleanQuery(url: URL, name: string, errorCode: string) {
 	]);
 }
 
-type EmployeeVisibility = { includeRetired: boolean; includeDeleted: boolean; referenceDate: Date };
+function parseBranchIds(url: URL): number[] {
+	const raw = url.searchParams.get('branchIds');
+	if (raw === null) return [];
+	const values = raw.split(',');
+	if (url.searchParams.getAll('branchIds').length !== 1 || !values.length || values.length > 500 || values.some((value) => !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) || new Set(values.map(Number)).size !== values.length) {
+		throwApiError(422, 'INVALID_BRANCH_IDS', 'branchIds must contain distinct positive integer IDs.', [{ field: 'branchIds', reason: 'INVALID_VALUE' }]);
+	}
+	return values.map(Number);
+}
+
+type EmployeeVisibility = { includeRetired: boolean; includeDeleted: boolean; referenceDate: Date; branchIds: number[] };
 
 function employeeWhere(search: string, visibility: EmployeeVisibility): Prisma.EmployeeWhereInput {
 	const visibleEmployees: Prisma.EmployeeWhereInput[] = [{
@@ -79,11 +90,13 @@ function employeeWhere(search: string, visibility: EmployeeVisibility): Prisma.E
 		...(visibility.includeRetired ? {} : { OR: [{ retiredAt: null }, { retiredAt: { gt: visibility.referenceDate } }] })
 	}];
 	if (visibility.includeDeleted) visibleEmployees.push({ deletedAt: { not: null } });
-	if (!search) return { OR: visibleEmployees };
+	const filters: Prisma.EmployeeWhereInput[] = [{ OR: visibleEmployees }];
+	if (visibility.branchIds.length) filters.push({ branchId: { in: visibility.branchIds } });
+	if (!search) return { AND: filters };
 	const contains = { contains: search, mode: 'insensitive' as const };
 	return {
 		AND: [
-			{ OR: visibleEmployees },
+			...filters,
 			{ OR: [
 				{ employeeCode: contains },
 				{ firstName: contains },
@@ -101,8 +114,7 @@ function employeeWhere(search: string, visibility: EmployeeVisibility): Prisma.E
 				{ departmentAssignments: { some: { deletedAt: null, department: { deletedAt: null, name: contains } } } },
 				{ group: { name: contains } },
 				{ positionAssignments: { some: { deletedAt: null, position: { deletedAt: null, name: contains } } } },
-				{ employmentType: { name: contains } },
-				{ branch: { name: contains } }
+				{ employmentType: { name: contains } }
 			] }
 		]
 	};
@@ -146,9 +158,12 @@ function employeeSqlSearchClause(search: string) {
 			OR employee_group.name ILIKE ${pattern}
 			OR position_values.names ILIKE ${pattern}
 			OR employment_type.name ILIKE ${pattern}
-			OR branch.name ILIKE ${pattern}
 		)
 	`;
+}
+
+function employeeSqlBranchClause(visibility: EmployeeVisibility) {
+	return visibility.branchIds.length ? Prisma.sql`AND employee.branch_id IN (${Prisma.join(visibility.branchIds)})` : Prisma.empty;
 }
 
 function employeeSqlVisibilityClause(visibility: EmployeeVisibility) {
@@ -211,17 +226,17 @@ async function visibleEmployeePage(
 			ON position.id = assignment.position_id AND position.deleted_at IS NULL
 			WHERE assignment.employee_id = employee.id AND assignment.deleted_at IS NULL AND position.name ILIKE ${pattern})`,
 		employmentType: Prisma.sql`employment_type.name ILIKE ${pattern}`,
-		branch: Prisma.sql`branch.name ILIKE ${pattern}`,
 		roles: Prisma.sql`EXISTS (SELECT 1 FROM employee_roles role_grant JOIN roles role ON role.id = role_grant.role_id AND role.deleted_at IS NULL
 			WHERE role_grant.employee_id = employee.id AND role_grant.scope_type = 'global' AND role_grant.deleted_at IS NULL AND role.name ILIKE ${pattern})`
 	};
 	const match = Prisma.sql`(${Prisma.join(keys.map((key) => fields[key as keyof typeof fields]), ' OR ')})`;
 	const visibilityClause = employeeSqlVisibilityClause(visibility);
+	const branchClause = employeeSqlBranchClause(visibility);
 	const from = Prisma.sql`FROM employees employee
 		LEFT JOIN employee_groups employee_group ON employee_group.id = employee.group_id
 		LEFT JOIN employment_types employment_type ON employment_type.id = employee.employment_type_id
 		LEFT JOIN branches branch ON branch.id = employee.branch_id`;
-	const count = await tx.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total ${from} WHERE true ${visibilityClause} AND ${match}`);
+	const count = await tx.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total ${from} WHERE true ${visibilityClause} ${branchClause} AND ${match}`);
 	const orderFields: Record<EmployeeSortField, Prisma.Sql> = {
 		id: Prisma.sql`employee.id`, employee: Prisma.sql`employee.last_name`, employeeCode: Prisma.sql`employee.employee_code`,
 		firstName: Prisma.sql`employee.first_name`, lastName: Prisma.sql`employee.last_name`,
@@ -244,7 +259,7 @@ async function visibleEmployeePage(
 		? Prisma.sql`employee.last_name ${direction}, employee.first_name ${direction}`
 		: Prisma.sql`${orderFields[sortBy]} ${direction} NULLS LAST`;
 	const ordered = await tx.$queryRaw<Array<{ id: number }>>(Prisma.sql`
-		SELECT employee.id ${from} WHERE true ${visibilityClause} AND ${match}
+		SELECT employee.id ${from} WHERE true ${visibilityClause} ${branchClause} AND ${match}
 		ORDER BY ${ordering}, employee.id ASC OFFSET ${offset} LIMIT ${limit}`);
 	const ids = ordered.map((row) => row.id);
 	const records = await tx.employee.findMany({ where: { id: { in: ids } }, select: employeeSafeSelect });
@@ -263,6 +278,7 @@ async function roleSortedEmployeeIds(
 	const direction = sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
 	const searchClause = employeeSqlSearchClause(search);
 	const visibilityClause = employeeSqlVisibilityClause(visibility);
+	const branchClause = employeeSqlBranchClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -291,6 +307,7 @@ async function roleSortedEmployeeIds(
 		) AS role_values ON true
 		WHERE true
 		${visibilityClause}
+		${branchClause}
 		${searchClause}
 		ORDER BY role_values.sort_key ${direction}, employee.id ASC
 		OFFSET ${offset}
@@ -312,6 +329,7 @@ async function assignmentSortedEmployeeIds(
 	const sortKey = sortBy === 'department' ? Prisma.sql`department_values.names` : Prisma.sql`position_values.names`;
 	const searchClause = employeeSqlSearchClause(search);
 	const visibilityClause = employeeSqlVisibilityClause(visibility);
+	const branchClause = employeeSqlBranchClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -332,6 +350,7 @@ async function assignmentSortedEmployeeIds(
 		LEFT JOIN branches AS branch ON branch.id = employee.branch_id
 		WHERE true
 		${visibilityClause}
+		${branchClause}
 		${searchClause}
 		ORDER BY ${sortKey} ${direction} NULLS LAST, employee.id ASC
 		OFFSET ${offset}
@@ -353,6 +372,7 @@ async function lengthOfServiceSortedEmployeeIds(
 	const referenceDateIso = referenceDate.toISOString().slice(0, 10);
 	const searchClause = employeeSqlSearchClause(search);
 	const visibilityClause = employeeSqlVisibilityClause(visibility);
+	const branchClause = employeeSqlBranchClause(visibility);
 	const rows = await tx.$queryRaw<{ id: number }[]>(Prisma.sql`
 		SELECT employee.id
 		FROM employees AS employee
@@ -373,6 +393,7 @@ async function lengthOfServiceSortedEmployeeIds(
 		LEFT JOIN branches AS branch ON branch.id = employee.branch_id
 		WHERE true
 		${visibilityClause}
+		${branchClause}
 		${searchClause}
 		ORDER BY GREATEST(
 			0,
@@ -404,18 +425,23 @@ async function employeeColumns() {
 }
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	const viewer = requireOperationApi(locals.user, permissionOperations.employeeRead);
+	const { actor: viewer, branchId: readerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
 	const query = parseListQuery(url, sortFields, 'employeeCode');
 	const search = parseSearch(url);
 	const visibleSearch = parseVisibleSearch(url, visibleSearchKeys);
 	const withColumns = parseBooleanQuery(url, 'includeColumns', 'INVALID_INCLUDE_COLUMNS');
-	if (withColumns) requireAdminApi(viewer);
+	if (withColumns) requireScopedOperationApi(viewer, permissionOperations.employeeManagement);
 	const referenceDate = employeeReferenceDate();
 	const visibility = {
 		includeRetired: parseBooleanQuery(url, 'includeRetired', 'INVALID_INCLUDE_RETIRED'),
 		includeDeleted: parseBooleanQuery(url, 'includeDeleted', 'INVALID_INCLUDE_DELETED'),
+		branchIds: parseBranchIds(url),
 		referenceDate
 	};
+	if (readerBranchId !== null) {
+		if (visibility.branchIds.length && !visibility.branchIds.includes(readerBranchId)) throwApiError(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
+		visibility.branchIds = [readerBranchId];
+	}
 	const where = employeeWhere(search, visibility);
 	const { total, items } = await getPrisma().$transaction(async (tx) => {
 		if (visibleSearch && search) return visibleEmployeePage(tx, search, visibleSearch.keys, visibleSearch.locale, visibility, query.sortBy, query.sortOrder, query.offset, query.limit);
@@ -434,15 +460,20 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 		return { total, items: ids.flatMap((id) => { const record = recordById.get(id); return record ? [record] : []; }) };
 	}, { isolationLevel: 'RepeatableRead' });
 	const columns = withColumns ? await employeeColumns() : undefined;
-	return success(items.map((item) => employeeOutput(item, referenceDate)), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), includeRetired: visibility.includeRetired, includeDeleted: visibility.includeDeleted, ...(columns ? { columns } : {}) });
+	return success(items.map((item) => employeeOutput(item, referenceDate)), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), includeRetired: visibility.includeRetired, includeDeleted: visibility.includeDeleted, branchIds: visibility.branchIds, ...(columns ? { columns } : {}) });
 }
 
 export async function POST({ request, locals, url }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user);
+	const { actor, branchId: writerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeManagement);
 	if (hasPermissionOperation(actor, permissionOperations.systemManagement) && !dev && !allowsSensitiveRequest(url, request)) return failure(403, 'HTTPS_REQUIRED', 'Account invitations require HTTPS.');
 	const parsed = parseEmployeeInput(await request.json().catch(() => null));
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;
+	if (writerBranchId !== null && input.employee.branchId !== writerBranchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
+	if (writerBranchId !== null) {
+		const baseRole = await getPrisma().role.findFirst({ where: { defaultKey: 'general_user', deletedAt: null }, select: { id: true } });
+		if (!baseRole || input.roleIds.length !== 1 || input.roleIds[0] !== baseRole.id) return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'Only system administrators can assign roles.');
+	}
 	if (!await canAssignRequestedRoles(actor, input.roleIds)) return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'You cannot assign one or more requested roles.');
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {

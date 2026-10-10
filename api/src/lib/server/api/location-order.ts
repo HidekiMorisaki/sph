@@ -1,5 +1,4 @@
 import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { getPrisma } from '$lib/server/prisma';
 
 export const locationOrderResources = ['branches', 'rooms', 'storages'] as const;
@@ -33,14 +32,12 @@ export async function reorderLocations(resource: LocationOrderResource, expected
 		for (const [index, id] of orderedIds.entries()) {
 			const sortOrder = index + 1;
 			if (rows.find((row) => row.id === id)?.sortOrder === sortOrder) continue;
-			const before = await readMasterSnapshot(tx, historyResource, id);
 			const data = { sortOrder };
 			const result = resource === 'branches' ? await tx.branch.updateMany({ where: { id, deletedAt: null }, data })
 				: resource === 'rooms' ? await tx.room.updateMany({ where: { id, deletedAt: null }, data })
 				: await tx.storage.updateMany({ where: { id, deletedAt: null }, data });
 			if (result.count !== 1) throw new LocationOrderConflictError();
 			await writeAuditLog(tx, actorId, 'update', historyResource, id);
-			await recordMasterChange(tx, historyResource, id, actorId, 'update', before, await readMasterSnapshot(tx, historyResource, id));
 		}
 		return orderedIds;
 	}, { isolationLevel: 'Serializable' });

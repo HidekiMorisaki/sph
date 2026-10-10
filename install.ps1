@@ -105,8 +105,8 @@ try {
 	$failureKey = 'error.docker'
 	$volumes = (Invoke-DockerCaptured -CommandArguments @('volume', 'ls', '--format', '{{.Name}}')) -split "`n"
 	$containers = (Invoke-DockerCaptured -CommandArguments @('ps', '-a', '--format', '{{.Names}}')) -split "`n"
-	if ('sph-db-data' -in $volumes -or @($containers | Where-Object { $_ -in @('sph-db', 'sph-api', 'sph-frontend', 'sph-gateway', 'sph-migration') }).Count -gt 0) { Stop-Installation 'error.existingResources' }
-	$keys = @('APP_ORIGIN', 'HTTP_PORT', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT', 'CORS_ALLOWED_ORIGINS', 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY') + @(Get-ChildItem Env: | Where-Object Name -Like 'INITIAL_ADMIN_*' | Select-Object -ExpandProperty Name)
+	if (@($volumes | Where-Object { $_ -in @('sph-db-data', 'sph-gateway-data', 'sph-gateway-config') }).Count -gt 0 -or @($containers | Where-Object { $_ -in @('sph-db', 'sph-api', 'sph-frontend', 'sph-gateway', 'sph-migration') }).Count -gt 0) { Stop-Installation 'error.existingResources' }
+	$keys = @('APP_ORIGIN', 'HTTP_PORT', 'GATEWAY_TLS_MODE', 'GATEWAY_HTTP_PUBLISH', 'GATEWAY_HTTPS_PUBLISH', 'ACME_EMAIL', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT', 'CORS_ALLOWED_ORIGINS', 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY') + @(Get-ChildItem Env: | Where-Object Name -Like 'INITIAL_ADMIN_*' | Select-Object -ExpandProperty Name)
 	foreach ($key in $keys) {
 		$savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key)
 		Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
@@ -116,16 +116,33 @@ try {
 	$failureKey = 'error.pull'
 	Invoke-DockerProgress -CommandArguments @('pull', 'node:22-alpine')
 	$failureKey = 'error.setup'
+	$hostIpv4 = ''
+	$hostName = ''
+	try {
+		$hostIpv4 = @(
+			foreach ($adapter in [Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) {
+				if ($adapter.OperationalStatus -ne [Net.NetworkInformation.OperationalStatus]::Up) { continue }
+				foreach ($entry in $adapter.GetIPProperties().UnicastAddresses) {
+					if ($entry.Address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork) { $entry.Address.IPAddressToString }
+				}
+			}
+		) -join ','
+		$hostName = [Net.Dns]::GetHostName()
+	} catch { $hostIpv4 = ''; $hostName = '' }
 	$previousPreference = $ErrorActionPreference
 	try {
 		$ErrorActionPreference = 'Continue'
-		& docker run --rm -it --network none -e NO_COLOR -e TERM --mount "type=bind,source=$PSScriptRoot,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-config.mjs $locale 2>$null
+		& docker run --rm -it --network none -e NO_COLOR -e TERM -e "SPH_INSTALL_HOST_IPV4=$hostIpv4" -e "SPH_INSTALL_HOSTNAME=$hostName" --mount "type=bind,source=$PSScriptRoot,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-config.mjs $locale 2>$null
 	} finally { $ErrorActionPreference = $previousPreference }
 	if ($LASTEXITCODE -ne 0) { Stop-Installation 'error.setup' }
 	$failureKey = 'error.permissions'
 	Protect-File (Join-Path $PSScriptRoot '.env')
 	$failureKey = 'error.settings'
 	$config = (Invoke-InstallerMaintenance 'settings') | ConvertFrom-Json
+	$failureKey = 'error.networkPreflight'
+	Invoke-InstallerMaintenance 'preflight' | Out-Null
+	$failureKey = 'error.gatewayConfig'
+	Invoke-InstallerMaintenance 'gateway-config' | Out-Null
 	Complete-Step
 	Start-Step 'stage.build'
 	$failureKey = 'error.build'
@@ -144,6 +161,17 @@ try {
 	$migrationLog = $null
 	Complete-Step
 	Start-Step 'stage.check'
+	if ($config.mode -eq 'internal') {
+		$failureKey = 'error.caExport'
+		$certificateDirectory = Join-Path $PSScriptRoot '.runtime/ca'
+		New-Item -ItemType Directory -Path $certificateDirectory -Force | Out-Null
+		$certificate = Join-Path $certificateDirectory 'root.crt'
+		for ($attempt = 0; $attempt -lt 30; $attempt++) {
+			try { Invoke-DockerCaptured -CommandArguments @('cp', 'sph-gateway:/data/caddy/pki/authorities/local/root.crt', $certificate) | Out-Null; break }
+			catch { if ($attempt -eq 29) { throw }; Start-Sleep -Seconds 1 }
+		}
+		if (-not (Test-Path -LiteralPath $certificate) -or (Get-Item -LiteralPath $certificate).Length -eq 0) { Stop-Installation 'error.caExport' }
+	}
 	$failureKey = 'error.health'
 	Invoke-InstallerMaintenance 'check' | Out-Null
 	Complete-Step
@@ -154,7 +182,10 @@ try {
 	$failureKey = 'error.permissions'
 	Protect-File $clean
 	$failureKey = 'error.cleanup'
-	[IO.File]::Replace($clean, (Join-Path $PSScriptRoot '.env'), [NullString]::Value)
+	for ($attempt = 0; $attempt -lt 5; $attempt++) {
+		try { [IO.File]::Replace($clean, (Join-Path $PSScriptRoot '.env'), [NullString]::Value); break }
+		catch { if ($attempt -eq 4 -or $_.Exception.InnerException -isnot [IO.IOException]) { throw }; Start-Sleep -Milliseconds 100 }
+	}
 	$failureKey = 'error.permissions'
 	Protect-File (Join-Path $PSScriptRoot '.env')
 	$failureKey = 'error.removeMigration'

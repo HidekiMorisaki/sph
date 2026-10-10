@@ -119,7 +119,8 @@
     "System Administrator",
     "Business Administrator",
     "General User",
-    "Server Administrator"
+    "Server Administrator",
+    "Branch Administrator"
   ],
   "permissions": [
     "System management",

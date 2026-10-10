@@ -62,7 +62,7 @@ try {
 			[input.employeeCode, input.firstName, input.lastName, input.birthDate, input.gender, input.email, input.hiredAt, employmentTypeId, branch.rows[0].id, input.username, passwordHash]
 		);
 		await client.query('INSERT INTO employee_roles (employee_id, role_id) VALUES ($1, $2)', [created.rows[0].id, role.rows[0].id]);
-		await client.query('INSERT INTO employee_settings (employee_id, display_language) VALUES ($1, $2)', [created.rows[0].id, input.displayLanguage]);
+		await client.query('INSERT INTO employee_settings (employee_id, display_language, display_currency) VALUES ($1, $2, $3)', [created.rows[0].id, input.displayLanguage, input.displayLanguage === 'ja' ? 'JPY' : 'USD']);
 		if (samples === 'yes') failedHolidayCountries = await installSamples(client, catalog, { adminId: created.rows[0].id, branchId: branch.rows[0].id, displayLanguage: input.displayLanguage });
 	}
 	await client.query('COMMIT');

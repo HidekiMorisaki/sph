@@ -25,7 +25,7 @@
 	"copy": "Copy",
 	"copyEmail": "Copy email address",
 	"emailCopied": "Email address copied.",
-	"emailCopyFailed": "Unable to copy email address.",
+	"emailCopyFailed": "Unable to copy email address. Select and copy it manually.",
 	"discardTitle": "Discard changes?",
 	"discardDescription": "Your unsaved changes will be lost. Are you sure you want to close this form?",
 	"continueEditing": "Continue editing",

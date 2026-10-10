@@ -8,8 +8,11 @@ export type Breadcrumb = { label: string; href?: string };
 export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 	const text = localeMessages[language].navigation;
 	return [
+		{ id: 'dashboard', label: text.groups.dashboard, items: [
+			{ id: 'employeeAnalytics', text: text.items.employeeAnalytics, icon: 'dashboard', href: '/' },
+			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'dashboard', href: '/financial-trends' }
+		] },
 		{ id: 'general', label: text.groups.general, items: [
-			{ id: 'dashboard', text: text.items.dashboard, icon: 'dashboard', href: '/' },
 			{ id: 'myPage', text: text.items.myPage, icon: 'dashboard', href: '/mypage' },
 			{ id: 'workCalendars', text: text.items.workCalendars, icon: 'calendar', href: '/work-calendars' },
 			{ id: 'employees', text: text.items.employees, icon: 'table', href: '/employees' }
@@ -24,6 +27,7 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 		] },
 		{ id: 'siteManagement', label: text.groups.siteManagement, systemAdministratorOnly: true, items: [
 			{ id: 'systemInformation', text: text.items.systemInformation, icon: 'list', href: '/system-information' },
+			{ id: 'businessOverview', text: text.items.businessOverview, icon: 'list', href: '/business-overview' },
 			{ id: 'systemSettings', text: text.items.systemSettings, icon: 'settings', href: '/system-settings' }
 		] }
 	];

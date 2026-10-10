@@ -17,7 +17,8 @@ export function GET({ locals }: import('./$types').RequestEvent) {
 			roles: locals.user.roles,
 			capabilities: capabilitiesFor(locals.user),
 			timeZone: locals.user.timeZone,
-			displayLanguage: locals.user.displayLanguage
+			displayLanguage: locals.user.displayLanguage,
+			displayCurrency: locals.user.displayCurrency
 		}
 	});
 }

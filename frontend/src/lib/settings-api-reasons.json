@@ -15,6 +15,7 @@
 	"This field cannot be changed in your profile.": "profileFieldForbidden",
 	"Select a valid time zone.": "timeZoneInvalid",
 	"Select a supported display language.": "languageInvalid",
+	"Select a supported display currency.": "currencyInvalid",
 	"Use at least 12 characters with uppercase, lowercase, and numbers.": "passwordApiRequirements",
 	"Choose a password different from your current password.": "passwordMustDiffer",
 	"The current password is incorrect.": "currentPasswordIncorrect",

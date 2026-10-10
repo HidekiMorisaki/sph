@@ -14,5 +14,9 @@
 	{
 		"key": "server_administrator",
 		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "calendars.read"]
+	},
+	{
+		"key": "branch_administrator",
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "branches.manage", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "calendars.read", "calendars.assign"]
 	}
 ]

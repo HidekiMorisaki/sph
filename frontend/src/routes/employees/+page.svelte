@@ -11,7 +11,10 @@
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import SearchMultiSelect from '$lib/components/SearchMultiSelect.svelte';
+	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
+	import { allBranchesValue, nextBranchSelection, restoreBranchSelection } from '$lib/employee-branch-filter';
 	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
 	import { formatEmployeeName, formatLengthOfService, formatTimestamp, invitationEmailSubject, localization } from '$lib/localization';
 	import { inferPersonNameLocale } from '$lib/person-name';
@@ -24,7 +27,7 @@
 	type ListMeta = { offset: number; limit: number; returned: number; total: number; hasMore: boolean; search: string; calculatedAsOf: string; sort: { field: string; order: 'asc' | 'desc' }; columns?: ExportColumn[] };
 	type ApiListPayload = { status: 'success'; responseCode: number; data: Employee[]; meta: ListMeta };
 
-	const resources = ['departments', 'employee-groups', 'positions', 'employment-types', 'branches'];
+	const resources = ['departments', 'employee-groups', 'positions', 'employment-types'];
 
 	let employeeList = $state<MasterList>();
 	let editing = $state<Employee | null>(null);
@@ -45,12 +48,18 @@
 	let roles = $state<EmployeeRole[]>([]);
 	let canManageAdministration = $state(false);
 	let canManageSystemSettings = $state(false);
+	let canInviteEmployees = $state(false);
+	let canAssignEmployeeRoles = $state(false);
 	let currentUserId = $state<number | null>(null);
 	let canManageEmployees = $derived(canManageAdministration);
 	let exporting = $state(false);
 	let includeRetired = $state(false);
 	let includeDeleted = $state(false);
-	let employeeQueryParams = $derived({ includeRetired, includeDeleted });
+	let branchOptions = $state<EmployeeMaster[]>([]);
+	let branchSelection = $state<string[]>([allBranchesValue]);
+	let branchFilterReady = $state(false);
+	let branchFilterError = $state(false);
+	let employeeQueryParams = $derived({ includeRetired, includeDeleted, ...(branchSelection.includes(allBranchesValue) ? {} : { branchIds: branchSelection.join(',') }) });
 
 	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 	const fullName = (employee: Employee) => formatEmployeeName(employee, $localization);
@@ -65,16 +74,52 @@
 	}
 	async function loadMasters() {
 		const responses = await Promise.all(resources.map((resource) => fetch(`/v1/${resource}?limit=500`)));
-		masters = Object.fromEntries(await Promise.all(responses.map(async (response, index) => [resources[index], response.ok ? await apiData<EmployeeMaster[]>(response) : []])));
+		masters = { ...masters, ...Object.fromEntries(await Promise.all(responses.map(async (response, index) => [resources[index], response.ok ? await apiData<EmployeeMaster[]>(response) : []]))) };
+	}
+	async function loadBranchOptions() {
+		const collected: EmployeeMaster[] = [];
+		let total = 0;
+		do {
+			const response = await fetch(`/v1/employees/branch-options?limit=500&offset=${collected.length}&sortBy=sortOrder&sortOrder=asc`);
+			if (!response.ok) throw new Error('Unable to load branches.');
+			const payload = await response.json() as { data: EmployeeMaster[]; meta: { total: number } };
+			if (!payload.data.length && collected.length < payload.meta.total) throw new Error('Incomplete branch list.');
+			collected.push(...payload.data);
+			total = payload.meta.total;
+		} while (collected.length < total);
+		branchOptions = collected;
+		masters = { ...masters, branches: collected };
 	}
 	async function loadRoleOptions() {
-		const [roleResponse, sessionResponse] = await Promise.all([fetch('/v1/roles?sortBy=name&sortOrder=asc&limit=100'), fetch('/v1/auth/session')]);
+		const [roleResponse, sessionResponse] = await Promise.all([fetch('/v1/employees/assignable-roles'), fetch('/v1/auth/session')]);
 		if (roleResponse.ok) roles = await apiData<EmployeeRole[]>(roleResponse);
 		if (sessionResponse.ok) {
-			const current = (await apiData<{ user: { id: number; capabilities: { canManageEmployees: boolean; canManageSystemSettings: boolean } } }>(sessionResponse)).user;
+			const current = (await apiData<{ user: { id: number; capabilities: { canManageEmployees: boolean; canManageSystemSettings: boolean; canAssignEmployeeRoles: boolean; canInviteEmployees: boolean } } }>(sessionResponse)).user;
 			canManageAdministration = current.capabilities.canManageEmployees;
 			canManageSystemSettings = current.capabilities.canManageSystemSettings;
+			canInviteEmployees = current.capabilities.canInviteEmployees;
+			canAssignEmployeeRoles = current.capabilities.canAssignEmployeeRoles;
 			currentUserId = current.id;
+		} else throw new Error('Unable to load current user.');
+	}
+	async function initialize() {
+		branchFilterError = false;
+		try {
+			await Promise.all([loadMasters(), loadBranchOptions(), loadRoleOptions()]);
+			if (currentUserId === null) throw new Error('Current user unavailable.');
+			const storageKey = `employees-branch-filter:${currentUserId}`;
+			let saved: string | null = null;
+			try { saved = localStorage.getItem(storageKey); } catch { /* Browsing without storage uses all branches. */ }
+			branchSelection = branchOptions.length === 1 ? [String(branchOptions[0].id)] : restoreBranchSelection(saved, branchOptions.map((branch) => String(branch.id)));
+			branchFilterReady = true;
+			try { localStorage.setItem(storageKey, JSON.stringify(branchSelection.filter((value) => value !== allBranchesValue))); } catch { /* The filter still works for this visit. */ }
+		} catch { branchFilterError = true; }
+	}
+	function chooseBranches(values: string[]) {
+		if (branchOptions.length === 1) return;
+		branchSelection = nextBranchSelection(branchSelection, values);
+		if (currentUserId !== null) {
+			try { localStorage.setItem(`employees-branch-filter:${currentUserId}`, JSON.stringify(branchSelection.filter((value) => value !== allBranchesValue))); } catch { /* The filter still works for this visit. */ }
 		}
 	}
 	function create(event: MouseEvent) { if (!canManageEmployees) return; editing = null; formMode = 'create'; formReturnFocus = event.currentTarget as HTMLElement; formOpen = true; }
@@ -96,6 +141,8 @@
 				const current = (await apiData<{ user: SessionUser }>(response)).user;
 				canManageAdministration = current.capabilities.canManageEmployees;
 				canManageSystemSettings = current.capabilities.canManageSystemSettings;
+				canInviteEmployees = current.capabilities.canInviteEmployees;
+				canAssignEmployeeRoles = current.capabilities.canAssignEmployeeRoles;
 				currentUserId = current.id;
 				window.dispatchEvent(new CustomEvent<SessionUser>('session-user-updated', { detail: current }));
 			} catch {
@@ -180,7 +227,7 @@
 		} catch { message = 'exportFailed'; } finally { exporting = false; }
 	}
 	onMount(() => {
-		void Promise.all([loadMasters(), loadRoleOptions()]);
+		void initialize();
 	});
 </script>
 
@@ -190,6 +237,7 @@
 {#snippet positionsCell(item: Employee)}<div class="position-badges">{#each item.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</div>{/snippet}
 {#snippet departmentsCell(item: Employee)}<div class="position-badges">{#each item.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</div>{/snippet}
 {#snippet pageActions()}<AddButton label={text.add} disabled={!canManageEmployees} onclick={create} />{/snippet}
+{#snippet branchFilter()}<div class="employee-branch-filter"><span>{text.branchFilter}</span>{#if branchOptions.length === 1}<SearchSelect label={text.branchFilter} field="employeeBranchFilter" value={String(branchOptions[0].id)} options={[{ value: String(branchOptions[0].id), label: branchOptions[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.branchFilter} field="employeeBranchFilter" values={branchSelection} options={[{ value: allBranchesValue, label: text.allBranches }, ...branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))]} onChange={chooseBranches} />{/if}</div>{/snippet}
 {#snippet exportAction()}<div class="employee-list-actions"><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div><button class="export-button" type="button" disabled={exporting || !canManageEmployees} onclick={() => void exportCsv()}>{exporting ? commonText.exporting : commonText.exportCsv}</button></div>{/snippet}
 {#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
 
@@ -197,7 +245,8 @@
 	<div class="employees-page">
 	<MasterPageHeader title={text.title} actions={pageActions} />
 	{#if message}<StatusNotice message={text[message]} tone={message === 'created' || message === 'updated' || message === 'removed' ? 'success' : 'error'} onDismiss={() => message = ''} />{/if}
-	<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={(item) => (item as Employee).employmentStatus !== 'deleted' && (canManageEmployees || item.id === currentUserId)} canDelete={(item) => canManageEmployees && (item as Employee).employmentStatus !== 'deleted'} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
+		{#if branchFilterError}<StatusNotice message={text.branchFilterLoadFailed} tone="error" onDismiss={() => branchFilterError = false} /><button type="button" class="branch-retry" onclick={() => void initialize()}>{text.retryBranchFilter}</button>{/if}
+		{#if branchFilterReady}<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={(item) => (item as Employee).employmentStatus !== 'deleted' && (canManageEmployees || item.id === currentUserId)} canDelete={(item) => canManageEmployees && (item as Employee).employmentStatus !== 'deleted'} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} toolbarFilters={branchFilter} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
 		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell, searchKeys: ['name', 'employeeCode', 'employmentStatus'] },
 		{ key: 'age', label: text.age, width: 6, value: (item) => (item as Employee).age, searchKeys: ['age'] },
 		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization), searchKeys: ['lengthOfService'] },
@@ -205,19 +254,20 @@
 		{ key: 'group', label: text.groupId, width: 9, value: (item) => (item as Employee).group?.name, searchKeys: ['group'] },
 		{ key: 'position', label: text.positions, width: 12, cell: positionsCell, searchKeys: ['position'] },
 		{ key: 'employmentType', label: text.employmentTypeId, width: 11, value: (item) => (item as Employee).employmentType?.name, searchKeys: ['employmentType'] },
-		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name, searchKeys: ['branch'] },
+		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name },
 		{ key: 'roles', label: text.roles, width: 11, cell: rolesCell, searchKeys: ['roles'] }
-	]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />
+		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />{:else if !branchFilterError}<div class="page-state">{text.loading}</div>{/if}
 	</div>
 
-	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
+	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
 
-	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canManageSystemSettings && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
+	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
 	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
 <style>
 	.employee-cell>div{min-width:0}
+	.employee-branch-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.employee-branch-filter :global(.form-multi-select-field){width:220px}.employee-branch-filter :global(.form-multi-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.employee-branch-filter :global(.form-multi-select-trigger){height:32px}.branch-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
 	.employee-name{display:flex;min-width:0;align-items:center;gap:6px}.employee-status{display:inline-flex;flex:none;align-items:center;min-height:18px;padding:1px 6px;border:1px solid;border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1.2;text-transform:uppercase}.employee-status.retired{background:rgba(243,156,18,.12);color:#c87f0a;border-color:rgba(243,156,18,.3)}.employee-status.deleted{background:rgba(231,76,60,.12);color:#d13b2d;border-color:rgba(231,76,60,.3)}
 	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:600;line-height:1.2}
 	.position-badges{display:flex;flex-wrap:wrap;gap:4px}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;font-size:var(--font-size-support);font-weight:500;line-height:1.2}.position-badges>span.primary{background:rgba(51,122,183,.12);color:#337ab7;border-color:rgba(51,122,183,.28)}
@@ -225,4 +275,5 @@
 	/* Keep the actions visible while the fields scroll. */
 	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
 	.export-button:disabled{cursor:not-allowed;opacity:.5}
+	@media(max-width:700px){.employee-branch-filter,.employee-branch-filter :global(.form-multi-select-field){width:100%}}
 </style>

@@ -7,10 +7,21 @@ installer_template() {
 		'complete.notice') printf '%s' 'Sign in with the username and password you entered. Keep .env secure and back it up separately from the database.' ;;
 		'configuration.failed') printf '%s' 'Setup input or configuration saving failed. Check the preceding message and folder write permissions. An existing .env will not be overwritten.' ;;
 		'configuration.saved') printf '%s' $'Configuration saved. Secrets were not displayed. Keep .env safe and back it up separately from the database.\n' ;;
-		'connection.httpsNotice') printf '%s' 'Sign-in from other PCs requires HTTPS for secure session cookies. Configure a TLS proxy and an HTTPS application URL before use.' ;;
-		'connection.notice') printf '%s' 'Server connection settings can be changed later in .env. HTTPS requires your own TLS reverse proxy.' ;;
+		'connection.acmeAgreement') printf '%s' 'Read the Let'\''s Encrypt Subscriber Agreement at https://letsencrypt.org/repository/. Type YES to agree and continue: ' ;;
+		'connection.acmeEmail') printf '%s' 'Let'\''s Encrypt account contact email' ;;
+		'connection.internalHttpExample') printf '%s' 'Example: {1}. This is only an example; enter this computer'\''s actual private IPv4 address.' ;;
+		'connection.internalHttpNotice') printf '%s' 'All traffic, including passwords, session cookies, and employee and asset data, is unencrypted. Reserve the server'\''s private IPv4 address and allow access only from devices on the local area network. No server certificate is required.' ;;
+		'connection.internalHttpsExample') printf '%s' 'Example: https://sph-server. This is only an example; enter this computer'\''s actual hostname.' ;;
+		'connection.internalTrustNotice') printf '%s' 'The installer exports the public CA root certificate to .runtime/ca/root.crt. An administrator must verify its identity on the server, securely distribute it to each client device, and configure it as trusted.' ;;
+		'connection.ipAddress') printf '%s' 'Select this computer'\''s private IPv4 address' ;;
+		'connection.mode') printf '%s' 'Connection mode' ;;
+		'connection.modeInternal') printf '%s' 'Internal HTTPS' ;;
+		'connection.modeInternalHttp') printf '%s' 'Internal HTTP' ;;
+		'connection.modeLocal') printf '%s' 'Local only' ;;
+		'connection.modePublic') printf '%s' 'Public domain' ;;
+		'connection.notice') printf '%s' 'Choose a connection mode. Local only is available on this PC; internal HTTP sends unencrypted traffic over the local area network; internal HTTPS requires CA root certificate trust on each client. A public domain requires public DNS, inbound TCP 80 and 443, an ACME contact email address, and acceptance of the Let'\''s Encrypt subscriber agreement.' ;;
 		'connection.port') printf '%s' 'Docker host web port' ;;
-		'connection.url') printf '%s' 'Application URL (use the server hostname or IP for other PCs)' ;;
+		'connection.url') printf '%s' 'Application URL' ;;
 		'employment.contract') printf '%s' 'Contract' ;;
 		'employment.employeeCode') printf '%s' 'Employee code (10–64 letters or numbers)' ;;
 		'employment.hireDate') printf '%s' 'Hire date (YYYY-MM-DD)' ;;
@@ -19,19 +30,23 @@ installer_template() {
 		'employment.regular') printf '%s' 'Regular' ;;
 		'employment.temporary') printf '%s' 'Temporary' ;;
 		'employment.type') printf '%s' 'Employment type' ;;
+		'error.acmeDeclined') printf '%s' 'The Let'\''s Encrypt Subscriber Agreement was not accepted. No configuration was saved.' ;;
 		'error.build') printf '%s' 'Service image build failed. The underlying cause could not be determined safely. Check network access, Docker disk space and the complete release files.' ;;
+		'error.caExport') printf '%s' 'The internal CA public certificate could not be exported. Keep the gateway data volume and retry the export. Never distribute the CA private key.' ;;
 		'error.cleanup') printf '%s' 'Could not prepare or replace .env to remove initial setup credentials. Check write permissions and whether .env.install-clean already exists. These files may contain secrets; keep them protected.' ;;
 		'error.compose') printf '%s' 'Docker responded, but docker compose version failed. Install or repair Docker Compose v2 and confirm that docker compose version works in this terminal.' ;;
 		'error.docker') printf '%s' 'Docker failed while checking existing containers or storage. The underlying cause could not be determined safely. Check that Docker is running and that your account can access it.' ;;
 		'error.dockerConnection') printf '%s' 'The docker info command failed: Docker could not be accessed. Check that Docker Desktop or the Docker daemon is running, the Docker context points to the intended server, and your account has access.' ;;
 		'error.dockerRequired') printf '%s' 'The docker command was not found. Install Docker with Docker Compose, then reopen the terminal and start Docker before running this installer.' ;;
 		'error.existingConfiguration') printf '%s' 'An existing .env was found in the installation folder. This installer is for a new installation and cannot overwrite existing configuration. Keep .env and database storage.' ;;
-		'error.existingResources') printf '%s' 'SPH containers or the sph-db-data volume already exist. A new installation was stopped to protect existing data. Keep these resources.' ;;
+		'error.existingResources') printf '%s' 'SPH containers or data volumes already exist. A new installation was stopped to protect existing data. Keep these resources.' ;;
+		'error.gatewayConfig') printf '%s' 'The gateway configuration could not be generated. Keep the saved .env file and check its connection settings before recovery.' ;;
 		'error.health') printf '%s' 'The local API or application did not return the expected response. Check gateway, frontend, API and database service status and the HTTP_PORT setting.' ;;
 		'error.initialCredentials') printf '%s' 'Initial setup credentials still remain in a service. Installation cannot be marked complete. Remove INITIAL_ADMIN_* settings and recreate the affected services; do not delete database storage.' ;;
 		'error.inspectCredentials') printf '%s' 'Could not inspect service configuration to verify removal of initial setup credentials. Installation cannot be marked complete. Check Docker access and database/API service status.' ;;
 		'error.interrupted') printf '%s' 'Installation was interrupted by a signal. Saved configuration and database storage may remain.' ;;
 		'error.migration') printf '%s' 'Could not confirm successful completion of the database migration job. Check the migration service status and database connectivity. Keep .env and database storage.' ;;
+		'error.networkPreflight') printf '%s' 'The public domain did not resolve. Configure public DNS before retrying, and keep the saved .env file for recovery.' ;;
 		'error.permissions') printf '%s' 'Could not secure the permissions of a configuration file. Check folder ownership, write permissions and security software.' ;;
 		'error.pull') printf '%s' 'Could not download the node:22-alpine setup image. The underlying cause could not be determined safely. Check registry connectivity, proxy settings and Docker disk space; retry docker pull node:22-alpine.' ;;
 		'error.refreshApi') printf '%s' 'Could not recreate the API service without initial setup credentials, or it did not become healthy within 300 seconds. Check API and database service status.' ;;
@@ -91,7 +106,7 @@ installer_template() {
 		'title.banner') printf '%s' '     SME Portal Hub — INSTALLATION' ;;
 		'warning.holidayJP') printf '%s' 'The Japanese Cabinet Office holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.holidayUS') printf '%s' 'The U.S. Office of Personnel Management (OPM) federal holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
-		'warning.publicUrl') printf '%s' 'Local startup succeeded. Public URL could not be verified; check DNS, firewall and HTTPS proxy settings.' ;;
+		'warning.publicUrl') printf '%s' 'Local startup succeeded, but the application URL could not be verified from the installer. Check client DNS, firewall and certificate trust settings.' ;;
 		*) return 1 ;;
 	esac
 }

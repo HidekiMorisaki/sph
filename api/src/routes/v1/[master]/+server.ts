@@ -1,4 +1,5 @@
 import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
+import { referenceBranchScope } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, branchSortFields, createMaster, employeeGroupSortFields, isEmployeeMasterResource, listMasters, masterInput, namedMasterSortFields, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
 import { cpuTypeConflictField, cpuTypeSortFields, createItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, listItAssetMasters, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput } from '$lib/server/api/it-asset-masters';
@@ -28,7 +29,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 	}
 	const fields = selected === 'branches' ? branchSortFields : selected === 'employee-groups' ? employeeGroupSortFields : namedMasterSortFields;
 	const query = parseListQuery(url, fields, 'sortOrder');
-	const { items, total } = await listMasters(selected, query, search);
+	const { items, total } = await listMasters(selected, query, search, selected === 'branches' ? referenceBranchScope(locals.user) : null);
 	return success(items, 200, listMeta(query, items.length, total));
 }
 

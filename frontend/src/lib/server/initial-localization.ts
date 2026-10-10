@@ -12,10 +12,11 @@ export async function readInitialLocalization(sessionCookie: string | undefined,
 	const payload = await response.json();
 	const user = payload?.data?.user;
 	if (payload?.status !== 'success' || payload?.responseCode !== 200 || !user ||
-		(user.displayLanguage !== 'en' && user.displayLanguage !== 'ja') || typeof user.timeZone !== 'string') {
+		(user.displayLanguage !== 'en' && user.displayLanguage !== 'ja') ||
+		(user.displayCurrency !== 'JPY' && user.displayCurrency !== 'USD') || typeof user.timeZone !== 'string') {
 		throw new Error('Invalid display settings.');
 	}
 	try { new Intl.DateTimeFormat('en', { timeZone: user.timeZone }); }
 	catch { throw new Error('Invalid display settings.'); }
-	return { timeZone: user.timeZone, displayLanguage: user.displayLanguage };
+	return { timeZone: user.timeZone, displayLanguage: user.displayLanguage, displayCurrency: user.displayCurrency };
 }

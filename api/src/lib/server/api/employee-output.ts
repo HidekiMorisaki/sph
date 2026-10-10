@@ -48,8 +48,8 @@ export const employeeSafeSelect = {
 		orderBy: { id: 'asc' }
 	},
 	roleGrants: {
-		where: { deletedAt: null, scopeType: 'global', role: { deletedAt: null } },
-		select: { role: { select: { id: true, name: true } } }
+		where: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } },
+		select: { role: { select: { id: true, name: true, defaultKey: true } } }
 	}
 } satisfies Prisma.EmployeeSelect;
 
@@ -83,6 +83,6 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 		employmentStatus,
 		canIssueInvitation: accountStatus === 'unprovisioned' && employmentStatus === 'current',
 		...employeeDerivedValues(employee, referenceDate),
-		roles: roleGrants.map((grant) => grant.role).sort((left, right) => left.name.localeCompare(right.name, 'en'))
+		roles: roleGrants.map(({ role }) => ({ id: role.id, name: role.name, isGeneralUser: role.defaultKey === 'general_user' })).sort((left, right) => left.name.localeCompare(right.name, 'en'))
 	};
 }

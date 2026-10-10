@@ -38,6 +38,7 @@ export const init: ClientInit = () => {
 
 		const url = requestUrl(input, response);
 		if (!url || url.origin !== window.location.origin || !url.pathname.startsWith('/v1/') || AUTHENTICATION_FAILURE_ENDPOINTS.has(url.pathname)) return response;
+		if (window.location.pathname === '/account-setup' && url.pathname === '/v1/auth/session') return response;
 		if (await apiErrorCode(response) !== 'AUTHENTICATION_REQUIRED') return response;
 
 		redirecting = true;

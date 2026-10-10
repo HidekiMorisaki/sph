@@ -4,8 +4,12 @@ export type Capabilities = {
 	canManageSystemSettings: boolean;
 	canManageAdministration: boolean;
 	canManageEmployees: boolean;
+	canInviteEmployees: boolean;
+	canAssignEmployeeRoles: boolean;
 	canManageMasters: boolean;
 	canManageBranches: boolean;
+	canCreateBranches: boolean;
+	canDeleteBranches: boolean;
 	canReadCalendars: boolean;
 	canAssignCalendars: boolean;
 	canManageAssets: boolean;

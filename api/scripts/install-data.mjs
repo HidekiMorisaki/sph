@@ -4,6 +4,20 @@ import { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, fetchHolidayData }
 
 export const catalogFor = language => JSON.parse(readFileSync(new URL(`sample-data/${language}.json`, import.meta.url), 'utf8'));
 const defaultRoles = JSON.parse(readFileSync(new URL('../src/lib/server/auth/default-role-permissions.json', import.meta.url), 'utf8'));
+const granularOperations = JSON.parse(readFileSync(new URL('../src/lib/server/auth/granular-operations.json', import.meta.url), 'utf8'));
+const branchScopedCodes = new Set([
+ 'employees.read', 'employees.manage', 'masters.read', 'branches.manage', 'assets.read', 'assets.manage',
+ 'assets.credentials.read', 'assets.credentials.write', 'calendars.read', 'calendars.assign',
+ 'employees.create', 'employees.update', 'employees.delete', 'employees.invite', 'branches.update', 'branches.delete',
+ 'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
+ 'assets.create', 'assets.update', 'assets.delete', 'assets.assign', 'assets.return',
+ 'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
+ 'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
+]);
+const roleCodes = role => [...role.permissionCodes, ...granularOperations.filter(operation =>
+ (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && ['branches.update', 'branches.delete'].includes(operation.code))) &&
+ (Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some(code => role.permissionCodes.includes(code))
+).map(operation => operation.code)];
 const employmentKeys = ['Regular','Contract','Part Time','Temporary'];
 export function employmentName(catalog, key) {
  const index = employmentKeys.indexOf(key);
@@ -22,7 +36,7 @@ export async function initializeRequiredData(client, catalog, input) {
   for (const table of ['permissions','permission_operations','role_permissions']) {
    if ((await client.query(`SELECT count(*)::int AS count FROM ${table}`)).rows[0].count) throw new Error('Incomplete permission configuration; initialization refused.');
   }
-  const operations = [...new Set(defaultRoles.flatMap(role => role.permissionCodes))];
+  const operations = [...new Set(defaultRoles.flatMap(roleCodes))];
   const permissions = new Map();
   for (let i=0;i<operations.length;i++) {
    const id = await insert(client,'permissions',{name:`Operation: ${operations[i]}`}); permissions.set(operations[i], id);
@@ -32,7 +46,7 @@ export async function initializeRequiredData(client, catalog, input) {
   for (let i=0;i<defaultRoles.length;i++) {
    const role = defaultRoles[i];
    const id = await insert(client,'roles',{name:catalog.roles[i],default_key:role.key});
-   for (const code of role.permissionCodes) await insert(client,'role_permissions',{role_id:id,permission_id:permissions.get(code)});
+   for (const code of roleCodes(role)) await insert(client,'role_permissions',{role_id:id,permission_id:permissions.get(code),scope_type:role.key === 'branch_administrator' && branchScopedCodes.has(code) ? 'own_branch' : 'global'});
   }
  }
  const name = employmentName(catalog,input.employmentType);
@@ -117,13 +131,64 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  for (const [position, {index: b}] of branchOrder.entries()) {
   const id = b === 0 ? branchId : await insert(client,'branches',{name:catalog.branches[b]});
   branches[b] = id;
-  await client.query('UPDATE branches SET sort_order=$2, opened_on=$3, city=$4, street_address=$5, building_name=$6, phone_number_1=$7, phone_number_1_label=$8, notes=$9 WHERE id=$1',[id,position+1,date(year-15+b),catalog.branchCities[b],`${b+1} ${catalog.street}`,catalog.building,displayLanguage==='ja' ? `03-0000-${String(b).padStart(4,'0')}` : `+1-202-555-01${String(b).padStart(2,'0')}`,catalog.phoneLabel,note]);
+  await client.query('UPDATE branches SET sort_order=$2, opened_on=$3, city=$4, street_address=$5, building_name=$6, phone_number_1=$7, phone_number_1_label=$8, notes=$9 WHERE id=$1',[id,position+1,date(2000+b),catalog.branchCities[b],`${b+1} ${catalog.street}`,catalog.building,displayLanguage==='ja' ? `03-0000-${String(b).padStart(4,'0')}` : `+1-202-555-01${String(b).padStart(2,'0')}`,catalog.phoneLabel,note]);
   for (const [roomPosition, {index: r}] of roomOrder.entries()) {
    const room = await insert(client,'rooms',{branch_id:id,name:catalog.roomNames[r],sort_order:roomPosition+1,notes:note});
    for (const [storagePosition, {index: s}] of storageOrder.entries()) {
     storages[(b*catalog.roomNames.length+r)*catalog.storageNames.length+s] = {id:await insert(client,'storage',{branch_id:id,room_id:room,name:catalog.storageNames[s],sort_order:storagePosition+1,notes:note}),room,branchName:catalog.branches[b],roomName:catalog.roomNames[r],storageName:catalog.storageNames[s]};
    }
   }
+ }
+ // Financial samples use the install language's currency. A fixed seed keeps
+ // the fictional monthly pattern reproducible while varying profit and loss.
+ await insert(client,'financial_period_settings',{key:'main',basis:'calendar',fiscal_start_month:4});
+ const financialCurrency=displayLanguage==='ja'?'JPY':'USD';
+ const firstFinancialYear=2005,lastFinancialYear=2025;
+ // Fictional rates keep the offline sample usable in both display currencies.
+ // The source explicitly distinguishes them from Bank of Japan observations.
+ for(let financialYear=firstFinancialYear;financialYear<=lastFinancialYear;financialYear++) for(let month=1;month<=12;month++) {
+  await insert(client,'financial_exchange_rates',{
+   month:date(financialYear,month),base_currency:'USD',quote_currency:'JPY',
+   rate:(105+(financialYear-2016)*3+month*0.25).toFixed(8),source:'SAMPLE_DATA'
+  });
+ }
+ for (let b=0;b<branches.length;b++) for (let financialYear=firstFinancialYear;financialYear<=lastFinancialYear;financialYear++) {
+  let seed=(financialYear*1009+(b+1)*9176)>>>0;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/0x100000000;};
+  const shuffledMonths=Array.from({length:12},(_,index)=>index+1);
+  for (let i=shuffledMonths.length-1;i>0;i--) {
+   const j=Math.floor(random()*(i+1));
+   [shuffledMonths[i],shuffledMonths[j]]=[shuffledMonths[j],shuffledMonths[i]];
+  }
+  const lossMonths=new Set(shuffledMonths.slice(0,3+Math.floor(random()*3)));
+  const financialMonths=[];
+  for (let month=1;month<=12;month++) {
+   const base=(financialCurrency==='JPY'?28000000:280000)*(1-b*0.28)*(1+(financialYear-2016)*0.025);
+   const seasonal=1+0.08*Math.sin((month-1)*Math.PI/6);
+   const revenue=Math.round(base*seasonal*(0.85+random()*0.3));
+   const variableCost=Math.round(revenue*(0.34+random()*0.17));
+   const grossProfit=revenue-variableCost;
+   const fixedCost=Math.round(grossProfit*(lossMonths.has(month)?1.08+random()*0.42:0.52+random()*0.32));
+   financialMonths.push({month,revenue,variableCost,fixedCost});
+  }
+  // Rotate annual losses and make every fifth year a loss across all branches,
+  // so both branch and combined trends include deficit years.
+  if((financialYear-firstFinancialYear)%5===0 || b===(financialYear-firstFinancialYear)%branches.length) {
+   const annualGross=financialMonths.reduce((total,row)=>total+row.revenue-row.variableCost,0);
+   const annualProfit=financialMonths.reduce((total,row)=>total+row.revenue-row.variableCost-row.fixedCost,0);
+   const adjustment=Math.max(0,annualProfit+Math.max(1,Math.round(annualGross*0.04)));
+   const lossRows=financialMonths.filter(row=>lossMonths.has(row.month));
+   const perMonth=Math.floor(adjustment/lossRows.length);
+   lossRows.forEach((row,index)=>{row.fixedCost+=perMonth+(index<adjustment%lossRows.length?1:0);});
+  }
+  for(const row of financialMonths) await insert(client,'financial_months',{
+   branch_id:branches[b],month:date(financialYear,row.month),currency:financialCurrency,
+   revenue:row.revenue,variable_cost:row.variableCost,fixed_cost:row.fixedCost
+  });
+  await insert(client,'financial_publications',{
+   branch_id:branches[b],basis:'calendar',fiscal_start_month:4,year:financialYear,
+   published:true,published_at:new Date()
+  });
  }
  const calendar = await insert(client,'work_calendars',{name:catalog.calendar,calendar_year:year,country_code:'JP',description:note});
  const usCalendar = await insert(client,'work_calendars',{name:catalog.calendarUs,calendar_year:year,country_code:'US',description:note});
@@ -141,7 +206,18 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  }
  for (const calendarId of [calendar,usCalendar]) for (let m=1;m<=12;m++) for (let d=1;d<=2;d++) await insert(client,'work_calendar_days',{calendar_id:calendarId,work_date:date(year,m,d),entry_type:d===1?'working_day':'company_holiday',title:d===1?catalog.working:catalog.holiday,note});
  await insert(client,'external_links',{name:catalog.external,url:'https://intranet.example.test',sort_order:1});
- const roles = (await client.query('SELECT id FROM roles ORDER BY id')).rows.map(r=>r.id);
+ const roles = new Map((await client.query('SELECT id, default_key FROM roles WHERE deleted_at IS NULL')).rows.map(role => [role.default_key, role.id]));
+ for (const key of ['system_administrator','server_administrator','business_administrator','branch_administrator','general_user']) {
+  if (!roles.has(key)) throw new Error(`Required sample role is missing: ${key}`);
+ }
+ // The installer administrator is separate from these fictional sample employees.
+ const branchRolePlans = branches.map(() => [
+  'system_administrator',
+  'server_administrator',
+  'business_administrator','business_administrator',
+  'branch_administrator','branch_administrator'
+ ]);
+ const branchEmployeeCounts = branches.map(() => 0);
  const employees = [];
  const history = async (table,subject,action,changes,at=today) => {
   const key = table === 'employee_change_history' ? 'employee_id':'asset_id';
@@ -178,14 +254,10 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
    await insert(client,'employee_departments',{employee_id:id,department_id:masterIds.employment_departments[(group+1)%3],is_primary:false});
    await insert(client,'employee_positions',{employee_id:id,position_id:masterIds.employment_positions[(position+1)%3],is_primary:false});
   }
-  // All 15 nonempty combinations of the four roles are represented; accounts remain unprovisioned.
-  const mask=i%15+1;
-  for (let r=0;r<4;r++) if (mask & 1<<r) await insert(client,'employee_roles',{employee_id:id,role_id:roles[r]});
-  if (i%30===0) {
-   const department = masterIds.employment_departments[group];
-   await insert(client,'employee_roles',{employee_id:id,role_id:roles[2],scope_type:'department',scope_key:`department:${department}`,department_id:department});
-   await insert(client,'employee_roles',{employee_id:id,role_id:roles[2],scope_type:'employee',scope_key:`employee:${id}`,scope_employee_id:id});
-  }
+  // Each branch has one system and server administrator, and two business and branch administrators.
+  const roleKey = branchRolePlans[b][branchEmployeeCounts[b]++] ?? 'general_user';
+  const scope = roleKey === 'branch_administrator' ? 'own_branch' : 'global';
+  await insert(client,'employee_roles',{employee_id:id,role_id:roles.get(roleKey),scope_type:scope,scope_key:scope});
   const socialPlatform = ['threads','bluesky','mastodon'][i%3];
   const socialPath = socialPlatform==='bluesky' ? `/profile/sample${i+1}.example.test` : `/@sample${i+1}`;
   await insert(client,'employee_social_links',{employee_id:id,platform:socialPlatform,url:`https://${socialPlatform}.example.test${socialPath}`});

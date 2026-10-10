@@ -24,6 +24,7 @@
 	"This email address is already in use.": "emailConflict",
 	"This field is required.": "required",
 	"Select at least one role.": "roleRequired",
+	"Select exactly one role.": "roleRequired",
 	"Check the value of this field.": "invalidField",
 	"Enter {1} characters or fewer.": "maximum",
 	"One or more fields are invalid.": "validation",

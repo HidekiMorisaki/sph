@@ -87,7 +87,7 @@
 	"wrongPassword": "The current password is incorrect.",
 	"revealFailed": "Unable to reveal this credential.",
 	"passwordCopied": "Password copied to the clipboard.",
-	"copyFailed": "Unable to copy the password.",
+	"copyFailed": "Unable to copy the password. Select the visible password and copy it manually.",
 	"codeFailed": "Unable to prepare a management code.",
 	"codeRequired": "Enter a management code.",
 	"typeRequired": "Select a type.",

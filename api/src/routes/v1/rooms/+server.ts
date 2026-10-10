@@ -1,4 +1,5 @@
-import { requireMasterManagementApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { referenceBranchScope, requireLocationManagementApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
 import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
@@ -19,15 +20,16 @@ function input(value: unknown) {
 	return name && name.length <= 128 && branchId > 0 && (!notes || notes.length <= 5000) && (sortOrder === undefined || Number.isSafeInteger(sortOrder) && sortOrder >= 0) ? { name, branchId, notes, ...(sortOrder === undefined ? {} : { sortOrder }) } : null;
 }
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.masterRead); const query = parseListQuery(url, sortFields, 'sortOrder');
+	const branchId = referenceBranchScope(locals.user); const query = parseListQuery(url, sortFields, 'sortOrder');
 	const search = parseSearch(url);
-	const where: Prisma.RoomWhereInput = { deletedAt: null, ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }, { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }] } : {}) };
+	const where: Prisma.RoomWhereInput = { deletedAt: null, ...(branchId === null ? {} : { branchId }), ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { notes: { contains: search, mode: 'insensitive' } }, { branch: { is: { name: { contains: search, mode: 'insensitive' }, deletedAt: null } } }] } : {}) };
 	const orderBy = [query.sortBy === 'branch' ? { branch: { name: query.sortOrder } } : { [query.sortBy]: query.sortOrder }, { id: 'asc' as const }] as Prisma.RoomOrderByWithRelationInput[];
 	const [total, items] = await getPrisma().$transaction([getPrisma().room.count({ where }), getPrisma().room.findMany({ where, include: { branch: true, _count: { select: { storage: { where: { deletedAt: null } } } } }, orderBy, skip: query.offset, take: query.limit })]);
 	const data = items.map(({ _count, ...item }) => ({ ...item, usageCount: _count.storage }));
 	return success(data, 200, listMeta(query, data.length, total));
 }
 export async function POST({ locals, request }: import('./$types').RequestEvent) {
-	const actor = requireMasterManagementApi(locals.user); const data = input(await request.json().catch(() => null)); if (!data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
+	const { actor, branchId } = requireLocationManagementApi(locals.user); const data = input(await request.json().catch(() => null)); if (!data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
+	if (branchId !== null && data.branchId !== branchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try { const item = await getPrisma().$transaction(async tx => { if (!await tx.branch.count({ where: { id: data.branchId, deletedAt: null } })) throw new Error(); const created = await tx.room.create({ data }); await writeAuditLog(tx, actor.id, 'create', 'room', created.id); await recordMasterChange(tx, 'room', created.id, actor.id, 'create', null, await readMasterSnapshot(tx, 'room', created.id)); return created; }); return success(item, 201); } catch (error) { const field=duplicateField(error);return field?failure(409,'DUPLICATE_VALUE','This value already exists.',[{field,reason:'DUPLICATE_VALUE'}]):failure(400, 'INVALID_REQUEST', 'Invalid request.'); }
 }

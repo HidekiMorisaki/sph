@@ -26,14 +26,19 @@ The system includes:
 - Branch, room, and storage-location management
 - IT asset records, assignments, returns, and change history
 - Master data for employees and IT assets
-- Dashboards and user settings
+- Employee analytics and published business performance trends, plus user settings
+- Administrator-only financial figures by branch and year
+
+Financial figures use the [Bank of Japan Time-Series Data Search](https://www.stat-search.boj.or.jp/index_en.html) API (FXERM07) for USD/JPY conversion. Monthly rates are stored in the database and are not automatically revised. If you install SPH and make it publicly available, review the [Bank of Japan API usage notice](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf) and provide the required service notification before publication. The financial page displays the data source.
+Optional installer samples include published financial periods and clearly marked
+fictional exchange rates so the trends can be explored without a live API request.
 
 ## Quick Start for Users
 
 ### 1. Prerequisites
 
 Git, Docker, and Docker Compose are required for installation. Install them beforehand and confirm that they work correctly.
-The web interface uses port `3000` (changeable in the installer), and the database uses port `5432`. Confirm that these ports are not already used by other software.
+Local-only installation uses host port `3000` by default (changeable in the installer). HTTPS installation uses ports `80` and `443`; internal HTTP uses the selected web port. PostgreSQL listens on the host's loopback port `5432`. Confirm that the needed ports are free.
 
 ### 2. Download
 
@@ -53,35 +58,24 @@ The installer supports English and Japanese. After selecting the display languag
 
 > [!NOTE]
 > At the "Optional fictional sample data" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
-> The sample Work calendars also attempt to import the current year's Japanese Cabinet Office and U.S. OPM holidays. If either source is unavailable, the other samples are still installed. After signing in, select **Refresh holidays** on the affected Work calendar.
 
 ## Installing on a server or another PC
 
 Run the download and installer steps on the machine that will host the system.
-When prompted for connection settings:
+Choose a connection mode in the installer:
 
-- **Docker host web port**: select an unused port on the server, such as `3000` or `8080`.
-- **Application URL**: enter the URL that users will open, such as `https://portal.example.internal`. Use a hostname or IP reachable from their PCs; `localhost` refers to each user's own PC.
+| Mode | URL and certificate | Network and trust requirements |
+| --- | --- | --- |
+| Local only | `http://localhost:3000` by default | Available only from the PC where SPH is installed. The web port binds only to that PC's loopback interface. |
+| Internal HTTP | `http://` followed by the server's private IPv4 address and optional web port | Allow access only from devices on the local area network. All traffic, including passwords, session cookies, and employee and asset data, is unencrypted, but no server certificate is required. |
+| Internal HTTPS | Your internal `https://` hostname, with a certificate issued and renewed by the built-in Caddy CA | Allow access only from devices on the local area network. Client devices must be able to reach TCP `443` on the server. An administrator must securely distribute the exported CA root certificate to each client and configure it as trusted. |
+| Public domain | Your `https://` domain, with a Let's Encrypt certificate obtained and renewed automatically by the built-in gateway | Point public DNS to this server and make TCP `80` and `443` reachable from the internet. During installation, you must enter an ACME contact email address and accept the Let's Encrypt subscriber agreement. |
 
-Allow the selected web port through the server firewall and configure DNS if using
-a hostname. Users then open the configured application URL in their browsers.
-Database port `5432` does not need to be accessible from user PCs.
+For the internal HTTPS mode, the installer exports the public CA root certificate to `.runtime/ca/root.crt`. Verify the certificate's identity on the server before distributing it to client devices through your organization's certificate management process. The CA private key is stored in Docker's `gateway_data` volume. Include the `gateway_data` volume in backups: losing it changes the CA and invalidates existing trust. Certificates are renewed automatically while the CA data persists.
 
-Sign-in from other PCs requires HTTPS because session cookies are marked Secure.
-Configure a TLS reverse proxy separately and enter its public URL,
-such as `https://portal.example.com`. The Docker host web port remains the proxy's
-backend destination. The installer does not provision certificates or a TLS proxy.
-If the public URL check reports a warning, finish the DNS, firewall, and proxy
-configuration, then verify access from a user PC.
+For the public mode, verify DNS and firewall access before installation. Certificate issuance requires an internet-reachable domain and ports `80`/`443`; the installer checks DNS and waits for the HTTPS health endpoint. If it stops, inspect `docker compose logs gateway`, correct DNS/firewall reachability, and resume with the recovery instructions below. The ACME provider's [subscriber agreement](https://letsencrypt.org/repository/) applies.
 
-For use on the installation PC, `http://localhost:<port>` supports account
-invitations and asset credential access. An invitation link created at this
-address can only be opened on that same PC. To invite someone on another PC,
-open the system through its HTTPS application URL before creating the link.
-
-Connection settings are saved as `APP_ORIGIN` and `HTTP_PORT` in `.env`.
-If changing them later, update `CORS_ALLOWED_ORIGINS` to the same application URL
-and run `docker compose up -d --no-build --no-deps api frontend gateway` to apply the changes.
+Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUBLISH`, `GATEWAY_HTTPS_PUBLISH`, `APP_ORIGIN`, `HTTP_PORT`, and `CORS_ALLOWED_ORIGINS` (plus `ACME_EMAIL` for a public domain). After changing them, regenerate `.runtime/gateway/Caddyfile` with `node scripts/install-maintenance.mjs gateway-config`, then run `docker compose up -d --build --no-deps api frontend gateway`. Do not edit the generated Caddyfile independently of `.env`.
 
 ## Quick Start troubleshooting
 
@@ -96,10 +90,9 @@ operation or detected condition, and the next checks to make. Docker's raw outpu
 is suppressed because it can contain credentials. When the underlying cause is
 unknown, the message says so; suggested checks are not a diagnosis.
 
-If a new installation failed after saving `.env`, retain that file and database
-storage. Resolve the prerequisite or startup problem, then run
+If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run
 `docker compose up -d --build --wait --wait-timeout 300` from the product repository
-root and check service status below. If no configuration or SPH storage was
+root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was
 created, rerun the installer. Never generate a replacement encryption key for
 encrypted data. Keep `.env` protected and back it up separately from the database.
 
@@ -132,7 +125,7 @@ docker compose logs migration
 docker compose logs api frontend gateway db
 ```
 
-Verify the API through the gateway (replace the example port if changed):
+Verify the API through the gateway. For local mode, replace the example port if changed:
 
 ```bash
 curl http://localhost:3000/v1/health
@@ -145,6 +138,7 @@ Invoke-RestMethod http://localhost:3000/v1/health
 ```
 
 A successful response reports that the `equipment-api` service is healthy.
+For HTTPS modes, use the configured `https://` application URL instead. In internal mode, first trust `.runtime/ca/root.crt` on the checking device.
 
 ### The web page does not open
 
@@ -175,7 +169,7 @@ docker compose up -d --build
 
 ### A port is already in use
 
-The default Compose configuration binds the gateway to host port `3000` and PostgreSQL to host port `5432`. Select another web port in the installer. For an existing installation, change `HTTP_PORT` and the application URL settings in `.env`. Database port mappings can be changed in `docker-compose.yml`.
+Local mode binds the gateway to host loopback port `3000` by default; HTTPS modes bind ports `80` and `443`; internal HTTP binds the selected port on the server's private IPv4 address. PostgreSQL binds only to host loopback port `5432`. Free the required ports before installation. For an existing local installation, change `HTTP_PORT`, `GATEWAY_HTTP_PUBLISH`, `APP_ORIGIN`, and `CORS_ALLOWED_ORIGINS` together, then regenerate the gateway configuration as described above.
 
 ### Bind mounts do not work
 
@@ -218,6 +212,8 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 ## Upgrading to the latest version
 
 To update an installed system, run the command for your operating system from the repository root. The update script stops services, creates and verifies a backup, then pulls source changes and restarts the system. Make sure the Git working tree is clean and the branch has an upstream remote.
+
+### Updating from v0.3.0 or later
 
 Windows PowerShell:
 

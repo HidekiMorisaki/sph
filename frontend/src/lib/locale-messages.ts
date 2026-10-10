@@ -10,6 +10,8 @@ export type FeatureCatalogs = {
 	masters: typeof import('./locales/en/masters.json');
 	analytics: typeof import('./locales/en/analytics.json');
 	assets: typeof import('./locales/en/assets.json');
+	financial: typeof import('./locales/en/financial.json');
+	financialTrends: typeof import('./locales/en/financialTrends.json');
 	employees: typeof import('./locales/en/employees.json');
 	employeeForm: typeof import('./locales/en/employeeForm.json');
 	login: typeof import('./locales/en/login.json');
@@ -31,8 +33,10 @@ export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/mypage') return ['myPage'];
 	if (path === '/employees') return ['employees', 'employeeForm'];
 	if (path === '/work-calendars') return ['workCalendars'];
-	if (path === '/system-settings') return ['systemSettings', 'systemReleases'];
+	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial'];
 	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
+	if (path === '/business-overview') return ['systemSettings', 'financial'];
+	if (path === '/financial-trends') return ['financialTrends'];
 	if (path === '/settings') return ['settings'];
 	if (path === '/locations') return ['masters', 'employees'];
 	if (path.startsWith('/employee-masters/') || path === '/it-asset-masters') return ['masters'];
@@ -59,7 +63,7 @@ export async function loadLocaleNamespaces(language: MessageLanguage, namespaces
 export function isLocaleLoaded(language: MessageLanguage, namespace: LocaleNamespace): boolean { return cache.has(`${language}/${namespace}`); }
 function catalog(language: MessageLanguage, core: typeof enCore, common: typeof enCommon, navigation: typeof enNavigation): Catalog {
 	const result = { ...core, common, navigation };
-	for (const namespace of ['masters', 'analytics', 'assets', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
+	for (const namespace of ['masters', 'analytics', 'assets', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
 		Object.defineProperty(result, namespace, { enumerable: true, get() {
 			const value = cache.get(`${language}/${namespace}`);
 			if (!value) throw new Error(`Locale namespace not loaded: ${language}/${namespace}`);

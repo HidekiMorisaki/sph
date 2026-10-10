@@ -1,4 +1,5 @@
-import { requireAssetCredentialWriteApi, requireAssetWriteApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { applyCredentialChanges, parseCredentialChanges } from '$lib/server/api/it-asset-credentials';
 import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
@@ -28,7 +29,7 @@ function assetOrderBy(field: SortField, direction: 'asc' | 'desc'): Prisma.ItAss
 	}
 }
 const filterId = (url: URL, key: string) => { const raw = url.searchParams.get(key); return raw && /^\d+$/.test(raw) ? Number(raw) : undefined; };
-async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: string, keys: string[], sortBy: SortField, sortOrder: 'asc' | 'desc', offset: number, limit: number) {
+async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: string, keys: string[], sortBy: SortField, sortOrder: 'asc' | 'desc', offset: number, limit: number, branchScope: number | null) {
 	const pattern = containsPattern(search);
 	const fields: Record<(typeof visibleSearchKeys)[number], Prisma.Sql> = {
 		assetTag: Prisma.sql`asset.asset_tag ILIKE ${pattern}`,
@@ -45,6 +46,7 @@ async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: 
 		status: Prisma.sql`status.name ILIKE ${pattern}`
 	};
 	const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`, Prisma.sql`(${Prisma.join(keys.map((key) => fields[key as keyof typeof fields]), ' OR ')})`];
+	if (branchScope !== null) conditions.push(Prisma.sql`location.branch_id = ${branchScope}`);
 	for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
 		const value = filterId(url, field);
 		if (value) conditions.push(Prisma.sql`${column} = ${value}`);
@@ -82,12 +84,13 @@ async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: 
 	return [count[0]?.total ?? 0, ids.flatMap((id) => byId.has(id) ? [byId.get(id)!] : [])] as const;
 }
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.assetRead); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
+	const { branchId: branchScope } = requireScopedOperationApi(locals.user, permissionOperations.assetRead); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
 	const visibleSearch = parseVisibleSearch(url, visibleSearchKeys);
 	if (visibleSearch && search && search.length > 200) throwApiError(422, 'INVALID_SEARCH', 'q must be 200 characters or fewer for visible list search.', [{ field: 'q', reason: 'TOO_LONG' }]);
 	const contains = search ? { contains: search, mode: 'insensitive' as const } : undefined;
 	const where: Prisma.ItAssetWhereInput = {
 		deletedAt: null,
+		...assetBranchWhere(branchScope),
 		...(filterId(url, 'typeId') ? { typeId: filterId(url, 'typeId') } : {}),
 		...(filterId(url, 'manufacturerId') ? { manufacturerId: filterId(url, 'manufacturerId') } : {}),
 		...(filterId(url, 'statusId') ? { statusId: filterId(url, 'statusId') } : {}),
@@ -103,10 +106,11 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	};
 	const prisma = getPrisma();
 	const [total, items] = await prisma.$transaction(async tx => {
-		if (visibleSearch && search) return visibleAssetPage(tx, url, search, visibleSearch.keys, query.sortBy, query.sortOrder, query.offset, query.limit);
+		if (visibleSearch && search) return visibleAssetPage(tx, url, search, visibleSearch.keys, query.sortBy, query.sortOrder, query.offset, query.limit, branchScope);
 		const total = await tx.itAsset.count({ where });
 		if (query.sortBy !== 'user') return [total, await tx.itAsset.findMany({ where, include: itAssetInclude, orderBy: assetOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit })] as const;
 		const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`];
+		if (branchScope !== null) conditions.push(Prisma.sql`location.branch_id = ${branchScope}`);
 		for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
 			const value = filterId(url, field);
 			if (value) conditions.push(Prisma.sql`${column} = ${value}`);
@@ -151,15 +155,16 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	return success(items.map(itAssetOutput), 200, listMeta(query, items.length, total));
 }
 export async function POST({ locals, request }: import('./$types').RequestEvent) {
-	const actor = requireAssetWriteApi(locals.user);
+	const { actor, branchId: branchScope } = requireScopedOperationApi(locals.user, permissionOperations.assetManagement);
 	const body = await request.json().catch(() => null);
 	const parsed = parseItAssetInput(body);
 	const credentialInput = parseCredentialChanges(body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).credentials : undefined);
-	if (Object.keys(credentialInput.changes).length) requireAssetCredentialWriteApi(locals.user);
+	if (Object.keys(credentialInput.changes).length) requireScopedOperationApi(locals.user, permissionOperations.assetCredentialWrite);
 	const data = parsed.data;
 	if (!data || credentialInput.details.length) return failure(400, 'VALIDATION_ERROR', 'Invalid IT asset input.', [...parsed.details, ...credentialInput.details]);
 	try {
 		const item = await getPrisma().$transaction(async tx => {
+			if (branchScope !== null && (!await tx.storage.count({ where: { id: data.storageId, branchId: branchScope, deletedAt: null } }) || typeof parsed.assigneeId === 'number' && !await tx.employee.count({ where: { id: parsed.assigneeId, branchId: branchScope, deletedAt: null } }))) return null;
 			const details = await itAssetReferenceErrors(tx, data);
 			if (details.length) throw new ItAssetValidationError(details);
 			const assetTag = await resolveManagementCode(tx, data.typeId, parsed.assetTag);
@@ -172,7 +177,7 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 			await writeAuditLog(tx, actor.id, 'create', 'it_asset', created.id);
 			return tx.itAsset.findUniqueOrThrow({ where: { id: created.id }, include: itAssetInclude });
 		}, { isolationLevel: 'ReadCommitted' });
-		return success(itAssetOutput(item), 201);
+		return item ? success(itAssetOutput(item), 201) : failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	} catch (error) {
 		const response = itAssetErrorResponse(error);
 		if (response) return response;

@@ -1,4 +1,5 @@
-import { requireAdminApi, requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { writeAuditLog } from '$lib/server/api/admin';
+import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
@@ -13,10 +14,10 @@ import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) {
-	requireOperationApi(locals.user, permissionOperations.employeeRead);
+	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
-	const item = await getPrisma().employee.findFirst({ where: { id, deletedAt: null }, select: employeeSafeSelect });
+	const item = await getPrisma().employee.findFirst({ where: { id, deletedAt: null, ...(branchId === null ? {} : { branchId }) }, select: employeeSafeSelect });
 	if (!item) return failure(404, 'NOT_FOUND', 'Not found.');
 	const response = success(employeeOutput(item));
 	response.headers.set('Cache-Control', 'no-store');
@@ -24,19 +25,26 @@ export async function GET({ params, locals }: import('./$types').RequestEvent) {
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user); const id = parseId(params.id);
+	const { actor, branchId: writerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeManagement); const id = parseId(params.id);
 	const parsed = parseEmployeeInput(await request.json().catch(() => null));
 	if (!id) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;
+	if (writerBranchId !== null && input.employee.branchId !== writerBranchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {
 			const referenceErrors = await employeeReferenceErrors(tx, { ...input.employee, departmentIds: input.departmentIds, primaryDepartmentId: input.primaryDepartmentId, positionIds: input.positionIds });
 			if (referenceErrors.length) return { status: 'invalid_reference' as const, errors: referenceErrors };
-			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null }, select: { email: true } });
+			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { email: true } });
 			if (!previous) return { status: 'not_found' as const };
+			if (writerBranchId !== null && await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: permissionOperations.systemManagement, deletedAt: null } } } } } } } })) return { status: 'system_role_forbidden' as const };
 			const before = await readEmployeeFields(tx, id);
-			const roleResult = await syncGlobalRoleGrants(tx, actor, id, input.roleIds);
+			let roleResult: Awaited<ReturnType<typeof syncGlobalRoleGrants>> = 'updated';
+			if (writerBranchId === null) roleResult = await syncGlobalRoleGrants(tx, actor, id, input.roleIds);
+			else {
+				const current = await tx.employeeRole.findMany({ where: { employeeId: id, deletedAt: null, scopeType: { in: ['global', 'own_branch'] } }, select: { roleId: true } });
+				if (current.length !== input.roleIds.length || current.some(({ roleId }) => !input.roleIds.includes(roleId))) roleResult = 'system_role_forbidden';
+			}
 			if (roleResult !== 'updated') return { status: roleResult };
 			await tx.employee.update({ where: { id }, data: input.employee });
 			await syncEmployeeDepartments(tx, id, input.departmentIds, input.primaryDepartmentId);
@@ -58,11 +66,12 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
-	const actor = requireAdminApi(locals.user); const id = parseId(params.id);
+	const { actor, branchId: writerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeManagement); const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async (tx) => {
-		if (!await tx.employee.count({ where: { id, deletedAt: null } })) return 'not_found';
+		if (!await tx.employee.count({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) } })) return 'not_found';
 		const targetIsSystemAdmin = await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } } } });
+		if (writerBranchId !== null && targetIsSystemAdmin) return 'system_role_forbidden';
 		if (targetIsSystemAdmin) {
 			const otherSystemAdmins = await tx.employeeRole.count({ where: { employeeId: { not: id }, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } }, employee: { accountStatus: 'active', deletedAt: null } } });
 			if (!otherSystemAdmins) return 'last_admin';
@@ -75,7 +84,7 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 		if (references[1] > 0) return 'branch_responsibility';
 		const before = await readEmployeeFields(tx, id);
 		const deletedAt = new Date();
-		const changed = await tx.employee.updateMany({ where: { id, deletedAt: null }, data: { deletedAt } });
+		const changed = await tx.employee.updateMany({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, data: { deletedAt } });
 		if (!changed.count) return 'not_found';
 		await tx.employeeRole.updateMany({
 			where: { deletedAt: null, OR: [{ employeeId: id }, { scopeEmployeeId: id }] },
@@ -92,5 +101,6 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 	if (result === 'referenced') return failure(409, 'RESOURCE_IN_USE', 'The employee has an active assignment.');
 	if (result === 'branch_responsibility') return failure(409, 'RESOURCE_IN_USE', 'The employee is assigned as a branch manager or deputy manager.');
 	if (result === 'last_admin') return failure(409, 'LAST_SYSTEM_ADMINISTRATOR', 'The last system administrator cannot be deleted.');
+	if (result === 'system_role_forbidden') return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'System administrator accounts cannot be changed by a branch administrator.');
 	return result === 'deleted' ? success({ id, deleted: true }) : failure(404, 'NOT_FOUND', 'Not found.');
 }

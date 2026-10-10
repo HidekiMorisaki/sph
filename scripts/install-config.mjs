@@ -1,11 +1,28 @@
 import { randomBytes } from 'node:crypto';
+import { isIP } from 'node:net';
 import { installerText } from './install-i18n.mjs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
+import { gatewaySettings } from './gateway-config.mjs';
 
 const initialDefaults = JSON.parse(readFileSync(new URL('install-defaults.json', import.meta.url), 'utf8'));
+
+export function hostUrlDefaults({ ipv4Addresses = '', hostname = '' } = {}) {
+	const addresses = [...new Set(String(ipv4Addresses).split(/[\s,]+/).filter(address => {
+		if (isIP(address) !== 4) return false;
+		try { gatewaySettings('internal-http', `http://${address}`); return true; } catch { return false; }
+	}))].sort((a, b) => {
+		const left = a.split('.').map(Number), right = b.split('.').map(Number);
+		for (let index = 0; index < 4; index++) if (left[index] !== right[index]) return left[index] - right[index];
+		return 0;
+	});
+	const name = String(hostname).trim().toLowerCase();
+	let internalHttps = '';
+	try { gatewaySettings('internal', `https://${name}`); internalHttps = `https://${name}`; } catch { /* Manual URL entry remains available. */ }
+	return { addresses, internalHttps };
+}
 
 export function validDate(value) {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -32,9 +49,10 @@ export function envValue(value) {
 	return /^[A-Za-z0-9_-]+$/.test(value) ? value : `'${value.replaceAll("'", "\\'")}'`;
 }
 
-export async function configuration(language, ask, say) {
+export async function configuration(language, ask, say, hostDetails = {}) {
 	if (!Object.hasOwn(initialDefaults, language)) throw new Error('Unsupported language.');
 	const defaults = initialDefaults[language];
+	const hostDefaults = hostUrlDefaults(hostDetails);
 	const text = installerText(language);
 	const input = async (key, fallback, valid) => {
 		while (true) {
@@ -58,10 +76,57 @@ export async function configuration(language, ask, say) {
 		INITIAL_ADMIN_DISPLAY_LANGUAGE: language
 	};
 	say(text('connection.notice'));
-	values.HTTP_PORT = await input('connection.port', '3000', value => /^\d{1,5}$/.test(value) && Number(value) >= 1 && Number(value) <= 65535);
-	values.APP_ORIGIN = publicOrigin(await input('connection.url', `http://localhost:${values.HTTP_PORT}`, value => publicOrigin(value) !== null));
-	if (values.APP_ORIGIN.startsWith('http:') && !['localhost', '127.0.0.1', '[::1]'].includes(new URL(values.APP_ORIGIN).hostname)) {
-		say(text('connection.httpsNotice'));
+	values.GATEWAY_TLS_MODE = await select('connection.mode', [
+		{ value: 'local', label: 'connection.modeLocal' },
+		{ value: 'internal-http', label: 'connection.modeInternalHttp' },
+		{ value: 'internal', label: 'connection.modeInternal' },
+		{ value: 'public', label: 'connection.modePublic' }
+	]);
+	if (values.GATEWAY_TLS_MODE === 'local') {
+		values.HTTP_PORT = await input('connection.port', '3000', value => /^\d{1,5}$/.test(value) && Number(value) >= 1 && Number(value) <= 65535);
+		values.APP_ORIGIN = await input('connection.url', `http://localhost${values.HTTP_PORT === '80' ? '' : ':' + values.HTTP_PORT}`, value => {
+			try { gatewaySettings('local', value); return (new URL(value).port || '80') === values.HTTP_PORT; } catch { return false; }
+		});
+		values.GATEWAY_HTTP_PUBLISH = `127.0.0.1:${values.HTTP_PORT}:80`;
+		values.GATEWAY_HTTPS_PUBLISH = '127.0.0.1::443';
+	} else if (values.GATEWAY_TLS_MODE === 'internal-http') {
+		values.HTTP_PORT = await input('connection.port', '80', value => /^\d{1,5}$/.test(value) && Number(value) >= 1 && Number(value) <= 65535);
+		let address = hostDefaults.addresses[0];
+		if (hostDefaults.addresses.length > 1) {
+			say(text('prompt.selection', text('connection.ipAddress')));
+			hostDefaults.addresses.forEach((candidate, index) => say(text('prompt.option', index + 1, candidate)));
+			while (true) {
+				const answer = (await ask(text('prompt.selection', text('input.selectNumber')))).trim();
+				if (/^[1-9]\d*$/.test(answer) && Number(answer) <= hostDefaults.addresses.length) {
+					address = hostDefaults.addresses[Number(answer) - 1];
+					break;
+				}
+				say(text('input.invalid'));
+			}
+		}
+		const suggested = address ? `http://${address}${values.HTTP_PORT === '80' ? '' : ':' + values.HTTP_PORT}` : '';
+		if (!suggested) say(text('connection.internalHttpExample', values.HTTP_PORT === '80' ? 'http://192.168.1.10' : `http://192.168.1.10:${values.HTTP_PORT}`));
+		values.APP_ORIGIN = await input('connection.url', suggested, value => {
+			try { gatewaySettings('internal-http', value); return (new URL(value).port || '80') === values.HTTP_PORT; } catch { return false; }
+		});
+		values.GATEWAY_HTTP_PUBLISH = `${new URL(values.APP_ORIGIN).hostname}:${values.HTTP_PORT}:80`;
+		values.GATEWAY_HTTPS_PUBLISH = '127.0.0.1::443';
+		say(text('connection.internalHttpNotice'));
+	} else {
+		values.HTTP_PORT = '80';
+		const suggested = values.GATEWAY_TLS_MODE === 'internal' ? hostDefaults.internalHttps : '';
+		if (values.GATEWAY_TLS_MODE === 'internal' && !suggested) say(text('connection.internalHttpsExample'));
+		values.APP_ORIGIN = await input('connection.url', suggested, value => {
+			try { gatewaySettings(values.GATEWAY_TLS_MODE, value, 'admin@example.com'); return true; } catch { return false; }
+		});
+		values.GATEWAY_HTTP_PUBLISH = '80:80';
+		values.GATEWAY_HTTPS_PUBLISH = '443:443';
+		if (values.GATEWAY_TLS_MODE === 'public') {
+			values.ACME_EMAIL = await input('connection.acmeEmail', '', value => {
+				try { gatewaySettings('public', values.APP_ORIGIN, value); return true; } catch { return false; }
+			});
+			if ((await ask(text('connection.acmeAgreement'))).trim() !== 'YES') throw new Error('error.acmeDeclined');
+		} else say(text('connection.internalTrustNotice'));
 	}
 	values.CORS_ALLOWED_ORIGINS = values.APP_ORIGIN;
 	values.INITIAL_ADMIN_USERNAME = await input('account.username', 'admin', limited(64));
@@ -122,7 +187,10 @@ async function main() {
 			hidden = secret;
 			try { return await terminal.question(secret ? '' : accent(prompt)); }
 			finally { hidden = false; if (secret) process.stdout.write('\n'); }
-		}, message => process.stdout.write(accent(message) + '\n'));
+		}, message => process.stdout.write(accent(message) + '\n'), {
+			ipv4Addresses: process.env.SPH_INSTALL_HOST_IPV4,
+			hostname: process.env.SPH_INSTALL_HOSTNAME
+		});
 		process.umask(0o077);
 		try {
 			writeFileSync('.env', Object.entries(values).map(([key, value]) => `${key}=${envValue(value)}`).join('\n') + '\n', { flag: 'wx', mode: 0o600 });
@@ -136,7 +204,7 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	main().catch(error => {
 		// Native Docker stderr is suppressed by the launcher. Show only allowlisted messages on stdout.
-		const key = ['error.existingConfiguration', 'error.terminal', 'error.saveConfiguration'].includes(error.message) ? error.message : 'configuration.failed';
+		const key = ['error.existingConfiguration', 'error.terminal', 'error.saveConfiguration', 'error.acmeDeclined'].includes(error.message) ? error.message : 'configuration.failed';
 		try { console.log(installerText(process.argv[2])(key)); }
 		catch { console.log('Installer language files are missing or invalid. Extract the complete release again before running the installer.'); }
 		process.exitCode = 1;

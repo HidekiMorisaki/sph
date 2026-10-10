@@ -9,6 +9,7 @@
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { socialLinkPlatforms, type EmployeeProfile, type EmployeeSocialLink, type SocialLinkPlatform } from '$lib/employees';
+	import type { FinancialCurrency } from '$lib/financial-currency';
 	import { localization as appliedLocalization, applyLocalization, DEFAULT_LOCALIZATION, displayLanguageOptions, genderOptions, personNameFields, type DisplayLanguage, type LocalizationSettings } from '$lib/localization';
 
 	import { localeMessages } from '$lib/locale-messages';
@@ -24,6 +25,7 @@
 	const settingsSections: SettingsSection[] = ['profile', 'social-links', 'localization', 'password'];
 	const bloodTypes = ['A', 'B', 'AB', 'O'].map((value) => ({ value, label: value }));
 	const languageOptions = displayLanguageOptions();
+	const currencyOptions = [{ value: 'JPY', label: 'JPY' }, { value: 'USD', label: 'USD' }];
 	const fallbackTimeZones = ['Asia/Tokyo', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Paris'];
 	const supportedValuesOf = (Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }).supportedValuesOf;
 	const timeZoneOptions = (supportedValuesOf?.('timeZone') ?? fallbackTimeZones).map((value) => ({ value, label: value.replaceAll('_', ' '), searchTerms: [value] }));
@@ -252,9 +254,9 @@
 								{#if profileMessage}<StatusNotice message={fieldError(profileMessage)} tone={profileMessage === 'profileSaved' ? 'success' : 'error'} onDismiss={() => profileMessage = ''} />{/if}
 								<FormSection title={text.basic} framed columns={2}>
 									{#each nameFields as field (field)}
-										<label><span>{text[field]} {#if field !== 'middleName'}<i>*</i>{/if}</span><input name={field} value={profile[field] ?? ''} maxlength="128" aria-invalid={!!profileErrors[field]} aria-describedby={profileErrors[field] ? `${field}-error` : undefined} oninput={(event) => updateProfile(field, event.currentTarget.value)} />{#if profileErrors[field]}<small id={`${field}-error`}>{fieldError(profileErrors[field])}</small>{/if}</label>
+										<label><span>{text[field]} {#if field !== 'middleName'}<i>*</i>{/if}</span><input name={field} value={profile[field] ?? ''} maxlength="128" placeholder={text[`${field}Example`]} aria-invalid={!!profileErrors[field]} aria-describedby={profileErrors[field] ? `${field}-error` : undefined} oninput={(event) => updateProfile(field, event.currentTarget.value)} />{#if profileErrors[field]}<small id={`${field}-error`}>{fieldError(profileErrors[field])}</small>{/if}</label>
 									{/each}
-									<label><span>{text.nameKana}</span><input name="nameKana" value={profile.nameKana ?? ''} maxlength="255" aria-invalid={!!profileErrors.nameKana} aria-describedby={profileErrors.nameKana ? 'nameKana-error' : undefined} oninput={(event) => updateProfile('nameKana', event.currentTarget.value)} />{#if profileErrors.nameKana}<small id="nameKana-error">{fieldError(profileErrors.nameKana)}</small>{/if}</label>
+									<label><span>{text.nameKana}</span><input name="nameKana" value={profile.nameKana ?? ''} maxlength="255" placeholder={text.nameKanaExample} aria-invalid={!!profileErrors.nameKana} aria-describedby={profileErrors.nameKana ? 'nameKana-error' : undefined} oninput={(event) => updateProfile('nameKana', event.currentTarget.value)} />{#if profileErrors.nameKana}<small id="nameKana-error">{fieldError(profileErrors.nameKana)}</small>{/if}</label>
 									<DatePicker label={text.birthDate} field="birthDate" value={profile.birthDate} required error={profileErrors.birthDate ? fieldError(profileErrors.birthDate) : ''} open={birthDateOpen} onToggle={() => birthDateOpen = !birthDateOpen} onSelect={(value) => { updateProfile('birthDate', value); birthDateOpen = false; }} />
 									<SearchSelect label={text.gender} field="gender" value={profile.gender} options={genders} required error={profileErrors.gender ? fieldError(profileErrors.gender) : ''} onSelect={(value) => updateProfile('gender', value)} />
 									<SearchSelect label={text.bloodType} field="bloodType" value={profile.bloodType ?? ''} options={[{ value: '', label: '-' }, ...bloodTypes]} error={profileErrors.bloodType ? fieldError(profileErrors.bloodType) : ''} onSelect={(value) => updateProfile('bloodType', value)} />
@@ -289,6 +291,7 @@
 							{#if localizationMessage}<StatusNotice message={fieldError(localizationMessage)} tone={localizationMessage === 'localizationSaved' ? 'success' : 'error'} onDismiss={() => localizationMessage = ''} />{/if}
 							<SearchSelect label={text.timeZone} field="timeZone" value={localization.timeZone} options={timeZoneOptions} required error={localizationErrors.timeZone ? fieldError(localizationErrors.timeZone) : ''} onSelect={(value) => { localization.timeZone = value; localizationMessage = ''; }} />
 							<SearchSelect label={text.displayLanguage} field="displayLanguage" value={localization.displayLanguage} options={languageOptions} required error={localizationErrors.displayLanguage ? fieldError(localizationErrors.displayLanguage) : ''} onSelect={(value) => { localization.displayLanguage = value as DisplayLanguage; localizationMessage = ''; }} />
+							<SearchSelect label={text.displayCurrency} field="displayCurrency" value={localization.displayCurrency} options={currencyOptions} searchable={false} required error={localizationErrors.displayCurrency ? fieldError(localizationErrors.displayCurrency) : ''} onSelect={(value) => { localization.displayCurrency = value as FinancialCurrency; localizationMessage = ''; }} />
 						</div><footer><button class="app-primary-action" type="submit" disabled={localizationSaving}>{localizationSaving ? text.saving : text.saveLocalization}</button></footer></form>
 					</section>
 

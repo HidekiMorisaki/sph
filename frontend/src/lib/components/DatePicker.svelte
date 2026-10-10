@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { calendarText, formatDate, formatMonthYear, localization, weekdayLabels } from '$lib/localization';
 
 	let { label, field, value, above = false, required = false, disabled = false, error = '', open = false, mode = 'date', min = '', max = '', align = 'start', helpText = '', helpLabel = '', onToggle, onSelect }: {
 		label: string; field: string; value: string; above?: boolean; required?: boolean; disabled?: boolean;
-		error?: string; open?: boolean; mode?: 'date' | 'month'; min?: string; max?: string; align?: 'start' | 'end'; helpText?: string; helpLabel?: string; onToggle: () => void; onSelect: (value: string) => void;
+		error?: string; open?: boolean; mode?: 'date' | 'month' | 'year'; min?: string; max?: string; align?: 'start' | 'end'; helpText?: string; helpLabel?: string; onToggle: () => void; onSelect: (value: string) => void;
 	} = $props();
 
 	const dateIso = (date: Date) => `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -14,10 +14,10 @@
 		date.setFullYear(year, month, day);
 		return date;
 	}
-	let year = $state(new Date().getFullYear());
+	let year = $state(untrack(() => Number(value.slice(0, 4)) || new Date().getFullYear()));
 	let month = $state(new Date().getMonth());
-	let choosingYear = $state(false);
-	let yearPage = $state(0);
+	let choosingYear = $state(untrack(() => mode === 'year' && open));
+	let yearPage = $state(untrack(() => Math.floor(year / 12) * 12));
 	let yearOptions = $derived(Array.from({ length: 12 }, (_, index) => yearPage + index));
 	let trigger: HTMLButtonElement;
 	let panel = $state<HTMLDivElement>();
@@ -30,7 +30,7 @@
 		if (open) onToggle();
 		helpOpen = !helpOpen;
 	}
-	let placeholder = $derived(mode === 'month' ? 'yyyy-mm' : 'yyyy-mm-dd');
+	let placeholder = $derived(mode === 'year' ? 'yyyy' : mode === 'month' ? 'yyyy-mm' : 'yyyy-mm-dd');
 	let months = $derived.by(() => Array.from({ length: 12 }, (_, index) => ({
 		iso: `${String(year).padStart(4, '0')}-${String(index + 1).padStart(2, '0')}`,
 		label: new Intl.DateTimeFormat($localization.displayLanguage, { month: 'short' }).format(new Date(2000, index, 1)),
@@ -65,10 +65,11 @@
 	function toggle() {
 		const opening = !open;
 		if (!open) {
-			const date = value ? new Date(`${value}${mode === 'month' ? '-01' : ''}T00:00:00`) : new Date();
+			const date = value ? new Date(`${value}${mode === 'year' ? '-01-01' : mode === 'month' ? '-01' : ''}T00:00:00`) : new Date();
 			year = date.getFullYear();
 			month = date.getMonth();
-			choosingYear = false;
+			yearPage = Math.floor(year / 12) * 12;
+			choosingYear = mode === 'year';
 		}
 		onToggle();
 		if (opening) void tick().then(() => { panel?.showPopover(); positionPanel(); panel?.querySelector<HTMLButtonElement>('button[aria-pressed="true"], .year-title')?.focus(); });
@@ -87,6 +88,7 @@
 		yearPage = Math.max(0, Math.min(9996, yearPage + offset * 12));
 	}
 	function selectYear(selected: number) {
+		if (mode === 'year') { selectDate(String(selected)); return; }
 		year = selected;
 		choosingYear = false;
 		void tick().then(() => panel?.querySelector<HTMLButtonElement>('.year-title')?.focus());
@@ -157,8 +159,8 @@
 		<div bind:this={panel} id={`${field}-calendar`} class="calendar-panel" popover="manual" style={panelStyle} role="dialog" aria-label={`${label} ${text.calendar}`}>
 			{#if choosingYear}
 				<div class="year-head"><button type="button" aria-label={text.previousYears} disabled={yearPage <= 0} onclick={() => moveYearPage(-1)}>‹</button><strong>{yearPage}–{Math.min(yearPage + 11, 9999)}</strong><button type="button" aria-label={text.nextYears} disabled={yearPage + 12 > 9999} onclick={() => moveYearPage(1)}>›</button></div>
-				<div class="year-grid">{#each yearOptions as option (option)}<button type="button" disabled={option < 1 || option > 9999} class:selected={option === year} aria-current={option === year ? 'date' : undefined} onclick={() => selectYear(option)}>{option}</button>{/each}</div>
-				<button class="back-month" type="button" onclick={() => choosingYear = false}>{text.backToCalendar}</button>
+				<div class="year-grid">{#each yearOptions as option (option)}<button type="button" disabled={option < 1 || option > 9999 || (mode === 'year' && !allowed(String(option)))} class:selected={option === year} aria-current={option === year ? 'date' : undefined} onclick={() => selectYear(option)}>{option}</button>{/each}</div>
+				{#if mode !== 'year'}<button class="back-month" type="button" onclick={() => choosingYear = false}>{text.backToCalendar}</button>{/if}
 			{:else if mode === 'month'}
 				<div class="year-head"><button type="button" aria-label={text.previousYear} disabled={year <= 1} onclick={() => year -= 1}>‹</button><button class="year-title" type="button" aria-label={text.chooseYearLabel(year)} onclick={showYears}>{year}</button><button type="button" aria-label={text.nextYear} disabled={year >= 9999} onclick={() => year += 1}>›</button></div>
 				<div class="year-grid month-grid">{#each months as option (option.iso)}<button type="button" disabled={!allowed(option.iso)} class:selected={option.iso === value} aria-label={option.fullLabel} aria-pressed={option.iso === value} onclick={() => selectDate(option.iso)}>{option.label}</button>{/each}</div>
