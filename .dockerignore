@@ -3,7 +3,6 @@
 .env.install-clean
 TEMP
 docs
-frontend
 gateway
 db
 **/node_modules

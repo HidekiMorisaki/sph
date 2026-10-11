@@ -7,9 +7,8 @@ name: sph-blitz
 services:
   frontend:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
-      target: production
     environment:
       API_INTERNAL_ORIGIN: http://v1:3000
     expose:

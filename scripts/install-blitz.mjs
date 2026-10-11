@@ -244,12 +244,15 @@ async function main() {
     const nightlyField = ['autoUpdate', 'automaticUpdates', 'nightlyUpdates', 'autoUpdates'].find(name => Object.hasOwn(updateProps, name));
     if (nightlyField) await client.call('apps_update', { app, [nightlyField]: false });
     else process.stdout.write('Turn off nightly updates in the app Settings page before using it.\n');
-    const database = `sph-${address}`;
-    const databases = await client.call('dbs_list', {});
-    if (!databases.includes(database)) await client.call('dbs_create', { engine: 'postgresql', name: database });
-    const connectArgs = { app };
-    connectArgs[client.field('dbs_connect', ['database', 'db', 'databaseName', 'dbId', 'databaseId'])] = database;
-    await client.call('dbs_connect', connectArgs);
+    const existingSettings = await client.call('env_list', { app });
+    if (!existingSettings.includes('DATABASE_URL')) {
+      const database = `sph-${address}`;
+      const databases = await client.call('dbs_list', {});
+      if (!databases.includes(database)) await client.call('dbs_create', { engine: 'postgresql', name: database });
+      const connectArgs = { app };
+      connectArgs[client.field('dbs_connect', ['database', 'db', 'databaseName', 'dbId', 'databaseId'])] = database;
+      await client.call('dbs_connect', connectArgs);
+    }
     await client.call('env_set', { app, name: 'ORIGIN', value: origin }, true);
     const settings = await client.call('env_list', { app });
     if (!settings.includes('IT_ASSET_CREDENTIAL_ENCRYPTION_KEY')) {
