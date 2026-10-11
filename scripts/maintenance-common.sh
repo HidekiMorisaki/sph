@@ -9,7 +9,7 @@ SPH_INCOMPLETE_BACKUP=""
 SPH_CREATED_BACKUP=""
 
 sph_compose() {
-	docker compose -f "$SPH_REPOSITORY_ROOT/docker-compose.yml" "$@"
+	docker compose -f "$SPH_REPOSITORY_ROOT/docker-compose.local.yml" "$@"
 }
 
 sph_cleanup() {

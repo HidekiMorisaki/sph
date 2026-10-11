@@ -77,9 +77,9 @@ This option runs SPH and PostgreSQL on the blitz.cloud free plan, without Docker
    node scripts/install-blitz.mjs
    ```
 
-5. Enter your blitz.cloud account name (the part before `.blitz.cloud`), an app subdomain, the API key, and an initial administrator profile when prompted. The installer creates the app and managed PostgreSQL database, runs the first migration, and prints the HTTPS address. Sign in there and confirm that `/v1/health` responds successfully.
+5. Enter the API key, confirm the suggested blitz.cloud account name (or enter it if the service does not return one), then accept or change the `sph` app subdomain. The installer verifies the deployment's three parts before requesting administrator details. Accept the profile defaults with Enter or edit them. Choose a strong password and enter it twice; the API key and password have no defaults. After the build, the installer checks `/v1/health`, session, administrator sign-in, and sign-out before it removes the initial administrator settings and prints the HTTPS address.
 
-If installation stops, inspect **Overview / Activity / Logs / Settings → Parts** for the app in blitz.cloud. Check GitHub access, free-plan capacity, database connection, the `frontend` path `/`, the `v1` path `/v1`, and the `migration` pre-deploy step. Correct the issue and rerun the same command; the existing database and encryption key are preserved. After a successful retry, verify that the installer removed the initial administrator settings. You may revoke the API key in AI tools if you do not plan to use it again.
+If installation stops, inspect **Overview / Activity / Logs / Settings → Parts** for the app in blitz.cloud. Check GitHub access, free-plan capacity, database connection, the `frontend` path `/`, the `v1` path `/v1`, and the `migration` pre-deploy step. The installer stops before sending administrator credentials if the MCP deployment selected only one part or cannot confirm all three. Correct the issue and rerun the same command; the existing database and encryption key are preserved. After a successful retry, verify that the installer removed the initial administrator settings. You may revoke the API key in AI tools if you do not plan to use it again.
 
 ## Installing on a server or another PC
 
@@ -95,9 +95,9 @@ Choose a connection mode in the installer:
 
 For the internal HTTPS mode, the installer exports the public CA root certificate to `.runtime/ca/root.crt`. Verify the certificate's identity on the server before distributing it to client devices through your organization's certificate management process. The CA private key is stored in Docker's `gateway_data` volume. Include the `gateway_data` volume in backups: losing it changes the CA and invalidates existing trust. Certificates are renewed automatically while the CA data persists.
 
-For the public mode, verify DNS and firewall access before installation. Certificate issuance requires an internet-reachable domain and ports `80`/`443`; the installer checks DNS and waits for the HTTPS health endpoint. If it stops, inspect `docker compose -f docker-compose.yml logs gateway`, correct DNS/firewall reachability, and resume with the recovery instructions below. The ACME provider's [subscriber agreement](https://letsencrypt.org/repository/) applies.
+For the public mode, verify DNS and firewall access before installation. Certificate issuance requires an internet-reachable domain and ports `80`/`443`; the installer checks DNS and waits for the HTTPS health endpoint. If it stops, inspect `docker compose -f docker-compose.local.yml logs gateway`, correct DNS/firewall reachability, and resume with the recovery instructions below. The ACME provider's [subscriber agreement](https://letsencrypt.org/repository/) applies.
 
-Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUBLISH`, `GATEWAY_HTTPS_PUBLISH`, `APP_ORIGIN`, `HTTP_PORT`, and `CORS_ALLOWED_ORIGINS` (plus `ACME_EMAIL` for a public domain). After changing them, regenerate `.runtime/gateway/Caddyfile` with `node scripts/install-maintenance.mjs gateway-config`, then run `docker compose -f docker-compose.yml up -d --build --no-deps api frontend gateway`. Do not edit the generated Caddyfile independently of `.env`.
+Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUBLISH`, `GATEWAY_HTTPS_PUBLISH`, `APP_ORIGIN`, `HTTP_PORT`, and `CORS_ALLOWED_ORIGINS` (plus `ACME_EMAIL` for a public domain). After changing them, regenerate `.runtime/gateway/Caddyfile` with `node scripts/install-maintenance.mjs gateway-config`, then run `docker compose -f docker-compose.local.yml up -d --build --no-deps api frontend gateway`. Do not edit the generated Caddyfile independently of `.env`.
 
 ## Quick Start troubleshooting
 
@@ -113,7 +113,7 @@ is suppressed because it can contain credentials. When the underlying cause is
 unknown, the message says so; suggested checks are not a diagnosis.
 
 If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run
-`docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 300` from the product repository
+`docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` from the product repository
 root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was
 created, rerun the installer. Never generate a replacement encryption key for
 encrypted data. Keep `.env` protected and back it up separately from the database.
@@ -121,8 +121,8 @@ encrypted data. Keep `.env` protected and back it up separately from the databas
 After recovering startup, finish the removal of initial setup credentials. Remove
 only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and
 encryption key. Recreate `db` and `api` with
-`docker compose -f docker-compose.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
-then remove the completed migration container with `docker compose -f docker-compose.yml rm -f migration`
+`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
+then remove the completed migration container with `docker compose -f docker-compose.local.yml rm -f migration`
 and verify the application responses below. If `.env.install-clean` remains,
 keep it protected until recovery is complete, then securely remove this temporary
 file. It may contain credentials.
@@ -132,7 +132,7 @@ file. It may contain credentials.
 Show all containers, including the one-time migration container:
 
 ```bash
-docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.local.yml ps -a
 ```
 
 The expected state is:
@@ -143,8 +143,8 @@ The expected state is:
 If startup is still in progress or a service failed, inspect the logs:
 
 ```bash
-docker compose -f docker-compose.yml logs migration
-docker compose -f docker-compose.yml logs api frontend gateway db
+docker compose -f docker-compose.local.yml logs migration
+docker compose -f docker-compose.local.yml logs api frontend gateway db
 ```
 
 Verify the API through the gateway. For local mode, replace the example port if changed:
@@ -167,8 +167,8 @@ For HTTPS modes, use the configured `https://` application URL instead. In inter
 Check that all long-running services are running and healthy:
 
 ```bash
-docker compose -f docker-compose.yml ps -a
-docker compose -f docker-compose.yml logs gateway frontend api
+docker compose -f docker-compose.local.yml ps -a
+docker compose -f docker-compose.local.yml logs gateway frontend api
 ```
 
 Also confirm that the selected web port is not already used by another application.
@@ -178,7 +178,7 @@ Also confirm that the selected web port is not already used by another applicati
 Review its logs:
 
 ```bash
-docker compose -f docker-compose.yml logs migration
+docker compose -f docker-compose.local.yml logs migration
 ```
 
 Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial password that does not meet the strength requirements, or employment type and branch names that do not match the initial master data.
@@ -186,7 +186,7 @@ Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial pa
 After correcting `.env`, rerun:
 
 ```bash
-docker compose -f docker-compose.yml up -d --build
+docker compose -f docker-compose.local.yml up -d --build
 ```
 
 ### A port is already in use
@@ -202,34 +202,34 @@ Some Docker environments cannot reliably bind-mount projects stored on removable
 View service status:
 
 ```bash
-docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.local.yml ps -a
 ```
 
 Follow logs:
 
 ```bash
-docker compose -f docker-compose.yml logs -f
+docker compose -f docker-compose.local.yml logs -f
 ```
 
 Restart the application:
 
 ```bash
-docker compose -f docker-compose.yml restart
+docker compose -f docker-compose.local.yml restart
 ```
 
 Stop and remove the containers while preserving database data:
 
 ```bash
-docker compose -f docker-compose.yml down
+docker compose -f docker-compose.local.yml down
 ```
 
 Start the existing installation again:
 
 ```bash
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.local.yml up -d
 ```
 
-Database data is stored in the named Docker volume `sph-db-data` and is retained by `docker compose -f docker-compose.yml down`. Do not add the `--volumes` option unless permanent data removal is intentional and a suitable backup exists.
+Database data is stored in the named Docker volume `sph-db-data` and is retained by `docker compose -f docker-compose.local.yml down`. Do not add the `--volumes` option unless permanent data removal is intentional and a suitable backup exists.
 
 ## Upgrading to the latest version
 

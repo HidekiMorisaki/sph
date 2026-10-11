@@ -1,4 +1,4 @@
-﻿# Windows PowerShell 5.1 or later. No host Node.js installation is required.
+# Windows PowerShell 5.1 or later. No host Node.js installation is required.
 param([switch]$WaitAtExit)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -87,7 +87,7 @@ function Invoke-InstallerMaintenance([string]$Operation) {
 	Invoke-DockerCaptured -CommandArguments @('run', '--rm', '--add-host', 'host.docker.internal:host-gateway', '--mount', "type=bind,source=$PSScriptRoot,target=/workspace", '--workdir', '/workspace', 'node:22-alpine', 'node', 'scripts/install-maintenance.mjs', $Operation)
 }
 $savedEnvironment = @{}
-$compose = @('compose', '-f', 'docker-compose.yml', '--env-file', '.env', '-p', 'sph')
+$compose = @('compose', '-f', 'docker-compose.local.yml', '--env-file', '.env', '-p', 'sph')
 Push-Location $PSScriptRoot
 try {
 	Write-InstallerLine "`n  ================================================" Cyan

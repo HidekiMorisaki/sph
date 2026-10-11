@@ -94,7 +94,7 @@ if printf '%s\n' "$volumes" | grep -Eq '^sph-(db-data|gateway-data|gateway-confi
 fi
 unset APP_ORIGIN HTTP_PORT GATEWAY_TLS_MODE GATEWAY_HTTP_PUBLISH GATEWAY_HTTPS_PUBLISH ACME_EMAIL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_HOST POSTGRES_PORT CORS_ALLOWED_ORIGINS IT_ASSET_CREDENTIAL_ENCRYPTION_KEY
 for key in ${!INITIAL_ADMIN_@}; do unset "$key"; done
-compose=(docker compose -f docker-compose.yml --env-file .env -p sph)
+compose=(docker compose -f docker-compose.local.yml --env-file .env -p sph)
 maintenance=(docker run --rm --add-host host.docker.internal:host-gateway --user "$(id -u):$(id -g)" --mount "type=bind,source=$PWD,target=/workspace" --workdir /workspace node:22-alpine node scripts/install-maintenance.mjs)
 complete_step
 begin_step 'stage.setup'

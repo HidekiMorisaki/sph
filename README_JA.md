@@ -79,9 +79,9 @@ cd sph
    node scripts/install-blitz.mjs
    ```
 
-5. 画面の案内に従い、blitz.cloudのアカウント名（`.blitz.cloud`より前）、アプリのサブドメイン、APIキー、初期管理者の情報を入力します。インストーラーはアプリと管理PostgreSQLを作成し、初回マイグレーションを実行します。完了後に表示されるHTTPS URLでログインし、`/v1/health`が正常に応答することを確認してください。
+5. APIキーを入力し、表示されたblitz.cloudのアカウント名を確認します（取得できない場合は入力します）。アプリのサブドメインはEnterで`sph`を選べます。インストーラーは3つのパートを確認してから初期管理者情報を尋ねます。プロフィールはEnterで既定値を選べます。APIキーとパスワードには既定値がなく、パスワードは確認入力も必要です。ビルド後に`/v1/health`、セッション、管理者ログイン、ログアウトを確認し、初期管理者設定を削除してHTTPS URLを表示します。
 
-途中で止まった場合は、blitz.cloudのアプリ画面の**Overview / Activity / Logs / Settings → Parts**で失敗箇所を確認します。GitHub連携、無料枠の残量、DB接続、`frontend`のパス`/`、`v1`のパス`/v1`、事前実行の`migration`を確認し、原因を修正してから同じコマンドを再実行してください。既存のDBと暗号化キーは保持します。初期管理者が作成された後、インストーラーは初期設定用の環境変数を削除します。失敗時にこれらが残っている場合は、正常に再開した後で削除されたことを確認してください。APIキーを再利用する予定がなければ、AI toolsで失効させられます。
+途中で止まった場合は、blitz.cloudのアプリ画面の**Overview / Activity / Logs / Settings → Parts**で失敗箇所を確認します。GitHub連携、無料枠の残量、DB接続、`frontend`のパス`/`、`v1`のパス`/v1`、事前実行の`migration`を確認してください。MCPによる公開が単一パートになった場合や3つの構成を確認できない場合、インストーラーは管理者情報を送る前に停止します。原因を修正してから同じコマンドを再実行してください。既存のDBと暗号化キーは保持します。正常に再開した後で初期設定用の環境変数が削除されたことを確認してください。APIキーを再利用する予定がなければ、AI toolsで失効させられます。
 
 <a id="installing-on-a-server-or-another-pc"></a>
 
@@ -98,9 +98,9 @@ cd sph
 
 社内 HTTPS 方式では、公開 CA ルート証明書を `.runtime/ca/root.crt` ファイルへ出力します。サーバー上で証明書の同一性を確認してから、組織の証明書管理手順に沿って利用端末へ配布してください。CA 秘密鍵は Docker の `gateway_data` ボリュームに保存されています。`gateway_data` ボリュームはバックアップに含めてください。失うと CA が変わり、既存の信頼設定が無効になります。CA データが保持されている間は証明書が自動更新されます。
 
-公開ドメイン方式では、インストール前に DNS とファイアウォールを確認してください。証明書の取得には、インターネットから到達可能なドメインとポート`80`/`443`が必要です。インストーラーは DNS を確認し、HTTPS のヘルスチェックを待ちます。停止した場合は`docker compose -f docker-compose.yml logs gateway`を確認し、到達性を修正してから下記の復旧手順を実施してください。[Let's Encrypt の利用規約](https://letsencrypt.org/repository/)が適用されます。
+公開ドメイン方式では、インストール前に DNS とファイアウォールを確認してください。証明書の取得には、インターネットから到達可能なドメインとポート`80`/`443`が必要です。インストーラーは DNS を確認し、HTTPS のヘルスチェックを待ちます。停止した場合は`docker compose -f docker-compose.local.yml logs gateway`を確認し、到達性を修正してから下記の復旧手順を実施してください。[Let's Encrypt の利用規約](https://letsencrypt.org/repository/)が適用されます。
 
-接続設定は`.env`の`GATEWAY_TLS_MODE`、`GATEWAY_HTTP_PUBLISH`、`GATEWAY_HTTPS_PUBLISH`、`APP_ORIGIN`、`HTTP_PORT`、`CORS_ALLOWED_ORIGINS`（公開ドメインでは`ACME_EMAIL`も）に保存されます。変更した場合は`node scripts/install-maintenance.mjs gateway-config`で`.runtime/gateway/Caddyfile`を再生成し、`docker compose -f docker-compose.yml up -d --build --no-deps api frontend gateway`を実行します。生成された Caddyfile だけを独立して編集しないでください。
+接続設定は`.env`の`GATEWAY_TLS_MODE`、`GATEWAY_HTTP_PUBLISH`、`GATEWAY_HTTPS_PUBLISH`、`APP_ORIGIN`、`HTTP_PORT`、`CORS_ALLOWED_ORIGINS`（公開ドメインでは`ACME_EMAIL`も）に保存されます。変更した場合は`node scripts/install-maintenance.mjs gateway-config`で`.runtime/gateway/Caddyfile`を再生成し、`docker compose -f docker-compose.local.yml up -d --build --no-deps api frontend gateway`を実行します。生成された Caddyfile だけを独立して編集しないでください。
 
 <a id="quick-start-troubleshooting"></a>
 
@@ -112,16 +112,16 @@ cd sph
 
 インストールに失敗した場合は、停止した工程、失敗した操作または検出した状態、次に確認する事項を表示します。Docker の出力には認証情報が含まれる可能性があるため、そのまま表示することはありません。詳細な原因が不明な場合は、その旨を明示します。表示する確認事項は、原因を断定したものではありません。
 
-新規インストールが`.env`の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data`ボリュームを保持してください。事前条件や起動時の問題を解消してから、製品リポジトリのルートで`docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 300`を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に`node scripts/install-maintenance.mjs gateway-config`で再生成します。社内限定方式では`docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env`は安全に保管し、データベースとは別にバックアップしてください。
+新規インストールが`.env`の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data`ボリュームを保持してください。事前条件や起動時の問題を解消してから、製品リポジトリのルートで`docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300`を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に`node scripts/install-maintenance.mjs gateway-config`で再生成します。社内限定方式では`docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env`は安全に保管し、データベースとは別にバックアップしてください。
 
-起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env`から`INITIAL_ADMIN_*`の行だけを削除します。`docker compose -f docker-compose.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`で`db`と`api`を再作成し、`docker compose -f docker-compose.yml rm -f migration`で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean`が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
+起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env`から`INITIAL_ADMIN_*`の行だけを削除します。`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`で`db`と`api`を再作成し、`docker compose -f docker-compose.local.yml rm -f migration`で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean`が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
 
 ### インストール結果の確認
 
 一度だけ実行される migration コンテナーも含め、すべてのコンテナーを表示します。
 
 ```bash
-docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.local.yml ps -a
 ```
 
 次の状態になっていることを確認してください。
@@ -132,8 +132,8 @@ docker compose -f docker-compose.yml ps -a
 起動処理がまだ続いている場合やサービスが失敗した場合は、ログを確認します。
 
 ```bash
-docker compose -f docker-compose.yml logs migration
-docker compose -f docker-compose.yml logs api frontend gateway db
+docker compose -f docker-compose.local.yml logs migration
+docker compose -f docker-compose.local.yml logs api frontend gateway db
 ```
 
 gateway 経由で API を確認します（ポートを変更した場合は、例のポート番号を置き換えてください）。
@@ -155,8 +155,8 @@ Invoke-RestMethod http://localhost:3000/v1/health
 常時稼働するサービスがすべて起動し、正常な状態であることを確認してください。
 
 ```bash
-docker compose -f docker-compose.yml ps -a
-docker compose -f docker-compose.yml logs gateway frontend api
+docker compose -f docker-compose.local.yml ps -a
+docker compose -f docker-compose.local.yml logs gateway frontend api
 ```
 
 選択した Web ポートが、他のアプリケーションで使用されていないことも確認してください。
@@ -166,7 +166,7 @@ docker compose -f docker-compose.yml logs gateway frontend api
 ログを確認してください。
 
 ```bash
-docker compose -f docker-compose.yml logs migration
+docker compose -f docker-compose.local.yml logs migration
 ```
 
 よくある原因には、`INITIAL_ADMIN_*`の値の不足・不正、強度要件を満たさない初期パスワード、初期マスターデータと一致しない雇用形態名や拠点名があります。
@@ -174,7 +174,7 @@ docker compose -f docker-compose.yml logs migration
 `.env`を修正してから、次のコマンドを再実行してください。
 
 ```bash
-docker compose -f docker-compose.yml up -d --build
+docker compose -f docker-compose.local.yml up -d --build
 ```
 
 ### ポートが既に使用されている場合
@@ -192,34 +192,34 @@ Docker の環境によっては、リムーバブルドライブ上のプロジ�
 サービスの状態を表示します。
 
 ```bash
-docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.local.yml ps -a
 ```
 
 ログを継続して表示します。
 
 ```bash
-docker compose -f docker-compose.yml logs -f
+docker compose -f docker-compose.local.yml logs -f
 ```
 
 アプリケーションを再起動します。
 
 ```bash
-docker compose -f docker-compose.yml restart
+docker compose -f docker-compose.local.yml restart
 ```
 
 データベースのデータを保持したまま、コンテナーを停止・削除します。
 
 ```bash
-docker compose -f docker-compose.yml down
+docker compose -f docker-compose.local.yml down
 ```
 
 インストール済みの環境を再度起動します。
 
 ```bash
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.local.yml up -d
 ```
 
-データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose -f docker-compose.yml down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
+データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose -f docker-compose.local.yml down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
 
 <a id="upgrading-to-the-latest-version"></a>
 
