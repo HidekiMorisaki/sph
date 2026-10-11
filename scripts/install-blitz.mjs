@@ -119,8 +119,10 @@ export function partConfiguration(details) {
   let data;
   try { data = JSON.parse(details); } catch { return null; }
   const app = data?.result || data;
-  const candidates = [app?.parts, app?.services, app?.app?.parts, app?.app?.services, app?.deployment?.parts];
-  const parts = candidates.find(Array.isArray);
+  const explicit = [app?.parts, app?.app?.parts, app?.deployment?.parts].find(Array.isArray);
+  const services = [app?.services, app?.app?.services].find(items => Array.isArray(items) && items.some(part =>
+    ['frontend', 'v1', 'migration'].includes(part?.name || part?.service || part?.id)));
+  const parts = explicit || services;
   if (!parts) return null;
   const byName = new Map(parts.map(part => [part.name || part.service || part.id, part]));
   const frontend = byName.get('frontend');
@@ -132,10 +134,41 @@ export function partConfiguration(details) {
   return Boolean(enabled(frontend) && enabled(api) && enabled(migration) && route(frontend) === '/' && route(api) === '/v1' && predeploy(migration));
 }
 
-async function verifyParts(client, app) {
+function partDiagnostic(details) {
+  let data;
+  try { data = JSON.parse(details); } catch {
+    return {
+      format: 'text',
+      markers: Object.fromEntries(['frontend', 'v1', '/v1', 'migration', 'before', 'parts'].map(word => [word, details.includes(word)]))
+    };
+  }
+  const app = data?.result || data;
+  const candidates = [app?.parts, app?.services, app?.app?.parts, app?.app?.services, app?.deployment?.parts];
+  return {
+    format: 'json',
+    arrays: candidates.map((parts, index) => ({
+      location: index,
+      count: Array.isArray(parts) ? parts.length : null,
+      entries: Array.isArray(parts) ? parts.map(part => ({
+        name: ['frontend', 'v1', 'migration'].includes(part?.name || part?.service) ? part.name || part.service : 'other',
+        path: ['/', '/v1', '/api'].includes(part?.path || part?.route || part?.publicPath) ? part.path || part.route || part.publicPath : 'other',
+        type: ['step', 'predeploy', 'pre-deploy', 'worker'].includes(part?.type || part?.phase) ? part.type || part.phase : 'other'
+      })) : undefined
+    }))
+  };
+}
+
+async function verifyParts(client, app, prompt, manuallyConfirmed = false) {
   const details = await client.call('apps_get', { app });
-  if (!partConfiguration(details)) throw new Error('The deployment does not confirm frontend at /, v1 at /v1, and a pre-deploy migration. No administrator credentials were sent. The MCP tools cannot add parts to an existing app; create the multi-part app in the GitHub deployment wizard, then rerun this installer.');
-  return details;
+  const configured = partConfiguration(details);
+  if (configured === false) throw new Error('The deployment is missing frontend at /, v1 at /v1, or a pre-deploy migration. No administrator credentials were sent. Correct Parts in the blitz.cloud dashboard, then rerun this installer.');
+  if (configured === null && !manuallyConfirmed) {
+    process.stdout.write('blitz.cloud MCP does not expose the app Parts. In the app dashboard, check Settings → Parts: frontend at /, v1 at /v1, and migration before each new version.\n');
+    const answer = await prompt.ask('Type VERIFY only after confirming all three Parts');
+    if (answer !== 'VERIFY') throw new Error('Parts were not confirmed. No administrator credentials were sent.');
+    return true;
+  }
+  return manuallyConfirmed || configured === true;
 }
 
 async function accountName(client) {
@@ -212,9 +245,11 @@ async function verifyAuthentication(origin, username, password) {
 }
 
 async function main() {
+  const inspectParts = process.argv.includes('--inspect-parts');
   const branchOption = process.argv.indexOf('--branch');
-  if (branchOption !== -1 && (!process.argv[branchOption + 1] || process.argv.length !== 4)) throw new Error('Usage: node scripts/install-blitz.mjs [--branch BRANCH]');
-  if (branchOption === -1 && process.argv.length !== 2) throw new Error('Usage: node scripts/install-blitz.mjs [--branch BRANCH]');
+  const argumentsWithoutInspect = process.argv.filter(argument => argument !== '--inspect-parts');
+  if (branchOption !== -1 && (!process.argv[branchOption + 1] || argumentsWithoutInspect.length !== 4)) throw new Error('Usage: node scripts/install-blitz.mjs [--branch BRANCH] [--inspect-parts]');
+  if (branchOption === -1 && argumentsWithoutInspect.length !== 2) throw new Error('Usage: node scripts/install-blitz.mjs [--branch BRANCH] [--inspect-parts]');
   const branch = branchOption === -1 ? 'main' : process.argv[branchOption + 1];
   if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,120}$/.test(branch) || branch.includes('..')) throw new Error('Invalid branch name.');
   const prompt = terminal();
@@ -234,12 +269,16 @@ async function main() {
       throw new Error(`No app exists at ${origin}. Create it from ${REPOSITORY}, branch ${branch}, in the blitz.cloud GitHub deployment wizard. Set frontend at /, v1 at /v1, and migration as a pre-deploy step. Then rerun this installer.`);
     } else {
       const details = await client.call('apps_get', { app });
+      if (inspectParts) {
+        process.stdout.write(`apps_get part diagnostics: ${JSON.stringify(partDiagnostic(details))}\n`);
+        return;
+      }
       if (!details.includes(REPOSITORY) && !details.includes(`github.com/${REPOSITORY}`)) {
         throw new Error(`An app already uses ${origin}, but its source is not ${REPOSITORY}.`);
       }
       process.stdout.write(`Resuming ${origin}. Existing data and encryption settings will be kept.\n`);
     }
-    await verifyParts(client, app);
+    const manuallyConfirmedParts = await verifyParts(client, app, prompt);
     const updateProps = client.tools.get('apps_update')?.inputSchema?.properties || {};
     const nightlyField = ['autoUpdate', 'automaticUpdates', 'nightlyUpdates', 'autoUpdates'].find(name => Object.hasOwn(updateProps, name));
     if (nightlyField) await client.call('apps_update', { app, [nightlyField]: false });
@@ -264,7 +303,7 @@ async function main() {
     process.stdout.write('Settings saved. Starting a build and waiting for /v1/health.\n');
     await client.call('builds_start', { app });
     await waitForHealth(origin);
-    await verifyParts(client, app);
+    await verifyParts(client, app, prompt, manuallyConfirmedParts);
     await verifyAuthentication(origin, admin.USERNAME, admin.PASSWORD);
     for (const field of ADMIN_FIELDS) {
       await client.call('env_delete', { app, name: `INITIAL_ADMIN_${field}`, confirm: true }, true);
