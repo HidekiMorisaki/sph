@@ -4,6 +4,12 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.5.0] - Unreleased
+
+### New features
+
+- In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.
+
 ## [v0.4.0] - 2026-10-11
 
 ### New features
@@ -12,7 +18,7 @@ User-facing changes to SME Portal Hub are documented below by release.
 - Added Branch Administrator as a default role. Its initial permissions allow management of employees, locations, IT assets, financial periods, and more within the assigned branch. The Branch Administrator role's permissions cannot be changed in System settings.
 - Added internal HTTP, internal HTTPS, and public domain installation modes.
 - You can now choose a display currency in the Localization section of personal Settings.
-- Added JPY/USD amount conversion using exchange rates from the Bank of Japan Time-Series Data Search API.
+- Added JPY/USD amount conversion using exchange rates from the [Bank of Japan Time-Series Data Search](https://www.stat-search.boj.or.jp/index_en.html) API.
 - Added a business performance analysis page. Entering amounts in Business performance visualizes business performance. You can choose whether to make business performance public or private. The visualization uses STRAC charts.
 
 ### Existing feature improvements

@@ -31,7 +31,8 @@ model Employee {
   /// Migrations m0013 and m0014 reject blank values and allow only female, male, or unspecified.
   gender                  String
   bloodType               String?                 @map("blood_type")
-  postalCode              String?                 @map("postal_code") @db.VarChar(8)
+  countryCode             String                  @default("JP") @map("country_code") @db.VarChar(2)
+  postalCode              String?                 @map("postal_code") @db.VarChar(10)
   prefecture              String?                 @db.VarChar(64)
   city                    String?                 @db.VarChar(128)
   streetAddress           String?                 @map("street_address") @db.VarChar(255)
@@ -388,7 +389,8 @@ model Branch {
   sortOrder               Int        @default(9999) @map("sort_order")
   openedOn                DateTime?  @map("opened_on") @db.Date
   closedOn                DateTime?  @map("closed_on") @db.Date
-  postalCode              String?    @map("postal_code") @db.VarChar(8)
+  countryCode             String     @default("JP") @map("country_code") @db.VarChar(2)
+  postalCode              String?    @map("postal_code") @db.VarChar(10)
   prefecture              String?    @db.VarChar(64)
   city                    String?    @db.VarChar(128)
   streetAddress           String?    @map("street_address") @db.VarChar(255)

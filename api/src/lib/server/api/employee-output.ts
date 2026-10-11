@@ -13,6 +13,7 @@ export const employeeSafeSelect = {
 	gender: true,
 	bloodType: true,
 	postalCode: true,
+	countryCode: true,
 	prefecture: true,
 	city: true,
 	streetAddress: true,

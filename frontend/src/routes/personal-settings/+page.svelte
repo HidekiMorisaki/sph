@@ -8,6 +8,8 @@
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
+	import PostalLookup from '$lib/components/PostalLookup.svelte';
+	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
 	import { socialLinkPlatforms, type EmployeeProfile, type EmployeeSocialLink, type SocialLinkPlatform } from '$lib/employees';
 	import type { FinancialCurrency } from '$lib/financial-currency';
 	import { localization as appliedLocalization, applyLocalization, DEFAULT_LOCALIZATION, displayLanguageOptions, genderOptions, personNameFields, type DisplayLanguage, type LocalizationSettings } from '$lib/localization';
@@ -29,7 +31,7 @@
 	const fallbackTimeZones = ['Asia/Tokyo', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Paris'];
 	const supportedValuesOf = (Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }).supportedValuesOf;
 	const timeZoneOptions = (supportedValuesOf?.('timeZone') ?? fallbackTimeZones).map((value) => ({ value, label: value.replaceAll('_', ' '), searchTerms: [value] }));
-	const blankProfile = (): ProfileForm => ({ firstName: '', middleName: null, lastName: '', nameKana: null, birthDate: '', gender: '', bloodType: null, postalCode: null, prefecture: null, city: null, streetAddress: null, buildingName: null, mobilePhone: null, email: '' });
+	const blankProfile = (): ProfileForm => ({ firstName: '', middleName: null, lastName: '', nameKana: null, birthDate: '', gender: '', bloodType: null, countryCode: 'JP', postalCode: null, prefecture: null, city: null, streetAddress: null, buildingName: null, mobilePhone: null, email: '' });
 	const profileForm = (saved: EmployeeProfile): ProfileForm => { const { id: _id, birthDate, ...fields } = saved; return { ...fields, birthDate: birthDate.slice(0, 10) }; };
 	const blankSocialLinks = (): SocialLinkValues => Object.fromEntries(socialLinkPlatforms.map(({ value }) => [value, ''])) as SocialLinkValues;
 
@@ -37,6 +39,7 @@
 	let loadError = $state('');
 	let loadErrorDismissed = $state(false);
 	let profile = $state(blankProfile());
+	let addressText = $derived(addressLabels(profile.countryCode, $appliedLocalization.displayLanguage));
 	let profileSaving = $state(false);
 	let profileMessage = $state('');
 	let profileErrors = $state<Record<string, string>>({});
@@ -74,7 +77,9 @@
 	}
 	function setApiErrors(body: ApiErrorPayload | null) { return Object.fromEntries((body?.error?.details ?? []).flatMap((detail) => detail.field ? [[detail.field, detail.reason]] : [])); }
 	function clearProfileError(field: ProfileField) { if (!profileErrors[field]) return; const next = { ...profileErrors }; delete next[field]; profileErrors = next; }
-	function updateProfile(field: ProfileField, value: string) { profile[field] = value; clearProfileError(field); profileMessage = ''; }
+	function updateProfile(field: Exclude<ProfileField, 'countryCode'>, value: string) { profile[field] = value; clearProfileError(field); profileMessage = ''; }
+	function selectCountry(country: AddressCountry) { if (profile.countryCode === country) return; profile.countryCode = country; profile.postalCode = null; profile.prefecture = null; profile.city = null; profile.streetAddress = null; profileMessage = ''; profileErrors = {}; }
+	function selectAddress(candidate: PostalCandidate) { profile.prefecture = candidate.prefecture; profile.city = candidate.city; if (profile.countryCode === 'JP') profile.streetAddress = candidate.streetAddress; for (const field of ['prefecture', 'city', 'streetAddress']) clearProfileError(field as ProfileField); }
 	function focusProfile(field: string) {
 		window.setTimeout(() => {
 			const input = document.querySelector<HTMLElement>(field === 'birthDate' ? '[data-field="birthDate"] .date-trigger' : field === 'gender' || field === 'bloodType' ? `[data-field="${field}"] .form-select-trigger` : `[name="${field}"]`);
@@ -115,7 +120,7 @@
 
 	async function load() {
 		try {
-			const [profileResponse, settingsResponse, socialLinksResponse] = await Promise.all([fetch('/v1/employees/me'), fetch('/v1/settings'), fetch('/v1/settings/social-links')]);
+			const [profileResponse, settingsResponse, socialLinksResponse] = await Promise.all([fetch('/v1/employees/me'), fetch('/v1/personal-settings'), fetch('/v1/personal-settings/social-links')]);
 			if ([profileResponse, settingsResponse, socialLinksResponse].some((response) => response.status === 401)) { window.location.assign('/'); return; }
 			if (!profileResponse.ok || !settingsResponse.ok || !socialLinksResponse.ok) throw new Error();
 			const savedProfile = await apiData<EmployeeProfile>(profileResponse);
@@ -135,7 +140,7 @@
 		if (!profile.birthDate) profileErrors.birthDate = 'birthDateRequired';
 		if (!profile.gender) profileErrors.gender = 'genderRequired';
 		const postalCode = profile.postalCode?.trim() ?? '';
-		if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) profileErrors.postalCode = 'postalCodeInvalid';
+		if (postalCode && !validPostalCode(profile.countryCode, postalCode)) profileErrors.postalCode = 'postalCodeInvalid';
 		const mobilePhone = profile.mobilePhone?.trim() ?? '';
 		if (mobilePhone && !/^[+0-9][0-9 ()-]{6,31}$/.test(mobilePhone)) profileErrors.mobilePhone = 'phoneInvalid';
 		const email = profile.email.trim();
@@ -164,7 +169,7 @@
 	async function saveLocalization() {
 		localizationMessage = ''; localizationErrors = {}; localizationSaving = true;
 		try {
-			const response = await fetch('/v1/settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(localization) });
+			const response = await fetch('/v1/personal-settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(localization) });
 			if (!response.ok) { const body = await response.json().catch(() => null) as ApiErrorPayload | null; localizationErrors = setApiErrors(body); localizationMessage = settingsSaveError(body?.error?.code, response.status, 'localizationFailed'); return; }
 			localization = await apiData<LocalizationSettings>(response); await applyLocalization(localization); localizationMessage = 'localizationSaved';
 		} catch { localizationMessage = 'localizationConnectionFailed'; }
@@ -191,7 +196,7 @@
 		if (Object.keys(socialLinkErrors).length) { await tick(); document.querySelector<HTMLInputElement>('.social-links-grid input[aria-invalid="true"]')?.focus(); return; }
 		socialLinksSaving = true;
 		try {
-			const response = await fetch('/v1/settings/social-links', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ links }) });
+			const response = await fetch('/v1/personal-settings/social-links', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ links }) });
 			if (!response.ok) {
 				const body = await response.json().catch(() => null) as ApiErrorPayload | null;
 				for (const detail of body?.error?.details ?? []) {
@@ -262,8 +267,10 @@
 									<SearchSelect label={text.bloodType} field="bloodType" value={profile.bloodType ?? ''} options={[{ value: '', label: '-' }, ...bloodTypes]} error={profileErrors.bloodType ? fieldError(profileErrors.bloodType) : ''} onSelect={(value) => updateProfile('bloodType', value)} />
 								</FormSection>
 								<FormSection title={text.contact} framed columns={2}>
-									<label><span>{text.postalCode}</span><input name="postalCode" value={profile.postalCode ?? ''} maxlength="8" placeholder={text.postalExample} aria-invalid={!!profileErrors.postalCode} aria-describedby={`postalCode-hint${profileErrors.postalCode ? ' postalCode-error' : ''}`} oninput={(event) => updateProfile('postalCode', event.currentTarget.value)} /><small id="postalCode-hint" class="field-hint">{text.postalHint}</small>{#if profileErrors.postalCode}<small id="postalCode-error" class="field-error">{fieldError(profileErrors.postalCode)}</small>{/if}</label>
-									<label><span>{text.prefecture}</span><input name="prefecture" value={profile.prefecture ?? ''} maxlength="64" placeholder={text.prefectureExample} aria-invalid={!!profileErrors.prefecture} aria-describedby={`prefecture-hint${profileErrors.prefecture ? ' prefecture-error' : ''}`} oninput={(event) => updateProfile('prefecture', event.currentTarget.value)} /><small id="prefecture-hint" class="field-hint">{text.prefectureHint}</small>{#if profileErrors.prefecture}<small id="prefecture-error" class="field-error">{fieldError(profileErrors.prefecture)}</small>{/if}</label>
+									<SearchSelect label={addressText.country} field="countryCode" name="countryCode" value={profile.countryCode} options={[{ value: 'JP', label: $appliedLocalization.displayLanguage === 'ja' ? '日本' : 'Japan' }, { value: 'US', label: $appliedLocalization.displayLanguage === 'ja' ? '米国' : 'United States' }]} error={profileErrors.countryCode ? fieldError(profileErrors.countryCode) : ''} onSelect={(value) => selectCountry(value as AddressCountry)} />
+									<label><span>{addressText.postal}</span><input name="postalCode" value={profile.postalCode ?? ''} maxlength="10" placeholder={addressText.postalExample} aria-invalid={!!profileErrors.postalCode} aria-describedby={profileErrors.postalCode ? 'postalCode-error' : undefined} oninput={(event) => updateProfile('postalCode', event.currentTarget.value)} />{#if profileErrors.postalCode}<small id="postalCode-error" class="field-error">{addressText.postalInvalid}</small>{/if}</label>
+									<PostalLookup countryCode={profile.countryCode} postalCode={profile.postalCode ?? ''} language={$appliedLocalization.displayLanguage} onSelect={selectAddress} />
+									<label><span>{addressText.region}</span><input name="prefecture" value={profile.prefecture ?? ''} maxlength="64" placeholder={addressText.regionExample} aria-invalid={!!profileErrors.prefecture} aria-describedby={`prefecture-hint${profileErrors.prefecture ? ' prefecture-error' : ''}`} oninput={(event) => updateProfile('prefecture', event.currentTarget.value)} /><small id="prefecture-hint" class="field-hint">{text.prefectureHint}</small>{#if profileErrors.prefecture}<small id="prefecture-error" class="field-error">{fieldError(profileErrors.prefecture)}</small>{/if}</label>
 									<label><span>{text.city}</span><input name="city" value={profile.city ?? ''} maxlength="128" placeholder={text.cityExample} aria-invalid={!!profileErrors.city} aria-describedby={`city-hint${profileErrors.city ? ' city-error' : ''}`} oninput={(event) => updateProfile('city', event.currentTarget.value)} /><small id="city-hint" class="field-hint">{text.cityHint}</small>{#if profileErrors.city}<small id="city-error" class="field-error">{fieldError(profileErrors.city)}</small>{/if}</label>
 									<label><span>{text.streetAddress}</span><input name="streetAddress" value={profile.streetAddress ?? ''} maxlength="255" placeholder={text.streetExample} aria-invalid={!!profileErrors.streetAddress} aria-describedby={`streetAddress-hint${profileErrors.streetAddress ? ' streetAddress-error' : ''}`} oninput={(event) => updateProfile('streetAddress', event.currentTarget.value)} /><small id="streetAddress-hint" class="field-hint">{text.addressHint}</small>{#if profileErrors.streetAddress}<small id="streetAddress-error" class="field-error">{fieldError(profileErrors.streetAddress)}</small>{/if}</label>
 									<label><span>{text.buildingName}</span><input name="buildingName" value={profile.buildingName ?? ''} maxlength="255" placeholder={text.buildingExample} aria-invalid={!!profileErrors.buildingName} aria-describedby={`buildingName-hint${profileErrors.buildingName ? ' buildingName-error' : ''}`} oninput={(event) => updateProfile('buildingName', event.currentTarget.value)} /><small id="buildingName-hint" class="field-hint">{text.addressHint}</small>{#if profileErrors.buildingName}<small id="buildingName-error" class="field-error">{fieldError(profileErrors.buildingName)}</small>{/if}</label>

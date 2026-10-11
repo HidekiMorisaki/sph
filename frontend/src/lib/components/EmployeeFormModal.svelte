@@ -13,6 +13,8 @@
 	import SearchSelect from './SearchSelect.svelte';
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
 	import StatusNotice from './StatusNotice.svelte';
+	import PostalLookup from './PostalLookup.svelte';
+	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
@@ -51,7 +53,7 @@
 	const bloodTypes = ['A', 'B', 'AB', 'O'];
 	const blank = () => ({
 		employeeCode: '', firstName: '', middleName: '', lastName: '', nameKana: '', birthDate: '', gender: '', bloodType: '',
-		postalCode: '', prefecture: '', city: '', streetAddress: '', buildingName: '', mobilePhone: '', email: '',
+		countryCode: 'JP' as AddressCountry, postalCode: '', prefecture: '', city: '', streetAddress: '', buildingName: '', mobilePhone: '', email: '',
 		hiredAt: '', departmentIds: [] as string[], primaryDepartmentId: '', groupId: '', positionIds: [] as string[], employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleIds: [] as string[]
 	});
 	type Form = ReturnType<typeof blank>;
@@ -66,20 +68,21 @@
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
 	let genders = $derived(genderOptions($localization));
+	let addressText = $derived(addressLabels(form.countryCode, $localization.displayLanguage));
 	let availableGroups = $derived((masters['employee-groups'] ?? []).filter((item) => item.departmentId != null && String(item.departmentId) === form.primaryDepartmentId));
 	let selectedDepartmentOptions = $derived((masters.departments ?? []).filter((item) => form.departmentIds.includes(String(item.id))).map((item) => ({ value: String(item.id), label: item.name })));
 	let hasDraftChanges = $derived(initialSnapshot !== '' && formSnapshot(adminPayload()) !== initialSnapshot);
 	let hasUnsavedChanges = $derived(mode !== 'create' && hasDraftChanges);
 
 	const iso = (value: string | null | undefined) => value ? value.slice(0, 10) : '';
-	const fieldError = (field: string) => (fieldErrors[field] ? employeeFieldError(fieldErrors[field], $localization.displayLanguage) : undefined) ?? (missingFields.includes(field) ? (field === 'roleIds' ? text.roleRequired : text.required) : '');
+	const fieldError = (field: string) => field === 'postalCode' && ['postal_invalid', 'Enter a valid postal code for the selected country.'].includes(fieldErrors[field]) ? addressText.postalInvalid : (fieldErrors[field] ? employeeFieldError(fieldErrors[field], $localization.displayLanguage) : undefined) ?? (missingFields.includes(field) ? (field === 'roleIds' ? text.roleRequired : text.required) : '');
 	function initializeForm() {
 		if (!employee) { form = blank(); if (!canAssignEmployeeRoles) form.roleIds = roles.filter((role) => role.isGeneralUser).map((role) => String(role.id)); return; }
 		const full = employee;
 		form = {
 			employeeCode: full?.employeeCode ?? '', firstName: employee.firstName, middleName: employee.middleName ?? '', lastName: employee.lastName,
 			nameKana: employee.nameKana ?? '', birthDate: iso(employee.birthDate), gender: employee.gender ?? '', bloodType: employee.bloodType ?? '',
-			postalCode: employee.postalCode ?? '', prefecture: employee.prefecture ?? '', city: employee.city ?? '', streetAddress: employee.streetAddress ?? '',
+			countryCode: employee.countryCode, postalCode: employee.postalCode ?? '', prefecture: employee.prefecture ?? '', city: employee.city ?? '', streetAddress: employee.streetAddress ?? '',
 			buildingName: employee.buildingName ?? '', mobilePhone: employee.mobilePhone ?? '', email: employee.email ?? '',
 			hiredAt: iso(full?.hiredAt), departmentIds: full?.departmentIds?.map(String) ?? (full?.departmentId == null ? [] : [String(full.departmentId)]), primaryDepartmentId: full?.primaryDepartmentId == null ? (full?.departmentId == null ? '' : String(full.departmentId)) : String(full.primaryDepartmentId), groupId: full?.groupId == null ? '' : String(full.groupId),
 			positionIds: full?.positionIds?.map(String) ?? (full?.positionId == null ? [] : [String(full.positionId)]), employmentTypeId: full?.employmentTypeId == null ? '' : String(full.employmentTypeId),
@@ -92,7 +95,9 @@
 		missingFields = missingFields.filter((name) => name !== field);
 		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = null;
 	}
-	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds'>, value: string) { form[field] = value; clearFieldError(field); }
+	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'countryCode'>, value: string) { form[field] = value; clearFieldError(field); }
+	function selectAddress(candidate: PostalCandidate) { form.prefecture = candidate.prefecture; form.city = candidate.city; if (form.countryCode === 'JP') form.streetAddress = candidate.streetAddress; for (const field of ['prefecture', 'city', 'streetAddress']) clearFieldError(field); }
+	function selectCountry(country: AddressCountry) { if (form.countryCode === country) return; form.countryCode = country; form.postalCode = ''; form.prefecture = ''; form.city = ''; form.streetAddress = ''; clearFieldError('countryCode'); clearFieldError('postalCode'); }
 	function chooseDepartments(values: string[]) {
 		form.departmentIds = values;
 		if (!values.includes(form.primaryDepartmentId)) form.primaryDepartmentId = values[0] ?? '';
@@ -138,6 +143,7 @@
 		const pickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'];
 		missingFields = [...pickerFields.filter((field) => !form[field as keyof Form]), ...(!form.roleIds.length ? ['roleIds'] : [])];
 		if (missingFields.length) { focusFormField(missingFields[0]); return; }
+		if (form.postalCode.trim() && !validPostalCode(form.countryCode, form.postalCode)) { fieldErrors.postalCode = 'postal_invalid'; focusFormField('postalCode'); return; }
 		const endpoint = mode === 'admin-edit' && employee ? `/v1/employees/${employee.id}` : '/v1/employees';
 		saving = true;
 		try {
@@ -180,7 +186,7 @@
 {#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false, disabled = false)}
 	<SearchSelect {label} {field} value={form[field]} {options} {required} {disabled} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => chooseSelect(field, value)} />
 {/snippet}
-{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
+{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'countryCode'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
@@ -198,7 +204,10 @@
 					{@render textInput(text.nameKana, 'nameKana', localeMessages[$localization.displayLanguage].employeeForm.nameKanaExample, 255)}{@render dateInput(text.birthDate, 'birthDate', form.birthDate, false, true)}{@render formSelect(text.gender, 'gender', [{ value: '', label: '-' }, ...genders], true)}{@render formSelect(text.bloodType, 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
 				</FormSection>
 				<FormSection title={text.contact} framed>
-					{@render textInput(text.postalCode, 'postalCode', text.examples.postalCode, 8, false, 'text', '\\d{3}-?\\d{4}')}{@render textInput(text.prefecture, 'prefecture', text.examples.prefecture, 64)}{@render textInput(text.city, 'city', text.examples.city, 128)}{@render textInput(text.streetAddress, 'streetAddress', text.examples.streetAddress, 255)}{@render textInput(text.buildingName, 'buildingName', text.examples.buildingName, 255)}{@render textInput(text.mobilePhone, 'mobilePhone', text.examples.mobilePhone, 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput(text.email, 'email', text.examples.email, 254, true, 'email')}
+					<SearchSelect label={addressText.country} field="countryCode" name="countryCode" value={form.countryCode} options={[{ value: 'JP', label: $localization.displayLanguage === 'ja' ? '日本' : 'Japan' }, { value: 'US', label: $localization.displayLanguage === 'ja' ? '米国' : 'United States' }]} error={fieldError('countryCode')} onSelect={(value) => selectCountry(value as AddressCountry)} />
+					{@render textInput(addressText.postal, 'postalCode', addressText.postalExample, 10, false, 'text', form.countryCode === 'JP' ? '\\d{3}-?\\d{4}' : '\\d{5}(-\\d{4})?')}
+					<PostalLookup countryCode={form.countryCode} postalCode={form.postalCode} language={$localization.displayLanguage} onSelect={selectAddress} />
+					{@render textInput(addressText.region, 'prefecture', addressText.regionExample, 64)}{@render textInput(text.city, 'city', text.examples.city, 128)}{@render textInput(text.streetAddress, 'streetAddress', text.examples.streetAddress, 255)}{@render textInput(text.buildingName, 'buildingName', text.examples.buildingName, 255)}{@render textInput(text.mobilePhone, 'mobilePhone', text.examples.mobilePhone, 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput(text.email, 'email', text.examples.email, 254, true, 'email')}
 				</FormSection>
 					<FormSection title={text.employment} framed>
 						{@render dateInput(text.hiredAt, 'hiredAt', form.hiredAt, false, true)}<SearchMultiSelect label={text.departments} field="departmentIds" values={form.departmentIds} options={(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('departmentIds')} onOpen={() => activeDateField = null} onChange={chooseDepartments} />{@render formSelect(text.primaryDepartmentId, 'primaryDepartmentId', [{ value: '', label: '-' }, ...selectedDepartmentOptions], false, !form.departmentIds.length)}{@render formSelect(text.groupId, 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.primaryDepartmentId)}<SearchMultiSelect label={text.positions} field="positionIds" values={form.positionIds} options={(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('positionIds') || fieldError('primaryPositionId')} onOpen={() => activeDateField = null} onChange={choosePositions} />{@render formSelect(text.employmentTypeId, 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect(text.branchId, 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput(text.retiredAt, 'retiredAt', form.retiredAt, true)}

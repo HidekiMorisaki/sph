@@ -68,7 +68,7 @@ installer_template() {
 		'input.defaultsNotice') printf '%s' '[]内の値は既定値です。Enterで既定値を採用できます。これらはログイン後に変更することが可能です。' ;;
 		'input.invalid') printf '%s' '入力内容が条件に合いません。再入力してください。' ;;
 		'input.selectNumber') printf '%s' '番号を選択' ;;
-		'language.notice') printf '%s' '選択した言語をアプリの初期表示言語にも設定します。設定 → ローカライズ で変更できます。' ;;
+		'language.notice') printf '%s' '選択した言語をアプリの初期表示言語にも設定します。個人設定 → ローカライズ で変更できます。' ;;
 		'locale.code') printf '%s' 'ja' ;;
 		'locale.name') printf '%s' '日本語' ;;
 		'locale.prompt') printf '%s' '言語' ;;
@@ -82,7 +82,7 @@ installer_template() {
 		'profile.firstName') printf '%s' '名' ;;
 		'profile.gender') printf '%s' '性別' ;;
 		'profile.lastName') printf '%s' '姓' ;;
-		'profile.notice') printf '%s' '以下の個人情報はログイン後、設定 → プロフィール で変更できます。' ;;
+		'profile.notice') printf '%s' '以下の個人情報はログイン後、個人設定 → プロフィール で変更できます。' ;;
 		'progress.complete') printf '%s' '  [OK] {1} | 全体経過 {2}' ;;
 		'progress.duration') printf '%s' '{1}分 {2}秒' ;;
 		'progress.notice') printf '%s' '全7段階で進行します。インストールには数分かかる場合があります。' ;;

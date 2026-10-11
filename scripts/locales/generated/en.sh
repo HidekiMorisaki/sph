@@ -68,7 +68,7 @@ installer_template() {
 		'input.defaultsNotice') printf '%s' 'Values in [] are defaults. Press Enter to accept the default values. You can change these after signing in.' ;;
 		'input.invalid') printf '%s' 'Invalid value. Please try again.' ;;
 		'input.selectNumber') printf '%s' 'Select a number' ;;
-		'language.notice') printf '%s' 'Your chosen language is also your initial application language. Change it in Settings > Localization.' ;;
+		'language.notice') printf '%s' 'Your chosen language is also your initial application language. Change it in Personal settings > Localization.' ;;
 		'locale.code') printf '%s' 'en' ;;
 		'locale.name') printf '%s' 'English' ;;
 		'locale.prompt') printf '%s' 'Language' ;;
@@ -82,7 +82,7 @@ installer_template() {
 		'profile.firstName') printf '%s' 'First name' ;;
 		'profile.gender') printf '%s' 'Gender' ;;
 		'profile.lastName') printf '%s' 'Last name' ;;
-		'profile.notice') printf '%s' 'Change these personal details later in Settings > Profile.' ;;
+		'profile.notice') printf '%s' 'Change these personal details later in Personal settings > Profile.' ;;
 		'progress.complete') printf '%s' '  [OK] {1} | Total {2}' ;;
 		'progress.duration') printf '%s' '{1}m {2}s' ;;
 		'progress.notice') printf '%s' 'Seven stages. Installation may take a few minutes.' ;;

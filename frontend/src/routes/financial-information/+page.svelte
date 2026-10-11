@@ -102,7 +102,7 @@
 		const selectedYear = year, selectedCurrency = currency, selectedOffset = offset;
 		try {
 			async function loadRows(displayCurrency: FinancialCurrency) {
-				const url = `/v1/financial-periods?year=${selectedYear}&currency=${displayCurrency}&sortBy=branchName&sortOrder=asc&offset=${selectedOffset}&limit=100`;
+				const url = `/v1/financial-information?year=${selectedYear}&currency=${displayCurrency}&sortBy=branchName&sortOrder=asc&offset=${selectedOffset}&limit=100`;
 				const response = await fetch(url);
 				if (response.status === 401) { if (current === sequence) window.location.assign('/'); return null; }
 				if (response.status === 403) { if (current === sequence) denied = true; return null; }
@@ -155,8 +155,11 @@
 			if (!settingResponse.ok) throw new Error();
 			settings = await apiData<Settings>(settingResponse);
 			const today = new Date();
-			const currentYear = settings.basis === 'fiscal' && today.getMonth() + 1 < settings.fiscalStartMonth ? today.getFullYear() - 1 : today.getFullYear();
-			year = storedYear(settings.basis) ?? currentYear;
+			const fiscalEndMonth = settings.fiscalStartMonth === 1 ? 12 : settings.fiscalStartMonth - 1;
+			const defaultYear = settings.basis === 'calendar' || today.getMonth() + 1 > fiscalEndMonth
+				? today.getFullYear() - 1
+				: today.getFullYear();
+			year = storedYear(settings.basis) ?? defaultYear;
 			await refresh(true);
 		} catch { error = text.loadFailed; }
 		finally { loading = false; }
@@ -164,7 +167,7 @@
 	async function edit(item: Item, trigger: HTMLButtonElement) {
 		busy = true; editError = ''; preview = null;
 		try {
-			const response = await fetch(`/v1/financial-periods/${item.branchId}/${year}/months`);
+			const response = await fetch(`/v1/financial-information/${item.branchId}/${year}/months`);
 			if (!response.ok) throw new Error();
 			const data = await apiData<{ currency: FinancialCurrency; months: Month[] }>(response);
 			draft = data.months.map((row) => ({ ...row, revenue: amountToInput(row.revenue, data.currency), variableCost: amountToInput(row.variableCost, data.currency), fixedCost: amountToInput(row.fixedCost, data.currency) }));
@@ -227,7 +230,7 @@
 		saving = true; editError = ''; rateNotice = '';
 		try {
 			const months = submittedMonths();
-			const response = await fetch(`/v1/financial-periods/${editing.branchId}/${year}/months`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, currency: draftCurrency, months }) });
+			const response = await fetch(`/v1/financial-information/${editing.branchId}/${year}/months`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, currency: draftCurrency, months }) });
 			if (!response.ok) { editError = await responseError(response, text.saveFailed); return; }
 			notice = text.saved; noticeError = false;
 			const missingMonths = canRetrieveRates ? await retrieveRates() : [];
@@ -245,7 +248,7 @@
 			const missingMonths = canRetrieveRates ? await retrieveRates() : null;
 			if (missingMonths !== null) rateNotice = '';
 			const months = submittedMonths();
-			const response = await fetch(`/v1/financial-periods/${editing.branchId}/${year}/preview`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, currency: draftCurrency, displayCurrency: currency, months }) });
+			const response = await fetch(`/v1/financial-information/${editing.branchId}/${year}/preview`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, currency: draftCurrency, displayCurrency: currency, months }) });
 			if (!response.ok) {
 				const payload = await response.json().catch(() => null) as { error?: { code?: string; details?: { field?: string }[] } } | null;
 				const missing = payload?.error?.details?.map((detail) => detail.field).filter((month): month is string => Boolean(month)) ?? [];
@@ -268,7 +271,7 @@
 		if (busy || (!item.published && item.completedMonths !== 12)) return;
 		busy = true; notice = '';
 		try {
-			const response = await fetch(`/v1/financial-periods/${item.branchId}/${year}/publication`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, published: !item.published }) });
+			const response = await fetch(`/v1/financial-information/${item.branchId}/${year}/publication`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...settings, published: !item.published }) });
 			if (!response.ok) { notice = await responseError(response, text.publishFailed); noticeError = true; return; }
 			notice = item.published ? text.unpublished : text.published; noticeError = false; await refresh();
 		} catch { notice = text.publishFailed; noticeError = true; }

@@ -30,16 +30,16 @@ let activeNamespaces: readonly LocaleNamespace[] = [];
 
 export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/') return ['login', 'analytics'];
-	if (path === '/mypage') return ['myPage'];
+	if (path === '/my-page') return ['myPage'];
 	if (path === '/employees') return ['employees', 'employeeForm'];
 	if (path === '/work-calendars') return ['workCalendars'];
 	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial'];
 	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
-	if (path === '/business-overview') return ['systemSettings', 'financial'];
+	if (path === '/financial-information') return ['systemSettings', 'financial'];
 	if (path === '/financial-trends') return ['financialTrends'];
-	if (path === '/settings') return ['settings'];
+	if (path === '/personal-settings') return ['settings'];
 	if (path === '/locations') return ['masters', 'employees'];
-	if (path.startsWith('/employee-masters/') || path === '/it-asset-masters') return ['masters'];
+	if (path === '/employee-masters' || path === '/it-asset-masters') return ['masters'];
 	if (path === '/it-assets') return ['assets'];
 	return [];
 }

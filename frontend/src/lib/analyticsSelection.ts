@@ -6,7 +6,7 @@ const outstanding = new Set<Promise<void>>();
 
 export async function readAnalyticsSelection(): Promise<{ employeeId: number; today: string; selection: AnalyticsSelection | null }> {
 	while (outstanding.size) await Promise.all([...outstanding]);
-	const response = await fetch('/v1/settings/employee-analysis', { cache: 'no-store' });
+	const response = await fetch('/v1/personal-settings/employee-analytics-selection', { cache: 'no-store' });
 	if (!response.ok) throw new Error('Unable to restore employee analysis selection');
 	return (await response.json()).data;
 }
@@ -21,7 +21,7 @@ export function analyticsSelectionSaver(employeeId: number, onStatus: (status: S
 			const current = version;
 			pending = null;
 			try {
-				const response = await fetch('/v1/settings/employee-analysis', {
+				const response = await fetch('/v1/personal-settings/employee-analytics-selection', {
 					method: 'PATCH', headers: { 'content-type': 'application/json', 'x-settings-owner': String(employeeId) },
 					body: JSON.stringify(selection), keepalive: true
 				});

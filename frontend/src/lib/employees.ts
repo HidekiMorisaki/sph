@@ -37,6 +37,7 @@ export type EmployeeProfile = {
 	gender: string;
 	bloodType: string | null;
 	postalCode: string | null;
+	countryCode: 'JP' | 'US';
 	prefecture: string | null;
 	city: string | null;
 	streetAddress: string | null;

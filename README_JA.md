@@ -4,7 +4,7 @@
 
 [![GitHub リリース](https://img.shields.io/github/v/release/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/releases) [![ライセンス](https://img.shields.io/github/license/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/blob/main/LICENSE)
 
-![ダッシュボード](./docs/gallery/Dashboard_ja.png)
+![従業員分析](./docs/gallery/EmployeeAnalysis_ja.png)
 
 SME Portal Hub ( 略称：SPH ) は、中小企業が社内向けのポータルサイトを構築できる Web システムです。従業員管理、社内カレンダーの作成・公開、IT 資産管理などを通じて、社内業務の効率化と情報の集約を支援することを目指して開発しています。
 
@@ -15,6 +15,7 @@ SME Portal Hub ( 略称：SPH ) は、中小企業が社内向けのポータル
 | 目的 | 参照するセクション |
 | --- | --- |
 | インストール・試用・利用する | [利用者向けクイックスタート](#quick-start-for-users) |
+| 無料クラウドで試す | [blitz.cloudへのインストール](#installing-on-blitz-cloud) |
 | 他の PC から利用できるようにサーバーへインストールする | [サーバーまたは別の PC へのインストール](#installing-on-a-server-or-another-pc) |
 | インストール時の問題を調べる | [クイックスタートのトラブルシューティング](#quick-start-troubleshooting) |
 | インストール済みのシステムを起動・停止する | [システムの起動と停止](#starting-and-stopping-the-system) |
@@ -61,6 +62,27 @@ cd sph
 > [!NOTE]
 > "架空のサンプルデータ（任意）" で "2：追加する" を選択することで、選択した言語に合わせたサンプルデータを自動的に追加することができます。SPH の評価にお役立てください。
 
+<a id="installing-on-blitz-cloud"></a>
+
+## blitz.cloudへのインストール
+
+この方法では、SPHとPostgreSQLをblitz.cloudの無料枠で動かします。Dockerを手元のPCで動かす必要はありません。クラウド対応版が公開リポジトリの`main`ブランチに反映された後に利用してください。無料枠では未使用のアプリが休止し、DBバックアップは直近7夜分です。評価用として利用し、実在する社員の機密情報を登録する前にサービスの条件とバックアップ方法を確認してください。
+
+1. [blitz.cloudのダッシュボード](https://dashboard.blitz.cloud/)を開き、無料アカウントを作成します。メールアドレスとパスワード、GitHub、Googleのいずれかで登録できます。確認メールが届いたらメールアドレスを確認し、案内に従って自分の`<アカウント名>.blitz.cloud`というアドレスを取得します。メール確認が終わるまでアプリとDBは作成できません。[公式の登録手順](https://blitz.cloud/docs/getting-started/)も参照してください。
+2. ダッシュボードの**Settings → Code from GitHub**からGitHub連携を行います。GitHubアカウントでblitz.cloudにログインしただけでは、コードへの連携は完了しません。GitHubに表示されるアクセス先と権限を確認して承認してください。SPHの公開元は[`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph)です。自分のリポジトリへのフォークは不要です。
+3. ダッシュボードの**AI tools → Keys → Make a key**を開き、`SPH installer`など用途が分かる名前でAPIキーを発行します。発行直後に表示される値を安全な場所へコピーしてください。再表示はできません。APIキーはblitz.cloudのアプリとDBを操作できるため、GitHub、スクリーンショット、チャット、コマンド引数に載せないでください。インストーラーが求めたときに非表示の入力欄へ貼り付けます。紛失時は同じ画面で再発行し、不要になったキーは**Revoke**で失効できます。[APIキーの公式説明](https://blitz.cloud/docs/ai-assistants/)も参照してください。
+4. [Node.js 22](https://nodejs.org/)とGitを用意し、公開元の安定版を取得してインストーラーを実行します。
+
+   ```bash
+   git clone https://github.com/HidekiMorisaki/sph.git
+   cd sph
+   node scripts/install-blitz.mjs
+   ```
+
+5. 画面の案内に従い、blitz.cloudのアカウント名（`.blitz.cloud`より前）、アプリのサブドメイン、APIキー、初期管理者の情報を入力します。インストーラーはアプリと管理PostgreSQLを作成し、初回マイグレーションを実行します。完了後に表示されるHTTPS URLでログインし、`/v1/health`が正常に応答することを確認してください。
+
+途中で止まった場合は、blitz.cloudのアプリ画面の**Overview / Activity / Logs / Settings → Parts**で失敗箇所を確認します。GitHub連携、無料枠の残量、DB接続、`frontend`のパス`/`、`v1`のパス`/v1`、事前実行の`migration`を確認し、原因を修正してから同じコマンドを再実行してください。既存のDBと暗号化キーは保持します。初期管理者が作成された後、インストーラーは初期設定用の環境変数を削除します。失敗時にこれらが残っている場合は、正常に再開した後で削除されたことを確認してください。APIキーを再利用する予定がなければ、AI toolsで失効させられます。
+
 <a id="installing-on-a-server-or-another-pc"></a>
 
 ## サーバーまたは別の PC へのインストール
@@ -76,9 +98,9 @@ cd sph
 
 社内 HTTPS 方式では、公開 CA ルート証明書を `.runtime/ca/root.crt` ファイルへ出力します。サーバー上で証明書の同一性を確認してから、組織の証明書管理手順に沿って利用端末へ配布してください。CA 秘密鍵は Docker の `gateway_data` ボリュームに保存されています。`gateway_data` ボリュームはバックアップに含めてください。失うと CA が変わり、既存の信頼設定が無効になります。CA データが保持されている間は証明書が自動更新されます。
 
-公開ドメイン方式では、インストール前に DNS とファイアウォールを確認してください。証明書の取得には、インターネットから到達可能なドメインとポート`80`/`443`が必要です。インストーラーは DNS を確認し、HTTPS のヘルスチェックを待ちます。停止した場合は`docker compose logs gateway`を確認し、到達性を修正してから下記の復旧手順を実施してください。[Let's Encrypt の利用規約](https://letsencrypt.org/repository/)が適用されます。
+公開ドメイン方式では、インストール前に DNS とファイアウォールを確認してください。証明書の取得には、インターネットから到達可能なドメインとポート`80`/`443`が必要です。インストーラーは DNS を確認し、HTTPS のヘルスチェックを待ちます。停止した場合は`docker compose -f docker-compose.yml logs gateway`を確認し、到達性を修正してから下記の復旧手順を実施してください。[Let's Encrypt の利用規約](https://letsencrypt.org/repository/)が適用されます。
 
-接続設定は`.env`の`GATEWAY_TLS_MODE`、`GATEWAY_HTTP_PUBLISH`、`GATEWAY_HTTPS_PUBLISH`、`APP_ORIGIN`、`HTTP_PORT`、`CORS_ALLOWED_ORIGINS`（公開ドメインでは`ACME_EMAIL`も）に保存されます。変更した場合は`node scripts/install-maintenance.mjs gateway-config`で`.runtime/gateway/Caddyfile`を再生成し、`docker compose up -d --build --no-deps api frontend gateway`を実行します。生成された Caddyfile だけを独立して編集しないでください。
+接続設定は`.env`の`GATEWAY_TLS_MODE`、`GATEWAY_HTTP_PUBLISH`、`GATEWAY_HTTPS_PUBLISH`、`APP_ORIGIN`、`HTTP_PORT`、`CORS_ALLOWED_ORIGINS`（公開ドメインでは`ACME_EMAIL`も）に保存されます。変更した場合は`node scripts/install-maintenance.mjs gateway-config`で`.runtime/gateway/Caddyfile`を再生成し、`docker compose -f docker-compose.yml up -d --build --no-deps api frontend gateway`を実行します。生成された Caddyfile だけを独立して編集しないでください。
 
 <a id="quick-start-troubleshooting"></a>
 
@@ -90,16 +112,16 @@ cd sph
 
 インストールに失敗した場合は、停止した工程、失敗した操作または検出した状態、次に確認する事項を表示します。Docker の出力には認証情報が含まれる可能性があるため、そのまま表示することはありません。詳細な原因が不明な場合は、その旨を明示します。表示する確認事項は、原因を断定したものではありません。
 
-新規インストールが`.env`の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data`ボリュームを保持してください。事前条件や起動時の問題を解消してから、製品リポジトリのルートで`docker compose up -d --build --wait --wait-timeout 300`を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に`node scripts/install-maintenance.mjs gateway-config`で再生成します。社内限定方式では`docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env`は安全に保管し、データベースとは別にバックアップしてください。
+新規インストールが`.env`の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data`ボリュームを保持してください。事前条件や起動時の問題を解消してから、製品リポジトリのルートで`docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 300`を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に`node scripts/install-maintenance.mjs gateway-config`で再生成します。社内限定方式では`docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env`は安全に保管し、データベースとは別にバックアップしてください。
 
-起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env`から`INITIAL_ADMIN_*`の行だけを削除します。`docker compose up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`で`db`と`api`を再作成し、`docker compose rm -f migration`で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean`が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
+起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env`から`INITIAL_ADMIN_*`の行だけを削除します。`docker compose -f docker-compose.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`で`db`と`api`を再作成し、`docker compose -f docker-compose.yml rm -f migration`で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean`が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
 
 ### インストール結果の確認
 
 一度だけ実行される migration コンテナーも含め、すべてのコンテナーを表示します。
 
 ```bash
-docker compose ps -a
+docker compose -f docker-compose.yml ps -a
 ```
 
 次の状態になっていることを確認してください。
@@ -110,8 +132,8 @@ docker compose ps -a
 起動処理がまだ続いている場合やサービスが失敗した場合は、ログを確認します。
 
 ```bash
-docker compose logs migration
-docker compose logs api frontend gateway db
+docker compose -f docker-compose.yml logs migration
+docker compose -f docker-compose.yml logs api frontend gateway db
 ```
 
 gateway 経由で API を確認します（ポートを変更した場合は、例のポート番号を置き換えてください）。
@@ -133,8 +155,8 @@ Invoke-RestMethod http://localhost:3000/v1/health
 常時稼働するサービスがすべて起動し、正常な状態であることを確認してください。
 
 ```bash
-docker compose ps -a
-docker compose logs gateway frontend api
+docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.yml logs gateway frontend api
 ```
 
 選択した Web ポートが、他のアプリケーションで使用されていないことも確認してください。
@@ -144,7 +166,7 @@ docker compose logs gateway frontend api
 ログを確認してください。
 
 ```bash
-docker compose logs migration
+docker compose -f docker-compose.yml logs migration
 ```
 
 よくある原因には、`INITIAL_ADMIN_*`の値の不足・不正、強度要件を満たさない初期パスワード、初期マスターデータと一致しない雇用形態名や拠点名があります。
@@ -152,7 +174,7 @@ docker compose logs migration
 `.env`を修正してから、次のコマンドを再実行してください。
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yml up -d --build
 ```
 
 ### ポートが既に使用されている場合
@@ -170,34 +192,34 @@ Docker の環境によっては、リムーバブルドライブ上のプロジ�
 サービスの状態を表示します。
 
 ```bash
-docker compose ps -a
+docker compose -f docker-compose.yml ps -a
 ```
 
 ログを継続して表示します。
 
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.yml logs -f
 ```
 
 アプリケーションを再起動します。
 
 ```bash
-docker compose restart
+docker compose -f docker-compose.yml restart
 ```
 
 データベースのデータを保持したまま、コンテナーを停止・削除します。
 
 ```bash
-docker compose down
+docker compose -f docker-compose.yml down
 ```
 
 インストール済みの環境を再度起動します。
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml up -d
 ```
 
-データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
+データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose -f docker-compose.yml down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
 
 <a id="upgrading-to-the-latest-version"></a>
 
@@ -232,24 +254,35 @@ git branch --set-upstream-to=origin/main
 
 macOS／Linux では同じ Git コマンドを実行し、最後のコマンドを `./scripts/update.sh` に置き換えてください。更新スクリプトは v0.3.0 のソースを取得する前に、データベースのバックアップを作成・検証します。ローカルに変更がある場合は事前に内容を確認して解消し、更新のために無断で破棄しないでください。
 
-バックアップ先の指定や復旧方法は[バックアップ・更新・復元手順](./docs/Backup_Update_and_Restore_JA.md)を参照してください。
+バックアップ先の指定や復旧方法は [バックアップ・更新・復元手順](./docs/Backup_Update_and_Restore_JA.md) を参照してください。
 
 ## ギャラリー
 
 ### ダッシュボード
-![ダッシュボード](./docs/gallery/Dashboard_ja.png)
+![従業員分析](./docs/gallery/EmployeeAnalysis_ja.png)
+![経営状況](./docs/gallery/FinancialTrends_ja.png)
 
 ### PDF エクスポート結果
-![年代別従業員数・男女比](./docs/gallery/Dashboard_Exported_PDF_ja_1.png)
-![年別従業員数の推移](./docs/gallery/Dashboard_Exported_PDF_ja_2.png)
-![年別入社・退職・離職率](./docs/gallery/Dashboard_Exported_PDF_ja_3.png)
-
-## 従業員リスト
-![従業員リスト](./docs/gallery/EmployeeList_ja.png)
+![年別入社・退職・離職率](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_1.png)
+![年別従業員数・平均年齢の推移](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_2.png)
+![年代別従業員数・男女比](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_3.png)
+![経営状況](./docs/gallery/FinancialTrends_ja_Exported_PDF_1.png)
 
 ## 勤務カレンダー
 ![勤務カレンダー](./docs/gallery/WorkCalendars_ja.png)
 
+## 従業員リスト
+![従業員リスト](./docs/gallery/EmployeeList_ja.png)
+
 ## 謝辞
 
 SPH の UI デザインは、[Gentelella v4 - Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella) を参考にさせていただきました。Gentelella の貢献者の皆様、そして高品質なデザインテンプレートを無償でコミュニティに公開してくださるすべての開発者の皆様に感謝します。
+
+SPH は、次の外部 API・公開データを利用しています。データとサービスの提供者の皆様に感謝します。
+
+- [zipcloud 郵便番号検索 API](https://zipcloud.ibsnet.co.jp/doc/api)：日本の郵便番号から住所候補を取得します。
+- [Zippopotam.us API](https://zippopotam.us/)：米国の ZIP コードから住所候補を取得します。
+- [日本銀行時系列統計データ検索サイトの API](https://www.stat-search.boj.or.jp/)：経営状況の金額換算に使用するドル／円の月中平均為替レートを取得します。日本銀行は SPH の内容を保証するものではありません。
+- [内閣府「国民の祝日」データ](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html)：日本の勤務カレンダーに祝日を取り込むため、公開 CSV データを利用します。
+- [米国人事管理局（OPM）の連邦祝日データ](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/)：米国の勤務カレンダーに連邦祝日を取り込むため、公開 iCalendar データを利用します。
+- [GitHub Releases API](https://docs.github.com/en/rest/releases/releases)：システム情報ページで新しい公開版の有無を確認します。

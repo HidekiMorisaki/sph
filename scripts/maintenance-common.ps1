@@ -21,7 +21,7 @@ function Invoke-ExternalCommand {
 
 function Invoke-Compose {
 	param([string[]]$Arguments = @(), [switch]$Capture)
-	return Invoke-ExternalCommand -FilePath 'docker' -Arguments (@('compose') + $Arguments) -Capture:$Capture
+	return Invoke-ExternalCommand -FilePath 'docker' -Arguments (@('compose', '-f', (Join-Path $script:RepositoryRoot 'docker-compose.yml')) + $Arguments) -Capture:$Capture
 }
 
 function Assert-MaintenancePrerequisites {

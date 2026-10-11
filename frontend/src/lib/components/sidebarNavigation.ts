@@ -13,7 +13,7 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'dashboard', href: '/financial-trends' }
 		] },
 		{ id: 'general', label: text.groups.general, items: [
-			{ id: 'myPage', text: text.items.myPage, icon: 'dashboard', href: '/mypage' },
+			{ id: 'myPage', text: text.items.myPage, icon: 'dashboard', href: '/my-page' },
 			{ id: 'workCalendars', text: text.items.workCalendars, icon: 'calendar', href: '/work-calendars' },
 			{ id: 'employees', text: text.items.employees, icon: 'table', href: '/employees' }
 		] },
@@ -21,13 +21,13 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 			{ id: 'itAssets', text: text.items.itAssets, icon: 'dashboard', href: '/it-assets' }
 		] },
 		{ id: 'masterManagement', label: text.groups.masterManagement, managerOnly: true, items: [
-			{ id: 'employment', text: text.items.employment, icon: 'list', href: '/employee-masters/employment-types' },
+			{ id: 'employment', text: text.items.employment, icon: 'list', href: '/employee-masters' },
 			{ id: 'locations', text: text.items.locations, icon: 'list', href: '/locations' },
 			{ id: 'itMasters', text: text.items.itMasters, icon: 'list', href: '/it-asset-masters' }
 		] },
 		{ id: 'siteManagement', label: text.groups.siteManagement, systemAdministratorOnly: true, items: [
 			{ id: 'systemInformation', text: text.items.systemInformation, icon: 'list', href: '/system-information' },
-			{ id: 'businessOverview', text: text.items.businessOverview, icon: 'list', href: '/business-overview' },
+			{ id: 'businessOverview', text: text.items.businessOverview, icon: 'list', href: '/financial-information' },
 			{ id: 'systemSettings', text: text.items.systemSettings, icon: 'settings', href: '/system-settings' }
 		] }
 	];

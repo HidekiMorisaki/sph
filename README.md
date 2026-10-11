@@ -4,7 +4,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/releases) [![License](https://img.shields.io/github/license/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/blob/main/LICENSE)
 
-![Dashboard](./docs/gallery/Dashboard_en.png)
+![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
 
 SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and IT asset management.
 
@@ -14,6 +14,7 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Your goal | Read this section |
 | --- | --- |
 | Install, try, or use the system | [Quick Start for Users](#quick-start-for-users) |
+| Try it on free cloud hosting | [Installing on blitz.cloud](#installing-on-blitz-cloud) |
 | Install on a server for access from other PCs | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
 | Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
 | Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
@@ -59,6 +60,27 @@ The installer supports English and Japanese. After selecting the display languag
 > [!NOTE]
 > At the "Optional fictional sample data" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
 
+<a id="installing-on-blitz-cloud"></a>
+
+## Installing on blitz.cloud
+
+This option runs SPH and PostgreSQL on the blitz.cloud free plan, without Docker on your own computer. Use it after the cloud-ready version reaches the public repository's `main` branch. On the free plan, idle apps sleep and database backups are kept for seven nights. This is intended for evaluation; review the service terms and backup options before entering real employee information.
+
+1. Open the [blitz.cloud dashboard](https://dashboard.blitz.cloud/) and create a free account. You can register with email and password, GitHub, or Google. Confirm your email address when prompted, then claim your `<account-name>.blitz.cloud` address. Apps and databases cannot be created until your email is confirmed. See the [official getting-started guide](https://blitz.cloud/docs/getting-started/).
+2. In the dashboard, open **Settings → Code from GitHub** and connect GitHub. Signing in to blitz.cloud with GitHub does not itself grant code access. Review the repositories and permissions shown by GitHub before authorizing. SPH uses the public [`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph) repository; you do not need to fork it.
+3. Open **AI tools → Keys → Make a key**. Name the key something recognizable, such as `SPH installer`, and copy its value when it appears. It is shown only once. This key can manage your blitz.cloud apps and databases: keep it private and never put it in GitHub, screenshots, chats, or a command argument. Paste it into the installer's hidden prompt. If you lose it, issue another key; use **Revoke** on the same page when you no longer need one. See the [official API-key guide](https://blitz.cloud/docs/ai-assistants/).
+4. Install [Node.js 22](https://nodejs.org/) and Git, then download the stable public branch and run the installer:
+
+   ```bash
+   git clone https://github.com/HidekiMorisaki/sph.git
+   cd sph
+   node scripts/install-blitz.mjs
+   ```
+
+5. Enter your blitz.cloud account name (the part before `.blitz.cloud`), an app subdomain, the API key, and an initial administrator profile when prompted. The installer creates the app and managed PostgreSQL database, runs the first migration, and prints the HTTPS address. Sign in there and confirm that `/v1/health` responds successfully.
+
+If installation stops, inspect **Overview / Activity / Logs / Settings → Parts** for the app in blitz.cloud. Check GitHub access, free-plan capacity, database connection, the `frontend` path `/`, the `v1` path `/v1`, and the `migration` pre-deploy step. Correct the issue and rerun the same command; the existing database and encryption key are preserved. After a successful retry, verify that the installer removed the initial administrator settings. You may revoke the API key in AI tools if you do not plan to use it again.
+
 ## Installing on a server or another PC
 
 Run the download and installer steps on the machine that will host the system.
@@ -73,9 +95,9 @@ Choose a connection mode in the installer:
 
 For the internal HTTPS mode, the installer exports the public CA root certificate to `.runtime/ca/root.crt`. Verify the certificate's identity on the server before distributing it to client devices through your organization's certificate management process. The CA private key is stored in Docker's `gateway_data` volume. Include the `gateway_data` volume in backups: losing it changes the CA and invalidates existing trust. Certificates are renewed automatically while the CA data persists.
 
-For the public mode, verify DNS and firewall access before installation. Certificate issuance requires an internet-reachable domain and ports `80`/`443`; the installer checks DNS and waits for the HTTPS health endpoint. If it stops, inspect `docker compose logs gateway`, correct DNS/firewall reachability, and resume with the recovery instructions below. The ACME provider's [subscriber agreement](https://letsencrypt.org/repository/) applies.
+For the public mode, verify DNS and firewall access before installation. Certificate issuance requires an internet-reachable domain and ports `80`/`443`; the installer checks DNS and waits for the HTTPS health endpoint. If it stops, inspect `docker compose -f docker-compose.yml logs gateway`, correct DNS/firewall reachability, and resume with the recovery instructions below. The ACME provider's [subscriber agreement](https://letsencrypt.org/repository/) applies.
 
-Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUBLISH`, `GATEWAY_HTTPS_PUBLISH`, `APP_ORIGIN`, `HTTP_PORT`, and `CORS_ALLOWED_ORIGINS` (plus `ACME_EMAIL` for a public domain). After changing them, regenerate `.runtime/gateway/Caddyfile` with `node scripts/install-maintenance.mjs gateway-config`, then run `docker compose up -d --build --no-deps api frontend gateway`. Do not edit the generated Caddyfile independently of `.env`.
+Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUBLISH`, `GATEWAY_HTTPS_PUBLISH`, `APP_ORIGIN`, `HTTP_PORT`, and `CORS_ALLOWED_ORIGINS` (plus `ACME_EMAIL` for a public domain). After changing them, regenerate `.runtime/gateway/Caddyfile` with `node scripts/install-maintenance.mjs gateway-config`, then run `docker compose -f docker-compose.yml up -d --build --no-deps api frontend gateway`. Do not edit the generated Caddyfile independently of `.env`.
 
 ## Quick Start troubleshooting
 
@@ -91,7 +113,7 @@ is suppressed because it can contain credentials. When the underlying cause is
 unknown, the message says so; suggested checks are not a diagnosis.
 
 If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run
-`docker compose up -d --build --wait --wait-timeout 300` from the product repository
+`docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 300` from the product repository
 root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was
 created, rerun the installer. Never generate a replacement encryption key for
 encrypted data. Keep `.env` protected and back it up separately from the database.
@@ -99,8 +121,8 @@ encrypted data. Keep `.env` protected and back it up separately from the databas
 After recovering startup, finish the removal of initial setup credentials. Remove
 only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and
 encryption key. Recreate `db` and `api` with
-`docker compose up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
-then remove the completed migration container with `docker compose rm -f migration`
+`docker compose -f docker-compose.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
+then remove the completed migration container with `docker compose -f docker-compose.yml rm -f migration`
 and verify the application responses below. If `.env.install-clean` remains,
 keep it protected until recovery is complete, then securely remove this temporary
 file. It may contain credentials.
@@ -110,7 +132,7 @@ file. It may contain credentials.
 Show all containers, including the one-time migration container:
 
 ```bash
-docker compose ps -a
+docker compose -f docker-compose.yml ps -a
 ```
 
 The expected state is:
@@ -121,8 +143,8 @@ The expected state is:
 If startup is still in progress or a service failed, inspect the logs:
 
 ```bash
-docker compose logs migration
-docker compose logs api frontend gateway db
+docker compose -f docker-compose.yml logs migration
+docker compose -f docker-compose.yml logs api frontend gateway db
 ```
 
 Verify the API through the gateway. For local mode, replace the example port if changed:
@@ -145,8 +167,8 @@ For HTTPS modes, use the configured `https://` application URL instead. In inter
 Check that all long-running services are running and healthy:
 
 ```bash
-docker compose ps -a
-docker compose logs gateway frontend api
+docker compose -f docker-compose.yml ps -a
+docker compose -f docker-compose.yml logs gateway frontend api
 ```
 
 Also confirm that the selected web port is not already used by another application.
@@ -156,7 +178,7 @@ Also confirm that the selected web port is not already used by another applicati
 Review its logs:
 
 ```bash
-docker compose logs migration
+docker compose -f docker-compose.yml logs migration
 ```
 
 Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial password that does not meet the strength requirements, or employment type and branch names that do not match the initial master data.
@@ -164,7 +186,7 @@ Common causes include missing or invalid `INITIAL_ADMIN_*` values, an initial pa
 After correcting `.env`, rerun:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yml up -d --build
 ```
 
 ### A port is already in use
@@ -180,34 +202,34 @@ Some Docker environments cannot reliably bind-mount projects stored on removable
 View service status:
 
 ```bash
-docker compose ps -a
+docker compose -f docker-compose.yml ps -a
 ```
 
 Follow logs:
 
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.yml logs -f
 ```
 
 Restart the application:
 
 ```bash
-docker compose restart
+docker compose -f docker-compose.yml restart
 ```
 
 Stop and remove the containers while preserving database data:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.yml down
 ```
 
 Start the existing installation again:
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml up -d
 ```
 
-Database data is stored in the named Docker volume `sph-db-data` and is retained by `docker compose down`. Do not add the `--volumes` option unless permanent data removal is intentional and a suitable backup exists.
+Database data is stored in the named Docker volume `sph-db-data` and is retained by `docker compose -f docker-compose.yml down`. Do not add the `--volumes` option unless permanent data removal is intentional and a suitable backup exists.
 
 ## Upgrading to the latest version
 
@@ -245,19 +267,30 @@ For backup locations and recovery steps, see [Backup, update, and restore](./doc
 ## Gallery
 
 ### Dashboard
-![Dashboard](./docs/gallery/Dashboard_en.png)
+![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
+![Financial trends](./docs/gallery/FinancialTrends_en.png)
 
 ### PDF export results
-![Employee count by age group and gender](./docs/gallery/Dashboard_Exported_PDF_en_1.png)
-![Annual employee count trend](./docs/gallery/Dashboard_Exported_PDF_en_2.png)
-![Annual hiring, retirement, and turnover rates](./docs/gallery/Dashboard_Exported_PDF_en_3.png)
-
-## Employee list
-![Employee list](./docs/gallery/EmployeeList_en.png)
+![Annual hiring, retirement, and turnover rates](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_1.png)
+![Annual employee count and average age trends](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_2.png)
+![Employee count by age group and gender](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_3.png)
+![Financial trends](./docs/gallery/FinancialTrends_en_Exported_PDF_1.png)
 
 ## Work calendars
 ![Work calendars](./docs/gallery/WorkCalendars_en.png)
 
+## Employee list
+![Employee list](./docs/gallery/EmployeeList_en.png)
+
 ## Acknowledgements
 
 The UI design of SPH was inspired by [Gentelella v4 - Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella). We are grateful to the Gentelella contributors—and to all developers who generously make high-quality design templates available to the community at no cost.
+
+SPH uses the following external APIs and public data sources. We thank their providers for making these services and data available.
+
+- [zipcloud Postal Code Search API](https://zipcloud.ibsnet.co.jp/doc/api): Looks up Japanese address candidates from postal codes.
+- [Zippopotam.us API](https://zippopotam.us/): Looks up U.S. address candidates from ZIP codes.
+- [Bank of Japan Time-Series Data Search API](https://www.stat-search.boj.or.jp/index_en.html): Retrieves monthly average USD/JPY exchange rates for converting financial figures. The Bank of Japan does not guarantee the content of SPH.
+- [Cabinet Office of Japan public holiday data](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html): Supplies the public CSV data imported into Japanese work calendars.
+- [U.S. Office of Personnel Management (OPM) federal holiday data](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/): Supplies the public iCalendar data imported into U.S. work calendars.
+- [GitHub Releases API](https://docs.github.com/en/rest/releases/releases): Checks for newer published versions on the System Information page.

@@ -126,7 +126,7 @@
 	function edit(item: Employee, trigger: HTMLButtonElement | null) {
 		if (item.employmentStatus === 'deleted') return;
 		if (!canManageEmployees && item.id !== currentUserId) return;
-		if (!canManageEmployees) { window.location.assign('/settings#profile'); return; }
+		if (!canManageEmployees) { window.location.assign('/personal-settings#profile'); return; }
 		formReturnFocus = trigger;
 		editing = item;
 		formMode = 'admin-edit';

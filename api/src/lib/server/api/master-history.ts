@@ -5,7 +5,7 @@ export const masterHistoryFields = {
 	'employee-groups': ['name', 'departmentId', 'sortOrder', 'notes'],
 	positions: ['name', 'sortOrder', 'notes'],
 	'employment-types': ['name', 'sortOrder', 'notes'],
-	branches: ['name', 'openedOn', 'closedOn', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'phoneNumber1Label', 'phoneNumber2', 'phoneNumber2Label', 'faxNumber1', 'faxNumber1Label', 'faxNumber2', 'faxNumber2Label', 'managerEmployeeId', 'deputyManagerEmployeeId', 'notes', 'sortOrder'],
+	branches: ['name', 'openedOn', 'closedOn', 'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'phoneNumber1Label', 'phoneNumber2', 'phoneNumber2Label', 'faxNumber1', 'faxNumber1Label', 'faxNumber2', 'faxNumber2Label', 'managerEmployeeId', 'deputyManagerEmployeeId', 'notes', 'sortOrder'],
 	room: ['name', 'branchId', 'notes', 'sortOrder'],
 	storage: ['name', 'roomId', 'notes', 'sortOrder'],
 	'it-asset-types': ['name', 'managementCodePrefix', 'supportsCpu', 'supportsRam', 'supportsOs', 'supportsLoginUsername', 'sortOrder', 'notes'],

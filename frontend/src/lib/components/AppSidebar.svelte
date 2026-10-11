@@ -133,7 +133,7 @@
 					<span class="sidebar-user-info"><b>{formatEmployeeName(user, $localization) || user.username}</b><small>{roleNames(user)}</small></span>
 					<span class="more-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg></span>
 				</button>
-				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><a href="/settings" role="menuitem"><MenuItemIcon name="settings" />{navigationText.settings}</a><button type="button" role="menuitem" onclick={onLogout}><MenuItemIcon name="sign-out" />{navigationText.signOut}</button></div>{/if}
+				{#if userMenuOpen}<div class="menu-popover user-menu" role="menu"><a href="/personal-settings" role="menuitem"><MenuItemIcon name="settings" />{navigationText.settings}</a><button type="button" role="menuitem" onclick={onLogout}><MenuItemIcon name="sign-out" />{navigationText.signOut}</button></div>{/if}
 			</div>
 		</div>
 	{/if}

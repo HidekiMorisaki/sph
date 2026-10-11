@@ -1,4 +1,5 @@
 export type BranchAddress = {
+	countryCode?: 'JP' | 'US';
 	postalCode: string | null;
 	prefecture: string | null;
 	city: string | null;
@@ -17,11 +18,11 @@ function mapsSearchUrl(query: string) {
 }
 
 export function googleMapsHref(branch: BranchAddress): string | null {
-	const query = [branch.postalCode, branch.prefecture, branch.city, branch.streetAddress, branch.buildingName]
+	const addressParts = [branch.postalCode, branch.prefecture, branch.city, branch.streetAddress, branch.buildingName]
 		.map((value) => value?.trim() ?? '')
-		.filter(Boolean)
-		.join(' ');
-	if (!query) return null;
+		.filter(Boolean);
+	if (!addressParts.length) return null;
+	const query = [...addressParts, branch.countryCode === 'US' ? 'United States' : 'Japan'].join(' ');
 
 	const complete = mapsSearchUrl(query);
 	if (complete.length <= GOOGLE_MAPS_URL_LIMIT) return complete;

@@ -3,6 +3,17 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.5.0",
+			"releasedAt": null,
+			"changeGroups": {
+				"newFeatures": [
+					"v0_5_0_postal_address_lookup"
+				],
+				"improvements": [],
+				"bugFixes": []
+			}
+		},
+		{
 			"version": "0.4.0",
 			"releasedAt": "2026-10-11",
 			"changeGroups": {
@@ -97,6 +108,6 @@
 		}
 	],
 	"noticeIds": [
-		"v0_4_0_development_notice"
+		"v0_5_0_development_notice"
 	]
 }

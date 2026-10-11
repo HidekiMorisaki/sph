@@ -5,6 +5,7 @@ import { duplicateField, parseId } from '$lib/server/api/database';
 import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
 import { cpuTypeConflictField, deleteItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
 import { failure, success, throwApiError } from '$lib/server/api/response';
+import { getPrisma } from '$lib/server/prisma';
 
 function resource(value: string) {
 	if (!isEmployeeMasterResource(value) && !isItAssetMasterResource(value)) throwApiError(404, 'NOT_FOUND', 'The requested API resource was not found.');
@@ -16,7 +17,9 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 	const id = parseId(params.id);
 	const actor = selected === 'branches' && id ? requireBranchAccess(locals.user, permissionOperations.branchManagement, id) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	const value = await request.json().catch(() => null);
-	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(selected, value);
+	const current = selected === 'branches' && id ? await getPrisma().branch.findFirst({ where: { id, deletedAt: null }, select: { countryCode: true } }) : null;
+	if (selected === 'branches' && !current) return failure(404, 'NOT_FOUND', 'Not found.');
+	const data = isItAssetMasterResource(selected) ? parseItAssetMasterInput(selected, value) : masterInput(selected, value, current?.countryCode === 'US' ? 'US' : 'JP');
 	if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (isItAssetMasterResource(selected) && value && typeof value === 'object' && !Object.hasOwn(value, 'sortOrder')) delete data.sortOrder;
 	try {

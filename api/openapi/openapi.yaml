@@ -452,7 +452,7 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
-  /v1/settings:
+  /v1/personal-settings:
     get:
       tags: [Settings]
       operationId: getPersonalSettings
@@ -480,7 +480,7 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
-  /v1/settings/employee-analysis:
+  /v1/personal-settings/employee-analytics-selection:
     get:
       tags: [Settings]
       operationId: getEmployeeAnalysisSelection
@@ -811,7 +811,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
-  /v1/storage:
+  /v1/storages:
     get:
       tags: [Locations]
       operationId: listStorage
@@ -838,7 +838,7 @@ paths:
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/Error' }
-  /v1/storage/{id}:
+  /v1/storages/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
     patch:

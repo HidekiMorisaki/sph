@@ -26,8 +26,10 @@ export async function GET({ params, locals }: import('./$types').RequestEvent) {
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
 	const { actor, branchId: writerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeManagement); const id = parseId(params.id);
-	const parsed = parseEmployeeInput(await request.json().catch(() => null));
 	if (!id) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
+	const current = await getPrisma().employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { countryCode: true } });
+	if (!current) return failure(404, 'NOT_FOUND', 'Not found.');
+	const parsed = parseEmployeeInput(await request.json().catch(() => null), current.countryCode === 'US' ? 'US' : 'JP');
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;
 	if (writerBranchId !== null && input.employee.branchId !== writerBranchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
