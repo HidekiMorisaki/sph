@@ -134,7 +134,7 @@ export function partConfiguration(details) {
 
 async function verifyParts(client, app) {
   const details = await client.call('apps_get', { app });
-  if (!partConfiguration(details)) throw new Error('The deployment does not confirm frontend at /, v1 at /v1, and a pre-deploy migration. No administrator credentials were sent. Check Settings → Parts. The MCP deployment may have selected only one part.');
+  if (!partConfiguration(details)) throw new Error('The deployment does not confirm frontend at /, v1 at /v1, and a pre-deploy migration. No administrator credentials were sent. The MCP tools cannot add parts to an existing app; create the multi-part app in the GitHub deployment wizard, then rerun this installer.');
   return details;
 }
 
@@ -220,7 +220,7 @@ async function main() {
   const prompt = terminal();
   let client;
   try {
-    process.stdout.write('SPH on blitz.cloud. Create an account, connect GitHub code access, and make an API key on https://dashboard.blitz.cloud/ai first.\n');
+    process.stdout.write('SPH on blitz.cloud. Create the multi-part app in the GitHub deployment wizard, then make an API key on https://dashboard.blitz.cloud/ai.\n');
     const key = await prompt.ask('blitz.cloud API key (hidden)', { secret: true });
     client = new Blitz(key);
     await client.connect();
@@ -231,8 +231,7 @@ async function main() {
     const existing = await client.call('apps_list', {});
     const resume = existing.includes(`${address}.${account}.blitz.cloud`);
     if (!resume) {
-      process.stdout.write(`Creating ${origin} from ${REPOSITORY}, branch ${branch}. The first build may wait for its database and settings.\n`);
-      await client.call('apps_deploy_github', { repo: REPOSITORY, branch, name: 'SPH', address });
+      throw new Error(`No app exists at ${origin}. Create it from ${REPOSITORY}, branch ${branch}, in the blitz.cloud GitHub deployment wizard. Set frontend at /, v1 at /v1, and migration as a pre-deploy step. Then rerun this installer.`);
     } else {
       const details = await client.call('apps_get', { app });
       if (!details.includes(REPOSITORY) && !details.includes(`github.com/${REPOSITORY}`)) {
@@ -251,7 +250,7 @@ async function main() {
     const connectArgs = { app };
     connectArgs[client.field('dbs_connect', ['database', 'db', 'databaseName', 'dbId', 'databaseId'])] = database;
     await client.call('dbs_connect', connectArgs);
-    await client.call('env_set', { app, name: 'APP_ORIGIN', value: origin }, true);
+    await client.call('env_set', { app, name: 'ORIGIN', value: origin }, true);
     const settings = await client.call('env_list', { app });
     if (!settings.includes('IT_ASSET_CREDENTIAL_ENCRYPTION_KEY')) {
       await client.call('env_set', { app, name: 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY',
