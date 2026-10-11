@@ -15,7 +15,7 @@ SME Portal Hub ( 略称：SPH ) は、中小企業が社内向けのポータル
 | 目的 | 参照するセクション |
 | --- | --- |
 | インストール・試用・利用する | [利用者向けクイックスタート](#quick-start-for-users) |
-| 無料クラウドで試す | [blitz.cloudへのインストール](#installing-on-blitz-cloud) |
+| 無料クラウドで試す | [blitz.cloud へのインストール](#installing-on-blitz-cloud) |
 | 他の PC から利用できるようにサーバーへインストールする | [サーバーまたは別の PC へのインストール](#installing-on-a-server-or-another-pc) |
 | インストール時の問題を調べる | [クイックスタートのトラブルシューティング](#quick-start-troubleshooting) |
 | インストール済みのシステムを起動・停止する | [システムの起動と停止](#starting-and-stopping-the-system) |
@@ -66,22 +66,24 @@ cd sph
 
 ## blitz.cloudへのインストール
 
-この方法では、SPHとPostgreSQLをblitz.cloudの無料枠で動かします。Dockerを手元のPCで動かす必要はありません。クラウド対応版が公開リポジトリの`main`ブランチに反映された後に利用してください。無料枠では未使用のアプリが休止し、DBバックアップは直近7夜分です。評価用として利用し、実在する社員の機密情報を登録する前にサービスの条件とバックアップ方法を確認してください。
+この方法では、SPH と PostgreSQL を blitz.cloud の無料枠で動かします。Docker を手元の PC で動かす必要はありません。無料枠での使用は評価目的にとどめ、本番運用を前提にする場合は有償プランの契約を推奨します。
 
-1. [blitz.cloudのダッシュボード](https://dashboard.blitz.cloud/)を開き、無料アカウントを作成します。メールアドレスとパスワード、GitHub、Googleのいずれかで登録できます。確認メールが届いたらメールアドレスを確認し、案内に従って自分の`<アカウント名>.blitz.cloud`というアドレスを取得します。メール確認が終わるまでアプリとDBは作成できません。[公式の登録手順](https://blitz.cloud/docs/getting-started/)も参照してください。
-2. **Host something new → My own code**を選び、公開リポジトリ[`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph)のURLを入力します。公開リポジトリを読むためのGitHub連携やフォークは不要です。**Advanced settings**で対象ブランチを選び、`frontend`を`/`、APIパートを`v1`という名前で`/v1`、`migration`を**Runs before each new version**にします。`db`と`gateway`が提案された場合は無効にします。**Needs a database**はオフにし、管理PostgreSQLはインストーラーで作成・接続します。未使用のアプリ名を選んでウィザードを完了します。DBと管理者設定がまだないため、最初のビルドは失敗しても構いません。
-3. ダッシュボードの**AI tools → Keys → Make a key**を開き、`SPH installer`など用途が分かる名前でAPIキーを発行します。発行直後に表示される値を安全な場所へコピーしてください。再表示はできません。APIキーはblitz.cloudのアプリとDBを操作できるため、GitHub、スクリーンショット、チャット、コマンド引数に載せないでください。インストーラーが求めたときに非表示の入力欄へ貼り付けます。紛失時は同じ画面で再発行し、不要になったキーは**Revoke**で失効できます。[APIキーの公式説明](https://blitz.cloud/docs/ai-assistants/)も参照してください。
-4. [Node.js 22](https://nodejs.org/)とGitを用意し、ウィザードで選んだ公開ブランチを取得してインストーラーを実行します。
+1. [blitz.cloudのダッシュボード](https://dashboard.blitz.cloud/) を開き、無料アカウントを作成します。メールアドレスとパスワード、GitHub、Google のいずれかで登録できます。確認メールが届いたらメールアドレスを確認し、案内に従って自分の `<アカウント名>.blitz.cloud` というアドレスを取得します。[公式の登録手順](https://blitz.cloud/docs/getting-started/) も参照してください。
+2. **Host something new --> My own code** を選び、公開リポジトリ [`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph) の URL を入力します。公開リポジトリを読むための GitHub 連携やリポジトリのフォークは不要です。**Advanced settings** で `main`ブランチを選び、次の 3 パートを確認・修正します。`frontend` はルートの `Dockerfile` で`/`、`v1` は `api/Dockerfile` で`/v1`、`migration` は `sh -c 'npm run db:deploy && npm run admin:create'` を実行する **Runs before each new version** です。`db` と `gateway` が提案された場合は使用しません。**Needs a database** はオフにし、管理 PostgreSQL はインストーラーで作成・接続します。未使用のアプリ名を選んでウィザードを完了します。DB と管理者設定がまだないため、最初のビルドが失敗しても、この時点ではアプリや DB を削除しないでください。
+3. ダッシュボードの **AI tools --> Keys --> Make a key** を開き、`SPH installer` など用途が分かる名前で API キーを発行します。発行直後に表示される値を安全な場所へコピーしてください。再表示はできません。インストーラーから API キーの入力を求められた場合は、非表示の入力欄へ貼り付けてください。紛失時は同じ画面で再発行し、不要になったキーは **Revoke** で失効できます。[APIキーの公式説明](https://blitz.cloud/docs/ai-assistants/) も参照してください。
+4. [Node.js 22](https://nodejs.org/) と Git を用意し、ウィザードと同じブランチを取得してインストーラーを実行します。
 
    ```bash
-   git clone https://github.com/HidekiMorisaki/sph.git
+   git clone --branch main --single-branch https://github.com/HidekiMorisaki/sph.git
    cd sph
    node scripts/install-blitz.mjs
    ```
 
-5. APIキーを入力し、表示されたblitz.cloudのアカウント名を確認します（取得できない場合は入力します）。ウィザードで選んだアプリのサブドメインを入力します。インストーラーはパート構成を確認した後、管理PostgreSQLを作成・接続し、初期管理者情報を尋ねます。プロフィールはEnterで既定値を選べます。APIキーとパスワードには既定値がなく、パスワードは確認入力も必要です。ビルド後に`/v1/health`、セッション、管理者ログイン、ログアウトを確認し、初期管理者設定を削除してHTTPS URLを表示します。
+5. API キーを入力し、表示された blitz.cloud のアカウント名を確認します（取得できない場合は入力します）。ウィザードで選んだアプリのサブドメインを入力します。blitz.cloud の管理 API がパート構成を返さない場合は、ダッシュボードの **Settings --> Parts** で上記 3 パートを確認してから、インストーラーへ`VERIFY` と入力します。インストーラーは管理 PostgreSQL を作成・接続し、初期管理者情報を尋ねます。プロフィールは Enter で既定値を選べます。API キーとパスワードには既定値がなく、パスワードは確認入力も必要です。ビルド後に `/v1/health`、セッション、管理者ログイン、ログアウトを確認し、初期管理者設定を削除して HTTPS URL を表示します。
 
-途中で止まった場合は、blitz.cloudのアプリ画面の**Overview / Activity / Logs / Settings → Parts**で失敗箇所を確認します。現在のMCP公開操作は単一パートを作るため、インストーラーは使用しません。既存の単一パート構成はインストーラーから修正できません。別のアドレスでウィザードから複数パートのアプリを作るか、既存のアプリと接続DBに保存データがないことを確認してから削除し、同じアドレスを使い直してください。再実行時は既存DBと暗号化キーを保持します。正常に再開した後で初期設定用の環境変数が削除されたことを確認してください。APIキーを再利用する予定がなければ、AI toolsで失効させられます。
+途中で止まった場合は、アプリを削除せずに blitz.cloud の **Activity** でビルド、**Logs --> migration** で DB 移行と管理者作成、**Settings --> Parts** で 3 パート、**Environment** で設定名の有無を確認します。設定値や API キーをログ・問い合わせに載せないでください。ビルドや起動が失敗した場合は原因を修正し、同じブランチ・アドレスでインストーラーを再実行します。再実行時は既存 DB と暗号化キーを保持し、管理者がすでに作成されている場合は最初に指定したログイン情報を入力します。
+
+インストーラーが `/v1/health` の待機時間切れで終了しても、ビルドが後から完了する場合があります。**Activity** で公開状態を確認し、`https://<アプリ名>.<アカウント名>.blitz.cloud/v1/health` が `responseCode: 200` のJSONを返すこと、未ログインの `/v1/auth/session` が 401 の JSON を返すこと、管理者でログイン・ログアウトできることを確認してください。すべて成功していればインストーラーを再実行する必要はありません。**Environment** から `INITIAL_ADMIN_*` をすべて削除して **Restart now** を押し、再起動後のヘルスチェックを確認します。`DATABASE_URL` と `IT_ASSET_CREDENTIAL_ENCRYPTION_KEY` は削除せずに残してください。API キーを再利用しない場合は **AI tools** で失効できます。
 
 <a id="installing-on-a-server-or-another-pc"></a>
 

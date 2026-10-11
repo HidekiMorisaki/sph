@@ -17,6 +17,8 @@
 	let year = $state(untrack(() => Number(value.slice(0, 4)) || new Date().getFullYear()));
 	let month = $state(new Date().getMonth());
 	let choosingYear = $state(untrack(() => mode === 'year' && open));
+	let choosingMonth = $state(false);
+	let yearReturnView = $state<'month' | 'date'>('date');
 	let yearPage = $state(untrack(() => Math.floor(year / 12) * 12));
 	let yearOptions = $derived(Array.from({ length: 12 }, (_, index) => yearPage + index));
 	let trigger: HTMLButtonElement;
@@ -70,6 +72,7 @@
 			month = date.getMonth();
 			yearPage = Math.floor(year / 12) * 12;
 			choosingYear = mode === 'year';
+			choosingMonth = false;
 		}
 		onToggle();
 		if (opening) void tick().then(() => { panel?.showPopover(); positionPanel(); panel?.querySelector<HTMLButtonElement>('button[aria-pressed="true"], .year-title')?.focus(); });
@@ -81,6 +84,7 @@
 	}
 	function showYears() {
 		yearPage = Math.floor(year / 12) * 12;
+		yearReturnView = mode === 'month' || choosingMonth ? 'month' : 'date';
 		choosingYear = true;
 		void tick().then(() => panel?.querySelector<HTMLButtonElement>(`.year-grid button[aria-current="date"]`)?.focus());
 	}
@@ -91,7 +95,18 @@
 		if (mode === 'year') { selectDate(String(selected)); return; }
 		year = selected;
 		choosingYear = false;
+		choosingMonth = true;
+		void tick().then(() => panel?.querySelector<HTMLButtonElement>('.month-grid button:not(:disabled)')?.focus());
+	}
+	function selectMonth(selected: string) {
+		if (mode === 'month') { selectDate(selected); return; }
+		if (!monthAllowed(selected)) return;
+		month = Number(selected.slice(5, 7)) - 1;
+		choosingMonth = false;
 		void tick().then(() => panel?.querySelector<HTMLButtonElement>('.year-title')?.focus());
+	}
+	function monthAllowed(selected: string) {
+		return (!min || selected >= min.slice(0, 7)) && (!max || selected <= max.slice(0, 7));
 	}
 	function allowed(selected: string) {
 		return (!min || selected >= min) && (!max || selected <= max);
@@ -160,11 +175,11 @@
 			{#if choosingYear}
 				<div class="year-head"><button type="button" aria-label={text.previousYears} disabled={yearPage <= 0} onclick={() => moveYearPage(-1)}>‹</button><strong>{yearPage}–{Math.min(yearPage + 11, 9999)}</strong><button type="button" aria-label={text.nextYears} disabled={yearPage + 12 > 9999} onclick={() => moveYearPage(1)}>›</button></div>
 				<div class="year-grid">{#each yearOptions as option (option)}<button type="button" disabled={option < 1 || option > 9999 || (mode === 'year' && !allowed(String(option)))} class:selected={option === year} aria-current={option === year ? 'date' : undefined} onclick={() => selectYear(option)}>{option}</button>{/each}</div>
-				{#if mode !== 'year'}<button class="back-month" type="button" onclick={() => choosingYear = false}>{text.backToCalendar}</button>{/if}
-			{:else if mode === 'month'}
+				{#if mode !== 'year'}<button class="back-month" type="button" onclick={() => { choosingYear = false; choosingMonth = yearReturnView === 'month'; }}>{text.backToCalendar}</button>{/if}
+			{:else if mode === 'month' || choosingMonth}
 				<div class="year-head"><button type="button" aria-label={text.previousYear} disabled={year <= 1} onclick={() => year -= 1}>‹</button><button class="year-title" type="button" aria-label={text.chooseYearLabel(year)} onclick={showYears}>{year}</button><button type="button" aria-label={text.nextYear} disabled={year >= 9999} onclick={() => year += 1}>›</button></div>
-				<div class="year-grid month-grid">{#each months as option (option.iso)}<button type="button" disabled={!allowed(option.iso)} class:selected={option.iso === value} aria-label={option.fullLabel} aria-pressed={option.iso === value} onclick={() => selectDate(option.iso)}>{option.label}</button>{/each}</div>
-				<div class="calendar-actions">{#if !required}<button type="button" onclick={() => selectDate('')}>{text.clear}</button>{/if}<button type="button" disabled={!allowed(dateIso(new Date()).slice(0, 7))} onclick={() => selectDate(dateIso(new Date()).slice(0, 7))}>{text.today}</button></div>
+				<div class="year-grid month-grid">{#each months as option (option.iso)}<button type="button" disabled={mode === 'month' ? !allowed(option.iso) : !monthAllowed(option.iso)} class:selected={option.iso === value.slice(0, 7)} aria-label={option.fullLabel} aria-pressed={option.iso === value.slice(0, 7)} onclick={() => selectMonth(option.iso)}>{option.label}</button>{/each}</div>
+				{#if mode === 'month'}<div class="calendar-actions">{#if !required}<button type="button" onclick={() => selectDate('')}>{text.clear}</button>{/if}<button type="button" disabled={!allowed(dateIso(new Date()).slice(0, 7))} onclick={() => selectDate(dateIso(new Date()).slice(0, 7))}>{text.today}</button></div>{/if}
 			{:else}
 				<div class="calendar-head"><button type="button" aria-label={text.previousYear} onclick={() => year -= 1}>«</button><button type="button" aria-label={text.previousMonth} onclick={() => moveMonth(-1)}>‹</button><button class="year-title" type="button" aria-label={text.chooseYearLabel(year)} onclick={showYears}>{monthYear}</button><button type="button" aria-label={text.nextMonth} onclick={() => moveMonth(1)}>›</button><button type="button" aria-label={text.nextYear} onclick={() => year += 1}>»</button></div>
 				<div class="weekdays">{#each weekdays as day}<span>{day}</span>{/each}</div>

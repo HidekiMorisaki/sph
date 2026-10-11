@@ -2,6 +2,7 @@
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount } from 'svelte';
 	import { productName } from '$lib/brand';
+	import { avatarImage } from '$lib/avatar';
 	import { roleNames, type SessionUser } from '$lib/auth';
 	import MenuItemIcon from '$lib/components/MenuItemIcon.svelte';
 	import { clearExternalLinks, externalLinks, loadExternalLinks } from '$lib/externalLinks';
@@ -129,7 +130,7 @@
 		<div class="sidebar-footer">
 			<div class="sidebar-user" bind:this={sidebarUser}>
 				<button class="account-trigger" type="button" aria-label={userMenuOpen ? navigationText.closeAccount : navigationText.openAccount} aria-haspopup="menu" aria-expanded={userMenuOpen} onclick={() => userMenuOpen = !userMenuOpen}>
-					<span class="avatar">{user.username.slice(0, 1).toUpperCase()}<i></i></span>
+					<span class="avatar">{#if $avatarImage}<img src={$avatarImage} alt="" />{:else}{user.username.slice(0, 1).toUpperCase()}{/if}<i></i></span>
 					<span class="sidebar-user-info"><b>{formatEmployeeName(user, $localization) || user.username}</b><small>{roleNames(user)}</small></span>
 					<span class="more-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg></span>
 				</button>
@@ -151,6 +152,7 @@
 	.account-trigger:hover{background:#ffffff0c}
 	.account-trigger:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 	.avatar{position:relative;display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:50%;background:linear-gradient(135deg,var(--primary),#168b76);font-size:var(--font-size-support);font-weight:600}
+	.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
 	.avatar i{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border:2px solid var(--sidebar);border-radius:50%;background:#42c885}
 	.sidebar-user-info{flex:1;min-width:0}
 	.sidebar-user-info b{display:block;overflow:hidden;color:#fff;font-size:var(--font-size-body);font-weight:500;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}

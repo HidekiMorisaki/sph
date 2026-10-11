@@ -10,7 +10,7 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 	return [
 		{ id: 'dashboard', label: text.groups.dashboard, items: [
 			{ id: 'employeeAnalytics', text: text.items.employeeAnalytics, icon: 'dashboard', href: '/' },
-			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'dashboard', href: '/financial-trends' }
+			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'trending_up', href: '/financial-trends' }
 		] },
 		{ id: 'general', label: text.groups.general, items: [
 			{ id: 'myPage', text: text.items.myPage, icon: 'dashboard', href: '/my-page' },
@@ -68,6 +68,7 @@ export function parentMenuForPath(path: string): string | null {
 	const svg = (body: string) => `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${body}</svg>`;
 	export const icons: Record<string, string> = {
 		dashboard: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="4" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="10" width="7" height="11" rx="1.5"/>'),
+		trending_up: svg('<path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v6h-6"/>'),
 		settings: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
 		table: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M9 10v9M15 10v9"/>'),
 		list: svg('<path d="M4 6h16M4 12h16M4 18h10"/>'),

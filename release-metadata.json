@@ -9,7 +9,9 @@
 				"newFeatures": [
 					"v0_5_0_postal_address_lookup"
 				],
-				"improvements": [],
+				"improvements": [
+					"v0_5_0_blitz_cloud_installation"
+				],
 				"bugFixes": []
 			}
 		},

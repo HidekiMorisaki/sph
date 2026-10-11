@@ -10,6 +10,10 @@ User-facing changes to SME Portal Hub are documented below by release.
 
 - In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.
 
+### Existing feature improvements
+
+- Documented the steps for publishing SPH on blitz.cloud.
+
 ## [v0.4.0] - 2026-10-11
 
 ### New features

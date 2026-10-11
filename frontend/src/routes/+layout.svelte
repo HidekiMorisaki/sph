@@ -4,6 +4,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { readSessionUser } from '$lib/client-session';
+	import { clearAvatar, loadAvatarFor } from '$lib/avatar';
 	import type { SessionUser } from '$lib/auth';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import AppSidebar from '$lib/components/AppSidebar.svelte';
@@ -28,6 +29,7 @@
 	async function logout() {
 		++sessionRevision;
 		user = null;
+		clearAvatar();
 		await fetch('/v1/auth/logout', { method: 'POST' });
 		window.location.assign('/');
 	}
@@ -37,9 +39,13 @@
 			const current = await readSessionUser();
 			if (revision !== sessionRevision) return;
 			if (current) await applyLocalization(current);
-			if (revision === sessionRevision) user = current;
+			if (revision === sessionRevision) {
+				user = current;
+				if (current) void loadAvatarFor(current.id).catch(() => undefined);
+				else clearAvatar();
+			}
 		} catch {
-			if (revision === sessionRevision) user = null;
+			if (revision === sessionRevision) { user = null; clearAvatar(); }
 		}
 	}
 	afterNavigate(() => { void refreshSession(); });

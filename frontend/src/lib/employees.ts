@@ -47,6 +47,7 @@ export type EmployeeProfile = {
 };
 
 export type Employee = EmployeeProfile & {
+	avatar?: string | null;
 	employeeCode: string;
 	age: number;
 	lengthOfService: { years: number; months: number };

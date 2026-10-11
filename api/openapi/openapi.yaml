@@ -553,6 +553,46 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/EmployeeConflict' }
+  /v1/employees/me/avatar:
+    get:
+      tags: [Employees]
+      operationId: getMyAvatar
+      description: Returns the authenticated employee's 256 by 256 PNG avatar as a data URL in the JSON data.image field, or null when absent.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [Employees]
+      operationId: replaceMyAvatar
+      description: Replaces the authenticated employee's avatar after decoding and re-encoding the cropped PNG. Input is limited to 400000 bytes.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '415': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Employees]
+      operationId: removeMyAvatar
+      description: Soft-deletes the authenticated employee's avatar.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/employees:
     get:
       tags: [Employees]
@@ -580,6 +620,10 @@ paths:
         - name: includeDeleted
           in: query
           description: Include soft-deleted employees regardless of their retirement date.
+          schema: { type: boolean, default: false }
+        - name: includeAvatar
+          in: query
+          description: Include a 48px PNG data URL in each returned employee's `avatar` field. Only images for employees on the authorized page are loaded; absent and soft-deleted avatars are null.
           schema: { type: boolean, default: false }
         - name: sortBy
           in: query

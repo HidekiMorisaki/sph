@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
+	import AvatarEditor from '$lib/components/AvatarEditor.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
@@ -254,6 +255,7 @@
 				<div class="settings-content">
 					<section id="profile" class="settings-card" aria-labelledby="profile-title">
 						<header><div><h2 id="profile-title">{text.profile}</h2><p>{text.profileDescription}</p></div></header>
+						<AvatarEditor {text} />
 						<form novalidate onsubmit={(event) => { event.preventDefault(); void saveProfile(); }}>
 							<div class="form-body">
 								{#if profileMessage}<StatusNotice message={fieldError(profileMessage)} tone={profileMessage === 'profileSaved' ? 'success' : 'error'} onDismiss={() => profileMessage = ''} />{/if}

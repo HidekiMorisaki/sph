@@ -61,6 +61,7 @@ model Employee {
   sessions                Session[]
   settings                EmployeeSettings?
   socialLinks             EmployeeSocialLink[]
+  avatar                  EmployeeAvatar?
   passwordResetTokens     PasswordResetToken[]
   auditLogs               AuditLog[]
   masterChangeHistory     MasterChangeHistory[]
@@ -77,6 +78,18 @@ model Employee {
 
   @@index([workCalendarId])
   @@map("employees")
+}
+
+model EmployeeAvatar {
+  id         Int       @id @default(autoincrement())
+  employeeId Int       @unique @map("employee_id")
+  image      Bytes     @db.ByteA
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@map("employee_avatars")
 }
 
 model EmployeeSettings {

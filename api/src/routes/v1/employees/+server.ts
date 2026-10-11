@@ -1,5 +1,6 @@
 import { dev } from '$app/environment';
 import { writeAuditLog } from '$lib/server/api/admin';
+import { avatarThumbnailDataUrl } from '$lib/server/api/avatar-image';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
@@ -430,6 +431,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	const search = parseSearch(url);
 	const visibleSearch = parseVisibleSearch(url, visibleSearchKeys);
 	const withColumns = parseBooleanQuery(url, 'includeColumns', 'INVALID_INCLUDE_COLUMNS');
+	const withAvatars = parseBooleanQuery(url, 'includeAvatar', 'INVALID_INCLUDE_AVATAR');
 	if (withColumns) requireScopedOperationApi(viewer, permissionOperations.employeeManagement);
 	const referenceDate = employeeReferenceDate();
 	const visibility = {
@@ -443,24 +445,40 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 		visibility.branchIds = [readerBranchId];
 	}
 	const where = employeeWhere(search, visibility);
-	const { total, items } = await getPrisma().$transaction(async (tx) => {
-		if (visibleSearch && search) return visibleEmployeePage(tx, search, visibleSearch.keys, visibleSearch.locale, visibility, query.sortBy, query.sortOrder, query.offset, query.limit);
-		const total = await tx.employee.count({ where });
-		if (!['roles', 'lengthOfService', 'department', 'position'].includes(query.sortBy)) {
-			const items = await tx.employee.findMany({ where, select: employeeSafeSelect, orderBy: employeeOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit });
-			return { total, items };
+	const { total, items, avatars } = await getPrisma().$transaction(async (tx) => {
+		let page: { total: number; items: Array<Prisma.EmployeeGetPayload<{ select: typeof employeeSafeSelect }>> };
+		if (visibleSearch && search) {
+			page = await visibleEmployeePage(tx, search, visibleSearch.keys, visibleSearch.locale, visibility, query.sortBy, query.sortOrder, query.offset, query.limit);
+		} else {
+			const total = await tx.employee.count({ where });
+			if (!['roles', 'lengthOfService', 'department', 'position'].includes(query.sortBy)) {
+				const items = await tx.employee.findMany({ where, select: employeeSafeSelect, orderBy: employeeOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit });
+				page = { total, items };
+			} else {
+				const ids = query.sortBy === 'roles'
+					? await roleSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit)
+					: query.sortBy === 'lengthOfService'
+						? await lengthOfServiceSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit, referenceDate)
+						: await assignmentSortedEmployeeIds(tx, search, visibility, query.sortBy as 'department' | 'position', query.sortOrder, query.offset, query.limit);
+				const records = await tx.employee.findMany({ where: { id: { in: ids } }, select: employeeSafeSelect });
+				const recordById = new Map(records.map((record) => [record.id, record]));
+				page = { total, items: ids.flatMap((id) => { const record = recordById.get(id); return record ? [record] : []; }) };
+			}
 		}
-		const ids = query.sortBy === 'roles'
-			? await roleSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit)
-			: query.sortBy === 'lengthOfService'
-				? await lengthOfServiceSortedEmployeeIds(tx, search, visibility, query.sortOrder, query.offset, query.limit, referenceDate)
-				: await assignmentSortedEmployeeIds(tx, search, visibility, query.sortBy as 'department' | 'position', query.sortOrder, query.offset, query.limit);
-		const records = await tx.employee.findMany({ where: { id: { in: ids } }, select: employeeSafeSelect });
-		const recordById = new Map(records.map((record) => [record.id, record]));
-		return { total, items: ids.flatMap((id) => { const record = recordById.get(id); return record ? [record] : []; }) };
+		const avatarIds = withAvatars ? page.items.filter((item) => item.deletedAt === null).map((item) => item.id) : [];
+		const avatars = avatarIds.length ? await tx.employeeAvatar.findMany({
+			where: { employeeId: { in: avatarIds }, deletedAt: null },
+			select: { employeeId: true, image: true }
+		}) : [];
+		return { ...page, avatars };
 	}, { isolationLevel: 'RepeatableRead' });
 	const columns = withColumns ? await employeeColumns() : undefined;
-	return success(items.map((item) => employeeOutput(item, referenceDate)), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), includeRetired: visibility.includeRetired, includeDeleted: visibility.includeDeleted, branchIds: visibility.branchIds, ...(columns ? { columns } : {}) });
+	const avatarByEmployeeId = new Map(avatars.map((avatar) => [avatar.employeeId, avatar.image]));
+	return success(items.map((item) => ({
+		...employeeOutput(item, referenceDate),
+		...(withAvatars ? { avatar: item.deletedAt === null && avatarByEmployeeId.has(item.id)
+			? avatarThumbnailDataUrl(avatarByEmployeeId.get(item.id)!) : null } : {})
+	})), 200, { ...listMeta(query, items.length, total), search, calculatedAsOf: referenceDate.toISOString().slice(0, 10), includeRetired: visibility.includeRetired, includeDeleted: visibility.includeDeleted, branchIds: visibility.branchIds, ...(columns ? { columns } : {}) });
 }
 
 export async function POST({ request, locals, url }: import('./$types').RequestEvent) {
