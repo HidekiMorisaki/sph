@@ -4,6 +4,7 @@
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import EmployeeMasterSection from '$lib/components/EmployeeMasterSection.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
@@ -67,7 +68,7 @@
 
 <AssetManagementShell {title} active="">
 	<MasterPageHeader {title} description={text.employeeDescription} />
-	{#if loading}<div class="page-state">{common.loading}</div>
+	{#if loading}<div class="page-state"><LoadingSpinner label={common.loading} /></div>
 	{:else if accessDenied}{#if !errorDismissed}<StatusNotice message={text.employeeAccessDenied} tone="error" onDismiss={() => errorDismissed = true} />{/if}
 	{:else if loadError}{#if !errorDismissed}<StatusNotice message={common.loadFailed} tone="error" onDismiss={() => errorDismissed = true} />{/if}
 	{:else}

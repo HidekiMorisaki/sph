@@ -6,6 +6,7 @@
 	import { localeMessages } from '$lib/locale-messages';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MyPage from '$lib/components/MyPage.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let user = $state<SessionUser | null>(null);
 	let failed = $state(false);
@@ -28,7 +29,7 @@
 	{#if user}
 		<MyPage {user} />
 	{:else}
-		<div class="page-state"><p role={failed ? 'alert' : 'status'}>{failed ? localeMessages[$localization.displayLanguage].common.loadFailed : localeMessages[$localization.displayLanguage].common.loading}</p></div>
+		<div class="page-state">{#if failed}<p role="alert">{localeMessages[$localization.displayLanguage].common.loadFailed}</p>{:else}<LoadingSpinner />{/if}</div>
 	{/if}
 </AssetManagementShell>
 

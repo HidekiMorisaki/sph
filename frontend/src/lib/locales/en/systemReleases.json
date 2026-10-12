@@ -1,6 +1,8 @@
 {
+	"v0_5_0_profile_picture_upload": "You can now upload a profile picture from Personal settings.",
 	"v0_5_0_postal_address_lookup": "In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.",
 	"v0_5_0_blitz_cloud_installation": "Documented the steps for publishing SPH on blitz.cloud.",
+	"v0_5_0_it_asset_type_filter": "Added an asset type selector beside search in the IT asset list. You can choose asset types, and your selection is restored when you return to the page. Asset types are no longer included in text search.",
 	"v0_5_0_development_notice": "Version 0.5.0 is a development release. Features, including existing ones, may change significantly in future updates.",
 	"v0_4_0_branch_administrator": "Added Branch Administrator as a default role. Its initial permissions allow management of employees, locations, IT assets, financial periods, and more within the assigned branch. The Branch Administrator role's permissions cannot be changed in System settings.",
 	"v0_4_0_employee_branch_filter": "Added a branch selector beside search in the employee list. You can select multiple branches, and the selection is restored when you return to the page. Branch names are no longer included in text search.",

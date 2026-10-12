@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
 	import { apiData } from '$lib/api';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { countryCode, postalCode, language, onSelect }: {
 		countryCode: AddressCountry;
@@ -43,7 +44,7 @@
 </script>
 
 <div class="postal-lookup" aria-live="polite">
-	{#if lookupState === 'loading'}<small>{language === 'ja' ? '住所を検索中…' : 'Looking up address…'}</small>{/if}
+	{#if lookupState === 'loading'}<LoadingSpinner label={language === 'ja' ? '住所を検索中…' : 'Looking up address…'} inline />{/if}
 	{#if lookupState === 'empty'}<small>{language === 'ja' ? '該当する住所はありません。手入力できます。' : 'No address found. You can enter it manually.'}</small>{/if}
 	{#if lookupState === 'error'}<small>{language === 'ja' ? '住所を取得できませんでした。手入力できます。' : 'Address lookup is unavailable. You can enter it manually.'}</small>{/if}
 	{#if candidates.length}

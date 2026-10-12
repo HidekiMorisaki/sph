@@ -4,6 +4,7 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import FinancialTrendsChart from '$lib/components/FinancialTrendsChart.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import type { FinancialTrend, FinancialTrendsResponse } from '$lib/financialTrendsData';
 	import { localeMessages } from '$lib/locale-messages';
@@ -127,7 +128,7 @@
 			</div>
 			<div class="content">
 				{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
-				{#if loading}<p class="state">{localeMessages[$localization.displayLanguage].common.loading}</p>
+				{#if loading}<LoadingSpinner />
 				{:else if !hasData}<p class="state">{hasPublished ? text.unavailable : text.noData}</p>
 				{:else}<FinancialTrendsChart points={items} labels={{ ...text, chartTitle: text.allBranchesTotal }} {currency} />{/if}
 			</div>

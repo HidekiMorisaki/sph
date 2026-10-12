@@ -7,6 +7,7 @@
 	import { readSessionUser } from '$lib/client-session';
 	import { productName } from '$lib/brand';
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	const pageText = localeMessages.en.login;
 	type CurrentUser = SessionUser;
@@ -22,7 +23,7 @@
 {#if !user}<PageTitle />{/if}
 <svelte:head><meta name="description" content={pageText.metaDescription} /></svelte:head>
 
-{#if isLoading}<main class="auth"><p>{localeMessages[$localization.displayLanguage].common.loading}</p></main>
+{#if isLoading}<main class="auth"><LoadingSpinner /></main>
 {:else if user}<Dashboard />
 {:else}<main class="auth"><form novalidate onsubmit={(event) => { event.preventDefault(); void login(); }}><h1>{productName}</h1><p>{pageText.loginDescription}</p><label>{pageText.identifier}<input bind:this={identifierInput} bind:value={identifier} autocomplete="username" maxlength="254" aria-invalid={!!identifierError} aria-describedby={identifierError?'identifier-error':undefined} oninput={()=>identifierError=''} />{#if identifierError}<small id="identifier-error" class="field-error">{identifierError}</small>{/if}</label><label>{pageText.password}<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="current-password" aria-invalid={!!passwordError} aria-describedby={passwordError?'login-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="login-password-error" class="field-error">{passwordError}</small>{/if}</label><button type="submit" disabled={isSubmitting}>{isSubmitting ? pageText.signingIn : pageText.signIn}</button>{#if message}<StatusNotice message={message} tone="error" onDismiss={() => message = ''} />{/if}</form></main>{/if}
 

@@ -3,6 +3,7 @@
 	import type { ChangeHistoryEntry } from '$lib/change-history';
 	import { formatDate, formatEmployeeName, formatTimestamp, localization } from '$lib/localization';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 
@@ -38,7 +39,7 @@
 <section class="app-detail-section">
 	<h3>{commonText.history}</h3>
 	<div class="history" aria-label={commonText.history}>
-		{#if loading}<p>{commonText.historyLoading}</p>
+		{#if loading}<LoadingSpinner label={commonText.historyLoading} compact />
 		{:else if error}{#if !errorDismissed}<StatusNotice message={commonText.historyFailed} tone="error" onDismiss={() => errorDismissed = true} />{/if}
 		{:else if entries.length === 0}<p>{commonText.historyEmpty}</p>
 		{:else}{#each entries as entry}<article class="history-event"><div class="history-event-heading"><strong>{(actionLabels ?? { create: commonText.created, update: commonText.updated, delete: commonText.deleted })[entry.action] ?? entry.action}</strong><span>{formatTimestamp(entry.changedAt, $localization)}</span><span>{formatLocaleTemplate(commonText.byActor, formatEmployeeName(entry.actor, $localization))}</span></div>

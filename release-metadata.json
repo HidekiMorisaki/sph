@@ -7,9 +7,11 @@
 			"releasedAt": null,
 			"changeGroups": {
 				"newFeatures": [
+					"v0_5_0_profile_picture_upload",
 					"v0_5_0_postal_address_lookup"
 				],
 				"improvements": [
+				"v0_5_0_it_asset_type_filter",
 					"v0_5_0_blitz_cloud_installation"
 				],
 				"bugFixes": []

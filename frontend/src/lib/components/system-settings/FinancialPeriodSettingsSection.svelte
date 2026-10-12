@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { localeMessages } from '$lib/locale-messages';
@@ -69,7 +70,7 @@
 <svelte:window onkeydown={handleConfirmKeydown} />
 <div class="financial-settings"><h2>{text.periodSettings}</h2><p>{text.periodSettingsDescription}</p>
 	{#if notice}<StatusNotice message={notice} tone={isError ? 'error' : 'success'} onDismiss={() => notice = ''} />{/if}
-	{#if loading}<p>{common.loading}</p>{:else}<div class="fields"><SearchSelect label={text.year} field="financial-basis" value={settings.basis} options={basisOptions} searchable={false} disabled={saving || confirming} onSelect={(value) => settings.basis = value as Settings['basis']} />{#if settings.basis === 'fiscal'}<SearchSelect label={text.fiscalStartMonth} field="financial-start-month" value={String(settings.fiscalStartMonth)} options={monthOptions} disabled={saving || confirming} onSelect={(value) => settings.fiscalStartMonth = Number(value)} />{/if}</div><button bind:this={saveButton} type="button" disabled={saving || !hasChanges} onclick={requestSave}>{saving ? common.saving : common.saveChanges}</button>{/if}
+	{#if loading}<LoadingSpinner label={common.loading} compact />{:else}<div class="fields"><SearchSelect label={text.year} field="financial-basis" value={settings.basis} options={basisOptions} searchable={false} disabled={saving || confirming} onSelect={(value) => settings.basis = value as Settings['basis']} />{#if settings.basis === 'fiscal'}<SearchSelect label={text.fiscalStartMonth} field="financial-start-month" value={String(settings.fiscalStartMonth)} options={monthOptions} disabled={saving || confirming} onSelect={(value) => settings.fiscalStartMonth = Number(value)} />{/if}</div><button bind:this={saveButton} type="button" disabled={saving || !hasChanges} onclick={requestSave}>{saving ? common.saving : common.saveChanges}</button>{/if}
 </div>
 
 {#if confirming}

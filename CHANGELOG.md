@@ -8,10 +8,12 @@ User-facing changes to SME Portal Hub are documented below by release.
 
 ### New features
 
+- You can now upload a profile picture from Personal settings.
 - In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.
 
 ### Existing feature improvements
 
+- Added an asset type selector beside search in the IT asset list. You can choose asset types, and your selection is restored when you return to the page. Asset types are no longer included in text search.
 - Documented the steps for publishing SPH on blitz.cloud.
 
 ## [v0.4.0] - 2026-10-11

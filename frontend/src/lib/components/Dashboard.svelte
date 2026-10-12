@@ -7,6 +7,7 @@
 	import AnalyticsPeriodControls from '$lib/components/AnalyticsPeriodControls.svelte';
 	import AnalyticsTurnoverChart from '$lib/components/AnalyticsTurnoverChart.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { analyticsRequestGate, AnalyticsRequestError, requestAnalytics, type AnalyticsFailure } from '$lib/analyticsRequests';
 	import { analyticsChartKeys, analyticsSelectionSaver, readAnalyticsSelection, type AnalyticsSelection, type ChartKey, type SaveStatus } from '$lib/analyticsSelection';
@@ -188,7 +189,7 @@
 </script>
 
 {#snippet chartStatus(key: ChartKey)}
-	{#if charts[key].loading}<p role="status">{text.loading}</p>{/if}
+	{#if charts[key].loading}<LoadingSpinner label={text.loading} compact />{/if}
 {/snippet}
 
 {#snippet pdfActions()}
@@ -214,7 +215,7 @@
 	{/if}
 	{#if saveStatus && saveStatus !== 'saved'}<StatusNotice message={text[saveStatus]} tone={saveStatus === 'saveFailed' ? 'error' : 'info'} onDismiss={() => saveStatus = null} />{#if saveStatus === 'saveFailed'}<button class="app-primary-action" onclick={save}>{text.retry}</button>{/if}{/if}
 	{#if loading}
-		<p class="status" role="status">{text.loading}</p>
+		<LoadingSpinner label={text.loading} />
 	{:else if error}
 		<div class="status">{#if !errorDismissed}<StatusNotice message={text[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}{#if error !== 'forbidden'}<button class="app-primary-action" onclick={() => initialized ? load() : initialize()}>{text.retry}</button>{/if}</div>
 	{:else if data}

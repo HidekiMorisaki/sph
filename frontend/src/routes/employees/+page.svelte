@@ -9,6 +9,7 @@
 	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
 	import EmployeeFormModal from '$lib/components/EmployeeFormModal.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchMultiSelect from '$lib/components/SearchMultiSelect.svelte';
@@ -256,7 +257,7 @@
 		{ key: 'employmentType', label: text.employmentTypeId, width: 11, value: (item) => (item as Employee).employmentType?.name, searchKeys: ['employmentType'] },
 		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name },
 		{ key: 'roles', label: text.roles, width: 11, cell: rolesCell, searchKeys: ['roles'] }
-		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />{:else if !branchFilterError}<div class="page-state">{text.loading}</div>{/if}
+		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	</div>
 
 	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/api';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { formatDate, localization } from '$lib/localization';
 
 	import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '$lib/locale-messages';
@@ -76,7 +77,7 @@
 	{#if error}
 		{#if !errorDismissed}<StatusNotice message={error} tone="error" onDismiss={() => errorDismissed = true} />{/if}
 	{:else if !information}
-		<div class="information-state">{text.informationLoading}</div>
+		<div class="information-state"><LoadingSpinner label={text.informationLoading} /></div>
 	{:else}
 		<div class="information-body">
 			<dl class="information-grid">

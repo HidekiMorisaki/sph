@@ -12,8 +12,10 @@
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import SearchMultiSelect from '$lib/components/SearchMultiSelect.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
@@ -46,6 +48,7 @@
 	const blankCredentialPasswords = (): Record<CredentialType, string> => ({ admin: '', login: '', management_console: '' });
 	const blankCredentialClears = (): Record<CredentialType, boolean> => ({ admin: false, login: false, management_console: false });
 	const blankCredentialStatus = (): CredentialStatus => ({ admin: { configured: false }, login: { configured: false }, management_console: { configured: false } });
+	const allTypesValue = 'all';
 	const endpoint = (name: string) => fetch('/v1/' + name + '?limit=500');
 	async function allPages<T>(name: string, sortOrder?: 'asc' | 'desc'): Promise<T[]> {
 		const items: T[] = [];
@@ -65,6 +68,12 @@
 
 	let assetList = $state<MasterList>();
 	let types = $state<Named[]>([]);
+	let typeSelection = $state<string[]>([allTypesValue]);
+	let typeFilterReady = $state(false);
+	let typeFilterError = $state(false);
+	let typeFilterErrorDismissed = $state(false);
+	let currentUserId = $state<number | null>(null);
+	let assetQueryParams = $derived.by((): Record<string, string> => typeSelection.includes(allTypesValue) ? {} : { typeIds: typeSelection.join(',') });
 	let manufacturers = $state<Named[]>([]);
 	let cpus = $state<Named[]>([]);
 	let systems = $state<OperatingSystem[]>([]);
@@ -126,22 +135,44 @@
 	}
 
 	async function load() {
+		typeFilterError = false;
+		typeFilterErrorDismissed = false;
 		const session = await fetch('/v1/auth/session');
 		if (!session.ok) { messageTone = 'error'; message = text.signInRequired; return; }
-		const capabilities = (await apiData<{ user: { capabilities: { canManageAssets: boolean; canReadAssetCredentials: boolean; canWriteAssetCredentials: boolean } } }>(session)).user.capabilities;
+		const user = (await apiData<{ user: { id: number; capabilities: { canManageAssets: boolean; canReadAssetCredentials: boolean; canWriteAssetCredentials: boolean } } }>(session)).user;
+		const capabilities = user.capabilities;
+		currentUserId = user.id;
 		canManageAssets = capabilities.canManageAssets;
 		canReadAssetCredentials = capabilities.canReadAssetCredentials;
 		canWriteAssetCredentials = capabilities.canWriteAssetCredentials;
-		const names = ['it-asset-types', 'manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'];
+		try { types = await allPages<Named>('it-asset-types'); }
+		catch { typeFilterError = true; return; }
+		const storageKey = `it-assets-type-filter:${user.id}`;
+		let saved: unknown = null;
+		try { saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null'); } catch { /* Use all types when storage is unavailable. */ }
+		const available = new Set(types.map((item) => String(item.id)));
+		const selected = Array.isArray(saved) ? [...new Set(saved.filter((value): value is string => typeof value === 'string' && available.has(value)))] : [];
+		typeSelection = selected.length ? selected : [allTypesValue];
+		try { localStorage.setItem(storageKey, JSON.stringify(selected)); } catch { /* The filter still works for this visit. */ }
+		typeFilterReady = true;
+		const names = ['manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'];
 		const responses = await Promise.all(names.map(endpoint));
 		if (responses.some((response) => !response.ok)) { messageTone = 'error'; message = text.loadFailed; return; }
 		const data = await Promise.all(responses.map((response) => apiData<unknown[]>(response)));
-		[types, manufacturers, cpus, systems, statuses] = data as unknown as [Named[], Named[], Named[], OperatingSystem[], Named[]];
-		try { [branches, rooms, storageItems] = await Promise.all([allPages<Branch>('branches'), allPages<Room>('rooms'), allPages<Storage>('storage')]); }
+		[manufacturers, cpus, systems, statuses] = data as unknown as [Named[], Named[], OperatingSystem[], Named[]];
+		try { [branches, rooms, storageItems] = await Promise.all([allPages<Branch>('branches'), allPages<Room>('rooms'), allPages<Storage>('storages')]); }
 		catch { messageTone = 'error'; message = text.locationLoadFailed; return; }
 		if (canManageAssets) {
 			const response = await fetch('/v1/it-asset-assignees');
 			if (response.ok) employees = await apiData<Assignee[]>(response);
+		}
+	}
+	function chooseTypes(values: string[]) {
+		if (types.length === 1) return;
+		const selected = values.includes(allTypesValue) && !typeSelection.includes(allTypesValue) ? [] : values.filter((value) => value !== allTypesValue);
+		typeSelection = selected.length ? selected : [allTypesValue];
+		if (currentUserId !== null) {
+			try { localStorage.setItem(`it-assets-type-filter:${currentUserId}`, JSON.stringify(typeSelection.filter((value) => value !== allTypesValue))); } catch { /* The filter still works for this visit. */ }
 		}
 	}
 
@@ -484,20 +515,22 @@
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
 {#snippet pageActions()}{#if canManageAssets}<AddButton label={text.add} onclick={create} />{/if}{/snippet}
+{#snippet typeFilter()}<div class="asset-type-filter"><span>{text.typeFilter}</span>{#if types.length === 1}<SearchSelect label={text.typeFilter} field="assetTypeFilter" value={String(types[0].id)} options={[{ value: String(types[0].id), label: types[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.typeFilter} field="assetTypeFilter" values={typeSelection} options={[{ value: allTypesValue, label: text.allTypes }, ...types.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={chooseTypes} />{/if}</div>{/snippet}
 
 <AssetManagementShell title={text.title}>
 	<MasterPageHeader title={text.title} description={text.description} actions={pageActions} />
 	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
-	<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={canManageAssets} canDelete={canManageAssets} actionLabel={(item) => (item as Asset).assetTag} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
+	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<button type="button" class="type-filter-retry" onclick={() => void load()}>{text.retryTypeFilter}</button>{/if}
+	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={canManageAssets} canDelete={canManageAssets} actionLabel={(item) => (item as Asset).assetTag} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
 		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
-		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name, searchKeys: ['type'] },
+		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },
 		{ key: 'branch', label: text.branch, width: 11, value: (item) => (item as Asset).storage.room.branch.name, searchKeys: ['branch'] },
 		{ key: 'room', label: text.room, width: 10, value: (item) => (item as Asset).storage.room.name, searchKeys: ['room'] },
 		{ key: 'storage', label: text.storage, width: 12, value: (item) => (item as Asset).storage.name, searchKeys: ['storage'] },
 		{ key: 'user', label: text.user, width: 12, value: (item) => (item as Asset).assignments[0] ? assigneeName((item as Asset).assignments[0]) : '', searchKeys: ['user'] },
 		{ key: 'status', label: text.status, width: 9, cell: statusCell, searchKeys: ['status'] }
-	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} onEdit={(item, trigger) => edit(item as Asset, trigger)} onDelete={(item) => remove(item as Asset)} />
+	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} onEdit={(item, trigger) => edit(item as Asset, trigger)} onDelete={(item) => remove(item as Asset)} />{:else if !typeFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	{#if open}
 		<ModalBackdrop>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
@@ -594,7 +627,7 @@
 			</dl>
 			{#if canReadAssetCredentials}
 				<div class="credential-statuses" aria-label={text.storedCredentials}>
-					{#if credentialsLoading}<p>{text.loadingCredentials}</p>{:else if credentialsError}{#if !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}{:else}
+					{#if credentialsLoading}<LoadingSpinner label={text.loadingCredentials} compact />{:else if credentialsError}{#if !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}{:else}
 						{#each [['admin',text.adminPassword],['login',text.loginPassword],['management_console',text.consolePassword]] as credential}
 							{@const type = credential[0] as CredentialType}
 							<div><span>{credential[1]}</span><span class:configured={credentialStatus[type].configured}>{credentialStatus[type].configured ? credentialStatusText.configured : credentialStatusText.unconfigured}</span>{#if credentialStatus[type].configured}<button type="button" onclick={() => openCredentialAccess(type)}>{text.reveal}</button>{/if}</div>
@@ -622,7 +655,9 @@
 </AssetManagementShell>
 
 <style>
+	.asset-type-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:220px}.asset-type-filter :global(.form-multi-select-field>span),.asset-type-filter :global(.form-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.asset-type-filter :global(.form-multi-select-trigger),.asset-type-filter :global(.form-select-trigger){height:32px}.type-filter-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
 	.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:var(--font-size-support)}
 	.wide{grid-column:1/-1}
 	.credential-field{display:grid;gap:6px}.clear-credential{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-size-support)}.clear-credential input{width:14px;height:14px}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:var(--font-size-support)}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,#169f85)}.credential-statuses button{height:28px;padding:0 10px;border:1px solid var(--action-primary);border-radius:4px;background:transparent;color:var(--action-primary);font-size:var(--font-size-body)}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:14px;padding:18px 24px 24px}.credential-dialog-body p{margin:0;color:var(--muted);font-size:var(--font-size-support)}.credential-dialog-body label{display:grid;gap:6px;font-size:var(--font-size-support)}.credential-dialog-body input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
+	@media(max-width:700px){.asset-type-filter,.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:100%}}
 </style>

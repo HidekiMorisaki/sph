@@ -6,6 +6,7 @@
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FinancialStracPreview from '$lib/components/FinancialStracPreview.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
@@ -288,7 +289,7 @@
 <svelte:window onkeydown={handleEditorKeydown} />
 <AssetManagementShell {title}>
 	<div class="finance-page"><MasterPageHeader {title} description={text.description} />
-		{#if loading}<p class="state">{common.loading}</p>
+		{#if loading}<LoadingSpinner label={common.loading} />
 		{:else if denied}{#if !deniedDismissed}<StatusNotice message={localeMessages[$localization.displayLanguage].systemSettings.accessDenied} tone="error" onDismiss={() => deniedDismissed = true} />{/if}
 		{:else}
 			{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
@@ -297,7 +298,7 @@
 			{#if fallbackNotice}<StatusNotice message={fallbackNotice} tone="info" onDismiss={() => fallbackNotice = ''} />{/if}
 			<section class="panel" aria-label={title}>
 				<div class="toolbar"><div><h2>{periodLabel()}</h2><p>{text.converted} {currency}</p></div><div class="controls"><DatePicker label={selectYearLabel} field="financial-year" value={String(year)} mode="year" min="1980" max="2100" required disabled={busy} open={yearPickerOpen} onToggle={() => yearPickerOpen = !yearPickerOpen} onSelect={(value) => { yearPickerOpen = false; chooseYear(value); }} /></div></div>
-				{#if rateLoading}<p class="state">{common.loading}</p>{:else if items.length === 0}<p class="state">{text.empty}</p>{:else}<div class="table-wrap"><table><thead><tr><th>{text.branch}</th><th>{text.revenue}</th><th>{text.variableCost}</th><th>{text.fixedCost}</th><th>{text.netProfit}</th><th>{text.month}</th><th>{text.publication}</th><th></th></tr></thead><tbody>
+				{#if rateLoading}<LoadingSpinner label={common.loading} />{:else if items.length === 0}<p class="state">{text.empty}</p>{:else}<div class="table-wrap"><table><thead><tr><th>{text.branch}</th><th>{text.revenue}</th><th>{text.variableCost}</th><th>{text.fixedCost}</th><th>{text.netProfit}</th><th>{text.month}</th><th>{text.publication}</th><th></th></tr></thead><tbody>
 					{#each items as item}<tr><th scope="row">{item.branchName}</th><td class:muted={item.revenue === null && item.missingRates.length === 0}>{format(item.revenue, item)}</td><td class:muted={item.variableCost === null && item.missingRates.length === 0}>{format(item.variableCost, item)}</td><td class:muted={item.fixedCost === null && item.missingRates.length === 0}>{format(item.fixedCost, item)}</td><td class:negative={item.netProfit?.startsWith('-')} class:muted={item.netProfit === null && item.missingRates.length === 0}>{format(item.netProfit, item)}</td><td class="muted">{item.completedMonths === 12 ? text.monthsComplete : formatLocaleTemplate(text.monthsEntered, item.completedMonths)}</td><td><button class="app-status-switch" class:is-on={item.published} type="button" role="switch" aria-checked={item.published} aria-label={`${item.branchName} ${text.publication}`} title={!item.published && item.completedMonths !== 12 ? text.incomplete : undefined} disabled={busy || item.branchDeleted || (!item.published && item.completedMonths !== 12)} onclick={() => toggle(item)}><span class="app-status-switch__text">{item.published ? text.published : text.unpublished}</span><span class="app-status-switch__knob"></span></button></td><td><button class="edit-button" type="button" disabled={busy || item.branchDeleted} onclick={(event) => edit(item, event.currentTarget)}>{text.edit}</button></td></tr>{/each}
 				</tbody></table></div>{/if}
 				{#if total > 100}<div class="pagination"><button type="button" disabled={offset === 0 || busy || rateLoading} onclick={() => { offset -= 100; void refresh(true); }}>‹</button><span>{offset + 1}–{Math.min(offset + 100, total)} / {total}</span><button type="button" disabled={offset + 100 >= total || busy || rateLoading} onclick={() => { offset += 100; void refresh(true); }}>›</button></div>{/if}

@@ -3,6 +3,7 @@
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import MenuItemIcon from '$lib/components/MenuItemIcon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import '$lib/styles/page-size-picker.css';
@@ -270,7 +271,7 @@
 		<colgroup>{#each columns as column}<col style={`width:${column.width ?? (showActions ? 100 - actionWidth : 100) / columns.length}%`} />{/each}{#if showActions}<col class="actions-column" style={`width:${actionWidth}%`} />{/if}</colgroup>
 		<thead class:sr-only={hideColumnHeaders}><tr>{#each columns as column}<th aria-sort={hideColumnHeaders || column.sortable === false ? undefined : activeSortBy === column.key ? sortOrder === 'asc' ? 'ascending' : 'descending' : 'none'}>{#if hideColumnHeaders || column.sortable === false}<span class="column-label">{column.label}</span>{:else}<button type="button" class="sort-button" onclick={() => changeSort(column.key)}>{column.label}<span class="sort-indicator" class:ascending={activeSortBy === column.key && sortOrder === 'asc'} class:descending={activeSortBy === column.key && sortOrder === 'desc'} aria-hidden="true"></span></button>{/if}</th>{/each}{#if showActions}<th><span class="sr-only">{commonText.rowActions}</span></th>{/if}</tr></thead>
 		<tbody>
-			{#if loading}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{loadingLabel ?? commonText.loading}</td></tr>
+			{#if loading}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}><LoadingSpinner label={loadingLabel ?? commonText.loading} /></td></tr>
 			{:else if error}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{#if !errorDismissed}<StatusNotice message={commonText[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}</td></tr>
 			{:else if !items.length}<tr><td class="empty" colspan={columns.length + (showActions ? 1 : 0)}>{emptyLabel ?? commonText.noItems}</td></tr>
 			{:else if treeParent}

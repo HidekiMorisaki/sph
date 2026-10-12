@@ -9,6 +9,7 @@
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
 	import FinancialPeriodSettingsSection from '$lib/components/system-settings/FinancialPeriodSettingsSection.svelte';
@@ -194,7 +195,7 @@
 <AssetManagementShell title={text.title}>
 	<div class="settings-page">
 		<MasterPageHeader title={text.title} description={text.description} />
-		{#if loading}<div class="page-state">{text.loading}</div>
+		{#if loading}<div class="page-state"><LoadingSpinner label={text.loading} /></div>
 		{:else if accessDenied}{#if !pageErrorDismissed}<StatusNotice message={text.accessDenied} tone="error" onDismiss={() => pageErrorDismissed = true} />{/if}
 		{:else if loadError}{#if !pageErrorDismissed}<StatusNotice message={loadError} tone="error" onDismiss={() => pageErrorDismissed = true} />{/if}
 		{:else}

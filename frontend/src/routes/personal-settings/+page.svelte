@@ -6,6 +6,7 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
@@ -247,7 +248,7 @@
 <AssetManagementShell title={text.title}>
 	<div class="settings-page">
 		<MasterPageHeader title={text.title} description={text.description} />
-		{#if loading}<div class="page-state">{text.loading}</div>
+		{#if loading}<div class="page-state"><LoadingSpinner label={text.loading} /></div>
 		{:else if loadError}{#if !loadErrorDismissed}<StatusNotice message={fieldError(loadError)} tone="error" onDismiss={() => loadErrorDismissed = true} />{/if}
 		{:else}
 			<div class="settings-layout">
