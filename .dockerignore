@@ -3,9 +3,15 @@
 .env.install-clean
 TEMP
 docs
+!docs/licenses/
+!docs/licenses/pngjs-7.0.0-LICENSE
+!docs/licenses/jpeg-js-0.4.4-LICENSE
+!docs/licenses/jpeg-js-0.4.4-README.md
+!docs/licenses/Apache-2.0-LICENSE
 gateway
 db
 **/node_modules
 **/.svelte-kit
 **/build
+api/scripts/generated-book-sources
 **/npm-debug.log

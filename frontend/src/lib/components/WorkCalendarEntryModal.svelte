@@ -3,6 +3,7 @@
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
+	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { apiData } from '$lib/api';
@@ -118,12 +119,12 @@
 					<label class="wide">{text.note}<textarea maxlength="5000" rows="5" bind:value={note} placeholder={text.notePlaceholder}></textarea></label>
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer">{#if entry}<button class="delete-action" type="button" disabled={saving} onclick={() => void remove()}>{common.delete}</button>{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(entry) && !hasUnsavedChanges)}>{saving ? common.saving : text.save}</button></footer>
+			<footer class="app-modal-footer">{#if entry}<ModalActionButton label={common.delete} variant="danger" disabled={saving} onclick={() => void remove()} />{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(entry) && !hasUnsavedChanges)}>{saving ? common.saving : text.save}</button></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>
 {#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeImmediately} />{/if}
 
 <style>
-	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:16px}.wide{grid-column:1/-1}.footer-spacer{flex:1}.delete-action{display:inline-flex;align-items:center;justify-content:center;height:32px;margin:0;padding:0 12px;background:var(--danger)!important;color:#fff!important;border:1px solid var(--danger);border-radius:4px;font-size:var(--font-size-body);font-weight:500}.delete-action:disabled{opacity:.65}
+	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:16px}.wide{grid-column:1/-1}.footer-spacer{flex:1}
 </style>

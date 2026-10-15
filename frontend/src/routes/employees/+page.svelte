@@ -9,6 +9,7 @@
 	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
 	import EmployeeFormModal from '$lib/components/EmployeeFormModal.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import ViewportListPage from '$lib/components/ViewportListPage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
@@ -35,7 +36,10 @@
 	let formMode = $state<'create' | 'admin-edit'>('create');
 	let formReturnFocus = $state<HTMLElement | null>(null);
 	let detailEmployee = $state<Employee | null>(null);
+	let detailBeforeEdit = $state<Employee | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
+	let invitationReturnToDetail = $state(false);
+	let invitationReturnFocus = $state<HTMLElement | null>(null);
 	let formOpen = $state(false);
 	let detailOpen = $state(false);
 	let invitation = $state<{ url: string; email: string; expiresAt: string } | null>(null);
@@ -123,8 +127,8 @@
 			try { localStorage.setItem(`employees-branch-filter:${currentUserId}`, JSON.stringify(branchSelection.filter((value) => value !== allBranchesValue))); } catch { /* The filter still works for this visit. */ }
 		}
 	}
-	function create(event: MouseEvent) { if (!canManageEmployees) return; editing = null; formMode = 'create'; formReturnFocus = event.currentTarget as HTMLElement; formOpen = true; }
-	function edit(item: Employee, trigger: HTMLButtonElement | null) {
+	function create(event: MouseEvent) { if (!canManageEmployees) return; detailBeforeEdit = null; editing = null; formMode = 'create'; formReturnFocus = event.currentTarget as HTMLElement; formOpen = true; }
+	function edit(item: Employee, trigger: HTMLElement | null) {
 		if (item.employmentStatus === 'deleted') return;
 		if (!canManageEmployees && item.id !== currentUserId) return;
 		if (!canManageEmployees) { window.location.assign('/personal-settings#profile'); return; }
@@ -134,6 +138,7 @@
 		formOpen = true;
 	}
 	async function formSaved(saved: Employee) {
+		detailBeforeEdit = null;
 		message = formMode === 'create' ? 'created' : 'updated';
 		if (saved.id === currentUserId) {
 			try {
@@ -159,17 +164,25 @@
 	}
 	function showDetail(item: Employee, trigger: HTMLElement | null) { detailEmployee = item; detailReturnFocus = trigger; detailOpen = true; }
 	function closeDetail() { detailOpen = false; detailEmployee = null; invitationError = ''; }
-	function showInvitation(payload: InvitationPayload, email: string) {
+	function closeForm() { formOpen = false; if (detailBeforeEdit) { detailEmployee = detailBeforeEdit; detailOpen = true; detailBeforeEdit = null; } }
+	function showInvitation(payload: InvitationPayload, email: string, trigger: HTMLElement | null = null) {
 		const url = new URL(payload.invitationUrl, window.location.origin);
 		if (url.origin !== window.location.origin || url.pathname !== '/account-setup') throw new Error('Invalid invitation URL.');
 		invitation = { url: url.href, email, expiresAt: payload.invitationExpiresAt };
 		copyMessage = '';
 		invitationWarningDismissed = false;
-		detailOpen = false;
+		invitationReturnToDetail = detailOpen && detailEmployee !== null;
+		invitationReturnFocus = trigger;
 		void tick().then(() => invitationDialogElement?.querySelector<HTMLInputElement>('input')?.focus());
 	}
-	function closeInvitation() { invitation = null; void tick().then(() => document.querySelector<HTMLButtonElement>('.app-add-button')?.focus()); }
+	function closeInvitation() {
+		invitation = null;
+		const target = invitationReturnToDetail ? invitationReturnFocus : document.querySelector<HTMLButtonElement>('.app-add-button');
+		invitationReturnToDetail = false; invitationReturnFocus = null;
+		void tick().then(() => target?.focus({ preventScroll: true }));
+	}
 	async function issueInvitation(item: Employee) {
+		const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		issuingInvitation = true;
 		invitationError = '';
 		try {
@@ -178,7 +191,7 @@
 				invitationError = response.status === 429 ? 'invitationRateLimited' : 'invitationFailed';
 				return;
 			}
-			showInvitation(await apiData<InvitationPayload>(response), item.email);
+			showInvitation(await apiData<InvitationPayload>(response), item.email, trigger);
 		} catch { invitationError = 'invitationFailed'; }
 		finally { issuingInvitation = false; }
 	}
@@ -190,6 +203,7 @@
 	async function remove(item: Employee) {
 		if (!canManageEmployees || item.employmentStatus === 'deleted') return;
 		if (!confirm(formatLocaleTemplate(text.deleteConfirm, fullName(item)))) return;
+		if (detailEmployee?.id === item.id) closeDetail();
 		const response = await fetch(`/v1/employees/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { message = 'deleteFailed'; return; }
 		message = 'removed'; await employeeList?.refresh();
@@ -197,7 +211,7 @@
 	function windowKeydown(event: KeyboardEvent) {
 		if (event.defaultPrevented) return;
 		if (event.key !== 'Escape') return;
-		if (invitation) closeInvitation();
+		if (invitation) { event.preventDefault(); closeInvitation(); }
 	}
 	function csvCell(value: unknown) {
 		let text = value === null || value === undefined ? '' : String(value);
@@ -243,11 +257,11 @@
 {#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
 
 <AssetManagementShell title={text.title} active="Employees">
-	<div class="employees-page">
+	<ViewportListPage>
 	<MasterPageHeader title={text.title} actions={pageActions} />
 	{#if message}<StatusNotice message={text[message]} tone={message === 'created' || message === 'updated' || message === 'removed' ? 'success' : 'error'} onDismiss={() => message = ''} />{/if}
 		{#if branchFilterError}<StatusNotice message={text.branchFilterLoadFailed} tone="error" onDismiss={() => branchFilterError = false} /><button type="button" class="branch-retry" onclick={() => void initialize()}>{text.retryBranchFilter}</button>{/if}
-		{#if branchFilterReady}<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} canEdit={(item) => (item as Employee).employmentStatus !== 'deleted' && (canManageEmployees || item.id === currentUserId)} canDelete={(item) => canManageEmployees && (item as Employee).employmentStatus !== 'deleted'} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} toolbarFilters={branchFilter} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
+		{#if branchFilterReady}<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} toolbarFilters={branchFilter} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
 		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell, searchKeys: ['name', 'employeeCode', 'employmentStatus'] },
 		{ key: 'age', label: text.age, width: 6, value: (item) => (item as Employee).age, searchKeys: ['age'] },
 		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization), searchKeys: ['lengthOfService'] },
@@ -257,12 +271,12 @@
 		{ key: 'employmentType', label: text.employmentTypeId, width: 11, value: (item) => (item as Employee).employmentType?.name, searchKeys: ['employmentType'] },
 		{ key: 'branch', label: text.branchId, width: 9, value: (item) => (item as Employee).branch?.name },
 		{ key: 'roles', label: text.roles, width: 11, cell: rolesCell, searchKeys: ['roles'] }
-		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} onEdit={(item, trigger) => edit(item as Employee, trigger)} onDelete={(item) => remove(item as Employee)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
-	</div>
+		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
+	</ViewportListPage>
 
-	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={formSaved} />{/if}
+	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} />{/if}
 
-	{#if detailOpen && detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onClose={closeDetail} />{/if}
+	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)} inert={Boolean(invitation)}><EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onEdit={detailEmployee.employmentStatus !== 'deleted' && (canManageEmployees || detailEmployee.id === currentUserId) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={canManageEmployees && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
 	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
@@ -272,7 +286,7 @@
 	.employee-name{display:flex;min-width:0;align-items:center;gap:6px}.employee-status{display:inline-flex;flex:none;align-items:center;min-height:18px;padding:1px 6px;border:1px solid;border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1.2;text-transform:uppercase}.employee-status.retired{background:rgba(243,156,18,.12);color:#c87f0a;border-color:rgba(243,156,18,.3)}.employee-status.deleted{background:rgba(231,76,60,.12);color:#d13b2d;border-color:rgba(231,76,60,.3)}
 	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:600;line-height:1.2}
 	.position-badges{display:flex;flex-wrap:wrap;gap:4px}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;font-size:var(--font-size-support);font-weight:500;line-height:1.2}.position-badges>span.primary{background:rgba(51,122,183,.12);color:#337ab7;border-color:rgba(51,122,183,.28)}
-	.employees-page{display:flex;height:calc(100dvh - 124px);min-height:0;flex-direction:column}.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 12px}.employee-visibility label{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap;cursor:pointer}.employee-visibility input{width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);font-size:var(--font-size-body);font-weight:500;line-height:1;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:var(--font-size-support);font-weight:600}.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions,.export-button{width:100%}.employee-visibility{align-items:flex-start;flex-direction:column}}
+	.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 12px}.employee-visibility label{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap;cursor:pointer}.employee-visibility input{width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);font-size:var(--font-size-body);font-weight:500;line-height:1;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:var(--font-size-support);font-weight:600}.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions,.export-button{width:100%}.employee-visibility{align-items:flex-start;flex-direction:column}}
 	/* Keep the actions visible while the fields scroll. */
 	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
 	.export-button:disabled{cursor:not-allowed;opacity:.5}

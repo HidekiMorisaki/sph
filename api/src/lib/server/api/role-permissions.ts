@@ -9,7 +9,10 @@ const readDependencies: Array<[string, string]> = [
 	[permissionOperations.calendarAssignment, permissionOperations.calendarRead],
 	[permissionOperations.assetManagement, permissionOperations.assetRead],
 	[permissionOperations.assetCredentialRead, permissionOperations.assetRead],
-	[permissionOperations.assetCredentialWrite, permissionOperations.assetRead]
+	[permissionOperations.assetCredentialWrite, permissionOperations.assetRead],
+	[permissionOperations.softwareManage, permissionOperations.softwareRead],
+	[permissionOperations.softwareKeyRead, permissionOperations.softwareRead],
+	[permissionOperations.softwareKeyWrite, permissionOperations.softwareRead]
 ];
 
 export function editableCodesFrom(permissionCodes: string[]): string[] {

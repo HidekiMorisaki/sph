@@ -4,6 +4,7 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
@@ -22,7 +23,7 @@
 	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
-	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
+	function t(key: Exclude<keyof typeof text, 'monitoring'>, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
 	type FormField = 'name' | 'url' | 'notes';
@@ -48,6 +49,7 @@
 	let dialogElement = $state<HTMLDialogElement>();
 	let addButton = $state<HTMLButtonElement>();
 	let returnFocus = $state<HTMLElement | null>(null);
+	let returnToDetail = $state(false);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
 	let scrollFrame: number | null = null;
@@ -97,15 +99,18 @@
 	}
 
 	function openModal(next: Exclude<ModalMode, null>, item: ExternalLink | null = null, trigger: HTMLElement | null = null) {
+		returnToDetail = next === 'edit' && mode === 'detail';
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : addButton ?? null);
 		selected = item; mode = next;
 		form = item ? { name: item.name, url: item.url, sortOrder: String(item.sortOrder), notes: item.notes ?? '' } : emptyForm();
 		errors = {}; formError = ''; initialSnapshot = formSnapshot(form); confirmingDiscard = false;
 		if (next !== 'detail') void tick().then(() => dialogElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());
 	}
-	function closeDetail() { mode = null; selected = null; }
+	function closeDetail() { returnToDetail = false; mode = null; selected = null; }
 	function closeModalImmediately() {
 		if (saving || removing) return;
+		if (returnToDetail && mode === 'edit') { confirmingDiscard = false; returnToDetail = false; mode = 'detail'; return; }
+		returnToDetail = false;
 		confirmingDiscard = false; mode = null; selected = null; initialSnapshot = '';
 		void tick().then(() => returnFocus?.focus());
 	}
@@ -153,7 +158,7 @@
 				const field = Object.keys(errors)[0]; if (field) void tick().then(() => dialogElement?.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus());
 				return;
 			}
-			mode = null; selected = null; notices = [text.linkSaved]; noticeIsError = false;
+			mode = null; selected = null; returnToDetail = false; notices = [text.linkSaved]; noticeIsError = false;
 			await Promise.all([list?.refresh(), loadExternalLinks(true)]);
 			void tick().then(() => returnFocus?.focus());
 		} catch { formError = text.linkSaveRetry; }
@@ -162,6 +167,7 @@
 	async function remove(item: ExternalLink) {
 		if (removing || !confirm(t('deleteConfirm', item.name))) return;
 		removing = true; notices = []; noticeIsError = false;
+		if (selected?.id === item.id) closeDetail();
 		try {
 			const response = await fetch(`/v1/external-links/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) { noticeIsError = true; notices = [response.status === 403 ? text.linkDeleteForbidden : text.linkDeleteFailed]; return; }
@@ -205,7 +211,7 @@
 				<div class="settings-content">
 					<section id="roles" class="settings-card" aria-label={text.roleSettings}><RoleManagementSection onNotice={(messages) => { notices = messages; noticeIsError = false; }} /></section>
 					<section id="external-links" class="settings-card" aria-label={text.linkSettings}>
-						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} actionWidth={14} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel={text.noLinks} />
+						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} emptyLabel={text.noLinks} />
 					</section>
 					<section id="financial-period" class="settings-card" aria-label={localeMessages[$localization.displayLanguage].financial.periodSettings}><FinancialPeriodSettingsSection /></section>
 				</div>
@@ -216,6 +222,7 @@
 
 {#if mode === 'detail' && selected}
 	<DetailModal title={text.linkDetails} titleId="external-link-detail-title" closeLabel={text.closeLinkDetails} {returnFocus} compact dialogClass="external-link-dialog" onClose={closeDetail}>
+		{#snippet headerActions()}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => openModal('edit', selected, returnFocus)} onDelete={() => void remove(selected!)} />{/snippet}
 		<section class="app-detail-section"><h3>{text.linkInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div class="app-detail-wide"><dt>{text.url}</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div><div><dt>{text.created}</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>{text.updated}</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
 		<MasterHistorySection endpoint="/v1/external-links" itemId={selected.id} fieldLabels={{ name: text.name, url: text.url, notes: text.notes }} hiddenFields={['sortOrder']} />
 	</DetailModal>

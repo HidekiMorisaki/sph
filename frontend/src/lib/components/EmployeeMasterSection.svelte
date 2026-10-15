@@ -7,6 +7,7 @@
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterRecordDetailModal from '$lib/components/MasterRecordDetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import ModalHeader from '$lib/components/ModalHeader.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
@@ -66,6 +67,7 @@
 	let editing = $state<Item | null>(null);
 	let detailItem = $state<Item | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
+	let detailBeforeEdit = $state<Item | null>(null);
 	let modalTitle = $derived(t(editing ? 'editItem' : 'addItem', itemLabel));
 	let formOpen = $state(false);
 	let saving = $state(false);
@@ -87,18 +89,21 @@
 		else nameInput?.focus();
 	}
 	function resetForm() { editing = null; name = ''; departmentId = ''; notes = ''; errors = {}; formError = ''; formOpen = false; initialSnapshot = ''; confirmingDiscard = false; }
-	function edit(item: Item, trigger: HTMLButtonElement | null) {
+	function edit(item: Item, trigger: HTMLElement | null) {
 		returnFocus = trigger;
 		editing = item; name = item.name; departmentId = item.departmentId == null ? '' : String(item.departmentId); notes = item.notes ?? ''; errors = {}; formError = ''; formOpen = true; initialSnapshot = formSnapshot({ name, departmentId, notes }); confirmingDiscard = false;
 		void tick().then(focusFirstField);
 	}
 	function add() {
+		detailBeforeEdit = null;
 		returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null;
 		resetForm(); initialSnapshot = formSnapshot({ name, departmentId, notes }); formOpen = true; void tick().then(focusFirstField);
 	}
 	function closeFormImmediately() {
 		if (saving) return;
-		const focusTarget = returnFocus; resetForm(); void tick().then(() => focusTarget?.focus());
+		const focusTarget = returnFocus; const detail = detailBeforeEdit; resetForm(); detailBeforeEdit = null;
+		if (detail) detailItem = detail;
+		else void tick().then(() => focusTarget?.focus());
 	}
 	function requestCloseForm() { if (saving) return; if (hasUnsavedChanges) { confirmingDiscard = true; return; } closeFormImmediately(); }
 	async function save() {
@@ -118,14 +123,15 @@
 				else formError = response.status === 403 ? 'saveForbidden' : 'saveFailed';
 				return;
 			}
-			const focusTarget = returnFocus; resetForm(); await list?.refresh(); void tick().then(() => focusTarget?.focus());
+			const focusTarget = returnFocus; resetForm(); detailBeforeEdit = null; await list?.refresh(); void tick().then(() => focusTarget?.focus());
 		} catch { formError = 'saveRetry'; }
 		finally { saving = false; }
 	}
 	async function remove(item: Item) {
-		if (item.usageCount && item.usageCount > 0) { message = 'deleteInUse'; return; }
+		if (item.usageCount && item.usageCount > 0) { detailItem = null; message = 'deleteInUse'; return; }
 		message = '';
 		if (!confirm(t('deleteConfirm', item.name))) return;
+		if (detailItem?.id === item.id) detailItem = null;
 		const response = await fetch(`${endpoint}/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { message = response.status === 409 ? 'deleteInUse' : response.status === 403 ? 'deleteForbidden' : 'deleteFailed'; return; }
 		message = ''; await list?.refresh();
@@ -156,10 +162,12 @@
 <svelte:window onkeydown={handleWindowKeydown} />
 <div class="master-section">
 	{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={() => message = ''} />{/if}
-	<div class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon {treeParent} minTableWidth={0} actionWidth={14} headerActions={headerActions} initialSortBy="sortOrder" reorderEndpoint={`/v1/workforce-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={handleReordered} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></div>
+	<div class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon {treeParent} minTableWidth={0} headerActions={headerActions} initialSortBy="sortOrder" reorderEndpoint={`/v1/workforce-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={handleReordered} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
 </div>
 
-{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId="employee-master-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} {endpoint} itemId={detailItem.id} fields={[{ key: 'name', label: text.name, value: detailItem.name }, ...(isGroup ? [{ key: 'departmentId', label: text.department, value: detailItem.department?.name ?? detailItem.departmentId }] : []), { key: 'notes', label: text.notes, value: detailItem.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailItem = null} />{/if}
+{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId="employee-master-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} {endpoint} itemId={detailItem.id} fields={[{ key: 'name', label: text.name, value: detailItem.name }, ...(isGroup ? [{ key: 'departmentId', label: text.department, value: detailItem.department?.name ?? detailItem.departmentId }] : []), { key: 'notes', label: text.notes, value: detailItem.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailItem = null}>
+	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); }} onDelete={() => void remove(detailItem!)} />{/if}{/snippet}
+</MasterRecordDetailModal>{/if}
 
 {#if canManage && formOpen}
 	<ModalBackdrop><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="employee-master-dialog-title">

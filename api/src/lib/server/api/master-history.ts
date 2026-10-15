@@ -19,7 +19,7 @@ export const masterHistoryFields = {
 } as const;
 
 export type MasterHistoryResource = keyof typeof masterHistoryFields;
-type Snapshot = Record<string, string | null>;
+type Snapshot = Record<string, string | { id: number } | null>;
 
 function value(raw: unknown, field: string): string | null {
 	if (raw === null || raw === undefined) return null;
@@ -34,7 +34,7 @@ export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource:
 		case 'employee-groups': item = await tx.employeeGroup.findUnique({ where: { id }, include: { department: { select: { name: true } } } }); break;
 		case 'positions': item = await tx.position.findUnique({ where: { id } }); break;
 		case 'employment-types': item = await tx.employmentType.findUnique({ where: { id } }); break;
-		case 'branches': item = await tx.branch.findUnique({ where: { id }, include: { manager: { select: { employeeCode: true } }, deputyManager: { select: { employeeCode: true } } } }); break;
+		case 'branches': item = await tx.branch.findUnique({ where: { id } }); break;
 		case 'room': item = await tx.room.findUnique({ where: { id }, include: { branch: { select: { name: true } } } }); break;
 		case 'storage': item = await tx.storage.findUnique({ where: { id }, include: { room: { select: { name: true } } } }); break;
 		case 'it-asset-types': item = await tx.itAssetType.findUnique({ where: { id } }); break;
@@ -49,22 +49,22 @@ export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource:
 	if (!item) return null;
 	const record = item as Record<string, unknown>;
 	if (resource === 'employee-groups') record.departmentId = (record.department as { name: string }).name;
-	if (resource === 'branches') {
-		record.managerEmployeeId = (record.manager as { employeeCode: string } | null)?.employeeCode ?? null;
-		record.deputyManagerEmployeeId = (record.deputyManager as { employeeCode: string } | null)?.employeeCode ?? null;
-	}
 	if (resource === 'room') record.branchId = (record.branch as { name: string }).name;
 	if (resource === 'storage') record.roomId = (record.room as { name: string }).name;
 	if (resource === 'cpu-types') record.manufacturerId = (record.manufacturer as { name: string }).name;
 	if (resource === 'operating-systems') record.vendorId = (record.vendor as { name: string }).name;
-	return Object.fromEntries(masterHistoryFields[resource].map((field) => [field, value(record[field], field)]));
+	return Object.fromEntries(masterHistoryFields[resource].map((field) => [field,
+		resource === 'branches' && (field === 'managerEmployeeId' || field === 'deputyManagerEmployeeId')
+			? record[field] === null ? null : { id: Number(record[field]) }
+			: value(record[field], field)
+	]));
 }
 
 export async function recordMasterChange(tx: Prisma.TransactionClient, resource: MasterHistoryResource, id: number, actorId: number, action: 'create' | 'update' | 'delete' | 'restore', before: Snapshot | null, after: Snapshot | null): Promise<void> {
 	const changes = masterHistoryFields[resource].flatMap((field) => {
 		const previous = before?.[field] ?? null;
 		const next = after?.[field] ?? null;
-		return previous === next ? [] : [{ field, before: previous, after: next }];
+		return JSON.stringify(previous) === JSON.stringify(next) ? [] : [{ field, before: previous, after: next }];
 	});
 	if (action === 'update' && changes.length === 0) return;
 	await tx.masterChangeHistory.create({ data: { resource, resourceId: id, actorId, action, changes } });

@@ -73,7 +73,7 @@
 	.settings-nav a:hover,.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}
 	.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}
 	.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}
-	.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;isolation:isolate}
+	.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;}
 	.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}
 	@media(max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav a{justify-content:center;text-align:center}}
 	@media(max-width:700px){.settings-layout{gap:16px}.settings-nav{grid-template-columns:1fr}.settings-nav a{justify-content:flex-start;text-align:left}}

@@ -1,4 +1,9 @@
 {
+  "software": {
+    "manufacturer": "Example Works",
+    "families": ["Document Studio", "Sheet Studio", "Slide Studio", "Mail Desk", "Meeting Hub", "Design Canvas", "Code Editor", "Data Insight", "Backup Vault", "Project Board"],
+    "unverifiedNote": "Fictional sample terms. Replace with the actual contract and verify before managing compliance."
+  },
   "branches": [
     "London Headquarters",
     "Manchester Branch",

@@ -5,6 +5,9 @@ import { authenticateRequest } from '$lib/server/auth/request';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 import { granularOperationForRoute } from '$lib/server/auth/route-operation';
 import { ownBranchOperations } from '$lib/server/auth/permissions';
+import { startSystemMetrics } from '$lib/server/system-metrics';
+
+export const init = () => { startSystemMetrics(); };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -22,6 +25,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.session = principal
 		? { id: principal.authentication.credentialId, expiresAt: principal.authentication.expiresAt }
 		: null;
+	if (event.url.pathname.startsWith('/v1/') && event.route.id === null) {
+		return failure(404, 'NOT_FOUND', 'The requested API resource was not found.');
+	}
 	const granularOperation = granularOperationForRoute(event.route.id, event.request.method, event.params);
 	if (granularOperation) {
 		if (!event.locals.user) return failure(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');

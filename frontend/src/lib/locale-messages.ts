@@ -10,6 +10,7 @@ export type FeatureCatalogs = {
 	masters: typeof import('./locales/en/masters.json');
 	analytics: typeof import('./locales/en/analytics.json');
 	assets: typeof import('./locales/en/assets.json');
+	software: typeof import('./locales/en/software.json');
 	financial: typeof import('./locales/en/financial.json');
 	financialTrends: typeof import('./locales/en/financialTrends.json');
 	employees: typeof import('./locales/en/employees.json');
@@ -40,7 +41,8 @@ export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/personal-settings') return ['settings'];
 	if (path === '/locations') return ['masters', 'employees'];
 	if (path === '/employee-masters' || path === '/it-asset-masters') return ['masters'];
-	if (path === '/it-assets') return ['assets'];
+	if (path === '/it-assets') return ['assets', 'employees'];
+	if (path === '/licenses') return ['software'];
 	return [];
 }
 export function setActiveNamespaces(namespaces: readonly LocaleNamespace[]): void { activeNamespaces = [...namespaces]; }
@@ -63,7 +65,7 @@ export async function loadLocaleNamespaces(language: MessageLanguage, namespaces
 export function isLocaleLoaded(language: MessageLanguage, namespace: LocaleNamespace): boolean { return cache.has(`${language}/${namespace}`); }
 function catalog(language: MessageLanguage, core: typeof enCore, common: typeof enCommon, navigation: typeof enNavigation): Catalog {
 	const result = { ...core, common, navigation };
-	for (const namespace of ['masters', 'analytics', 'assets', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
+	for (const namespace of ['masters', 'analytics', 'assets', 'software', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
 		Object.defineProperty(result, namespace, { enumerable: true, get() {
 			const value = cache.get(`${language}/${namespace}`);
 			if (!value) throw new Error(`Locale namespace not loaded: ${language}/${namespace}`);

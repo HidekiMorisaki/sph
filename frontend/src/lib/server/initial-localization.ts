@@ -1,13 +1,13 @@
-import { DEFAULT_LOCALIZATION, type LocalizationSettings } from '$lib/localization';
+import type { LocalizationSettings } from '$lib/localization';
 
 // Only the session cookie is forwarded to the configured REST API host.
-export async function readInitialLocalization(sessionCookie: string | undefined, apiOrigin: string, fetcher: typeof fetch = fetch): Promise<LocalizationSettings> {
-	if (!sessionCookie) return { ...DEFAULT_LOCALIZATION };
+export async function readInitialLocalization(sessionCookie: string | undefined, apiOrigin: string, fetcher: typeof fetch = fetch): Promise<LocalizationSettings | null> {
+	if (!sessionCookie) return null;
 	const response = await fetcher(new URL('/v1/auth/session', apiOrigin), {
 		headers: { cookie: `equipment_session=${encodeURIComponent(sessionCookie)}` },
 		cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000)
 	});
-	if (response.status === 401) return { ...DEFAULT_LOCALIZATION };
+	if (response.status === 401) return null;
 	if (!response.ok) throw new Error('Unable to load display settings.');
 	const payload = await response.json();
 	const user = payload?.data?.user;

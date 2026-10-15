@@ -134,6 +134,10 @@ failure_key='error.migration'
 migration_log=$(docker logs sph-migration 2>/dev/null)
 if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_HOLIDAY_WARNING=JP'; then holiday_jp=true; fi
 if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_HOLIDAY_WARNING=US'; then holiday_us=true; fi
+book_lookup=false
+book_cover=false
+if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_BOOK_WARNING=lookup'; then book_lookup=true; fi
+if printf '%s\n' "$migration_log" | grep -qx 'SPH_SAMPLE_BOOK_WARNING=cover'; then book_cover=true; fi
 unset migration_log
 complete_step
 begin_step 'stage.check'
@@ -180,4 +184,6 @@ printf '\n'
 line 32 'complete' "$origin"
 if [[ "$holiday_jp" == true ]]; then line 33 'warning.holidayJP'; fi
 if [[ "$holiday_us" == true ]]; then line 33 'warning.holidayUS'; fi
+if [[ "$book_lookup" == true ]]; then line 33 'warning.book.lookup'; fi
+if [[ "$book_cover" == true ]]; then line 33 'warning.book.cover'; fi
 line 37 'complete.notice'

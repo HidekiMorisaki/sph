@@ -18,7 +18,9 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 			{ id: 'employees', text: text.items.employees, icon: 'table', href: '/employees' }
 		] },
 		{ id: 'assets', label: text.groups.assets, items: [
-			{ id: 'itAssets', text: text.items.itAssets, icon: 'dashboard', href: '/it-assets' }
+			{ id: 'itAssets', text: text.items.itAssets, icon: 'dashboard', href: '/it-assets' },
+			{ id: 'softwareLicenses', text: text.items.softwareLicenses, icon: 'list', href: '/licenses' },
+			{ id: 'books', text: text.items.books, icon: 'list', href: '/books' }
 		] },
 		{ id: 'masterManagement', label: text.groups.masterManagement, managerOnly: true, items: [
 			{ id: 'employment', text: text.items.employment, icon: 'list', href: '/employee-masters' },

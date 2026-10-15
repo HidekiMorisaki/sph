@@ -31,6 +31,7 @@ $step = 0
 $stage = ''
 $failureKey = 'error.unexpected'
 $holidayWarnings = @()
+$bookWarnings = @()
 function Stop-Installation([string]$Key) { $script:failureKey = $Key; throw 'Installation failed.' }
 function Write-InstallerLine([string]$Text, [string]$Color = 'Gray', [switch]$Inline) {
 	if ($useColor) { Write-Host $Text -ForegroundColor $Color -NoNewline:$Inline }
@@ -158,6 +159,9 @@ try {
 	foreach ($countryCode in @('JP', 'US')) {
 		if (@($migrationLog -split '\r?\n' | Where-Object { $_ -ceq "SPH_SAMPLE_HOLIDAY_WARNING=$countryCode" }).Count -gt 0) { $holidayWarnings += $countryCode }
 	}
+	foreach ($kind in @('lookup', 'cover')) {
+		if (@($migrationLog -split '\r?\n' | Where-Object { $_ -ceq "SPH_SAMPLE_BOOK_WARNING=$kind" }).Count -gt 0) { $bookWarnings += $kind }
+	}
 	$migrationLog = $null
 	Complete-Step
 	Start-Step 'stage.check'
@@ -208,6 +212,7 @@ try {
 	Complete-Step
 	Write-InstallerLine ("`n" + (Get-InstallerMessage 'complete' @($config.origin))) Green
 	foreach ($countryCode in $holidayWarnings) { Write-InstallerLine (Get-InstallerMessage "warning.holiday$countryCode") Yellow }
+	foreach ($kind in $bookWarnings) { Write-InstallerLine (Get-InstallerMessage "warning.book.$kind") Yellow }
 	Write-InstallerLine (Get-InstallerMessage 'complete.notice')
 } catch {
 	Write-InstallerLine (Get-InstallerMessage 'error.stoppedWindows') Red

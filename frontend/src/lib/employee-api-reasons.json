@@ -3,6 +3,7 @@
 	"Enter a valid date.": "date",
 	"Select an option.": "option",
 	"Select a valid option.": "validOption",
+	"Select Japan or the United States.": "validOption",
 	"Select valid options.": "validOptions",
 	"Do not select the same option more than once.": "duplicateOption",
 	"Enter a valid employee object.": "object",

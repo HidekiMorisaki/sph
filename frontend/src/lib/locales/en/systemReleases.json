@@ -1,8 +1,15 @@
 {
+	"v0_5_0_history_employee_references": "Branch responsibility and IT asset assignee histories now display current employee names from stored IDs. Names in branch responsibility history open employee details, with return to the original history position.",
+	"v0_5_0_favicon": "Replaced the default Svelte favicon with an SPH favicon. Supports SVG, 16/32/48px ICO, and a 180px PNG for the Apple home screen.",
+	"v0_5_0_login_return_destination": "Fixed sign-in returning to the home page when opening a bookmarked page.",
+	"v0_5_0_unauthenticated_page_flash": "Fixed protected pages briefly appearing before the sign-in screen. Sessions are now verified before rendering, including during page navigation after a session expires or is invalidated.",
 	"v0_5_0_profile_picture_upload": "You can now upload a profile picture from Personal settings.",
 	"v0_5_0_postal_address_lookup": "In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.",
-	"v0_5_0_blitz_cloud_installation": "Documented the steps for publishing SPH on blitz.cloud.",
+	"v0_5_0_license_management": "Added a License management page for managing software licenses.",
+	"v0_5_0_book_management": "Added a Book management page for introducing books to employees and managing reservations, loans and returns for company-owned books. Employees can also register books and request new or additional copies for their own branch. Branch principals and deputies manage approval and ordering, and requests are completed automatically when linked physical copies are registered.",
 	"v0_5_0_it_asset_type_filter": "Added an asset type selector beside search in the IT asset list. You can choose asset types, and your selection is restored when you return to the page. Asset types are no longer included in text search.",
+	"v0_5_0_it_asset_employee_details": "Employee names in the IT asset list, details, and change history now open employee details when an employee ID is available.",
+	"v0_5_0_detail_action_icons": "Replaced row action kebab menus with edit and delete icons in detail headers. Work calendar actions also appear as icons in the calendar summary.",
 	"v0_5_0_development_notice": "Version 0.5.0 is a development release. Features, including existing ones, may change significantly in future updates.",
 	"v0_4_0_branch_administrator": "Added Branch Administrator as a default role. Its initial permissions allow management of employees, locations, IT assets, financial periods, and more within the assigned branch. The Branch Administrator role's permissions cannot be changed in System settings.",
 	"v0_4_0_employee_branch_filter": "Added a branch selector beside search in the employee list. You can select multiple branches, and the selection is restored when you return to the page. Branch names are no longer included in text search.",
@@ -54,5 +61,6 @@
 	"v0_1_0_employee_name_formatting": "Added language-aware employee name formatting and localized gender and length-of-service labels.",
 	"v0_1_0_employee_email_and_asset_notes": "Added employee email actions and made IT asset notes easier to identify.",
 	"v0_1_0_responsive_layouts": "Improved responsive layouts across Settings, System settings, master data, and asset management screens.",
-	"v0_1_0_active_data_transfer": "Added a separate active-data export and restore workflow that preserves database date values without time-zone shifts."
+	"v0_1_0_active_data_transfer": "Added a separate active-data export and restore workflow that preserves database date values without time-zone shifts.",
+	"v0_5_0_system_monitoring": "Added current CPU and memory measurements with history for the last hour, 24 hours and 7 days, plus current DB filesystem free space and database size, to System information. Display period and refresh interval (1, 5 or 10 minutes) are saved and restored. Only monitoring data refreshes automatically."
 }

@@ -6,31 +6,37 @@
 
 ![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
 
-SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and IT asset management.
+SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and various asset management functions.
 
 > [!NOTE]
 > SPH is currently under active development. It can be installed and evaluated, but some functionality remains incomplete. Existing features may also change substantially in future updates.
 
+## Main features
+
+| Feature | Overview |
+| --- | --- |
+| Employee analytics | Analyze employees using multiple metrics |
+| Financial analytics | View charts showing published financial trends by branch and year |
+| Employee management and access control | Manage employee information and role-based access control |
+| Internal calendars | Create and publish internal calendars |
+| Location management | Manage branches, rooms, and storage locations |
+| IT asset management | Manage IT asset records, assignments, returns, and change history |
+| License management | Manage software licenses |
+| Book management | Manage bibliographic records, physical copies, reservations, loans, and returns |
+| Master data management | Manage employee-related and other master data |
+| Personal settings | Set time zone, display language, display currency, and more |
+
+## Installation instructions
+
 | Your goal | Read this section |
 | --- | --- |
-| Install, try, or use the system | [Quick Start for Users](#quick-start-for-users) |
-| Try it on free cloud hosting | [Installing on blitz.cloud](#installing-on-blitz-cloud) |
+| Try and evaluate the system | [Quick Start for Users](#quick-start-for-users) |
+| Try it on free cloud hosting (experimental deployment) | [Installing on blitz.cloud](#installing-on-blitz-cloud) |
 | Install on a server for access from other PCs | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
 | Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
 | Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
-| Upgrade an existing installation | [Upgrading to the latest version](#upgrading-to-the-latest-version) |
 
-The system includes:
-
-- Employee management and role-based access control
-- Internal calendar creation and publishing
-- Branch, room, and storage-location management
-- IT asset records, assignments, returns, and change history
-- Master data for employees and IT assets
-- Employee analytics and published business performance trends, plus user settings
-- Administrator-only financial figures by branch and year
-
-Financial figures use the [Bank of Japan Time-Series Data Search](https://www.stat-search.boj.or.jp/index_en.html) API (FXERM07) for USD/JPY conversion. Monthly rates are stored in the database and are not automatically revised. If you install SPH and make it publicly available, review the [Bank of Japan API usage notice](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf) and provide the required service notification before publication. The financial page displays the data source.
+Financial figures use the [Bank of Japan Time-Series Data Search](https://www.stat-search.boj.or.jp/index_en.html) API for USD/JPY conversion. Monthly rates are stored in the database and are not automatically revised. If you install SPH and make it publicly available, review the [Bank of Japan API usage notice](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf) and provide the required service notification before publication. The financial page displays the data source.
 Optional installer samples include published financial periods and clearly marked
 fictional exchange rates so the trends can be explored without a live API request.
 
@@ -58,7 +64,9 @@ cd sph
 The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
 > [!NOTE]
-> At the "Optional fictional sample data" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
+> At the "Optional samples (fictional business data and book introductions)" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
+
+Optional samples retrieve current bibliographic details and covers for 11 ISBNs selected for the display language (Japanese technical books or English-language academic books) from openBD, with zero physical copies. Unavailable titles are skipped; failed cover imports retain the title without an image. The Docker installer reports warnings at completion; affected ISBNs appear in migration logs. Provider data/images are not bundled. Review the [openBD terms](https://openbd.jp/terms/).
 
 <a id="installing-on-blitz-cloud"></a>
 
@@ -235,36 +243,8 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 
 ## Upgrading to the latest version
 
-To update an installed system, run the command for your operating system from the repository root. The update script stops services, creates and verifies a backup, then pulls source changes and restarts the system. Make sure the Git working tree is clean and the branch has an upstream remote.
-
-### Updating from v0.3.0 or later
-
-Windows PowerShell:
-
-```powershell
-.\scripts\update.ps1
-```
-
-macOS or Linux:
-
-```bash
-./scripts/update.sh
-```
-
-### Updating from v0.2.1
-
-The original v0.2.1 PowerShell script is incompatible with Windows PowerShell 5.1. Fetch the v0.2.1 maintenance fix first, then point the checkout at the v0.3.0 release branch. After v0.3.0 is published on `main`, run these commands from the repository root:
-
-```powershell
-git fetch origin
-git pull --ff-only origin bugfix/v0.2.1
-git branch --set-upstream-to=origin/main
-.\scripts\update.ps1
-```
-
-On macOS/Linux, use the same Git commands and run `./scripts/update.sh` for the final command. The update script creates and verifies a database backup before it pulls v0.3.0. If the checkout has local changes, resolve them before starting; do not discard them as part of the update.
-
-For backup locations and recovery steps, see [Backup, update, and restore](./docs/Backup_Update_and_Restore.md).
+> [!NOTE]
+> Upgrading from older versions is currently unsupported. An easy update mechanism is planned for v1.0.0 and later.
 
 ## Gallery
 
@@ -292,6 +272,7 @@ SPH uses the following external APIs and public data sources. We thank their pro
 
 - [zipcloud Postal Code Search API](https://zipcloud.ibsnet.co.jp/doc/api): Looks up Japanese address candidates from postal codes.
 - [Zippopotam.us API](https://zippopotam.us/): Looks up U.S. address candidates from ZIP codes.
+- [openBD](https://openbd.jp/): Provides bibliographic details and available book covers for ISBN lookup in the book catalog.
 - [Bank of Japan Time-Series Data Search API](https://www.stat-search.boj.or.jp/index_en.html): Retrieves monthly average USD/JPY exchange rates for converting financial figures. The Bank of Japan does not guarantee the content of SPH.
 - [Cabinet Office of Japan public holiday data](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html): Supplies the public CSV data imported into Japanese work calendars.
 - [U.S. Office of Personnel Management (OPM) federal holiday data](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/): Supplies the public iCalendar data imported into U.S. work calendars.

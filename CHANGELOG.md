@@ -8,13 +8,24 @@ User-facing changes to SME Portal Hub are documented below by release.
 
 ### New features
 
+- Added current CPU and memory measurements with history for the last hour, 24 hours and 7 days, plus current DB filesystem free space and database size, to System information. Display period and refresh interval (1, 5 or 10 minutes) are saved and restored. Only monitoring data refreshes automatically.
 - You can now upload a profile picture from Personal settings.
 - In employee forms, personal profile settings, and branch forms, you can select Japan or the United States and use a postal code to look up and select an address. The lookup uses the [zipcloud API](https://zipcloud.ibsnet.co.jp/doc/api) for Japan and the [Zippopotam.us API](https://zippopotam.us/) for the United States. You can still enter the address manually if lookup is unavailable.
+- Added a License management page for managing software licenses.
+- Added a Book management page for introducing books to employees and managing reservations, loans and returns for company-owned books. Employees can also register books and request new or additional copies for their own branch. Branch principals and deputies manage approval and ordering, and requests are completed automatically when linked physical copies are registered.
 
 ### Existing feature improvements
 
+- Branch responsibility and IT asset assignee histories now display current employee names from stored IDs. Names in branch responsibility history open employee details, with return to the original history position.
+- Replaced the default Svelte favicon with an SPH favicon. Supports SVG, 16/32/48px ICO, and a 180px PNG for the Apple home screen.
 - Added an asset type selector beside search in the IT asset list. You can choose asset types, and your selection is restored when you return to the page. Asset types are no longer included in text search.
-- Documented the steps for publishing SPH on blitz.cloud.
+- Employee names in the IT asset list, details, and change history now open employee details when an employee ID is available.
+- Replaced row action kebab menus with edit and delete icons in detail headers. Work calendar actions also appear as icons in the calendar summary.
+
+### Bug fixes
+
+- Fixed sign-in returning to the home page when opening a bookmarked page.
+- Fixed protected pages briefly appearing before the sign-in screen. Sessions are now verified before rendering, including during page navigation after a session expires or is invalidated.
 
 ## [v0.4.0] - 2026-10-11
 

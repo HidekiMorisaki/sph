@@ -1,4 +1,5 @@
 import type { ClientInit, HandleClientError } from '@sveltejs/kit';
+import { loginUrl } from '$lib/login-redirect';
 
 type GuardedFetch = typeof window.fetch & { sessionRedirectGuard?: true };
 
@@ -42,7 +43,7 @@ export const init: ClientInit = () => {
 		if (await apiErrorCode(response) !== 'AUTHENTICATION_REQUIRED') return response;
 
 		redirecting = true;
-		window.location.replace('/');
+		window.location.replace(loginUrl(window.location));
 		return new Promise<Response>(() => {});
 	};
 	guardedFetch.sessionRedirectGuard = true;

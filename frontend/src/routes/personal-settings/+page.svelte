@@ -13,7 +13,7 @@
 	import PostalLookup from '$lib/components/PostalLookup.svelte';
 	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
 	import { socialLinkPlatforms, type EmployeeProfile, type EmployeeSocialLink, type SocialLinkPlatform } from '$lib/employees';
-	import type { FinancialCurrency } from '$lib/financial-currency';
+	import { currencyOptions, type FinancialCurrency } from '$lib/financial-currency';
 	import { localization as appliedLocalization, applyLocalization, DEFAULT_LOCALIZATION, displayLanguageOptions, genderOptions, personNameFields, type DisplayLanguage, type LocalizationSettings } from '$lib/localization';
 
 	import { localeMessages } from '$lib/locale-messages';
@@ -29,7 +29,6 @@
 	const settingsSections: SettingsSection[] = ['profile', 'social-links', 'localization', 'password'];
 	const bloodTypes = ['A', 'B', 'AB', 'O'].map((value) => ({ value, label: value }));
 	const languageOptions = displayLanguageOptions();
-	const currencyOptions = [{ value: 'JPY', label: 'JPY' }, { value: 'USD', label: 'USD' }];
 	const fallbackTimeZones = ['Asia/Tokyo', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Paris'];
 	const supportedValuesOf = (Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }).supportedValuesOf;
 	const timeZoneOptions = (supportedValuesOf?.('timeZone') ?? fallbackTimeZones).map((value) => ({ value, label: value.replaceAll('_', ' '), searchTerms: [value] }));

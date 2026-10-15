@@ -86,6 +86,7 @@
 	"returned": "Returned",
 	"signInRequired": "Please sign in to continue.",
 	"loadFailed": "Unable to load IT asset data.",
+	"employeeDetailFailed": "Unable to load employee details. You may not have permission to view this employee.",
 	"locationLoadFailed": "Unable to load location data.",
 	"credentialsLoadFailed": "Unable to load credential status.",
 	"wrongPassword": "The current password is incorrect.",

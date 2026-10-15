@@ -14,7 +14,14 @@ export const permissionOperations = {
 	assetRead: 'assets.read',
 	assetManagement: 'assets.manage',
 	assetCredentialRead: 'assets.credentials.read',
-	assetCredentialWrite: 'assets.credentials.write'
+	assetCredentialWrite: 'assets.credentials.write',
+	softwareRead: 'software.read',
+	softwareManage: 'software.manage',
+	softwareKeyRead: 'software.keys.read',
+	softwareKeyWrite: 'software.keys.write',
+	bookRead: 'books.read',
+	bookTitleManage: 'books.titles.manage',
+	bookManage: 'books.manage'
 } as const;
 
 export const editablePermissionCatalog = [
@@ -23,6 +30,13 @@ export const editablePermissionCatalog = [
 	{ code: permissionOperations.calendarRead, category: 'calendars' },
 	{ code: permissionOperations.roleRead, category: 'system' },
 	{ code: permissionOperations.assetRead, category: 'assets' },
+	{ code: permissionOperations.softwareRead, category: 'software' },
+	{ code: permissionOperations.softwareManage, category: 'software' },
+	{ code: permissionOperations.softwareKeyRead, category: 'software' },
+	{ code: permissionOperations.softwareKeyWrite, category: 'software' },
+	{ code: permissionOperations.bookRead, category: 'books' },
+	{ code: permissionOperations.bookTitleManage, category: 'books' },
+	{ code: permissionOperations.bookManage, category: 'books' },
 	...granularOperations.filter((operation) => !operation.systemOnly).map(({ code, category }) => ({ code, category }))
 ];
 
@@ -32,6 +46,7 @@ export const ownBranchOperations = new Set([
 	'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
 	'assets.read', 'assets.manage', 'assets.create', 'assets.update', 'assets.delete', 'assets.assign', 'assets.return',
 	'assets.credentials.read', 'assets.credentials.write', 'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
+	'books.manage', 'books.copies.create', 'books.copies.update', 'books.copies.delete', 'books.covers.update', 'books.reservations.manage', 'books.loans.create', 'books.loans.return',
 	'calendars.read', 'calendars.assign', 'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 
@@ -64,6 +79,22 @@ export function capabilitiesFor(user: AuthenticatedUser) {
 		canAssignCalendars: (hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.calendarAssignment)) || hasOwnBranchPermissionOperation(user, permissionOperations.calendarAssignment),
 		canManageAssets: hasPermissionOperation(user, permissionOperations.assetManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.assetManagement),
 		canReadAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialRead) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialRead),
-		canWriteAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialWrite) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialWrite)
+		canWriteAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialWrite) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialWrite),
+		canReadSoftware: hasPermissionOperation(user, permissionOperations.softwareRead),
+		canManageBookTitles: hasPermissionOperation(user, permissionOperations.bookRead) && hasPermissionOperation(user, 'books.titles.create'),
+		canRequestBookPurchases: hasPermissionOperation(user, 'books.purchases.create'),
+		canUpdateBookTitles: hasPermissionOperation(user, permissionOperations.bookTitleManage) && hasPermissionOperation(user, 'books.titles.update'),
+		canManageBooks: hasPermissionOperation(user, permissionOperations.bookManage) || hasOwnBranchPermissionOperation(user, permissionOperations.bookManage),
+		canManageBooksGlobally: hasPermissionOperation(user, permissionOperations.bookManage),
+		canManageBookCovers: hasPermissionOperation(user, permissionOperations.bookManage) && hasPermissionOperation(user, 'books.covers.update'),
+		canManageSoftware: hasPermissionOperation(user, permissionOperations.softwareManage),
+		canDeleteSoftwareProducts: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.products.delete'),
+		canDeleteSoftwareContracts: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.contracts.delete'),
+		canReadSoftwareKeys: hasPermissionOperation(user, permissionOperations.softwareKeyRead),
+		canWriteSoftwareKeys: hasPermissionOperation(user, permissionOperations.softwareKeyWrite),
+		canCreateSoftwareInstallations: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.installations.create'),
+		canEndSoftwareInstallations: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.installations.end'),
+		canCreateSoftwareUsage: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.usage.create'),
+		canEndSoftwareUsage: hasPermissionOperation(user, permissionOperations.softwareManage) && hasPermissionOperation(user, 'software.usage.end')
 	};
 }

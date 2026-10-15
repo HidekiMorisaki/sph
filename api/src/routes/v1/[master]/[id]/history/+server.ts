@@ -3,6 +3,7 @@ import { referenceBranchScope } from '$lib/server/api/branch-access';
 import { hasOwnBranchPermissionOperation, hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { masterHistoryFields, type MasterHistoryResource } from '$lib/server/api/master-history';
+import { resolveHistoryEmployees } from '$lib/server/api/history-employees';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
@@ -48,7 +49,8 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 		db.masterChangeHistory.count({ where }),
 		db.masterChangeHistory.findMany({ where, select: { id: true, action: true, changes: true, changedAt: true, actor: { select: { firstName: true, middleName: true, lastName: true } } }, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'desc' }], skip: query.offset, take: query.limit })
 	]);
-	const response = success(items, 200, listMeta(query, items.length, total));
+	const resolved = resource === 'branches' ? await resolveHistoryEmployees(db, items, true) : items;
+	const response = success(resolved, 200, listMeta(query, items.length, total));
 	response.headers.set('Cache-Control', 'no-store');
 	return response;
 }

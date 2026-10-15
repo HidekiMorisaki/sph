@@ -7,14 +7,23 @@
 			"releasedAt": null,
 			"changeGroups": {
 				"newFeatures": [
+					"v0_5_0_system_monitoring",
 					"v0_5_0_profile_picture_upload",
-					"v0_5_0_postal_address_lookup"
+					"v0_5_0_postal_address_lookup",
+					"v0_5_0_license_management",
+					"v0_5_0_book_management"
 				],
 				"improvements": [
-				"v0_5_0_it_asset_type_filter",
-					"v0_5_0_blitz_cloud_installation"
+					"v0_5_0_history_employee_references",
+					"v0_5_0_favicon",
+					"v0_5_0_it_asset_type_filter",
+					"v0_5_0_it_asset_employee_details",
+					"v0_5_0_detail_action_icons"
 				],
-				"bugFixes": []
+				"bugFixes": [
+					"v0_5_0_login_return_destination",
+					"v0_5_0_unauthenticated_page_flash"
+				]
 			}
 		},
 		{
@@ -37,8 +46,8 @@
 					"v0_4_0_branch_manager_details"
 				],
 				"bugFixes": [
-				"v0_4_0_settings_profile_examples",
-				"v0_4_0_invitation_setup_redirect"
+					"v0_4_0_settings_profile_examples",
+					"v0_4_0_invitation_setup_redirect"
 				]
 			}
 		},

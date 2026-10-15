@@ -5,6 +5,7 @@
 	import type { ChangeHistoryEntry } from '$lib/change-history';
 	import ChangeHistorySection from '$lib/components/ChangeHistorySection.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import EmailAddressActions from '$lib/components/EmailAddressActions.svelte';
 	import SocialLinkIcon from '$lib/components/SocialLinkIcon.svelte';
 	import { socialLinkLabel, type Employee } from '$lib/employees';
@@ -13,10 +14,12 @@
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
 
-	let { employee, returnFocus = null, footer, onClose }: {
+	let { employee, returnFocus = null, footer, onEdit, onDelete, onClose }: {
 		employee: Employee;
 		returnFocus?: HTMLElement | null;
 		footer?: Snippet;
+		onEdit?: () => void;
+		onDelete?: () => void;
 		onClose: () => void;
 	} = $props();
 	const socialLabel = (platform: Employee['socialLinks'][number]['platform']) => socialLinkLabel(platform);
@@ -63,6 +66,7 @@
 </script>
 
 <DetailModal title={text.detail} titleId="employee-detail-title" closeLabel={text.closeDetail} {returnFocus} actions={footer} {onClose}>
+	{#snippet headerActions()}{#if onEdit || onDelete}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={onEdit ? () => onEdit() : undefined} onDelete={onDelete ? () => onDelete() : undefined} />{/if}{/snippet}
 	<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid"><div><dt>{text.employeeCode}</dt><dd>{employee.employeeCode}</dd></div><div><dt>{text.employee}</dt><dd>{formatEmployeeName(employee, $localization)}</dd></div><div><dt>{text.nameKana}</dt><dd>{display(employee.nameKana)}</dd></div><div><dt>{text.birthDate}</dt><dd>{formatDate(employee.birthDate, $localization)}</dd></div><div><dt>{text.age}</dt><dd>{employee.age}</dd></div><div><dt>{text.gender}</dt><dd>{formatGender(employee.gender, $localization)}</dd></div><div><dt>{text.bloodType}</dt><dd>{display(employee.bloodType)}</dd></div><div><dt>{text.lengthOfService}</dt><dd>{formatLengthOfService(employee.lengthOfService, $localization)}</dd></div></dl></section>
 	<section class="app-detail-section"><h3>{text.contact}</h3><dl class="app-detail-grid"><div><dt>{$localization.displayLanguage==='ja'?'国':'Country'}</dt><dd>{employee.countryCode==='US'?($localization.displayLanguage==='ja'?'米国':'United States'):($localization.displayLanguage==='ja'?'日本':'Japan')}</dd></div><div><dt>{employee.countryCode==='US'?'ZIP Code':text.postalCode}</dt><dd>{display(employee.postalCode)}</dd></div><div><dt>{employee.countryCode==='US'?($localization.displayLanguage==='ja'?'州':'State'):text.prefecture}</dt><dd>{display(employee.prefecture)}</dd></div><div><dt>{text.city}</dt><dd>{display(employee.city)}</dd></div><div><dt>{text.streetAddress}</dt><dd>{display(employee.streetAddress)}</dd></div><div><dt>{text.buildingName}</dt><dd>{display(employee.buildingName)}</dd></div><div><dt>{text.mobilePhone}</dt><dd>{display(employee.mobilePhone)}</dd></div><div class="app-detail-wide"><dt>{text.email}</dt><dd><EmailAddressActions email={employee.email} /></dd></div>{#if employee.socialLinks.length}<div class="app-detail-wide"><dt>{text.socialLinks}</dt><dd class="social-links">{#each employee.socialLinks as link}<a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={formatLocaleTemplate(commonText.openExternal, socialLabel(link.platform))} title={socialLabel(link.platform)}><SocialLinkIcon platform={link.platform} /></a>{/each}</dd></div>{/if}</dl></section>
 	<section class="app-detail-section"><h3>{text.employment}</h3><dl class="app-detail-grid"><div><dt>{text.hiredAt}</dt><dd>{formatDate(employee.hiredAt, $localization)}</dd></div><div><dt>{text.retiredAt}</dt><dd>{formatDate(employee.retiredAt, $localization)}</dd></div><div><dt>{text.departments}</dt><dd><span class="assignment-badges">{#each employee.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</span></dd></div><div><dt>{text.groupId}</dt><dd>{display(employee.group?.name)}</dd></div><div><dt>{text.positions}</dt><dd><span class="assignment-badges">{#each employee.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</span></dd></div><div><dt>{text.employmentTypeId}</dt><dd>{display(employee.employmentType?.name)}</dd></div><div><dt>{text.branchId}</dt><dd>{display(employee.branch?.name)}</dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{display(employee.notes)}</dd></div></dl></section>

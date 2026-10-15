@@ -9,6 +9,7 @@
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterRecordDetailModal from '$lib/components/MasterRecordDetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import ModalHeader from '$lib/components/ModalHeader.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
@@ -39,6 +40,7 @@
 	let editing = $state<Item | null>(null);
 	let detailItem = $state<Item | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
+	let detailBeforeEdit = $state<Item | null>(null);
 	let modalTitle = $derived(t(editing ? 'editItem' : 'addItem', itemLabel));
 	let message = $state('');
 	let form = $state(blank());
@@ -113,14 +115,14 @@
 		if (resource === 'operating-systems') await loadVendors();
 		if (!editing) resetForm();
 	}
-	function edit(item: Item, trigger: HTMLButtonElement | null) {
+	function edit(item: Item, trigger: HTMLElement | null) {
 		returnFocus = trigger; editing = item; formOpen = true; errors = {}; formError = '';
 		form = { name: item.name ?? '', managementCodePrefix: item.managementCodePrefix ?? '', manufacturerId: item.manufacturerId ? String(item.manufacturerId) : '', series: item.series ?? '', modelNumber: item.modelNumber ?? '', vendorId: item.vendorId ? String(item.vendorId) : '', product: item.product ?? '', version: item.version ?? '', edition: item.edition ?? '', architecture: item.architecture ?? '', officialUrl: item.officialUrl ?? '', sourceCheckedOn: item.sourceCheckedOn?.slice(0, 10) ?? '', supportsCpu: item.supportsCpu ?? false, supportsRam: item.supportsRam ?? false, supportsOs: item.supportsOs ?? false, supportsLoginUsername: item.supportsLoginUsername ?? false, disposalDatePolicy: item.disposalDatePolicy ?? 'prohibited', notes: item.notes ?? '' };
 		initialSnapshot = formSnapshot(form); confirmingDiscard = false;
 		void tick().then(() => formElement?.querySelector<HTMLElement>(resource === 'operating-systems' ? '[data-field="vendorId"] button' : '[name="name"]')?.focus());
 	}
-	function add() { returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null; resetForm(); initialSnapshot = formSnapshot(form); formOpen = true; void tick().then(() => formElement?.querySelector<HTMLElement>(resource === 'operating-systems' ? '[data-field="vendorId"] button' : '[name="name"]')?.focus()); }
-	function closeFormImmediately() { if (saving) return; const focusTarget = returnFocus; resetForm(); void tick().then(() => focusTarget?.focus()); }
+	function add() { detailBeforeEdit = null; returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : addButton ?? null; resetForm(); initialSnapshot = formSnapshot(form); formOpen = true; void tick().then(() => formElement?.querySelector<HTMLElement>(resource === 'operating-systems' ? '[data-field="vendorId"] button' : '[name="name"]')?.focus()); }
+	function closeFormImmediately() { if (saving) return; const focusTarget = returnFocus; const detail = detailBeforeEdit; resetForm(); detailBeforeEdit = null; if (detail) detailItem = detail; else void tick().then(() => focusTarget?.focus()); }
 	function requestCloseForm() { if (saving) return; sourceDateOpen = false; if (hasUnsavedChanges) { confirmingDiscard = true; return; } closeFormImmediately(); }
 	function clearError(field: string) { errors[field] = ''; formError = ''; }
 	async function save() {
@@ -141,14 +143,15 @@
 				else formError = response.status === 403 ? 'saveForbidden' : 'saveDuplicateFailed';
 				return;
 			}
-			const focusTarget = returnFocus; resetForm(); await list?.refresh(); if (resource === 'operating-system-vendors') notifyVendorsChanged(); void tick().then(() => focusTarget?.focus());
+			const focusTarget = returnFocus; resetForm(); detailBeforeEdit = null; await list?.refresh(); if (resource === 'operating-system-vendors') notifyVendorsChanged(); void tick().then(() => focusTarget?.focus());
 		} catch { formError = 'saveRetry'; }
 		finally { saving = false; }
 	}
 	async function remove(item: Item) {
-		if (item.usageCount && item.usageCount > 0) { message = 'deleteInUse'; return; }
+		if (item.usageCount && item.usageCount > 0) { detailItem = null; message = 'deleteInUse'; return; }
 		message = '';
 		if (!confirm(t('deleteConfirm', item.name ?? osName(item) ?? text.item))) return;
+		if (detailItem?.id === item.id) detailItem = null;
 		const response = await fetch(`/v1/${resource}/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { message = response.status === 409 ? 'deleteInUse' : response.status === 403 ? 'deleteForbidden' : 'deleteFailed'; return; }
 		message = ''; await load(); resetForm(); await list?.refresh(); if (resource === 'operating-system-vendors') notifyVendorsChanged();
@@ -171,9 +174,11 @@
 <svelte:window onkeydown={handleWindowKeydown} onclick={(event) => { if (sourceDateOpen && event.target instanceof Element && !event.target.closest('[data-field="master-source-checked"]')) sourceDateOpen = false; }} />
 	<div class="master-section">
 		{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={() => message = ''} />{/if}
-		<div class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon actionLabel={resource === 'operating-systems' ? (row) => osName(row as Item) : undefined} treeParent={resource === 'operating-systems' ? operatingSystemTreeParent : undefined} minTableWidth={0} actionWidth={14} headerActions={headerActions} {initialSortBy} reorderEndpoint={`/v1/it-asset-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={() => { if (resource === 'operating-system-vendors') notifyVendorsChanged(); }} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} onEdit={(item, trigger) => edit(item as Item, trigger)} onDelete={(item) => remove(item as Item)} /></div>
+		<div class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon actionLabel={resource === 'operating-systems' ? (row) => osName(row as Item) : undefined} treeParent={resource === 'operating-systems' ? operatingSystemTreeParent : undefined} minTableWidth={0} headerActions={headerActions} {initialSortBy} reorderEndpoint={`/v1/it-asset-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={() => { if (resource === 'operating-system-vendors') notifyVendorsChanged(); }} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
 	</div>
-	{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId={`it-master-detail-${resource}`} sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} endpoint={`/v1/${resource}`} itemId={detailItem.id} fields={detailFields} hiddenHistoryFields={['sortOrder']} dateFields={['sourceCheckedOn']} valueFormatters={{ disposalDatePolicy: (value) => m(value) }} onClose={() => detailItem = null} />{/if}
+	{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId={`it-master-detail-${resource}`} sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} endpoint={`/v1/${resource}`} itemId={detailItem.id} fields={detailFields} hiddenHistoryFields={['sortOrder']} dateFields={['sourceCheckedOn']} valueFormatters={{ disposalDatePolicy: (value) => m(value) }} onClose={() => detailItem = null}>
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); }} onDelete={() => void remove(detailItem!)} />{/if}{/snippet}
+	</MasterRecordDetailModal>{/if}
 
 	{#if canManage && formOpen}
 		<ModalBackdrop><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby={`it-master-dialog-${resource}`}>

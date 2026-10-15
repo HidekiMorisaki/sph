@@ -15,12 +15,24 @@ export type Capabilities = {
 	canManageAssets: boolean;
 	canReadAssetCredentials: boolean;
 	canWriteAssetCredentials: boolean;
+	canReadSoftware: boolean;
+	canManageBookTitles: boolean;
+	canRequestBookPurchases: boolean;
+	canUpdateBookTitles: boolean;
+	canManageBooks: boolean;
+	canManageBooksGlobally: boolean;
+	canManageBookCovers: boolean;
+	canCreateSoftwareInstallations: boolean;
+	canEndSoftwareInstallations: boolean;
+	canCreateSoftwareUsage: boolean;
+	canEndSoftwareUsage: boolean;
 };
 
 export type SessionRole = { id: number; name: string };
 
 export type SessionUser = {
 	id: number;
+	branchId?: number;
 	username: string;
 	email: string | null;
 	firstName: string;

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createCipheriv, randomBytes } from 'node:crypto';
+import { installBookSamples } from './install-book-samples.mjs';
 import { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, fetchHolidayData } from './holiday-source.mjs';
 
 export const catalogFor = language => JSON.parse(readFileSync(new URL(`sample-data/${language}.json`, import.meta.url), 'utf8'));
@@ -296,16 +297,48 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   await history('it_asset_change_history',id,'create',Object.entries({assetTag:tag,modelNumber:row.model_number,serialNumber:row.serial_number,purchasedOn:purchased,storageId:`${loc.branchName} / ${loc.roomName} / ${loc.storageName}`,notes:note}).map(([field,after])=>({field,before:null,after})),purchased);
   const previous=employees[(i+72)%288], assigned=past(date(year-2,i%12+1,1)), returned=past(date(year-1,i%12+1,1));
   await insert(client,'it_asset_assignments',{asset_id:id,employee_id:previous.id,assigned_at:timestamp(assigned),returned_at:timestamp(returned)});
-  const name={firstName:previous.firstName,middleName:null,lastName:previous.lastName};
+  const name={id:previous.id,firstName:previous.firstName,middleName:null,lastName:previous.lastName};
   await history('it_asset_change_history',id,'assign',[{field:'assigneeId',before:null,after:name}],assigned);
   await history('it_asset_change_history',id,'return',[{field:'assigneeId',before:name,after:null}],returned);
   if (s===0) {
    const employee=employees[i%288];
    await insert(client,'it_asset_assignments',{asset_id:id,employee_id:employee.id,assigned_at:timestamp(today)});
-   await history('it_asset_change_history',id,'assign',[{field:'assigneeId',before:null,after:{firstName:employee.firstName,middleName:null,lastName:employee.lastName}}]);
+   await history('it_asset_change_history',id,'assign',[{field:'assigneeId',before:null,after:{id:employee.id,firstName:employee.firstName,middleName:null,lastName:employee.lastName}}]);
   }
   if (disposed) await history('it_asset_change_history',id,'update',[{field:'disposalOn',before:null,after:disposed}],disposed);
  }
  for (const id of masterIds.it_asset_types) await client.query('UPDATE it_asset_types SET next_management_number=$2 WHERE id=$1',[id,Math.ceil(128/assetTypeCount)+1]);
- return ['JP', 'US'].filter((_, index) => holidayImports[index].status === 'failed');
+ // Fictional products and contracts exercise the license list and renewal alerts.
+ // No sample record represents a real purchase or verified license terms.
+ const software = catalog.software;
+ if (software.families.length !== 10) throw new Error('The sample software catalog must contain ten families.');
+ const dayFromToday = offset => new Date(Date.parse(`${today}T00:00:00Z`) + offset * 86400000).toISOString().slice(0,10);
+ for (let i=0;i<101;i++) {
+  const number=String(i+1).padStart(3,'0');
+  const name=`${software.families[i%software.families.length]} ${number}`;
+  const manufacturer=software.manufacturer;
+  const edition=i%3===0?'Team':i%3===1?'Standard':'Professional';
+  const version=`${1+Math.floor(i/30)}.0`;
+  const catalogKey=JSON.stringify([manufacturer,name,edition,version].map(part=>part.normalize('NFKC').trim().toLocaleLowerCase('und')));
+  const productId=await insert(client,'software_products',{catalog_key:catalogKey,name,manufacturer,edition,version,product_code:`SAMPLE-SW-${number}`,notes:note});
+  if (i>=51) continue;
+  const licenseType=['user','device','concurrent'][i%3];
+  const due=dayFromToday(i%5===0?-15:i%5===1?15:180+i%30);
+  const contractId=await insert(client,'software_contracts',{
+   product_id:productId,reference:`SAMPLE-CONTRACT-${number}`,license_type:licenseType,
+   purchased_quantity:5+(i%8)*5,starts_on:dayFromToday(-365),ends_on:due,renews_on:due,
+   auto_renew:i%4===0,vendor:manufacturer,order_number:`SAMPLE-ORDER-${number}`,
+   notes:note
+  });
+  await insert(client,'software_license_terms',{
+   contract_id:contractId,counting_unit:licenseType==='user'?'employee':licenseType==='device'?'asset':'concurrent',
+   users_per_license:licenseType==='user'?1+i%2:null,
+   devices_per_user:licenseType==='user'?1+i%3:null,
+   users_per_device:licenseType==='device'?1+i%4:null,
+   concurrent_limit:licenseType==='concurrent'?5+(i%8)*5:null,
+   evidence_status:'unverified',notes:software.unverifiedNote
+  });
+ }
+ const failedBooks = await installBookSamples(client, { adminId, note: displayLanguage === 'ja' ? 'インストール時に追加した書籍紹介サンプルです。' : 'Book introduction sample added during installation.', displayLanguage });
+ return { failedHolidayCountries: ['JP', 'US'].filter((_, index) => holidayImports[index].status === 'failed'), failedBooks };
 }

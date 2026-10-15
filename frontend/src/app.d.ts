@@ -3,7 +3,10 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		interface Locals { displayLanguage?: 'en' | 'ja' }
+		interface Locals {
+			displayLanguage?: 'en' | 'ja';
+			initialLocalization?: import('$lib/localization').LocalizationSettings;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

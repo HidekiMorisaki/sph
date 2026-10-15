@@ -53,6 +53,8 @@ model Employee {
   updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt               DateTime?               @map("deleted_at") @db.Timestamptz(3)
   itAssetAssignments      ItAssetAssignment[]
+  softwareAssignments     SoftwareAssignment[]
+  softwareUsageRecords    SoftwareInstallationUser[]
   itAssetChangeHistory    ItAssetChangeHistory[]
   employeeChangeHistory   EmployeeChangeHistory[] @relation("EmployeeHistorySubject")
   recordedEmployeeChanges EmployeeChangeHistory[] @relation("EmployeeHistoryActor")
@@ -64,7 +66,15 @@ model Employee {
   avatar                  EmployeeAvatar?
   passwordResetTokens     PasswordResetToken[]
   auditLogs               AuditLog[]
+  bookCopyBatches         BookCopyBatch[]
+  bookPurchaseRequests    BookPurchaseRequest[]
+  bookChangesRecorded     BookChangeHistory[]
+  bookReservations        BookReservation[]
+  bookLoans               BookLoan[]                @relation("BookBorrower")
+  bookLoansManaged        BookLoan[]                @relation("BookLoanManager")
+  widgets                 EmployeeWidget[]
   masterChangeHistory     MasterChangeHistory[]
+  softwareChangesRecorded SoftwareChangeHistory[]
   roleGrants              EmployeeRole[]          @relation("Grantee")
   departmentAssignments   EmployeeDepartment[]
   positionAssignments     EmployeePosition[]
@@ -390,6 +400,7 @@ model Storage {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
   room      Room      @relation(fields: [branchId, roomId], references: [branchId, id])
   itAssets  ItAsset[]
+  bookCopies BookCopy[]
 
   @@unique([branchId, roomId, name])
   @@index([roomId])
@@ -424,6 +435,9 @@ model Branch {
   deletedAt               DateTime?  @map("deleted_at") @db.Timestamptz(3)
   rooms                   Room[]
   employees               Employee[]
+  bookReservations        BookReservation[]
+  bookPurchaseRequests    BookPurchaseRequest[]
+  bookPurchaseOrders      BookPurchaseOrder[]
   financialMonths          FinancialMonth[]
   financialPublications    FinancialPublication[]
   manager                 Employee?  @relation("BranchManager", fields: [managerEmployeeId], references: [id], onDelete: Restrict)
@@ -551,6 +565,8 @@ model ItAsset {
   managementCodes           ItAssetManagementCode[]
   ipAddresses               ItAssetIpAddress[]
   credentials               ItAssetCredential[]
+  softwareAssignments       SoftwareAssignment[]
+  softwareInstallations     SoftwareInstallation[]
 
   @@unique([manufacturerId, serialNumber])
   @@index([typeId])
@@ -595,6 +611,179 @@ model ItAssetCredential {
   @@unique([assetId, credentialType])
   @@index([assetId])
   @@map("it_asset_credentials")
+}
+
+model SoftwareProduct {
+  id          Int                @id @default(autoincrement())
+  catalogKey  String             @unique @map("catalog_key") @db.VarChar(1024)
+  name        String             @db.VarChar(255)
+  manufacturer String            @db.VarChar(255)
+  edition     String?            @db.VarChar(128)
+  version     String?            @db.VarChar(128)
+  productCode String?            @map("product_code") @db.VarChar(128)
+  notes       String?            @db.VarChar(5000)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  contracts   SoftwareContract[]
+
+  @@map("software_products")
+}
+
+model SoftwareContract {
+  id                Int                   @id @default(autoincrement())
+  productId         Int                   @map("product_id")
+  reference         String                @db.VarChar(255)
+  licenseType       String                @map("license_type") @db.VarChar(32)
+  purchasedQuantity Int                   @map("purchased_quantity")
+  startsOn          DateTime              @map("starts_on") @db.Date
+  endsOn            DateTime?             @map("ends_on") @db.Date
+  renewsOn          DateTime?             @map("renews_on") @db.Date
+  autoRenew         Boolean               @default(false) @map("auto_renew")
+  vendor            String?               @db.VarChar(255)
+  orderNumber       String?               @map("order_number") @db.VarChar(128)
+  amount            Decimal?              @db.Decimal(16, 2)
+  currency          String?               @db.VarChar(3)
+  evidenceReference String?               @map("evidence_reference") @db.VarChar(2048)
+  notes             String?               @db.VarChar(5000)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?             @map("deleted_at") @db.Timestamptz(3)
+  product           SoftwareProduct       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  terms             SoftwareLicenseTerms?
+  keys              SoftwareLicenseKey[]
+  assignments       SoftwareAssignment[]
+  installations     SoftwareInstallation[]
+
+  @@unique([productId, reference])
+  @@index([productId, deletedAt])
+  @@map("software_contracts")
+}
+
+model SoftwareLicenseTerms {
+  id                  Int              @id @default(autoincrement())
+  contractId          Int              @unique @map("contract_id")
+  countingUnit        String           @map("counting_unit") @db.VarChar(32)
+  usersPerLicense     Int?             @map("users_per_license")
+  devicesPerUser      Int?             @map("devices_per_user")
+  usersPerDevice      Int?             @map("users_per_device")
+  concurrentLimit     Int?             @map("concurrent_limit")
+  evidenceStatus      String           @default("unverified") @map("evidence_status") @db.VarChar(16)
+  termsReference      String?          @map("terms_reference") @db.VarChar(2048)
+  notes               String?          @db.VarChar(5000)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  contract            SoftwareContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  @@map("software_license_terms")
+}
+
+model SoftwareLicenseKey {
+  id                   Int              @id @default(autoincrement())
+  contractId           Int              @map("contract_id")
+  fingerprint          String           @db.VarChar(64)
+  label                String?          @db.VarChar(255)
+  lastFour             String           @map("last_four") @db.VarChar(4)
+  activationLimit      Int?             @map("activation_limit")
+  expiresOn            DateTime?        @map("expires_on") @db.Date
+  notes                String?          @db.VarChar(5000)
+  ciphertext           String           @db.Text
+  initializationVector String           @map("initialization_vector") @db.VarChar(32)
+  authenticationTag    String           @map("authentication_tag") @db.VarChar(32)
+  keyVersion           Int              @default(1) @map("key_version")
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt            DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  contract             SoftwareContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  assignments          SoftwareAssignment[]
+
+  @@unique([contractId, fingerprint])
+  @@map("software_license_keys")
+}
+
+model SoftwareAssignment {
+  id            Int                 @id @default(autoincrement())
+  contractId    Int                 @map("contract_id")
+  employeeId    Int?                @map("employee_id")
+  assetId       Int?                @map("asset_id")
+  keyId         Int?                @map("key_id")
+  assignmentNo  Int                 @map("assignment_no")
+  assignedOn    DateTime            @map("assigned_on") @db.Date
+  plannedReleaseOn DateTime?        @map("planned_release_on") @db.Date
+  releasedOn    DateTime?           @map("released_on") @db.Date
+  releaseReason String?             @map("release_reason") @db.VarChar(1000)
+  deactivatedOn DateTime?           @map("deactivated_on") @db.Date
+  notes         String?             @db.VarChar(5000)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  contract      SoftwareContract    @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  employee      Employee?           @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  asset         ItAsset?            @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  key           SoftwareLicenseKey? @relation(fields: [keyId], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, assignmentNo])
+  @@index([employeeId])
+  @@index([assetId])
+  @@map("software_assignments")
+}
+
+model SoftwareInstallation {
+  id             Int                        @id @default(autoincrement())
+  contractId     Int                        @map("contract_id")
+  assetId        Int                        @map("asset_id")
+  installationNo Int                        @map("installation_no")
+  installedOn    DateTime                   @map("installed_on") @db.Date
+  removedOn      DateTime?                  @map("removed_on") @db.Date
+  notes          String?                    @db.VarChar(5000)
+  createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+  contract       SoftwareContract           @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  asset          ItAsset                    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  users          SoftwareInstallationUser[]
+
+  @@unique([contractId, installationNo])
+  @@index([assetId])
+  @@map("software_installations")
+}
+
+model SoftwareInstallationUser {
+  id             Int                  @id @default(autoincrement())
+  installationId Int                  @map("installation_id")
+  employeeId     Int                  @map("employee_id")
+  usageNo        Int                  @map("usage_no")
+  startedOn      DateTime             @map("started_on") @db.Date
+  endedOn        DateTime?            @map("ended_on") @db.Date
+  notes          String?              @db.VarChar(5000)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime?            @map("deleted_at") @db.Timestamptz(3)
+  installation   SoftwareInstallation @relation(fields: [installationId], references: [id], onDelete: Restrict)
+  employee       Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([installationId, usageNo])
+  @@index([employeeId])
+  @@map("software_installation_users")
+}
+
+model SoftwareChangeHistory {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  resource   String    @db.VarChar(32)
+  resourceId Int       @map("resource_id")
+  actorId    Int       @map("actor_id")
+  action     String    @db.VarChar(32)
+  changes    Json
+  changedAt  DateTime  @default(now()) @map("changed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  actor      Employee  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([resource, resourceId, changedAt])
+  @@map("software_change_history")
 }
 
 model ItAssetManagementCode {
@@ -772,6 +961,187 @@ model EmployeeChangeHistory {
   @@map("employee_change_history")
 }
 
+model BookTitle {
+  id           Int               @id @default(autoincrement())
+  catalogCode  String            @unique @map("catalog_code") @db.VarChar(40)
+  name         String            @db.VarChar(500)
+  author       String?           @db.VarChar(500)
+  publisher    String?           @db.VarChar(255)
+  edition      String?           @db.VarChar(100)
+  /// Canonical ISBN-13. Active-row uniqueness and validation are enforced by m0030 SQL.
+  isbn         String?           @db.VarChar(13)
+  sourceProvider String?          @map("source_provider") @db.VarChar(40)
+  sourceUrl     String?           @map("source_url") @db.VarChar(500)
+  sourceRetrievedAt DateTime?     @map("source_retrieved_at") @db.Timestamptz(3)
+  notes        String?
+  coverImage   Bytes?            @map("cover_image") @db.ByteA
+  coverSource  String?            @map("cover_source") @db.VarChar(20)
+  coverSourceUrl String?          @map("cover_source_url") @db.VarChar(500)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  copies       BookCopy[]
+  reservations BookReservation[]
+  purchaseRequests BookPurchaseRequest[]
+  purchaseOrders BookPurchaseOrder[]
+
+  @@index([isbn])
+  @@map("book_titles")
+}
+
+model BookCopy {
+  id          Int            @id @default(autoincrement())
+  copyCode    String         @unique @map("copy_code") @db.VarChar(40)
+  titleId     Int            @map("title_id")
+  storageId   Int            @map("storage_id")
+  batchId     Int?           @map("batch_id")
+  purchaseOrderId Int?       @map("purchase_order_id")
+  purchasedOn DateTime?      @map("purchased_on") @db.Date
+  status      String         @default("available") @db.VarChar(20)
+  notes       String?
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  title       BookTitle      @relation(fields: [titleId], references: [id], onDelete: Restrict)
+  storage     Storage        @relation(fields: [storageId], references: [id], onDelete: Restrict)
+  batch       BookCopyBatch? @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  purchaseOrder BookPurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  loans       BookLoan[]
+
+  @@index([titleId])
+  @@index([storageId])
+  @@map("book_copies")
+}
+
+model BookPurchaseRequest {
+  id Int @id @default(autoincrement())
+  requestCode String @unique @default(dbgenerated("gen_random_uuid()::text")) @map("request_code") @db.VarChar(40)
+  titleId Int @map("title_id")
+  branchId Int @map("branch_id")
+  employeeId Int @map("employee_id")
+  orderId Int? @map("order_id")
+  kind String @db.VarChar(20)
+  quantity Int
+  reason String?
+  status String @default("pending") @db.VarChar(20)
+  decisionReason String? @map("decision_reason")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  title BookTitle @relation(fields: [titleId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  order BookPurchaseOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  @@index([branchId, titleId, status])
+  @@map("book_purchase_requests")
+}
+
+model BookPurchaseOrder {
+  id Int @id @default(autoincrement())
+  orderCode String @unique @default(dbgenerated("gen_random_uuid()::text")) @map("order_code") @db.VarChar(40)
+  titleId Int @map("title_id")
+  branchId Int @map("branch_id")
+  quantity Int
+  status String @default("approved") @db.VarChar(20)
+  decisionReason String? @map("decision_reason")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  title BookTitle @relation(fields: [titleId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  requests BookPurchaseRequest[]
+  copies BookCopy[]
+  @@index([branchId, titleId, status])
+  @@map("book_purchase_orders")
+}
+
+model BookCopyBatch {
+  id         Int        @id @default(autoincrement())
+  requestKey String     @unique @map("request_key") @db.VarChar(100)
+  actorId    Int        @map("actor_id")
+  bodyHash   String     @map("body_hash") @db.VarChar(64)
+  result     Json?      @db.JsonB
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  actor      Employee   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  copies     BookCopy[]
+
+  @@map("book_copy_batches")
+}
+
+model BookReservation {
+  id              Int       @id @default(autoincrement())
+  reservationCode String    @unique @map("reservation_code") @db.VarChar(40)
+  titleId         Int       @map("title_id")
+  employeeId      Int       @map("employee_id")
+  branchId        Int       @map("branch_id")
+  status          String    @default("waiting") @db.VarChar(20)
+  reservedAt      DateTime  @default(now()) @map("reserved_at") @db.Timestamptz(3)
+  expiresOn       DateTime? @map("expires_on") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  title           BookTitle @relation(fields: [titleId], references: [id], onDelete: Restrict)
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  branch          Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([titleId, branchId, reservedAt])
+  @@map("book_reservations")
+}
+
+model BookLoan {
+  id         Int       @id @default(autoincrement())
+  loanCode   String    @unique @map("loan_code") @db.VarChar(40)
+  copyId     Int       @map("copy_id")
+  employeeId Int       @map("employee_id")
+  managerId  Int       @map("manager_id")
+  loanedOn   DateTime  @map("loaned_on") @db.Date
+  dueOn      DateTime  @map("due_on") @db.Date
+  returnedOn DateTime? @map("returned_on") @db.Date
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  copy       BookCopy  @relation(fields: [copyId], references: [id], onDelete: Restrict)
+  employee   Employee  @relation("BookBorrower", fields: [employeeId], references: [id], onDelete: Restrict)
+  manager    Employee  @relation("BookLoanManager", fields: [managerId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, dueOn])
+  @@map("book_loans")
+}
+
+model BookChangeHistory {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  resource   String    @db.VarChar(30)
+  resourceId Int       @map("resource_id")
+  actorId    Int       @map("actor_id")
+  action     String    @db.VarChar(20)
+  changes    Json      @db.JsonB
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  actor      Employee  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([resource, resourceId, createdAt])
+  @@map("book_change_history")
+}
+
+model EmployeeWidget {
+  id         Int       @id @default(autoincrement())
+  employeeId Int       @map("employee_id")
+  code       String    @db.VarChar(50)
+  sortOrder  Int       @default(0) @map("sort_order")
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, code])
+  @@map("employee_widgets")
+}
+
 model AuditLog {
   id         Int       @id @default(autoincrement())
   eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
@@ -838,6 +1208,20 @@ model PasswordResetToken {
   @@index([employeeId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+// Rolling seven-day telemetry: each minute-of-week slot is reused, without deletes.
+model SystemMetricSample {
+  id          Int       @id @default(autoincrement())
+  slot        Int       @unique
+  measuredAt  DateTime  @map("measured_at") @db.Timestamptz(3)
+  measurement Json
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([measuredAt])
+  @@map("system_metric_samples")
 }
 
 model AccountInvitation {

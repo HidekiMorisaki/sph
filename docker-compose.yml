@@ -18,6 +18,8 @@ services:
         condition: service_started
 
   v1:
+    environment:
+      SPH_SYSTEM_METRICS: disabled
     build:
       context: .
       dockerfile: api/Dockerfile

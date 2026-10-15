@@ -93,8 +93,8 @@ installer_template() {
 		'prompt.option') printf '%s' '  {1}. {2}' ;;
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' '追加しない（初期管理者と必須設定のみ）' ;;
-		'samples.prompt') printf '%s' '架空のサンプルデータ（任意）' ;;
-		'samples.yes') printf '%s' '追加する：従業員360人、拠点3件、IT資産128件、メモ・履歴' ;;
+		'samples.prompt') printf '%s' 'サンプルデータ（架空の業務データと書籍紹介、任意）' ;;
+		'samples.yes') printf '%s' '追加する：従業員360人、拠点3件、IT資産128件、ソフトウェア製品101件、契約51件、メモ・履歴、書誌11件（openBDから取得、所蔵0冊）。利用条件: https://openbd.jp/terms/' ;;
 		'stage.build') printf '%s' 'サービスイメージの構築' ;;
 		'stage.check') printf '%s' 'ローカルでの起動確認' ;;
 		'stage.cleanup') printf '%s' '初期管理者情報の削除・サービスの再作成' ;;
@@ -104,6 +104,8 @@ installer_template() {
 		'stage.start') printf '%s' 'データベースの初期化・サービスの起動' ;;
 		'title') printf '%s' 'インストール' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — インストール' ;;
+		'warning.book.cover') printf '%s' 'サンプル書誌の一部は書影なしで登録しました。書籍詳細のopenBD更新で再取得できます。対象ISBNはmigrationコンテナーのログに記録されています。' ;;
+		'warning.book.lookup') printf '%s' 'サンプル書誌の一部を取得できなかったため、該当書籍を追加しませんでした。後から書籍ページでISBN検索して登録できます。対象ISBNはmigrationコンテナーのログに記録されています。' ;;
 		'warning.holidayJP') printf '%s' '内閣府の祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.holidayUS') printf '%s' '米国人事管理局（OPM）の連邦祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.publicUrl') printf '%s' 'ローカル起動は正常ですが、インストーラーからアプリURLを確認できませんでした。利用端末のDNS・ファイアウォール・証明書信頼設定を確認してください。' ;;

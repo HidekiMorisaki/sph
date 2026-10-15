@@ -93,8 +93,8 @@ installer_template() {
 		'prompt.option') printf '%s' '  {1}. {2}' ;;
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' 'Do not add samples (initial administrator and required settings only)' ;;
-		'samples.prompt') printf '%s' 'Optional fictional sample data' ;;
-		'samples.yes') printf '%s' 'Add localized samples: 360 employees, 3 branches, 128 IT assets, notes and history' ;;
+		'samples.prompt') printf '%s' 'Optional samples (fictional business data and book introductions)' ;;
+		'samples.yes') printf '%s' 'Add localized samples: 360 employees, 3 branches, 128 IT assets, 101 software products, 51 contracts, notes and history, 11 book titles (retrieved from openBD; no physical copies). Terms: https://openbd.jp/terms/' ;;
 		'stage.build') printf '%s' 'Building service images' ;;
 		'stage.check') printf '%s' 'Checking local application responses' ;;
 		'stage.cleanup') printf '%s' 'Removing initial setup credentials and refreshing services' ;;
@@ -104,6 +104,8 @@ installer_template() {
 		'stage.start') printf '%s' 'Initializing the database and starting services' ;;
 		'title') printf '%s' 'INSTALLATION' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — INSTALLATION' ;;
+		'warning.book.cover') printf '%s' 'Some sample titles were registered without a cover. Retry using Refresh openBD details in the book details. Affected ISBNs are recorded in the migration container logs.' ;;
+		'warning.book.lookup') printf '%s' 'Some sample book titles could not be retrieved and were skipped. Register them later using ISBN search on Books. Affected ISBNs are recorded in the migration container logs.' ;;
 		'warning.holidayJP') printf '%s' 'The Japanese Cabinet Office holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.holidayUS') printf '%s' 'The U.S. Office of Personnel Management (OPM) federal holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.publicUrl') printf '%s' 'Local startup succeeded, but the application URL could not be verified from the installer. Check client DNS, firewall and certificate trust settings.' ;;

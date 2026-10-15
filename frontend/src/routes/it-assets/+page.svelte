@@ -7,11 +7,14 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import ChangeHistorySection from '$lib/components/ChangeHistorySection.svelte';
+	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
+	import ViewportListPage from '$lib/components/ViewportListPage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
@@ -20,9 +23,11 @@
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
+	import type { Employee } from '$lib/employees';
 	import { operatingSystemName, type OperatingSystemParts } from '$lib/operating-system-name';
 
 	let text = $derived(localeMessages[$localization.displayLanguage].assets);
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
 	function t(key: keyof Omit<typeof text, 'errors' | 'credentialStatus'>, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
@@ -87,7 +92,14 @@
 	let historyError = $state(false);
 	let historyRequestId = 0;
 	let detailAsset = $state<Asset | null>(null);
+	let detailBeforeEdit = $state<Asset | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
+	let detailEmployee = $state<Employee | null>(null);
+	let employeeReturnFocus = $state<HTMLElement | null>(null);
+	let credentialReturnFocus = $state<HTMLElement | null>(null);
+	let employeeDetailLoading = $state(false);
+	let employeeDetailError = $state(false);
+	let employeeRequestId = 0;
 	let canManageAssets = $state(false);
 	let canReadAssetCredentials = $state(false);
 	let canWriteAssetCredentials = $state(false);
@@ -183,6 +195,8 @@
 	}
 	function closeFormImmediately() {
 		confirmingDiscard = false;
+		const detail = detailBeforeEdit;
+		detailBeforeEdit = null;
 		open = false;
 		initialSnapshot = '';
 		formError = '';
@@ -190,7 +204,8 @@
 		activeDateField = null;
 		previewRequestId++;
 		codeLoading = false;
-		void tick().then(() => returnFocus?.focus());
+		if (detail) showDetail(detail, detailReturnFocus);
+		else void tick().then(() => returnFocus?.focus());
 	}
 	function requestCloseForm() {
 		if (saving) return;
@@ -199,6 +214,7 @@
 		closeFormImmediately();
 	}
 	function create() {
+		detailBeforeEdit = null;
 		returnFocus = document.activeElement as HTMLElement;
 		editing = null;
 		form = blank();
@@ -254,11 +270,32 @@
 		if (canReadAssetCredentials) void loadCredentialStatus(item.id);
 	}
 	function closeDetail() {
+		employeeRequestId++;
+		employeeDetailLoading = false;
+		employeeDetailError = false;
 		closeCredentialAccess();
 		detailAsset = null;
 		historyRequestId++;
 		credentialRequestId++;
 		changeHistory = [];
+	}
+	async function openEmployeeDetail(id: number, trigger: HTMLElement) {
+		if (employeeDetailLoading || detailEmployee) return;
+		const requestId = ++employeeRequestId;
+		employeeDetailLoading = true;
+		employeeDetailError = false;
+		try {
+			const response = await fetch(`/v1/employees/${id}`, { cache: 'no-store' });
+			if (!response.ok) throw new Error('Unable to load employee detail.');
+			const employee = await apiData<Employee>(response);
+			if (requestId !== employeeRequestId) return;
+			employeeReturnFocus = trigger;
+			detailEmployee = employee;
+		} catch { if (requestId === employeeRequestId) employeeDetailError = true; }
+		finally { if (requestId === employeeRequestId) employeeDetailLoading = false; }
+	}
+	function closeEmployeeDetail() {
+		detailEmployee = null;
 	}
 	async function loadCredentialStatus(assetId: number) {
 		const requestId = ++credentialRequestId;
@@ -273,6 +310,7 @@
 		finally { if (requestId === credentialRequestId) credentialsLoading = false; }
 	}
 	function openCredentialAccess(type: CredentialType) {
+		credentialReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		revealType = type;
 		currentPassword = '';
 		revealedPassword = '';
@@ -285,6 +323,9 @@
 		revealedPassword = '';
 		revealError = '';
 		revealing = false;
+		const trigger = credentialReturnFocus;
+		credentialReturnFocus = null;
+		void tick().then(() => trigger?.focus({ preventScroll: true }));
 	}
 	async function revealCredential() {
 		if (!detailAsset || !revealType || revealing || !currentPassword) return;
@@ -408,6 +449,7 @@
 			}
 			const saved = await apiData<Asset>(response);
 			const result = editing ? t('updated', saved.assetTag) : t('created', saved.assetTag);
+			detailBeforeEdit = null;
 			closeFormImmediately();
 			messageTone = 'success'; message = result;
 			await assetList?.refresh();
@@ -419,6 +461,7 @@
 	}
 	async function remove(item: Asset) {
 		if (!confirm(t('deleteConfirm', item.assetTag))) return;
+		if (detailAsset?.id === item.id) closeDetail();
 		try {
 			const response = await fetch(`/v1/it-assets/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) {
@@ -513,24 +556,28 @@
 {/snippet}
 {#snippet assetCodeCell(item: Asset)}<strong class="asset-primary">{item.assetTag}</strong>{#if item.notes?.trim()}<small class="asset-secondary asset-note" title={item.notes}>{item.notes}</small>{/if}{/snippet}
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
+{#snippet assigneeCell(item: Asset)}{#if item.assignments[0]}<button class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(item.assignments[0].employee.id, event.currentTarget)}>{assigneeName(item.assignments[0])}</button>{/if}{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
 {#snippet pageActions()}{#if canManageAssets}<AddButton label={text.add} onclick={create} />{/if}{/snippet}
 {#snippet typeFilter()}<div class="asset-type-filter"><span>{text.typeFilter}</span>{#if types.length === 1}<SearchSelect label={text.typeFilter} field="assetTypeFilter" value={String(types[0].id)} options={[{ value: String(types[0].id), label: types[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.typeFilter} field="assetTypeFilter" values={typeSelection} options={[{ value: allTypesValue, label: text.allTypes }, ...types.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={chooseTypes} />{/if}</div>{/snippet}
 
 <AssetManagementShell title={text.title}>
+	<ViewportListPage>
 	<MasterPageHeader title={text.title} description={text.description} actions={pageActions} />
 	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
+	{#if employeeDetailError && !detailAsset}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
 	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<button type="button" class="type-filter-retry" onclick={() => void load()}>{text.retryTypeFilter}</button>{/if}
-	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} actionWidth={4} edgePagination canDetail={true} canEdit={canManageAssets} canDelete={canManageAssets} actionLabel={(item) => (item as Asset).assetTag} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
+	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
 		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
 		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },
 		{ key: 'branch', label: text.branch, width: 11, value: (item) => (item as Asset).storage.room.branch.name, searchKeys: ['branch'] },
 		{ key: 'room', label: text.room, width: 10, value: (item) => (item as Asset).storage.room.name, searchKeys: ['room'] },
 		{ key: 'storage', label: text.storage, width: 12, value: (item) => (item as Asset).storage.name, searchKeys: ['storage'] },
-		{ key: 'user', label: text.user, width: 12, value: (item) => (item as Asset).assignments[0] ? assigneeName((item as Asset).assignments[0]) : '', searchKeys: ['user'] },
+		{ key: 'user', label: text.user, width: 12, cell: assigneeCell, searchKeys: ['user'] },
 		{ key: 'status', label: text.status, width: 9, cell: statusCell, searchKeys: ['status'] }
-	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} onEdit={(item, trigger) => edit(item as Asset, trigger)} onDelete={(item) => remove(item as Asset)} />{:else if !typeFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
+	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} />{:else if !typeFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
+	</ViewportListPage>
 	{#if open}
 		<ModalBackdrop>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
@@ -591,7 +638,10 @@
 		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}
 	{/if}
 	{#if detailAsset}
+		<div hidden={Boolean(detailEmployee || revealType)} inert={Boolean(detailEmployee || revealType)}>
 		<DetailModal title={text.detail} titleId="asset-detail-title" closeLabel={text.closeDetail} returnFocus={detailReturnFocus} onClose={closeDetail}>
+			{#snippet headerActions()}{#if canManageAssets}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailAsset!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); }} onDelete={() => void remove(detailAsset!)} />{/if}{/snippet}
+			{#if employeeDetailError}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
 			<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid">
 						{@render detailField(text.assetTag, detailAsset.assetTag)}
 						{@render detailField(text.type, detailAsset.type.name)}
@@ -613,7 +663,7 @@
 						{@render detailField(text.storage, detailAsset.storage.name)}
 						{@render detailField(text.purchasedOn, formatDate(detailAsset.purchasedOn, $localization))}
 						{@render detailField(text.disposalOn, formatDate(detailAsset.disposalOn, $localization))}
-						{@render detailField(text.employee, detailAsset.assignments[0] ? assigneeName(detailAsset.assignments[0]) : '')}
+						<div><dt>{text.employee}</dt><dd>{#if detailAsset.assignments[0]}<button class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(detailAsset!.assignments[0].employee.id, event.currentTarget)}>{assigneeName(detailAsset.assignments[0])}</button>{/if}</dd></div>
 						<div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{detailAsset.notes ?? ''}</dd></div>
 			</dl></section>
 			<section class="app-detail-section"><h3>{text.network}</h3><dl class="app-detail-grid">
@@ -636,9 +686,11 @@
 				</div>
 			{/if}
 			</section>
-			<ChangeHistorySection entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} dateFields={['purchasedOn','disposalOn']} actionLabels={historyActions} />
+			<ChangeHistorySection entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} dateFields={['purchasedOn','disposalOn']} actionLabels={historyActions} onEmployeeClick={openEmployeeDetail} />
 		</DetailModal>
+		</div>
 	{/if}
+	{#if detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={employeeReturnFocus} onClose={closeEmployeeDetail} />{/if}
 	{#if revealType}
 		<ModalBackdrop>
 			<dialog bind:this={credentialDialogElement} class="credential-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="credential-dialog-title">
@@ -657,6 +709,7 @@
 <style>
 	.asset-type-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:220px}.asset-type-filter :global(.form-multi-select-field>span),.asset-type-filter :global(.form-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.asset-type-filter :global(.form-multi-select-trigger),.asset-type-filter :global(.form-select-trigger){height:32px}.type-filter-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
 	.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:var(--font-size-support)}
+	.asset-employee-link{border:0;padding:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;text-decoration:underline;cursor:pointer}.asset-employee-link:disabled{opacity:.6;cursor:wait}.asset-employee-link:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.wide{grid-column:1/-1}
 	.credential-field{display:grid;gap:6px}.clear-credential{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-size-support)}.clear-credential input{width:14px;height:14px}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:var(--font-size-support)}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,#169f85)}.credential-statuses button{height:28px;padding:0 10px;border:1px solid var(--action-primary);border-radius:4px;background:transparent;color:var(--action-primary);font-size:var(--font-size-body)}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:14px;padding:18px 24px 24px}.credential-dialog-body p{margin:0;color:var(--muted);font-size:var(--font-size-support)}.credential-dialog-body label{display:grid;gap:6px;font-size:var(--font-size-support)}.credential-dialog-body input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
 	@media(max-width:700px){.asset-type-filter,.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:100%}}

@@ -2,6 +2,15 @@ import type { MessageLanguage } from './locale-messages';
 
 export type FinancialCurrency = 'JPY' | 'USD';
 
+export const currencyOptions: { value: FinancialCurrency; label: string }[] = [
+	{ value: 'JPY', label: 'JPY' },
+	{ value: 'USD', label: 'USD' }
+];
+
+export function isFinancialCurrency(value: string): value is FinancialCurrency {
+	return currencyOptions.some((option) => option.value === value);
+}
+
 export function formatFinancialAmount(value: string | null, currency: FinancialCurrency, language: MessageLanguage): string | null {
 	if (value === null) return null;
 	const negative = value.startsWith('-');

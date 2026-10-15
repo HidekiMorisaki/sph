@@ -14,6 +14,8 @@
 	let canManageMasters = $derived(Boolean(user?.capabilities.canManageMasters || user?.capabilities.canManageBranches));
 	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'general'
 		? { ...group, items: group.items.filter((item) => item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) }
+		: group.id === 'assets'
+			? { ...group, items: group.items.filter((item) => item.id !== 'softwareLicenses' || user?.capabilities.canReadSoftware) }
 		: group.id === 'siteManagement' && !user?.capabilities.canManageSystemSettings
 			? { ...group, items: group.items.filter((item) => item.id === 'businessOverview' && user?.capabilities.canManageBranches) }
 			: group).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length

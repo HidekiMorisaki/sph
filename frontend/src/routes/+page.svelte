@@ -5,6 +5,7 @@
 	import { applyLocalization, localization } from '$lib/localization';
 	import Dashboard from '$lib/components/Dashboard.svelte';
 	import { readSessionUser } from '$lib/client-session';
+	import { safeLoginDestination } from '$lib/login-redirect';
 	import { productName } from '$lib/brand';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -14,7 +15,18 @@
 	let user = $state<CurrentUser | null>(null); let identifier = $state(''); let password = $state(''); let isLoading = $state(true); let isSubmitting = $state(false); let message = $state('');
 	let identifierError=$state('');let passwordError=$state('');let identifierInput=$state<HTMLInputElement>();let passwordInput=$state<HTMLInputElement>();
 	async function validateLogin(){identifierError=identifier.trim()?'':pageText.identifierRequired;passwordError=password?'':pageText.passwordRequired;if(identifierError||passwordError){await tick();(identifierError?identifierInput:passwordInput)?.focus();return false;}return true;}
-	async function loadSession() { const current = await readSessionUser(); if (current) await applyLocalization(current); user = current; if (current) window.dispatchEvent(new CustomEvent('session-user-updated', { detail: current })); }
+	async function loadSession() {
+		const current = await readSessionUser();
+		if (current) await applyLocalization(current);
+		user = current;
+		if (current) {
+			window.dispatchEvent(new CustomEvent('session-user-updated', { detail: current }));
+			const loginPage = new URL(window.location.href);
+			const destination = safeLoginDestination(loginPage.searchParams.get('returnTo'));
+			// HTTP redirects preserve the original fragment on the sign-in URL.
+			if (destination) window.location.replace(destination.includes('#') ? destination : destination + loginPage.hash);
+		}
+	}
 	onMount(() => { let mounted = true; void (async () => { try { await loadSession(); } catch { if (mounted) message = pageText.loginFailed; } finally { if (mounted) isLoading = false; } })(); return () => { mounted = false; }; });
 	async function login() { if(!await validateLogin())return; isSubmitting = true; message = ''; try { const response = await fetch('/v1/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier, password }) }); const isJson = response.headers.get('content-type')?.includes('application/json'); if (!isJson) { message = pageText.loginFailed; return; } if (!response.ok) { message = response.status === 401 ? pageText.invalidCredentials : pageText.loginFailed; return; } password = ''; await loadSession(); } catch { message = pageText.loginFailed; } finally { isSubmitting = false; } }
 
