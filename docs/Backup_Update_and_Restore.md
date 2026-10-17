@@ -12,7 +12,7 @@ The maintenance tools in `scripts/` are intended for operators of installed SME 
 - `.env` is intentionally not included. Keep a separate, protected copy of the deployment configuration and secrets.
 - In HTTPS installations, also back up the Docker `gateway_data` volume and `.runtime/gateway/Caddyfile` separately. The database dump does not include certificates or the internal CA. Losing the internal CA requires a new client trust deployment.
 - The tools do not automatically roll back Git source code. If an update fails after the pull, preserve the backup and diagnose the failure before choosing a source revision or restoring data.
-- Never use `docker compose down --volumes` as part of an update.
+- Never use `docker compose -f docker-compose.local.yml down --volumes` as part of an update.
 
 ## Prerequisites
 
@@ -107,13 +107,13 @@ complete backup. Databases already on the baseline are left as they are.
 For a supervised development checkout already containing the consolidated source:
 
 ```powershell
-docker compose stop gateway frontend api
+docker compose -f docker-compose.local.yml stop gateway frontend api
 ./scripts/backup.ps1
-docker compose build migration
+docker compose -f docker-compose.local.yml build migration
 # Replace the host path with the verified backup directory just created.
-docker compose run --rm --no-deps --volume 'C:\protected\sph-backup:/baseline-backup' migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json
-docker compose run --rm --no-deps migration
-docker compose start api frontend gateway
+docker compose -f docker-compose.local.yml run --rm --no-deps --volume 'C:\protected\sph-backup:/baseline-backup' migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json
+docker compose -f docker-compose.local.yml run --rm --no-deps migration
+docker compose -f docker-compose.local.yml start api frontend gateway
 ```
 
 Do not reset the database or manually edit checksums to resolve a rejected
@@ -149,7 +149,7 @@ For supervised automation, the expected database name may be provided explicitly
 ./scripts/restore.sh /protected/sph-backups/sph-0.1.0-YYYYMMDDTHHMMSSZ equipment_db
 ```
 
-If restore fails after database replacement begins, application services are intentionally not restarted. Keep the backup unchanged, inspect the reported failure and `docker compose logs`, and correct the cause before retrying recovery.
+If restore fails after database replacement begins, application services are intentionally not restarted. Keep the backup unchanged, inspect the reported failure and `docker compose -f docker-compose.local.yml logs`, and correct the cause before retrying recovery.
 
 ## Backup retention
 

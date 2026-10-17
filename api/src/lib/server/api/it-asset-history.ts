@@ -4,10 +4,10 @@ import { itAssetInclude } from './it-asset-input';
 import { operatingSystemName } from './operating-system-name';
 import { writeAuditLog } from './admin';
 
-type EmployeeNameParts = { firstName: string; middleName: string | null; lastName: string };
-type FieldValue = { value: string | null; display: string | EmployeeNameParts | null };
+type EmployeeReference = { id: number };
+type FieldValue = { value: string | null; display: string | EmployeeReference | null };
 export type AssetFields = Record<string, FieldValue>;
-const field = (value: string | number | null | undefined, display?: string | EmployeeNameParts | null): FieldValue => ({
+const field = (value: string | number | null | undefined, display?: string | EmployeeReference | null): FieldValue => ({
 	value: value === null || value === undefined ? null : String(value),
 	display: display === undefined ? value === null || value === undefined ? null : String(value) : display
 });
@@ -38,7 +38,7 @@ export async function readAssetFields(tx: Prisma.TransactionClient, assetId: num
 		purchasedOn: field(date(asset.purchasedOn)),
 		disposalOn: field(date(asset.disposalOn)),
 		notes: field(asset.notes),
-		assigneeId: field(assignee?.id, assignee ? { firstName: assignee.firstName, middleName: assignee.middleName, lastName: assignee.lastName } : null)
+		assigneeId: field(assignee?.id, assignee ? { id: assignee.id } : null)
 	};
 }
 

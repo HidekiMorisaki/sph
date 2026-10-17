@@ -12,7 +12,7 @@
 - `.env` はバックアップに含まれません。設定と秘密情報は別途、安全に保管してください。
 - HTTPS 環境では Docker の`gateway_data`ボリュームと`.runtime/gateway/Caddyfile`も別途バックアップします。データベースのダンプには証明書や社内 CA は含まれません。社内 CA を失った場合は、端末の信頼設定をやり直す必要があります。
 - 保守ツールは Git のソースコードを自動的には戻しません。ソース取得後に更新が失敗した場合は、バックアップを保持し、原因を調べてからソースのリビジョンやデータの復元を判断してください。
-- 更新時に `docker compose down --volumes` を使用しないでください。
+- 更新時に `docker compose -f docker-compose.local.yml down --volumes` を使用しないでください。
 
 ## 事前準備
 
@@ -96,13 +96,13 @@ macOS／Linux:
 統合済みソースを既に配置した開発用チェックアウトを、管理者の監督下で移行する場合:
 
 ```powershell
-docker compose stop gateway frontend api
+docker compose -f docker-compose.local.yml stop gateway frontend api
 ./scripts/backup.ps1
-docker compose build migration
+docker compose -f docker-compose.local.yml build migration
 # ホスト側のパスを、直前に作成した検証済みバックアップディレクトリに置き換える。
-docker compose run --rm --no-deps --volume 'C:\protected\sph-backup:/baseline-backup' migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json
-docker compose run --rm --no-deps migration
-docker compose start api frontend gateway
+docker compose -f docker-compose.local.yml run --rm --no-deps --volume 'C:\protected\sph-backup:/baseline-backup' migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json
+docker compose -f docker-compose.local.yml run --rm --no-deps migration
+docker compose -f docker-compose.local.yml start api frontend gateway
 ```
 
 拒否されたベースラインに対処するために、データベースをリセットしたりチェックサムを手動変更したりしないでください。バックアップを保持し、差異の原因を調べ、対応する移行計画ができるまでアプリケーションサービスを停止したままにします。既存の完全バックアップは、互換性のあるソースのリビジョンを使用して復元できます。
@@ -135,7 +135,7 @@ macOS／Linux:
 ./scripts/restore.sh /protected/sph-backups/sph-0.1.0-YYYYMMDDTHHMMSSZ equipment_db
 ```
 
-データベースの置き換え開始後に復元が失敗した場合、アプリケーションサービスは意図的に再起動されません。バックアップを変更せず保持し、エラーと `docker compose logs` を確認して原因を解消してから、復旧を再試行してください。
+データベースの置き換え開始後に復元が失敗した場合、アプリケーションサービスは意図的に再起動されません。バックアップを変更せず保持し、エラーと `docker compose -f docker-compose.local.yml logs` を確認して原因を解消してから、復旧を再試行してください。
 
 ## バックアップの保管期間
 

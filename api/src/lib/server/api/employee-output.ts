@@ -13,6 +13,7 @@ export const employeeSafeSelect = {
 	gender: true,
 	bloodType: true,
 	postalCode: true,
+	countryCode: true,
 	prefecture: true,
 	city: true,
 	streetAddress: true,
@@ -30,6 +31,11 @@ export const employeeSafeSelect = {
 	updatedAt: true,
 	deletedAt: true,
 	group: { select: { id: true, name: true } },
+	teamAssignments: {
+		where: { deletedAt: null, team: { deletedAt: null } },
+		select: { team: { select: { id: true, name: true } } },
+		orderBy: [{ team: { name: 'asc' } }, { teamId: 'asc' }]
+	},
 	departmentAssignments: {
 		where: { deletedAt: null, department: { deletedAt: null } },
 		select: { isPrimary: true, department: { select: { id: true, name: true, sortOrder: true } } },
@@ -55,8 +61,8 @@ export const employeeSafeSelect = {
 
 type EmployeeSafeRecord = Prisma.EmployeeGetPayload<{ select: typeof employeeSafeSelect }>;
 
-export function employeeOutput(record: EmployeeSafeRecord, referenceDate = employeeReferenceDate()) {
-	const { roleGrants, accountStatus, departmentAssignments, positionAssignments, ...employee } = record;
+export function employeeOutput(record: EmployeeSafeRecord, referenceDate = employeeReferenceDate(), includeTeams = true) {
+	const { roleGrants, accountStatus, departmentAssignments, positionAssignments, teamAssignments, ...employee } = record;
 	const departments = departmentAssignments.map((assignment) => ({ ...assignment.department, isPrimary: assignment.isPrimary }));
 	const positions = positionAssignments.map((assignment) => ({ ...assignment.position, isPrimary: assignment.isPrimary }));
 	const primaryDepartment = departments.find((department) => department.isPrimary) ?? null;
@@ -68,6 +74,9 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 			: 'current';
 	return {
 		...employee,
+		teamIds: includeTeams ? teamAssignments.map(item => item.team.id) : [],
+		teams: includeTeams ? teamAssignments.map(item => item.team) : [],
+		teamNames: includeTeams ? teamAssignments.map(item => item.team.name).join(' | ') : '',
 		departmentId: primaryDepartment?.id ?? null,
 		departmentRef: primaryDepartment && { id: primaryDepartment.id, name: primaryDepartment.name },
 		departmentIds: departments.map((department) => department.id),

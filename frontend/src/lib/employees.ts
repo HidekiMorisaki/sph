@@ -37,6 +37,7 @@ export type EmployeeProfile = {
 	gender: string;
 	bloodType: string | null;
 	postalCode: string | null;
+	countryCode: 'JP' | 'US';
 	prefecture: string | null;
 	city: string | null;
 	streetAddress: string | null;
@@ -46,6 +47,10 @@ export type EmployeeProfile = {
 };
 
 export type Employee = EmployeeProfile & {
+	teamIds: number[];
+	teams: Array<{ id: number; name: string }>;
+	teamNames: string;
+	avatar?: string | null;
 	employeeCode: string;
 	age: number;
 	lengthOfService: { years: number; months: number };

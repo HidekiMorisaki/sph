@@ -3,6 +3,34 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.5.0",
+			"releasedAt": "2026-10-18",
+			"changeGroups": {
+				"newFeatures": [
+					"v0_5_0_business_management",
+					"v0_5_0_employee_saved_search",
+					"v0_5_0_license_management",
+					"v0_5_0_book_management",
+					"v0_5_0_system_monitoring",
+					"v0_5_0_profile_picture_upload"
+				],
+				"improvements": [
+					"v0_5_0_postal_address_lookup",
+					"v0_5_0_history_employee_references",
+					"v0_5_0_favicon",
+					"v0_5_0_it_asset_type_filter",
+					"v0_5_0_it_asset_employee_details",
+					"v0_5_0_detail_action_icons",
+					"v0_5_0_add_button_icons",
+					"v0_5_0_sidebar_icons"
+				],
+				"bugFixes": [
+					"v0_5_0_login_return_destination",
+					"v0_5_0_unauthenticated_page_flash"
+				]
+			}
+		},
+		{
 			"version": "0.4.0",
 			"releasedAt": "2026-10-11",
 			"changeGroups": {
@@ -22,8 +50,8 @@
 					"v0_4_0_branch_manager_details"
 				],
 				"bugFixes": [
-				"v0_4_0_settings_profile_examples",
-				"v0_4_0_invitation_setup_redirect"
+					"v0_4_0_settings_profile_examples",
+					"v0_4_0_invitation_setup_redirect"
 				]
 			}
 		},
@@ -97,6 +125,6 @@
 		}
 	],
 	"noticeIds": [
-		"v0_4_0_development_notice"
+		"v0_5_0_development_notice"
 	]
 }

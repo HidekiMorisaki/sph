@@ -25,6 +25,7 @@ const validDate = (value) => {
 if (!process.env.DATABASE_URL) throw new Error('The database connection is required.');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 let failedHolidayCountries = [];
+let failedBooks = { lookup: [], cover: [] };
 
 try {
 	await client.connect();
@@ -63,10 +64,14 @@ try {
 		);
 		await client.query('INSERT INTO employee_roles (employee_id, role_id) VALUES ($1, $2)', [created.rows[0].id, role.rows[0].id]);
 		await client.query('INSERT INTO employee_settings (employee_id, display_language, display_currency) VALUES ($1, $2, $3)', [created.rows[0].id, input.displayLanguage, input.displayLanguage === 'ja' ? 'JPY' : 'USD']);
-		if (samples === 'yes') failedHolidayCountries = await installSamples(client, catalog, { adminId: created.rows[0].id, branchId: branch.rows[0].id, displayLanguage: input.displayLanguage });
+		if (samples === 'yes') ({ failedHolidayCountries, failedBooks } = await installSamples(client, catalog, { adminId: created.rows[0].id, branchId: branch.rows[0].id, displayLanguage: input.displayLanguage }));
 	}
 	await client.query('COMMIT');
 	for (const countryCode of failedHolidayCountries) console.log(`SPH_SAMPLE_HOLIDAY_WARNING=${countryCode}`);
+	for (const kind of ['lookup', 'cover']) {
+		if (failedBooks[kind].length) console.log(`SPH_SAMPLE_BOOK_WARNING=${kind}`);
+		for (const isbn of failedBooks[kind]) console.log(`SPH_SAMPLE_BOOK_${kind.toUpperCase()}_WARNING_ISBN=${isbn}`);
+	}
 } catch (error) {
 	await client.query('ROLLBACK').catch(() => undefined);
 	throw error;

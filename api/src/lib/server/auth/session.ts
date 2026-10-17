@@ -86,7 +86,7 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 						select: {
 							scopeType: true,
 							role: { select: {
-								id: true, name: true,
+								id: true, name: true, defaultKey: true,
 								permissions: {
 									where: { deletedAt: null, permission: { deletedAt: null } },
 									select: { scopeType: true, permission: { select: { identifier: true, operations: { where: { deletedAt: null }, select: { operation: true } } } } }
@@ -111,6 +111,15 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	const grants = record.employee.roleGrants;
 	const permissionIdentifiers = [...new Set(grants.filter((grant) => grant.scopeType === 'global').flatMap((grant) => grant.role.permissions.filter((entry) => entry.scopeType === 'global').map((entry) => entry.permission.identifier)))];
 	const grantedOperations = [...new Set(grants.flatMap((grant) => grant.scopeType === 'global' ? grant.role.permissions.filter((entry) => entry.scopeType === 'global').flatMap((entry) => entry.permission.operations.map((operation) => operation.operation)) : []))];
+	// These approved operations have no branch scope. Saved filters remain owner-only
+	// in their service; target-resource reads still use their existing scope checks.
+	// Every operation requires an active global DB permission grant.
+	const globalTeamOperations = new Set(['search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'projects.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
+	for (const grant of grants.filter(grant => grant.scopeType === 'own_branch' && grant.role.defaultKey === 'branch_administrator')) {
+		for (const entry of grant.role.permissions.filter(entry => entry.scopeType === 'global')) {
+			for (const { operation } of entry.permission.operations) if (globalTeamOperations.has(operation) && !grantedOperations.includes(operation)) grantedOperations.push(operation);
+		}
+	}
 	const ownBranchPermissionOperations = [...new Set(grants.flatMap((grant) => grant.role.permissions.filter((entry) => grant.scopeType === 'own_branch' || entry.scopeType === 'own_branch').flatMap((entry) => entry.permission.operations.map((operation) => operation.operation))))];
 	const settings = record.employee.settings?.deletedAt == null ? record.employee.settings : null;
 	const displayLanguage = isDisplayLanguage(settings?.displayLanguage) ? settings.displayLanguage : DEFAULT_DISPLAY_LANGUAGE;

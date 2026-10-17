@@ -1,5 +1,5 @@
 {
-	"title": "Employee list",
+	"title": "Employees",
 	"employee": "Employee Name",
 	"add": "Add employee",
 	"edit": "Edit employee",
@@ -128,5 +128,8 @@
 		"forbidden": "You do not have permission to perform this action.",
 		"notFound": "The employee could not be found.",
 		"invalidRequest": "Invalid request."
-	}
+	},
+	"teams": "Teams",
+	"teamFilter": "Teams",
+	"allTeams": "All teams"
 }

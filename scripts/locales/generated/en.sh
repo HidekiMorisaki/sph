@@ -68,7 +68,7 @@ installer_template() {
 		'input.defaultsNotice') printf '%s' 'Values in [] are defaults. Press Enter to accept the default values. You can change these after signing in.' ;;
 		'input.invalid') printf '%s' 'Invalid value. Please try again.' ;;
 		'input.selectNumber') printf '%s' 'Select a number' ;;
-		'language.notice') printf '%s' 'Your chosen language is also your initial application language. Change it in Settings > Localization.' ;;
+		'language.notice') printf '%s' 'Your chosen language is also your initial application language. Change it in Personal settings > Localization.' ;;
 		'locale.code') printf '%s' 'en' ;;
 		'locale.name') printf '%s' 'English' ;;
 		'locale.prompt') printf '%s' 'Language' ;;
@@ -82,7 +82,7 @@ installer_template() {
 		'profile.firstName') printf '%s' 'First name' ;;
 		'profile.gender') printf '%s' 'Gender' ;;
 		'profile.lastName') printf '%s' 'Last name' ;;
-		'profile.notice') printf '%s' 'Change these personal details later in Settings > Profile.' ;;
+		'profile.notice') printf '%s' 'Change these personal details later in Personal settings > Profile.' ;;
 		'progress.complete') printf '%s' '  [OK] {1} | Total {2}' ;;
 		'progress.duration') printf '%s' '{1}m {2}s' ;;
 		'progress.notice') printf '%s' 'Seven stages. Installation may take a few minutes.' ;;
@@ -93,8 +93,8 @@ installer_template() {
 		'prompt.option') printf '%s' '  {1}. {2}' ;;
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' 'Do not add samples (initial administrator and required settings only)' ;;
-		'samples.prompt') printf '%s' 'Optional fictional sample data' ;;
-		'samples.yes') printf '%s' 'Add localized samples: 360 employees, 3 branches, 128 IT assets, notes and history' ;;
+		'samples.prompt') printf '%s' 'Optional samples (fictional business data and book introductions)' ;;
+		'samples.yes') printf '%s' 'Add' ;;
 		'stage.build') printf '%s' 'Building service images' ;;
 		'stage.check') printf '%s' 'Checking local application responses' ;;
 		'stage.cleanup') printf '%s' 'Removing initial setup credentials and refreshing services' ;;
@@ -104,6 +104,8 @@ installer_template() {
 		'stage.start') printf '%s' 'Initializing the database and starting services' ;;
 		'title') printf '%s' 'INSTALLATION' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — INSTALLATION' ;;
+		'warning.book.cover') printf '%s' 'Some sample titles were registered without a cover. Retry using Refresh openBD details in the book details. Affected ISBNs are recorded in the migration container logs.' ;;
+		'warning.book.lookup') printf '%s' 'Some sample book titles could not be retrieved and were skipped. Register them later using ISBN search on Books. Affected ISBNs are recorded in the migration container logs.' ;;
 		'warning.holidayJP') printf '%s' 'The Japanese Cabinet Office holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.holidayUS') printf '%s' 'The U.S. Office of Personnel Management (OPM) federal holiday data could not be retrieved. After signing in, open Work calendars and select Refresh holidays.' ;;
 		'warning.publicUrl') printf '%s' 'Local startup succeeded, but the application URL could not be verified from the installer. Check client DNS, firewall and certificate trust settings.' ;;

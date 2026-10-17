@@ -20,6 +20,8 @@
 		"nextYear": "Next year",
 		"clear": "Clear",
 		"today": "Today",
+		"time": "Time",
+		"apply": "Apply",
 		"chooseYearLabel": "Choose year, {1}"
 	},
 	"genderLabels": {

@@ -13,7 +13,7 @@ type CalendarText = {
 	required: string; calendar: string; previousYears: string; nextYears: string;
 	backToCalendar: string; previousYear: string; previousMonth: string; chooseYear: string;
 	nextMonth: string; nextYear: string; clear: string; today: string;
-	chooseYearLabel: (year: number) => string;
+	chooseYearLabel: (year: number) => string; time: string; apply: string;
 };
 type WeekdayLabels = readonly [string, string, string, string, string, string, string];
 type LanguageDefinition = {

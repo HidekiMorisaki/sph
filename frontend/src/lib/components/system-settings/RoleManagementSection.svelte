@@ -1,10 +1,12 @@
 <script lang="ts">
+	import '$lib/styles/table-scroll.css';
 	import { tick } from 'svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterRecordDetailModal from '$lib/components/MasterRecordDetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { formSnapshot } from '$lib/modalForm';
@@ -26,6 +28,7 @@
 	let selected = $state<Role | null>(null);
 	let isAdding = $state(false);
 	let detailRole = $state<Role | null>(null);
+	let detailBeforeEdit = $state<Role | null>(null);
 	let name = $state('');
 	let notes = $state('');
 	let errors = $state<Partial<Record<RoleField, string>>>({});
@@ -54,9 +57,11 @@
 		'calendars.read': text.permissionCalendarRead, 'calendars.assign': text.permissionCalendarAssign,
 		'assets.read': text.permissionAssetRead, 'assets.manage': text.permissionAssetManage,
 		'assets.credentials.read': text.permissionCredentialRead, 'assets.credentials.write': text.permissionCredentialWrite,
+		'software.read': text.permissionSoftwareRead, 'software.manage': text.permissionSoftwareManage,
+		'software.keys.read': text.permissionSoftwareKeyRead, 'software.keys.write': text.permissionSoftwareKeyWrite,
 		'roles.read': text.permissionRoleRead
 	});
-	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, system: text.permissionSystem, other: text.permissionOther });
+	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, other: text.permissionOther });
 	let permissionDescriptions = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManageHelp,
 		'employees.read': text.permissionEmployeeReadHelp, 'employees.manage': text.permissionEmployeeManageHelp,
@@ -65,6 +70,8 @@
 		'calendars.read': text.permissionCalendarReadHelp, 'calendars.assign': text.permissionCalendarAssignHelp,
 		'assets.read': text.permissionAssetReadHelp, 'assets.manage': text.permissionAssetManageHelp,
 		'assets.credentials.read': text.permissionCredentialReadHelp, 'assets.credentials.write': text.permissionCredentialWriteHelp,
+		'software.read': text.permissionSoftwareReadHelp, 'software.manage': text.permissionSoftwareManageHelp,
+		'software.keys.read': text.permissionSoftwareKeyReadHelp, 'software.keys.write': text.permissionSoftwareKeyWriteHelp,
 		'roles.read': text.permissionRoleReadHelp
 	});
 	const permissionCategoryByCode: Record<string, string> = {
@@ -72,9 +79,10 @@
 		'masters.read': 'masters', 'masters.manage': 'masters', 'branches.manage': 'masters',
 		'calendars.read': 'calendars', 'calendars.assign': 'calendars',
 		'assets.read': 'assets', 'assets.manage': 'assets', 'assets.credentials.read': 'assets', 'assets.credentials.write': 'assets',
+		'software.read': 'software', 'software.manage': 'software', 'software.keys.read': 'software', 'software.keys.write': 'software',
 		'roles.read': 'system', 'system.manage': 'system'
 	};
-	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'system', 'other'];
+	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'software', 'system', 'other'];
 	const knownPermissionCodes = Object.keys(permissionCategoryByCode);
 	function permissionCategory(code: string): string {
 		const fromCatalog = permissions.find((permission) => permission.code === code)?.category;
@@ -107,7 +115,7 @@
 		{ key: 'name', label: text.name, width: 90, value: (item: Role) => item.name }
 	]);
 
-	function openEdit(item: Role, trigger: HTMLButtonElement | null) {
+	function openEdit(item: Role, trigger: HTMLElement | null) {
 		if (item.isSystemManagement || item.isBranchAdministrator) return;
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 		selected = item;
@@ -126,6 +134,7 @@
 	}
 
 	function openAdd() {
+		detailBeforeEdit = null;
 		returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		selected = null;
 		isAdding = true;
@@ -145,10 +154,13 @@
 	function closeImmediately() {
 		if (saving) return;
 		confirmingDiscard = false;
+		const detail = detailBeforeEdit;
+		detailBeforeEdit = null;
 		selected = null;
 		isAdding = false;
 		initialSnapshot = '';
-		void tick().then(() => returnFocus?.focus());
+		if (detail) detailRole = detail;
+		else void tick().then(() => returnFocus?.focus());
 	}
 
 	function requestClose() {
@@ -200,6 +212,7 @@
 				return;
 			}
 			selected = null;
+			detailBeforeEdit = null;
 			isAdding = false;
 			initialSnapshot = '';
 			onNotice([
@@ -219,6 +232,7 @@
 		if (removing || item.isSystemManagement || item.isBranchAdministrator || !confirm(formatLocaleTemplate(text.deleteConfirm, item.name))) return;
 		removing = true;
 		deleteError = '';
+		if (detailRole?.id === item.id) detailRole = null;
 		try {
 			const response = await fetch(`/v1/roles/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) {
@@ -236,13 +250,15 @@
 
 	function togglePermission(code: string, scopeType: 'global' | 'own_branch', checked: boolean) {
 		const prerequisites: Record<string, string[]> = {
-			'employees.read': [], 'roles.read': [], 'masters.read': [], 'assets.read': [], 'calendars.read': []
+			'employees.read': [], 'roles.read': [], 'masters.read': [], 'assets.read': [], 'software.read': [], 'calendars.read': []
 		};
 		for (const permission of permissions) {
-			if (permission.code.startsWith('employees.') && permission.code !== 'employees.read') prerequisites[permission.code] = ['employees.read'];
+			if (permission.code.startsWith('teams.') && permission.code !== 'teams.read') prerequisites[permission.code] = permission.code.startsWith('teams.members.') ? ['teams.read', 'employees.read'] : ['teams.read'];
+			else if (permission.code.startsWith('employees.') && permission.code !== 'employees.read') prerequisites[permission.code] = ['employees.read'];
 			else if (scopeType === 'own_branch' && /^(rooms|storage|financial)\./.test(permission.code)) prerequisites[permission.code] = ['branches.manage', 'masters.read'];
 			else if (/^(masters|branches|rooms|storage|financial)\./.test(permission.code) && permission.code !== 'masters.read') prerequisites[permission.code] = ['masters.read'];
 			else if (permission.code.startsWith('assets.') && permission.code !== 'assets.read') prerequisites[permission.code] = ['assets.read'];
+			else if (permission.code.startsWith('software.') && permission.code !== 'software.read') prerequisites[permission.code] = ['software.read'];
 			else if (permission.code.startsWith('calendars.') && permission.code !== 'calendars.read') prerequisites[permission.code] = ['calendars.read'];
 		}
 		if (!checked && (scopeType === 'own_branch' || !permissions.find((permission) => permission.code === code)?.allowOwnBranch)) {
@@ -256,6 +272,7 @@
 					else selectedCodes = selectedCodes.filter((item) => item !== dependent);
 				}
 			}
+			if (selectedCodes.includes('teams.read')) nextScopes['teams.read'] = 'global';
 			scopeByCode = nextScopes;
 		}
 		permissionError = '';
@@ -286,12 +303,13 @@
 
 {#if reorderError}<StatusNotice message={reorderError} tone="error" onDismiss={() => reorderError = ''} />{/if}
 {#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={() => deleteError = ''} />{/if}
-<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail canEdit={(item) => !(item as Role).isSystemManagement && !(item as Role).isBranchAdministrator} canDelete={(item) => !(item as Role).isSystemManagement && !(item as Role).isBranchAdministrator} headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} actionWidth={14} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} onEdit={(item, trigger) => openEdit(item as Role, trigger)} onDelete={(item) => remove(item as Role)} emptyLabel={text.noRoles} />
+<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} emptyLabel={text.noRoles} />
 
 {#if detailRole}<MasterRecordDetailModal title={`${text.roles} ${common.detail}`} titleId="role-detail-title" sectionTitle={common.basicInformation} closeLabel={common.close} {returnFocus} endpoint="/v1/roles" itemId={detailRole.id} fields={[{ key: 'name', label: text.name, value: detailRole.name }, { key: 'notes', label: text.notes, value: detailRole.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailRole = null}>
+	{#snippet headerActions()}{#if detailRole && !detailRole.isSystemManagement && !detailRole.isBranchAdministrator}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => { const item = detailRole!; const row = returnFocus; detailBeforeEdit = item; detailRole = null; openEdit(item, row); }} onDelete={() => void remove(detailRole!)} />{/if}{/snippet}
 	{#snippet details()}
 		<section class="app-detail-section"><h3>{text.permissionHeading}</h3><p class="role-permission-description">{text.permissionAssignedDescription}</p>
-			<div class="role-permission-table-wrap"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead>
+			<div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead>
 				{#each detailPermissionGroups as group}
 					<tbody><tr class="role-permission-category"><th scope="rowgroup" colspan="3">{categoryLabels[group.category]}</th></tr>
 						{#each group.codes as code}
@@ -323,13 +341,13 @@
 							{#if selected?.defaultPermissionCodes}<button class="permission-reset-button" type="button" disabled={saving || atDefaultPermissions} onclick={resetPermissionsToDefault}>{text.resetPermissionsToDefault}</button>{/if}
 						{/snippet}
 						<div class="permission-section wide">
-		{#each ['employees', 'masters', 'calendars', 'assets', 'system'] as category}
+		{#each ['employees', 'masters', 'calendars', 'assets', 'software', 'system'] as category}
 							{#if permissions.some((permission) => permission.category === category)}
-								<fieldset><legend>{categoryLabels[category]}</legend><div class="role-permission-table-wrap"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead><tbody>
+								<fieldset><legend>{categoryLabels[category]}</legend><div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead><tbody>
 									{#each permissions.filter((permission) => permission.category === category) as permission}
 										{@const globalEnabled = scopeByCode[permission.code] === 'global' && selectedCodes.includes(permission.code)}
 										{@const ownEnabled = selectedCodes.includes(permission.code)}
-										<tr><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__text">{globalEnabled ? text.permissionSwitchOn : text.permissionSwitchOff}</span><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__text">{ownEnabled ? text.permissionSwitchOn : text.permissionSwitchOff}</span><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
+										<tr><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
 									{/each}
 								</tbody></table></div></fieldset>
 							{/if}
@@ -347,13 +365,15 @@
 
 <style>
 	.permission-reset-button{height:32px;min-height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-support);font-weight:500;line-height:1;white-space:nowrap}
-	.permission-reset-button:hover:not(:disabled){background:var(--surface-secondary)!important;color:var(--text)!important}
+	.permission-reset-button:hover:not(:disabled){background:var(--surface-hover,var(--surface-secondary))!important;color:var(--text)!important}
 	.permission-reset-button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.permission-reset-button:disabled{cursor:not-allowed;opacity:.6}
 	.role-dialog,:global(dialog[aria-labelledby="role-detail-title"]){width:min(100%,650px)}.role-form-body{grid-template-columns:1fr}.permission-section{display:grid;gap:12px}.permission-section fieldset{border:1px solid var(--border-light);border-radius:5px;padding:10px}.permission-section legend{font-weight:600;padding:0 4px}
 	.role-permission-description{margin:0 0 16px;color:var(--text-secondary)}.role-permission-table-wrap{max-width:100%;overflow-x:auto}.role-permission-table{width:100%;border-collapse:collapse;table-layout:fixed;color:var(--text-secondary)}.role-permission-table th,.role-permission-table td{padding:10px 8px;border-bottom:1px solid var(--border-light);text-align:left;vertical-align:top;overflow-wrap:anywhere}.role-permission-table thead th{background:var(--surface-secondary);color:var(--muted);font-size:var(--font-size-support);font-weight:700}.role-permission-table thead th:last-child,.role-permission-table td{width:104px;text-align:center}.role-permission-table tbody th[scope="row"]{font-weight:500}.role-permission-table tbody small{display:block;margin-top:3px;color:var(--muted);font-size:var(--font-size-support);font-weight:400;line-height:1.4}.role-permission-table .role-permission-category th{background:var(--surface-secondary);color:var(--text);font-weight:700}
 	.role-permission-state{display:inline-flex;justify-content:center;align-items:center;max-width:100%;padding:2px 6px;border:1px solid var(--border-light);border-radius:4px;background:var(--surface-secondary);color:var(--text-secondary);font-size:var(--font-size-support);font-weight:600;line-height:1.3}.role-permission-state.allowed{border-color:color-mix(in srgb,var(--action-primary) 25%,var(--border));background:color-mix(in srgb,var(--action-primary) 10%,var(--surface));color:var(--action-primary)}.role-permission-state.unavailable{border-color:transparent;background:transparent;color:var(--muted);font-weight:400}
-	.role-permission-table :global(button.app-status-switch){--app-status-switch-width:88px}
+	.role-permission-table :global(button.app-status-switch){--app-status-switch-width:48px;height:28px;border-radius:14px}
+	.role-permission-table :global(.app-status-switch__knob){top:3px;left:3px}
+	.role-permission-table :global(.app-status-switch.is-on .app-status-switch__knob){left:auto;right:3px}
 	.role-permission-table--scoped thead th:nth-child(n+2){width:104px;text-align:center}
 	@media(max-width:700px){.role-permission-table{min-width:380px}.role-permission-table thead th:last-child,.role-permission-table td{width:100px}.role-permission-table th,.role-permission-table td{padding:9px 6px}.role-permission-table--scoped thead th:nth-child(n+2){width:100px}}
 </style>

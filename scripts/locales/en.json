@@ -1,8 +1,8 @@
 {
 	"locale.code": "en",
-	"samples.prompt": "Optional fictional sample data",
+	"samples.prompt": "Optional samples (fictional business data and book introductions)",
 	"samples.no": "Do not add samples (initial administrator and required settings only)",
-	"samples.yes": "Add localized samples: 360 employees, 3 branches, 128 IT assets, notes and history",
+	"samples.yes": "Add",
 	"locale.name": "English",
 	"locale.prompt": "Language",
 	"progress.total": "Total",
@@ -54,9 +54,9 @@
 	"password.invalid": "Password does not meet the requirements.",
 	"password.confirm": "Confirm password: ",
 	"password.mismatch": "Passwords do not match.",
-	"profile.notice": "Change these personal details later in Settings > Profile.",
+	"profile.notice": "Change these personal details later in Personal settings > Profile.",
 	"employment.notice": "Change these employment details later in Employees.",
-	"language.notice": "Your chosen language is also your initial application language. Change it in Settings > Localization.",
+	"language.notice": "Your chosen language is also your initial application language. Change it in Personal settings > Localization.",
 	"cancelled": "\nInstallation cancelled.\n",
 	"configuration.saved": "Configuration saved. Secrets were not displayed. Keep .env safe and back it up separately from the database.\n",
 	"input.selectNumber": "Select a number",
@@ -104,5 +104,7 @@
 	"error.inspectCredentials": "Could not inspect service configuration to verify removal of initial setup credentials. Installation cannot be marked complete. Check Docker access and database/API service status.",
 	"error.unexpected": "An unexpected installer error occurred. Its underlying cause could not be determined safely. Use the stopped stage shown above to check file permissions and Docker access. Do not share .env or unredacted diagnostics.",
 	"error.interrupted": "Installation was interrupted by a signal. Saved configuration and database storage may remain.",
-	"error.saveConfiguration": "Could not save .env. Check installation folder write permissions and free disk space. An existing file will not be overwritten."
+	"error.saveConfiguration": "Could not save .env. Check installation folder write permissions and free disk space. An existing file will not be overwritten.",
+	"warning.book.lookup": "Some sample book titles could not be retrieved and were skipped. Register them later using ISBN search on Books. Affected ISBNs are recorded in the migration container logs.",
+	"warning.book.cover": "Some sample titles were registered without a cover. Retry using Refresh openBD details in the book details. Affected ISBNs are recorded in the migration container logs."
 }

@@ -15,6 +15,7 @@ const employeeProfileSelect = {
 	gender: true,
 	bloodType: true,
 	postalCode: true,
+	countryCode: true,
 	prefecture: true,
 	city: true,
 	streetAddress: true,
@@ -40,7 +41,9 @@ export async function GET({ locals }: import('./$types').RequestEvent) {
 
 export async function PATCH({ request, locals }: import('./$types').RequestEvent) {
 	const actor = requireAuthenticatedApi(locals.user);
-	const parsed = parseEmployeeSelfInput(await request.json().catch(() => null));
+	const current = await findProfile(actor.id);
+	if (!current) return failure(404, 'NOT_FOUND', 'Not found.');
+	const parsed = parseEmployeeSelfInput(await request.json().catch(() => null), current.countryCode === 'US' ? 'US' : 'JP');
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {

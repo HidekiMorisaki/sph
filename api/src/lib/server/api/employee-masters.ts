@@ -3,16 +3,18 @@ import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-h
 import { getPrisma } from '$lib/server/prisma';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { ListQuery } from '$lib/server/api/query';
+import { addressCountry, validPostalCode, type AddressCountry } from './postal-address';
 
 export const employeeMasterResources = ['departments', 'employee-groups', 'positions', 'employment-types', 'branches'] as const;
 export type EmployeeMasterResource = (typeof employeeMasterResources)[number];
 export const namedMasterSortFields = ['id', 'name', 'sortOrder', 'createdAt', 'updatedAt'] as const;
 export const employeeGroupSortFields = ['id', 'department', 'name', 'sortOrder', 'createdAt', 'updatedAt'] as const;
-export const branchSortFields = ['id', 'name', 'sortOrder', 'openedOn', 'closedOn', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'faxNumber1', 'notes', 'createdAt', 'updatedAt'] as const;
+export const branchSortFields = ['id', 'name', 'sortOrder', 'openedOn', 'closedOn', 'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'faxNumber1', 'notes', 'createdAt', 'updatedAt'] as const;
 export type MasterSortField = (typeof namedMasterSortFields)[number] | (typeof employeeGroupSortFields)[number] | (typeof branchSortFields)[number];
 type BranchContactInput = {
 	openedOn: Date | null;
 	closedOn: Date | null;
+	countryCode: AddressCountry;
 	postalCode: string | null;
 	prefecture: string | null;
 	city: string | null;
@@ -112,6 +114,7 @@ function branchData(data: EmployeeMasterInput) {
 		...(data.sortOrder === undefined ? {} : { sortOrder: data.sortOrder }),
 		openedOn: data.openedOn ?? null,
 		closedOn: data.closedOn ?? null,
+		countryCode: data.countryCode ?? 'JP',
 		postalCode: data.postalCode ?? null,
 		prefecture: data.prefecture ?? null,
 		city: data.city ?? null,
@@ -135,7 +138,7 @@ export function isEmployeeMasterResource(resource: string): resource is Employee
 	return employeeMasterResources.includes(resource as EmployeeMasterResource);
 }
 
-export function masterInput(resource: EmployeeMasterResource, value: unknown): EmployeeMasterInput | null {
+export function masterInput(resource: EmployeeMasterResource, value: unknown, currentCountry: AddressCountry = 'JP'): EmployeeMasterInput | null {
 	if (!value || typeof value !== 'object') return null;
 	const body = value as Record<string, unknown>;
 	if (typeof body.name !== 'string') return null;
@@ -157,7 +160,8 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 	const values = {
 		openedOn: optionalDate(body, 'openedOn'),
 		closedOn: optionalDate(body, 'closedOn'),
-		postalCode: optionalText(body, 'postalCode', 8),
+		countryCode: body.countryCode === undefined ? currentCountry : body.countryCode,
+		postalCode: optionalText(body, 'postalCode', 10),
 		prefecture: optionalText(body, 'prefecture', 64),
 		city: optionalText(body, 'city', 128),
 		streetAddress: optionalText(body, 'streetAddress', 255),
@@ -175,8 +179,9 @@ export function masterInput(resource: EmployeeMasterResource, value: unknown): E
 		notes: optionalText(body, 'notes', 5000)
 	};
 	if (Object.values(values).some((value) => value === undefined)) return null;
+	if (!addressCountry(values.countryCode)) return null;
 	if (values.openedOn && values.closedOn && values.closedOn < values.openedOn) return null;
-	if (values.postalCode && !/^\d{3}-?\d{4}$/.test(values.postalCode)) return null;
+	if (values.postalCode && !validPostalCode(values.countryCode, values.postalCode)) return null;
 	const phonePattern = /^[+0-9][0-9 ()-]{6,31}$/;
 	for (const number of [values.phoneNumber1, values.phoneNumber2, values.faxNumber1, values.faxNumber2]) if (number && !phonePattern.test(number)) return null;
 	if ((values.phoneNumber1Label && !values.phoneNumber1) || (values.phoneNumber2 && !values.phoneNumber1) || (values.phoneNumber2Label && !values.phoneNumber2)) return null;

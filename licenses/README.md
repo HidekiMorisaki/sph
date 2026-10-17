@@ -23,6 +23,11 @@ dependency installation excludes them.
 The public holiday data sources and usage are recorded in
 [`holiday-data.md`](holiday-data.md).
 
+The sidebar's `trending_up` SVG path comes from the Gentelella design sample
+(`production/icons.html`). Its MIT license and copyright notice are included in
+the distributed frontend at
+[`frontend/static/licenses/gentelella-MIT.txt`](../frontend/static/licenses/gentelella-MIT.txt).
+
 The API dependency override sources, exact versions, and redistribution conditions
 are recorded in [`api-dependency-overrides.md`](api-dependency-overrides.md).
 

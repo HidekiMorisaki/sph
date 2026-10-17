@@ -1,15 +1,9 @@
-import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { readInitialLocalization } from '$lib/server/initial-localization';
+import { DEFAULT_LOCALIZATION } from '$lib/localization';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ cookies, locals, setHeaders }) => {
+export const load: LayoutServerLoad = ({ locals, setHeaders, url }) => {
 	setHeaders({ 'cache-control': 'private, no-store' });
-	try {
-		const initialLocalization = await readInitialLocalization(cookies.get('equipment_session'), env.API_INTERNAL_ORIGIN ?? 'http://127.0.0.1:5174');
-		locals.displayLanguage = initialLocalization.displayLanguage;
-		return { initialLocalization };
-	} catch {
-		error(503, 'Unable to load display settings. Please try again.');
-	}
+	// Track the destination so client navigation requests fresh server data,
+	// even when it reuses this layout. The hook verifies the session first.
+	return { initialLocalization: locals.initialLocalization ?? { ...DEFAULT_LOCALIZATION }, requestedPath: url.pathname + url.search };
 };

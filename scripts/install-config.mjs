@@ -70,6 +70,7 @@ export async function configuration(language, ask, say, hostDetails = {}) {
 	};
 	say(text('input.defaultsNotice'));
 	const values = {
+		COMPOSE_FILE: 'docker-compose.local.yml',
 		POSTGRES_DB: 'sph', POSTGRES_USER: 'appuser', POSTGRES_PASSWORD: randomBytes(32).toString('base64url'),
 		POSTGRES_HOST: 'db', POSTGRES_PORT: '5432',
 		IT_ASSET_CREDENTIAL_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),

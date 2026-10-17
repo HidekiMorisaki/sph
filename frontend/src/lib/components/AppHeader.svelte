@@ -68,7 +68,7 @@
 	.app-header{position:fixed;z-index:50;top:0;left:252px;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:left .22s}
 	.head-left{display:flex;align-items:center;gap:16px}
 	.menu,.theme{display:grid;place-items:center;width:34px;height:34px;padding:7px;background:transparent;color:var(--muted);border:0;border-radius:4px;cursor:pointer;font:inherit}
-	.menu:hover,.theme:hover{background:var(--bg)}
+	.menu:hover,.theme:hover{background:var(--surface-hover,var(--bg))}
 	.menu svg{width:18px;height:18px;transition:transform .2s}
 	.theme svg{width:20px;height:20px}
 	.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--font-size-support)}

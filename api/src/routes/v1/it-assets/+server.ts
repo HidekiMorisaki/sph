@@ -29,7 +29,16 @@ function assetOrderBy(field: SortField, direction: 'asc' | 'desc'): Prisma.ItAss
 	}
 }
 const filterId = (url: URL, key: string) => { const raw = url.searchParams.get(key); return raw && /^\d+$/.test(raw) ? Number(raw) : undefined; };
-async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: string, keys: string[], sortBy: SortField, sortOrder: 'asc' | 'desc', offset: number, limit: number, branchScope: number | null) {
+function parseTypeIds(url: URL): number[] {
+	const raw = url.searchParams.get('typeIds');
+	if (raw === null) return [];
+	const values = raw.split(',');
+	if (url.searchParams.getAll('typeIds').length !== 1 || values.length > 500 || values.some((value) => !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) || new Set(values.map(Number)).size !== values.length) {
+		throwApiError(422, 'INVALID_TYPE_IDS', 'typeIds must contain distinct positive integer IDs.', [{ field: 'typeIds', reason: 'INVALID_VALUE' }]);
+	}
+	return values.map(Number);
+}
+async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: string, keys: string[], sortBy: SortField, sortOrder: 'asc' | 'desc', offset: number, limit: number, branchScope: number | null, typeIds: number[]) {
 	const pattern = containsPattern(search);
 	const fields: Record<(typeof visibleSearchKeys)[number], Prisma.Sql> = {
 		assetTag: Prisma.sql`asset.asset_tag ILIKE ${pattern}`,
@@ -47,6 +56,7 @@ async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: 
 	};
 	const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`, Prisma.sql`(${Prisma.join(keys.map((key) => fields[key as keyof typeof fields]), ' OR ')})`];
 	if (branchScope !== null) conditions.push(Prisma.sql`location.branch_id = ${branchScope}`);
+	if (typeIds.length) conditions.push(Prisma.sql`asset.type_id IN (${Prisma.join(typeIds)})`);
 	for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
 		const value = filterId(url, field);
 		if (value) conditions.push(Prisma.sql`${column} = ${value}`);
@@ -85,12 +95,14 @@ async function visibleAssetPage(tx: Prisma.TransactionClient, url: URL, search: 
 }
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	const { branchId: branchScope } = requireScopedOperationApi(locals.user, permissionOperations.assetRead); const query = parseListQuery(url, sortFields, 'assetTag'); const search = url.searchParams.get('q')?.trim();
+	const typeIds = parseTypeIds(url);
 	const visibleSearch = parseVisibleSearch(url, visibleSearchKeys);
 	if (visibleSearch && search && search.length > 200) throwApiError(422, 'INVALID_SEARCH', 'q must be 200 characters or fewer for visible list search.', [{ field: 'q', reason: 'TOO_LONG' }]);
 	const contains = search ? { contains: search, mode: 'insensitive' as const } : undefined;
 	const where: Prisma.ItAssetWhereInput = {
 		deletedAt: null,
 		...assetBranchWhere(branchScope),
+		...(typeIds.length ? { AND: [{ typeId: { in: typeIds } }] } : {}),
 		...(filterId(url, 'typeId') ? { typeId: filterId(url, 'typeId') } : {}),
 		...(filterId(url, 'manufacturerId') ? { manufacturerId: filterId(url, 'manufacturerId') } : {}),
 		...(filterId(url, 'statusId') ? { statusId: filterId(url, 'statusId') } : {}),
@@ -106,11 +118,12 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	};
 	const prisma = getPrisma();
 	const [total, items] = await prisma.$transaction(async tx => {
-		if (visibleSearch && search) return visibleAssetPage(tx, url, search, visibleSearch.keys, query.sortBy, query.sortOrder, query.offset, query.limit, branchScope);
+		if (visibleSearch && search) return visibleAssetPage(tx, url, search, visibleSearch.keys, query.sortBy, query.sortOrder, query.offset, query.limit, branchScope, typeIds);
 		const total = await tx.itAsset.count({ where });
 		if (query.sortBy !== 'user') return [total, await tx.itAsset.findMany({ where, include: itAssetInclude, orderBy: assetOrderBy(query.sortBy, query.sortOrder), skip: query.offset, take: query.limit })] as const;
 		const conditions: Prisma.Sql[] = [Prisma.sql`asset.deleted_at IS NULL`];
 		if (branchScope !== null) conditions.push(Prisma.sql`location.branch_id = ${branchScope}`);
+		if (typeIds.length) conditions.push(Prisma.sql`asset.type_id IN (${Prisma.join(typeIds)})`);
 		for (const [field, column] of [['typeId', Prisma.sql`asset.type_id`], ['manufacturerId', Prisma.sql`asset.manufacturer_id`], ['statusId', Prisma.sql`asset.status_id`], ['storageId', Prisma.sql`asset.storage_id`]] as const) {
 			const value = filterId(url, field);
 			if (value) conditions.push(Prisma.sql`${column} = ${value}`);

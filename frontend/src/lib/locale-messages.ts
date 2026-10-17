@@ -7,9 +7,12 @@ import jaNavigation from './locales/ja/navigation.json';
 
 export type MessageLanguage = 'en' | 'ja';
 export type FeatureCatalogs = {
+	workforce: typeof import('./locales/en/workforce.json');
+	teams: typeof import('./locales/en/teams.json');
 	masters: typeof import('./locales/en/masters.json');
 	analytics: typeof import('./locales/en/analytics.json');
 	assets: typeof import('./locales/en/assets.json');
+	software: typeof import('./locales/en/software.json');
 	financial: typeof import('./locales/en/financial.json');
 	financialTrends: typeof import('./locales/en/financialTrends.json');
 	employees: typeof import('./locales/en/employees.json');
@@ -30,17 +33,20 @@ let activeNamespaces: readonly LocaleNamespace[] = [];
 
 export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/') return ['login', 'analytics'];
-	if (path === '/mypage') return ['myPage'];
-	if (path === '/employees') return ['employees', 'employeeForm'];
+	if (path === '/my-page') return ['myPage'];
+	if (path === '/skills' || path === '/projects' || path === '/clients') return ['workforce'];
+	if (path === '/teams') return ['teams', 'employees', 'workforce'];
+	if (path === '/employees') return ['employees', 'employeeForm', 'teams', 'workforce'];
 	if (path === '/work-calendars') return ['workCalendars'];
 	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial'];
 	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
-	if (path === '/business-overview') return ['systemSettings', 'financial'];
+	if (path === '/financial-information') return ['systemSettings', 'financial'];
 	if (path === '/financial-trends') return ['financialTrends'];
-	if (path === '/settings') return ['settings'];
-	if (path === '/locations') return ['masters', 'employees'];
-	if (path.startsWith('/employee-masters/') || path === '/it-asset-masters') return ['masters'];
-	if (path === '/it-assets') return ['assets'];
+	if (path === '/personal-settings') return ['settings'];
+	if (path === '/locations') return ['masters', 'employees', 'teams', 'workforce'];
+	if (path === '/employee-masters' || path === '/it-asset-masters') return ['masters'];
+	if (path === '/it-assets') return ['assets', 'employees', 'teams', 'workforce'];
+	if (path === '/licenses') return ['software'];
 	return [];
 }
 export function setActiveNamespaces(namespaces: readonly LocaleNamespace[]): void { activeNamespaces = [...namespaces]; }
@@ -63,7 +69,7 @@ export async function loadLocaleNamespaces(language: MessageLanguage, namespaces
 export function isLocaleLoaded(language: MessageLanguage, namespace: LocaleNamespace): boolean { return cache.has(`${language}/${namespace}`); }
 function catalog(language: MessageLanguage, core: typeof enCore, common: typeof enCommon, navigation: typeof enNavigation): Catalog {
 	const result = { ...core, common, navigation };
-	for (const namespace of ['masters', 'analytics', 'assets', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
+	for (const namespace of ['workforce', 'teams', 'masters', 'analytics', 'assets', 'software', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
 		Object.defineProperty(result, namespace, { enumerable: true, get() {
 			const value = cache.get(`${language}/${namespace}`);
 			if (!value) throw new Error(`Locale namespace not loaded: ${language}/${namespace}`);

@@ -37,6 +37,6 @@
 	:global([data-theme='dark']) .warning{color:#ffd075}
 	:global([data-theme='dark']) .error{color:#ff8d8d}
 	.status-notice-close{display:grid;place-items:center;flex:none;width:28px;height:28px;margin:-4px -6px -4px 0;padding:0;background:transparent!important;color:inherit!important;border:0;border-radius:4px;font:inherit;font-size:22px;line-height:1;cursor:pointer}
-	.status-notice-close:hover{background:color-mix(in srgb,currentColor 10%,transparent)!important}
+	.status-notice-close:hover{background:var(--surface-hover,color-mix(in srgb,currentColor 10%,transparent))!important}
 	.status-notice-close:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 </style>

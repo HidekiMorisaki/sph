@@ -1,4 +1,6 @@
+import { parseTeamIds } from './teams';
 import type { ApiErrorDetail } from '$lib/server/api/response';
+import { addressCountry, validPostalCode, type AddressCountry } from './postal-address';
 
 const genders = new Set(['female', 'male', 'unspecified']);
 const bloodTypes = new Set(['A', 'B', 'AB', 'O']);
@@ -7,11 +9,12 @@ const removedFields = ['active', 'workEmail', 'loginEmail', 'personalEmail', 'ro
 type EmployeeInput = {
 	employee: {
 		employeeCode: string; firstName: string; middleName: string | null; lastName: string; nameKana: string | null;
-		birthDate: Date; gender: string; bloodType: string | null; postalCode: string | null; prefecture: string | null;
+		birthDate: Date; gender: string; bloodType: string | null; countryCode: AddressCountry; postalCode: string | null; prefecture: string | null;
 		city: string | null; streetAddress: string | null; buildingName: string | null; mobilePhone: string | null; email: string;
 		hiredAt: Date; groupId: number | null;
 		employmentTypeId: number; branchId: number; retiredAt: Date | null; notes: string | null;
 	};
+	teamIds?: number[];
 	departmentIds: number[];
 	primaryDepartmentId: number | null;
 	positionIds: number[];
@@ -21,7 +24,7 @@ type EmployeeInput = {
 
 export type EmployeeSelfInput = Pick<EmployeeInput['employee'],
 	'firstName' | 'middleName' | 'lastName' | 'nameKana' | 'birthDate' | 'gender' | 'bloodType' |
-	'postalCode' | 'prefecture' | 'city' | 'streetAddress' | 'buildingName' | 'mobilePhone' | 'email'
+	'countryCode' | 'postalCode' | 'prefecture' | 'city' | 'streetAddress' | 'buildingName' | 'mobilePhone' | 'email'
 >;
 
 export type EmployeeInputResult =
@@ -97,7 +100,7 @@ function readIds(body: Record<string, unknown>, key: string, errors: ApiErrorDet
 	return ids.filter((id) => Number.isSafeInteger(id) && id > 0);
 }
 
-export function parseEmployeeInput(value: unknown): EmployeeInputResult {
+export function parseEmployeeInput(value: unknown, currentCountry: AddressCountry = 'JP'): EmployeeInputResult {
 	const errors: ApiErrorDetail[] = [];
 	if (!value || typeof value !== 'object' || Array.isArray(value)) {
 		return { success: false, errors: [{ reason: 'Enter a valid employee object.' }] };
@@ -116,8 +119,10 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 	if (gender && !genders.has(gender)) invalid(errors, 'gender', 'Select a valid gender.');
 	const bloodType = readText(body, 'bloodType', 2, false, errors);
 	if (bloodType && !bloodTypes.has(bloodType)) invalid(errors, 'bloodType', 'Select a valid blood type.');
-	const postalCode = readText(body, 'postalCode', 8, false, errors);
-	if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) invalid(errors, 'postalCode', 'Use a Japanese postal code such as 100-0001.');
+	const countryCode = body.countryCode === undefined ? currentCountry : body.countryCode;
+	if (!addressCountry(countryCode)) invalid(errors, 'countryCode', 'Select Japan or the United States.');
+	const postalCode = readText(body, 'postalCode', 10, false, errors);
+	if (postalCode && addressCountry(countryCode) && !validPostalCode(countryCode, postalCode)) invalid(errors, 'postalCode', 'Enter a valid postal code for the selected country.');
 	const prefecture = readText(body, 'prefecture', 64, false, errors);
 	const city = readText(body, 'city', 128, false, errors);
 	const streetAddress = readText(body, 'streetAddress', 255, false, errors);
@@ -152,13 +157,14 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 	const roleIds = parsedRoleIds ?? [];
 	if (!parsedRoleIds || roleIds.length !== 1) invalid(errors, 'roleIds', 'Select exactly one role.');
 
-	if (errors.length || !employeeCode || !firstName || !lastName || !birthDate || !gender || !email || !hiredAt || !employmentTypeId || !branchId) {
+	if (errors.length || !employeeCode || !firstName || !lastName || !birthDate || !gender || !email || !hiredAt || !employmentTypeId || !branchId || !addressCountry(countryCode)) {
 		return { success: false, errors };
 	}
 	return {
 		success: true,
 		data: {
-			employee: { employeeCode, firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase(), hiredAt, groupId, employmentTypeId, branchId, retiredAt, notes },
+			employee: { employeeCode, firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, countryCode, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase(), hiredAt, groupId, employmentTypeId, branchId, retiredAt, notes },
+			teamIds: parseTeamIds(body.teamIds),
 			departmentIds,
 			primaryDepartmentId,
 			positionIds,
@@ -170,10 +176,10 @@ export function parseEmployeeInput(value: unknown): EmployeeInputResult {
 
 const selfEditableFields = new Set([
 	'firstName', 'middleName', 'lastName', 'nameKana', 'birthDate', 'gender', 'bloodType',
-	'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'mobilePhone', 'email'
+	'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'mobilePhone', 'email'
 ]);
 
-export function parseEmployeeSelfInput(value: unknown): EmployeeSelfInputResult {
+export function parseEmployeeSelfInput(value: unknown, currentCountry: AddressCountry = 'JP'): EmployeeSelfInputResult {
 	const errors: ApiErrorDetail[] = [];
 	if (!value || typeof value !== 'object' || Array.isArray(value)) {
 		return { success: false, errors: [{ reason: 'Enter a valid employee profile object.' }] };
@@ -192,8 +198,10 @@ export function parseEmployeeSelfInput(value: unknown): EmployeeSelfInputResult 
 	if (gender && !genders.has(gender)) invalid(errors, 'gender', 'Select a valid gender.');
 	const bloodType = readText(body, 'bloodType', 2, false, errors);
 	if (bloodType && !bloodTypes.has(bloodType)) invalid(errors, 'bloodType', 'Select a valid blood type.');
-	const postalCode = readText(body, 'postalCode', 8, false, errors);
-	if (postalCode && !/^\d{3}-?\d{4}$/.test(postalCode)) invalid(errors, 'postalCode', 'Use a Japanese postal code such as 100-0001.');
+	const countryCode = body.countryCode === undefined ? currentCountry : body.countryCode;
+	if (!addressCountry(countryCode)) invalid(errors, 'countryCode', 'Select Japan or the United States.');
+	const postalCode = readText(body, 'postalCode', 10, false, errors);
+	if (postalCode && addressCountry(countryCode) && !validPostalCode(countryCode, postalCode)) invalid(errors, 'postalCode', 'Enter a valid postal code for the selected country.');
 	const prefecture = readText(body, 'prefecture', 64, false, errors);
 	const city = readText(body, 'city', 128, false, errors);
 	const streetAddress = readText(body, 'streetAddress', 255, false, errors);
@@ -203,9 +211,9 @@ export function parseEmployeeSelfInput(value: unknown): EmployeeSelfInputResult 
 	const email = readText(body, 'email', 254, true, errors);
 	if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalid(errors, 'email', 'Enter a valid email address.');
 
-	if (errors.length || !firstName || !lastName || !birthDate || !gender || !email) return { success: false, errors };
+	if (errors.length || !firstName || !lastName || !birthDate || !gender || !email || !addressCountry(countryCode)) return { success: false, errors };
 	return {
 		success: true,
-		data: { firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase() }
+		data: { firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, countryCode, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase() }
 	};
 }

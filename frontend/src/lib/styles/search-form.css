@@ -1,0 +1,70 @@
+.search-form {
+	--search-placeholder: #c0c7cf;
+}
+html[data-theme='dark'] .search-form {
+	--search-placeholder: #5a6473;
+}
+
+/* Match the visible Skill/Team filter labels throughout the search form. */
+.search-form :is(.form-input-field, .form-select-field, .form-multi-select-field) > span:not(.field-error),
+.search-form .custom-date > .date-label,
+.search-form .search-fields .range-label,
+.search-form .search-fields .age-bound > span,
+.search-form .condition-group .value-label,
+.search-form .keyword-control > span {
+	color: var(--text-secondary);
+	font-size: var(--font-size-support);
+	font-weight: 400;
+}
+
+.search-form .form-input-field input,
+.search-form .search-box input,
+.search-form :is(.form-select-trigger, .form-multi-select-trigger, .date-trigger) {
+	color: var(--text) !important;
+	font-weight: 400;
+}
+.search-form .form-input-field input::placeholder,
+.search-form .search-box input::placeholder,
+.search-form .date-trigger .placeholder {
+	color: var(--search-placeholder);
+	opacity: 1;
+}
+.search-form .form-select-field[data-empty='true'] .form-select-trigger,
+.search-form .form-multi-select-trigger.unselected {
+	color: var(--search-placeholder) !important;
+}
+
+/* Single and multiple quick-filter selectors share the participation selector's states. */
+.search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger) {
+	height: 32px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	background: var(--surface) !important;
+	font-size: var(--font-size-body);
+	font-weight: 400;
+	transition: border-color 150ms, box-shadow 150ms;
+}
+.search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger):hover:not(:focus):not(:disabled) {
+	border-color: var(--muted);
+}
+.search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger):focus-visible,
+.search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger)[aria-expanded='true'] {
+	border-color: #1abb9c;
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(26,187,156,.14);
+}
+.search-form .employee-workforce-filters :is(.form-select-options, .form-multi-select-options) {
+	z-index: 1400;
+	max-height: calc(100dvh - 16px);
+	padding: 3px;
+	overflow: hidden;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	box-shadow: 0 8px 18px rgba(15,23,42,.18);
+}
+.search-form .employee-workforce-filters :is(.form-select-search, .form-multi-select-search)::placeholder {
+	color: var(--search-placeholder);
+	opacity: 1;
+}

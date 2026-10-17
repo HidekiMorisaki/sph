@@ -68,7 +68,7 @@ installer_template() {
 		'input.defaultsNotice') printf '%s' '[]内の値は既定値です。Enterで既定値を採用できます。これらはログイン後に変更することが可能です。' ;;
 		'input.invalid') printf '%s' '入力内容が条件に合いません。再入力してください。' ;;
 		'input.selectNumber') printf '%s' '番号を選択' ;;
-		'language.notice') printf '%s' '選択した言語をアプリの初期表示言語にも設定します。設定 → ローカライズ で変更できます。' ;;
+		'language.notice') printf '%s' '選択した言語をアプリの初期表示言語にも設定します。個人設定 → ローカライズ で変更できます。' ;;
 		'locale.code') printf '%s' 'ja' ;;
 		'locale.name') printf '%s' '日本語' ;;
 		'locale.prompt') printf '%s' '言語' ;;
@@ -82,7 +82,7 @@ installer_template() {
 		'profile.firstName') printf '%s' '名' ;;
 		'profile.gender') printf '%s' '性別' ;;
 		'profile.lastName') printf '%s' '姓' ;;
-		'profile.notice') printf '%s' '以下の個人情報はログイン後、設定 → プロフィール で変更できます。' ;;
+		'profile.notice') printf '%s' '以下の個人情報はログイン後、個人設定 → プロフィール で変更できます。' ;;
 		'progress.complete') printf '%s' '  [OK] {1} | 全体経過 {2}' ;;
 		'progress.duration') printf '%s' '{1}分 {2}秒' ;;
 		'progress.notice') printf '%s' '全7段階で進行します。インストールには数分かかる場合があります。' ;;
@@ -93,8 +93,8 @@ installer_template() {
 		'prompt.option') printf '%s' '  {1}. {2}' ;;
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' '追加しない（初期管理者と必須設定のみ）' ;;
-		'samples.prompt') printf '%s' '架空のサンプルデータ（任意）' ;;
-		'samples.yes') printf '%s' '追加する：従業員360人、拠点3件、IT資産128件、メモ・履歴' ;;
+		'samples.prompt') printf '%s' 'サンプルデータ（架空の業務データと書籍紹介、任意）' ;;
+		'samples.yes') printf '%s' '追加する' ;;
 		'stage.build') printf '%s' 'サービスイメージの構築' ;;
 		'stage.check') printf '%s' 'ローカルでの起動確認' ;;
 		'stage.cleanup') printf '%s' '初期管理者情報の削除・サービスの再作成' ;;
@@ -104,6 +104,8 @@ installer_template() {
 		'stage.start') printf '%s' 'データベースの初期化・サービスの起動' ;;
 		'title') printf '%s' 'インストール' ;;
 		'title.banner') printf '%s' '     SME Portal Hub — インストール' ;;
+		'warning.book.cover') printf '%s' 'サンプル書誌の一部は書影なしで登録しました。書籍詳細のopenBD更新で再取得できます。対象ISBNはmigrationコンテナーのログに記録されています。' ;;
+		'warning.book.lookup') printf '%s' 'サンプル書誌の一部を取得できなかったため、該当書籍を追加しませんでした。後から書籍ページでISBN検索して登録できます。対象ISBNはmigrationコンテナーのログに記録されています。' ;;
 		'warning.holidayJP') printf '%s' '内閣府の祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.holidayUS') printf '%s' '米国人事管理局（OPM）の連邦祝日データが取得できませんでした。ログイン後に勤務カレンダーページの「祝日を更新」を実行してください。' ;;
 		'warning.publicUrl') printf '%s' 'ローカル起動は正常ですが、インストーラーからアプリURLを確認できませんでした。利用端末のDNS・ファイアウォール・証明書信頼設定を確認してください。' ;;

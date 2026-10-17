@@ -4,6 +4,7 @@
 node_modules/
 build/
 api/src/lib/server/generated/
+api/scripts/generated-book-sources/
 *.dump
 .runtime/
 

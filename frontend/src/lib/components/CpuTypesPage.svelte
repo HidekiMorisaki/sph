@@ -4,6 +4,7 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
@@ -16,6 +17,7 @@
 	import { formSnapshot } from '$lib/modalForm';
 
 	let text = $derived(localeMessages[$localization.displayLanguage].masters);
+	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	function m(key: string | undefined): string { return key ? text[key as keyof typeof text] ?? text.invalidValue : ''; }
 	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
@@ -52,6 +54,7 @@
 	let sourceDateAbove = $state(false);
 	let addButton = $state<HTMLButtonElement>();
 	let returnFocus = $state<HTMLElement | null>(null);
+	let returnToDetail = $state(false);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
 	let hasDraftChanges = $derived(initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
@@ -75,6 +78,7 @@
 	}
 	function openModal(next: Exclude<ModalMode, null>, item: CpuType | null = null, trigger: HTMLElement | null = null) {
 		if (next !== 'detail' && !canManage) return;
+		returnToDetail = next === 'edit' && mode === 'detail';
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : addButton ?? null);
 		selected = item;
 		mode = next;
@@ -88,6 +92,7 @@
 		if (next !== 'detail') void tick().then(() => dialogElement?.querySelector<HTMLElement>('[name="manufacturerId"]')?.focus());
 	}
 	function closeDetail() {
+		returnToDetail = false;
 		mode = null;
 		selected = null;
 	}
@@ -95,6 +100,8 @@
 		confirmingDiscard = false;
 		if (saving || removing) return;
 		sourceDateOpen = false;
+		if (returnToDetail && mode === 'edit') { returnToDetail = false; mode = 'detail'; return; }
+		returnToDetail = false;
 		mode = null;
 		selected = null;
 		void tick().then(() => returnFocus?.focus());
@@ -163,6 +170,7 @@
 				return;
 			}
 			mode = null;
+			returnToDetail = false;
 			selected = null;
 			notice = 'cpuSaved';
 			await list?.refresh();
@@ -172,9 +180,10 @@
 	}
 	async function remove(item: CpuType) {
 		if (removing || !canManage) return;
-		if (item.usageCount && item.usageCount > 0) { notice = 'deleteInUse'; return; }
+		if (item.usageCount && item.usageCount > 0) { if (selected?.id === item.id) closeDetail(); notice = 'deleteInUse'; return; }
 		notice = '';
 		if (!confirm(t('deleteConfirm', item.name))) return;
+		if (selected?.id === item.id) closeDetail();
 		removing = true;
 		try {
 			const response = await fetch(`/v1/cpu-types/${item.id}`, { method: 'DELETE' });
@@ -205,17 +214,18 @@
 	onMount(() => { void initialize(); });
 </script>
 
-{#snippet headerActions()}{#if canManage}<AddButton bind:element={addButton} label={text.addButton} ariaLabel={text.cpuAdd} onclick={() => openModal('add')} />{/if}{/snippet}
+{#snippet headerActions()}{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={text.cpuAdd} onclick={() => openModal('add')} />{/if}{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />
 	<div class="cpu-page">
 		{#if notice}<StatusNotice message={m(notice)} tone={notice === 'cpuSaved' || notice === 'cpuDeleted' ? 'success' : 'error'} onDismiss={() => notice = ''} />{/if}
-		<MasterList bind:this={list} endpoint="/v1/cpu-types" title={text.cpuTitle} listHeading={text.cpuTitle} description={text.cpuDescription} {columns} {canManage} unpaged showNameIcon {treeParent} initialSortBy="sortOrder" minTableWidth={0} actionWidth={14} headerActions={headerActions} reorderEndpoint="/v1/it-asset-orders/cpu-types" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => notice = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onDetail={(item, trigger) => openModal('detail', item as CpuType, trigger)} onEdit={(item, trigger) => openModal('edit', item as CpuType, trigger)} onDelete={(item) => remove(item as CpuType)} />
+		<MasterList bind:this={list} endpoint="/v1/cpu-types" title={text.cpuTitle} listHeading={text.cpuTitle} description={text.cpuDescription} {columns} {canManage} unpaged showNameIcon {treeParent} initialSortBy="sortOrder" minTableWidth={0} headerActions={headerActions} reorderEndpoint="/v1/it-asset-orders/cpu-types" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => notice = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onDetail={(item, trigger) => openModal('detail', item as CpuType, trigger)} />
 	</div>
 
 {#if mode === 'detail' && selected}
 	{@const officialUrl = officialUrlHref(selected.officialUrl)}
 	<DetailModal title={text.cpuDetail} titleId="cpu-detail-title" closeLabel={text.cpuDetailClose} {returnFocus} compact dialogClass="cpu-dialog" onClose={closeDetail}>
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} disabled={removing} onEdit={() => openModal('edit', selected, returnFocus)} onDelete={() => void remove(selected!)} />{/if}{/snippet}
 		<section class="app-detail-section"><h3>{text.basicInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div><dt>{text.manufacturer}</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>{text.series}</dt><dd>{selected.series}</dd></div><div><dt>{text.modelNumber}</dt><dd>{selected.modelNumber}</dd></div></dl></section>
 		<section class="app-detail-section"><h3>{text.referenceInformation}</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>{text.officialUrl}</dt><dd>{#if officialUrl}<a class="detail-link" href={officialUrl} target="_blank" rel="noopener noreferrer">{selected.officialUrl}</a>{:else}{selected.officialUrl ?? ''}{/if}</dd></div><div><dt>{text.sourceChecked}</dt><dd>{formatDate(selected.sourceCheckedOn,$localization)}</dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div></dl></section>
 		<MasterHistorySection endpoint="/v1/cpu-types" itemId={selected.id} fieldLabels={{ name: text.name, manufacturerId: text.manufacturer, series: text.series, modelNumber: text.modelNumber, officialUrl: text.officialUrl, sourceCheckedOn: text.sourceChecked, notes: text.notes }} hiddenFields={['sortOrder']} dateFields={['sourceCheckedOn']} />

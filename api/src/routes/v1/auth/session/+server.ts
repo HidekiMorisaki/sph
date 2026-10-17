@@ -9,6 +9,7 @@ export function GET({ locals }: import('./$types').RequestEvent) {
 	return success({
 		user: {
 			id: locals.user.id,
+			branchId: locals.user.branchId,
 			username: locals.user.username,
 			email: locals.user.email,
 			firstName: locals.user.firstName,

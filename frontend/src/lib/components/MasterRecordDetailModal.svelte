@@ -5,7 +5,7 @@
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 
-	let { title, titleId, sectionTitle = title, closeLabel, returnFocus = null, endpoint, itemId, fields, dateFields = [], valueFormatters = {}, hiddenHistoryFields = [], details, onClose }: {
+	let { title, titleId, sectionTitle = title, closeLabel, returnFocus = null, endpoint, itemId, fields, dateFields = [], valueFormatters = {}, hiddenHistoryFields = [], details, headerActions, onClose }: {
 		title: string;
 		titleId: string;
 		sectionTitle?: string;
@@ -18,6 +18,7 @@
 		valueFormatters?: Record<string, (value: string) => string>;
 		hiddenHistoryFields?: string[];
 		details?: Snippet;
+		headerActions?: Snippet;
 		onClose: () => void;
 	} = $props();
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
@@ -28,7 +29,7 @@
 	}
 </script>
 
-<DetailModal {title} {titleId} {closeLabel} {returnFocus} compact onClose={onClose}>
+<DetailModal {title} {titleId} {closeLabel} {returnFocus} {headerActions} compact onClose={onClose}>
 	<section class="app-detail-section"><h3>{sectionTitle}</h3><dl class="app-detail-grid">
 		{#each fields as field}<div class:app-detail-wide={field.key === 'notes'}><dt>{field.label}</dt><dd class:app-detail-notes={field.key === 'notes'}>{#if field.key === 'officialUrl' && safeUrl(field.value)}<a class="detail-link" href={safeUrl(field.value) ?? undefined} target="_blank" rel="noopener noreferrer">{field.value}</a>{:else if typeof field.value === 'boolean'}{field.value ? common.yes : common.no}{:else}{field.value === null || field.value === undefined || field.value === '' ? '' : String(field.value)}{/if}</dd></div>{/each}
 	</dl></section>

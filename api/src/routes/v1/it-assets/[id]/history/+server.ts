@@ -5,6 +5,7 @@ import { parseId } from '$lib/server/api/database';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
+import { resolveHistoryEmployees } from '$lib/server/api/history-employees';
 
 const sortFields = ['changedAt', 'id'] as const;
 
@@ -20,14 +21,17 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 		prisma.itAssetChangeHistory.count({ where }),
 		prisma.itAssetChangeHistory.findMany({ where, select: {
 			id: true, action: true, changes: true, changedAt: true,
-			actor: { select: { firstName: true, middleName: true, lastName: true } }
+			actor: { select: { id: true, firstName: true, middleName: true, lastName: true } }
 		}, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'desc' }], skip: query.offset, take: query.limit })
 	]);
-	return success(items.map(item => ({
+	const resolved = await resolveHistoryEmployees(prisma, items);
+	const response = success(resolved.map(item => ({
 		id: item.id,
 		action: item.action,
 		changes: item.changes,
 		changedAt: item.changedAt,
 		actor: item.actor
 	})), 200, listMeta(query, items.length, total));
+	response.headers.set('Cache-Control', 'no-store');
+	return response;
 }

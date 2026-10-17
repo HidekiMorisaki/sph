@@ -4,11 +4,13 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
 	import FinancialPeriodSettingsSection from '$lib/components/system-settings/FinancialPeriodSettingsSection.svelte';
@@ -21,7 +23,7 @@
 	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
-	function t(key: keyof typeof text, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
+	function t(key: Exclude<keyof typeof text, 'monitoring'>, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
 
 	type ModalMode = 'add' | 'edit' | 'detail' | null;
 	type FormField = 'name' | 'url' | 'notes';
@@ -47,6 +49,7 @@
 	let dialogElement = $state<HTMLDialogElement>();
 	let addButton = $state<HTMLButtonElement>();
 	let returnFocus = $state<HTMLElement | null>(null);
+	let returnToDetail = $state(false);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
 	let scrollFrame: number | null = null;
@@ -96,15 +99,18 @@
 	}
 
 	function openModal(next: Exclude<ModalMode, null>, item: ExternalLink | null = null, trigger: HTMLElement | null = null) {
+		returnToDetail = next === 'edit' && mode === 'detail';
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : addButton ?? null);
 		selected = item; mode = next;
 		form = item ? { name: item.name, url: item.url, sortOrder: String(item.sortOrder), notes: item.notes ?? '' } : emptyForm();
 		errors = {}; formError = ''; initialSnapshot = formSnapshot(form); confirmingDiscard = false;
 		if (next !== 'detail') void tick().then(() => dialogElement?.querySelector<HTMLInputElement>('[name="name"]')?.focus());
 	}
-	function closeDetail() { mode = null; selected = null; }
+	function closeDetail() { returnToDetail = false; mode = null; selected = null; }
 	function closeModalImmediately() {
 		if (saving || removing) return;
+		if (returnToDetail && mode === 'edit') { confirmingDiscard = false; returnToDetail = false; mode = 'detail'; return; }
+		returnToDetail = false;
 		confirmingDiscard = false; mode = null; selected = null; initialSnapshot = '';
 		void tick().then(() => returnFocus?.focus());
 	}
@@ -152,7 +158,7 @@
 				const field = Object.keys(errors)[0]; if (field) void tick().then(() => dialogElement?.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus());
 				return;
 			}
-			mode = null; selected = null; notices = [text.linkSaved]; noticeIsError = false;
+			mode = null; selected = null; returnToDetail = false; notices = [text.linkSaved]; noticeIsError = false;
 			await Promise.all([list?.refresh(), loadExternalLinks(true)]);
 			void tick().then(() => returnFocus?.focus());
 		} catch { formError = text.linkSaveRetry; }
@@ -161,6 +167,7 @@
 	async function remove(item: ExternalLink) {
 		if (removing || !confirm(t('deleteConfirm', item.name))) return;
 		removing = true; notices = []; noticeIsError = false;
+		if (selected?.id === item.id) closeDetail();
 		try {
 			const response = await fetch(`/v1/external-links/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) { noticeIsError = true; notices = [response.status === 403 ? text.linkDeleteForbidden : text.linkDeleteFailed]; return; }
@@ -193,8 +200,8 @@
 
 <AssetManagementShell title={text.title}>
 	<div class="settings-page">
-		<MasterPageHeader title={text.title} description={text.description} />
-		{#if loading}<div class="page-state">{text.loading}</div>
+		<MasterPageHeader title={text.title} />
+		{#if loading}<div class="page-state"><LoadingSpinner label={text.loading} /></div>
 		{:else if accessDenied}{#if !pageErrorDismissed}<StatusNotice message={text.accessDenied} tone="error" onDismiss={() => pageErrorDismissed = true} />{/if}
 		{:else if loadError}{#if !pageErrorDismissed}<StatusNotice message={loadError} tone="error" onDismiss={() => pageErrorDismissed = true} />{/if}
 		{:else}
@@ -204,7 +211,7 @@
 				<div class="settings-content">
 					<section id="roles" class="settings-card" aria-label={text.roleSettings}><RoleManagementSection onNotice={(messages) => { notices = messages; noticeIsError = false; }} /></section>
 					<section id="external-links" class="settings-card" aria-label={text.linkSettings}>
-						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail canEdit canDelete headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} actionWidth={14} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} onEdit={(item, trigger) => openModal('edit', item as ExternalLink, trigger)} onDelete={(item) => remove(item as ExternalLink)} emptyLabel={text.noLinks} />
+						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} emptyLabel={text.noLinks} />
 					</section>
 					<section id="financial-period" class="settings-card" aria-label={localeMessages[$localization.displayLanguage].financial.periodSettings}><FinancialPeriodSettingsSection /></section>
 				</div>
@@ -215,6 +222,7 @@
 
 {#if mode === 'detail' && selected}
 	<DetailModal title={text.linkDetails} titleId="external-link-detail-title" closeLabel={text.closeLinkDetails} {returnFocus} compact dialogClass="external-link-dialog" onClose={closeDetail}>
+		{#snippet headerActions()}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => openModal('edit', selected, returnFocus)} onDelete={() => void remove(selected!)} />{/snippet}
 		<section class="app-detail-section"><h3>{text.linkInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div class="app-detail-wide"><dt>{text.url}</dt><dd><a class="detail-link" href={selected.url} target="_blank" rel="noopener noreferrer">{selected.url}</a></dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div><div><dt>{text.created}</dt><dd>{formatTimestamp(selected.createdAt, $localization)}</dd></div><div><dt>{text.updated}</dt><dd>{formatTimestamp(selected.updatedAt, $localization)}</dd></div></dl></section>
 		<MasterHistorySection endpoint="/v1/external-links" itemId={selected.id} fieldLabels={{ name: text.name, url: text.url, notes: text.notes }} hiddenFields={['sortOrder']} />
 	</DetailModal>
@@ -239,7 +247,7 @@
 {/if}
 
 <style>
-	.settings-page{width:100%}.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:var(--font-size-body);font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}.settings-nav a:hover,.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;isolation:isolate}.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}.settings-card :global(.master-list){max-height:none}.settings-card :global(.master-header){flex-wrap:wrap}.settings-card :global(th),.settings-card :global(td){padding-right:6px;padding-left:6px;overflow-wrap:anywhere}.settings-card :global(td:first-child){padding-left:10px}.settings-card :global(.actions-cell){padding-right:6px;padding-left:2px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
+	.settings-page{width:100%}.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:var(--font-size-body);font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:hover:not(.active){background:var(--surface-hover,var(--surface-secondary));color:var(--text)}.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;isolation:isolate}.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}.settings-card :global(.master-list){max-height:none}.settings-card :global(.master-header){flex-wrap:wrap}.settings-card :global(th),.settings-card :global(td){padding-right:6px;padding-left:6px;overflow-wrap:anywhere}.settings-card :global(td:first-child){padding-left:10px}.settings-card :global(.actions-cell){padding-right:6px;padding-left:2px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
 	@media(max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav a{justify-content:center;text-align:center}}
 	@media(max-width:700px){.settings-layout{gap:16px}.settings-nav{grid-template-columns:1fr}.settings-nav a{justify-content:flex-start;text-align:left}.wide{grid-column:auto}}
 </style>

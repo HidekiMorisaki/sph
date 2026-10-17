@@ -1,0 +1,5 @@
+/* Keep the scrolling ancestor outside the table so sticky headers can attach to it. */
+.app-table-scroll{min-width:0;min-height:0;overflow:auto;isolation:isolate}
+.app-table-scroll--bounded{max-height:min(60dvh,640px)}
+.app-table-scroll>table{overflow:visible;border-radius:0}
+.app-table-scroll>table>thead>tr>th{position:sticky;top:0;z-index:2;background:var(--surface-secondary);box-shadow:inset 0 -1px var(--border)}
