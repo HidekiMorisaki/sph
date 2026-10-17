@@ -1,3 +1,5 @@
+import { isHttpError } from '@sveltejs/kit';
+import { syncEmployeeTeams } from '$lib/server/api/teams';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -14,12 +16,12 @@ import { getPrisma } from '$lib/server/prisma';
 import { failure, success } from '$lib/server/api/response';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) {
-	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
+	const { actor: viewer, branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const item = await getPrisma().employee.findFirst({ where: { id, deletedAt: null, ...(branchId === null ? {} : { branchId }) }, select: employeeSafeSelect });
 	if (!item) return failure(404, 'NOT_FOUND', 'Not found.');
-	const response = success(employeeOutput(item));
+	const response = success(employeeOutput(item, undefined, viewer.permissionOperations.includes('teams.read')));
 	response.headers.set('Cache-Control', 'no-store');
 	return response;
 }
@@ -48,6 +50,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 				if (current.length !== input.roleIds.length || current.some(({ roleId }) => !input.roleIds.includes(roleId))) roleResult = 'system_role_forbidden';
 			}
 			if (roleResult !== 'updated') return { status: roleResult };
+			await syncEmployeeTeams(tx, actor, id, input.teamIds);
 			await tx.employee.update({ where: { id }, data: input.employee });
 			await syncEmployeeDepartments(tx, id, input.departmentIds, input.primaryDepartmentId);
 			await syncEmployeePositions(tx, id, input.positionIds, input.primaryPositionId);
@@ -61,8 +64,9 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 		if (result.status === 'last_system_administrator') return failure(409, 'LAST_SYSTEM_ADMINISTRATOR', 'The last system administrator role cannot be removed.');
 		if (result.status === 'invalid_reference') return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', result.errors);
 		if (result.status !== 'updated') return failure(404, 'NOT_FOUND', 'Not found.');
-		return success(employeeOutput(result.item));
+		return success(employeeOutput(result.item, undefined, actor.permissionOperations.includes('teams.read')));
 	} catch (error) {
+		if (isHttpError(error)) throw error;
 		return employeeConflictResponse(error) ?? failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	}
 }
@@ -92,6 +96,8 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 			where: { deletedAt: null, OR: [{ employeeId: id }, { scopeEmployeeId: id }] },
 			data: { deletedAt }
 		});
+		await tx.savedSearchFilter.updateMany({where:{ownerEmployeeId:id,deletedAt:null},data:{deletedAt,revision:{increment:1}}});
+		await tx.employeeTeam.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
 		await tx.employeePosition.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
 		await tx.employeeDepartment.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
 		await tx.employeeSocialLink.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });

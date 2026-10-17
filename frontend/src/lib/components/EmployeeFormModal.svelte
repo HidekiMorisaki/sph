@@ -3,6 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { employeeFieldError, employeeSaveError } from '$lib/employee-messages';
 	import { apiData } from '$lib/api';
+	import type { Team } from '$lib/teams';
 	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
 	import { genderOptions, localization, personNameFields } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
@@ -33,6 +34,9 @@
 		employee = null,
 		masters = {},
 		roles = [],
+		teamOptions = [],
+		canManageTeamMemberships = false,
+		teamsReady = false,
 		canManageSystemSettings = false,
 		canAssignEmployeeRoles = true,
 		returnFocus = null,
@@ -43,6 +47,9 @@
 		employee?: Employee | null;
 		masters?: Record<string, EmployeeMaster[]>;
 		roles?: EmployeeRole[];
+		teamOptions?: Team[];
+		canManageTeamMemberships?: boolean;
+		teamsReady?: boolean;
 		canManageSystemSettings?: boolean;
 		canAssignEmployeeRoles?: boolean;
 		returnFocus?: HTMLElement | null;
@@ -54,7 +61,7 @@
 	const blank = () => ({
 		employeeCode: '', firstName: '', middleName: '', lastName: '', nameKana: '', birthDate: '', gender: '', bloodType: '',
 		countryCode: 'JP' as AddressCountry, postalCode: '', prefecture: '', city: '', streetAddress: '', buildingName: '', mobilePhone: '', email: '',
-		hiredAt: '', departmentIds: [] as string[], primaryDepartmentId: '', groupId: '', positionIds: [] as string[], employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleIds: [] as string[]
+		hiredAt: '', teamIds: [] as string[], departmentIds: [] as string[], primaryDepartmentId: '', groupId: '', positionIds: [] as string[], employmentTypeId: '', branchId: '', retiredAt: '', notes: '', roleIds: [] as string[]
 	});
 	type Form = ReturnType<typeof blank>;
 
@@ -84,6 +91,7 @@
 			nameKana: employee.nameKana ?? '', birthDate: iso(employee.birthDate), gender: employee.gender ?? '', bloodType: employee.bloodType ?? '',
 			countryCode: employee.countryCode, postalCode: employee.postalCode ?? '', prefecture: employee.prefecture ?? '', city: employee.city ?? '', streetAddress: employee.streetAddress ?? '',
 			buildingName: employee.buildingName ?? '', mobilePhone: employee.mobilePhone ?? '', email: employee.email ?? '',
+			teamIds: full.teamIds?.map(String) ?? [],
 			hiredAt: iso(full?.hiredAt), departmentIds: full?.departmentIds?.map(String) ?? (full?.departmentId == null ? [] : [String(full.departmentId)]), primaryDepartmentId: full?.primaryDepartmentId == null ? (full?.departmentId == null ? '' : String(full.departmentId)) : String(full.primaryDepartmentId), groupId: full?.groupId == null ? '' : String(full.groupId),
 			positionIds: full?.positionIds?.map(String) ?? (full?.positionId == null ? [] : [String(full.positionId)]), employmentTypeId: full?.employmentTypeId == null ? '' : String(full.employmentTypeId),
 			branchId: full?.branchId == null ? '' : String(full.branchId), retiredAt: iso(full?.retiredAt), notes: full?.notes ?? '', roleIds: full?.roles.map((role) => String(role.id)) ?? []
@@ -95,7 +103,7 @@
 		missingFields = missingFields.filter((name) => name !== field);
 		if (!Object.keys(fieldErrors).length && !missingFields.length) formError = null;
 	}
-	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'countryCode'>, value: string) { form[field] = value; clearFieldError(field); }
+	function updateTextField(field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'teamIds' | 'countryCode'>, value: string) { form[field] = value; clearFieldError(field); }
 	function selectAddress(candidate: PostalCandidate) { form.prefecture = candidate.prefecture; form.city = candidate.city; if (form.countryCode === 'JP') form.streetAddress = candidate.streetAddress; for (const field of ['prefecture', 'city', 'streetAddress']) clearFieldError(field); }
 	function selectCountry(country: AddressCountry) { if (form.countryCode === country) return; form.countryCode = country; form.postalCode = ''; form.prefecture = ''; form.city = ''; form.streetAddress = ''; clearFieldError('countryCode'); clearFieldError('postalCode'); }
 	function chooseDepartments(values: string[]) {
@@ -134,10 +142,10 @@
 	}
 	function focusFormField(field: string) {
 		const normalizedField = field === 'primaryPositionId' ? 'positionIds' : field === 'departmentId' ? 'departmentIds' : field;
-		const selector = normalizedField === 'roleIds' ? '.roles-field input:not(:disabled)' : ['positionIds', 'departmentIds'].includes(normalizedField) ? `.form-multi-select-picker[data-field="${normalizedField}"] .form-multi-select-trigger` : normalizedField === 'birthDate' || normalizedField === 'hiredAt' || normalizedField === 'retiredAt' ? `.custom-date[data-field="${normalizedField}"] .date-trigger` : ['gender', 'bloodType', 'primaryDepartmentId', 'groupId', 'employmentTypeId', 'branchId'].includes(normalizedField) ? `.form-select-picker[data-field="${normalizedField}"] .form-select-trigger` : `[name="${normalizedField}"]`;
+		const selector = normalizedField === 'roleIds' ? '.roles-field input:not(:disabled)' : ['positionIds', 'departmentIds', 'teamIds'].includes(normalizedField) ? `.form-multi-select-picker[data-field="${normalizedField}"] .form-multi-select-trigger` : normalizedField === 'birthDate' || normalizedField === 'hiredAt' || normalizedField === 'retiredAt' ? `.custom-date[data-field="${normalizedField}"] .date-trigger` : ['gender', 'bloodType', 'primaryDepartmentId', 'groupId', 'employmentTypeId', 'branchId'].includes(normalizedField) ? `.form-select-picker[data-field="${normalizedField}"] .form-select-trigger` : `[name="${normalizedField}"]`;
 		dialogElement?.querySelector<HTMLElement>(selector)?.focus();
 	}
-	function adminPayload() { return { ...form, primaryDepartmentId: form.primaryDepartmentId || null, primaryPositionId: form.positionIds[0] ?? null }; }
+	function adminPayload() { const { teamIds, ...fields } = form; return { ...fields, ...(teamsReady && canManageTeamMemberships ? { teamIds } : {}), primaryDepartmentId: form.primaryDepartmentId || null, primaryPositionId: form.positionIds[0] ?? null }; }
 	async function save() {
 		formError = null; fieldErrors = {};
 		const pickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'];
@@ -186,7 +194,7 @@
 {#snippet formSelect(label: string, field: SelectField, options: SelectOption[], required = false, disabled = false)}
 	<SearchSelect {label} {field} value={form[field]} {options} {required} {disabled} error={fieldError(field)} onOpen={() => activeDateField = null} onSelect={(value) => chooseSelect(field, value)} />
 {/snippet}
-{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'countryCode'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
+{#snippet textInput(label: string, field: Exclude<keyof Form, 'roleIds' | 'positionIds' | 'departmentIds' | 'teamIds' | 'countryCode'>, placeholder: string, maximum: number, required = false, type = 'text', pattern: string | undefined = undefined, minimum: number | undefined = undefined)}
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
@@ -213,6 +221,7 @@
 						{@render dateInput(text.hiredAt, 'hiredAt', form.hiredAt, false, true)}<SearchMultiSelect label={text.departments} field="departmentIds" values={form.departmentIds} options={(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('departmentIds')} onOpen={() => activeDateField = null} onChange={chooseDepartments} />{@render formSelect(text.primaryDepartmentId, 'primaryDepartmentId', [{ value: '', label: '-' }, ...selectedDepartmentOptions], false, !form.departmentIds.length)}{@render formSelect(text.groupId, 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.primaryDepartmentId)}<SearchMultiSelect label={text.positions} field="positionIds" values={form.positionIds} options={(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('positionIds') || fieldError('primaryPositionId')} onOpen={() => activeDateField = null} onChange={choosePositions} />{@render formSelect(text.employmentTypeId, 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect(text.branchId, 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput(text.retiredAt, 'retiredAt', form.retiredAt, true)}
 					</FormSection>
 					<FormSection title={text.additional} framed>
+						{#if teamsReady}<SearchMultiSelect label={text.teams} field="teamIds" values={form.teamIds} options={teamOptions.map(team => ({ value: String(team.id), label: team.name }))} disabled={!canManageTeamMemberships} error={fieldError('teamIds')} onChange={values => { form.teamIds = values; clearFieldError('teamIds'); }} />{/if}
 						<label class="wide">{text.notes}<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder={text.examples.notes} oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
 					</FormSection>
 					<FormSection title={text.access} framed>

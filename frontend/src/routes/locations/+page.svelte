@@ -51,7 +51,7 @@
 </script>
 
 <AssetManagementShell {title} active="">
-	<MasterPageHeader {title} description={formatLocaleTemplate(text.locationDescription, title.toLowerCase())} />
+	<MasterPageHeader {title} />
 	<div class="settings-layout">
 		<nav class="settings-nav" aria-label={title}>
 			{#each sections as section}
@@ -70,7 +70,8 @@
 	.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}
 	.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}
 	.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:var(--font-size-body);font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}
-	.settings-nav a:hover,.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}
+	.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:hover:not(.active){background:var(--surface-hover,var(--surface-secondary));color:var(--text)}
+
 	.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}
 	.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}
 	.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;}

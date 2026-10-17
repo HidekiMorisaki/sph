@@ -8,7 +8,7 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['changedAt', 'id'] as const;
 
 export async function GET({ params, locals, url }: import('./$types').RequestEvent) {
-	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
+	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);
 	const employeeId = parseId(params.id);
 	if (!employeeId) return failure(404, 'NOT_FOUND', 'Not found.');
 	const query = parseListQuery(url, sortFields, 'changedAt');
@@ -34,7 +34,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 	return success(items.map((item) => ({
 		id: item.id,
 		action: item.action,
-		changes: item.changes,
+		changes: actor.permissionOperations.includes('teams.read') || !Array.isArray(item.changes) ? item.changes : item.changes.filter(change => !(typeof change === 'object' && change !== null && !Array.isArray(change) && change.field === 'teams')),
 		changedAt: item.changedAt,
 		actor: item.actor
 	})), 200, listMeta(query, items.length, total));

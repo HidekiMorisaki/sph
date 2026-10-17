@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { SerialPrismaPg } from './serial-prisma-pg';
 
 import { PrismaClient } from './generated/prisma/client';
 
@@ -11,7 +11,7 @@ function createPrismaClient(): PrismaClient {
 	}
 
 	return new PrismaClient({
-		adapter: new PrismaPg({
+		adapter: new SerialPrismaPg({
 			connectionString: env.DATABASE_URL,
 			options: '-c timezone=UTC'
 		})

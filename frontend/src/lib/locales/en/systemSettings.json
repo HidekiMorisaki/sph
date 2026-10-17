@@ -11,6 +11,8 @@
 	"links": "External links",
 	"linkSettings": "External links settings",
 	"information": "System information",
+	"serverInformation": "Server information",
+	"aboutSph": "About SPH",
 	"linksDescription": "Manage the other systems shown in every user's sidebar.",
 	"noLinks": "No external links found.",
 	"reorderHint": "Drag or use the up and down arrow keys to reorder",

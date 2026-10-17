@@ -1,6 +1,8 @@
 import type { Prisma } from '$lib/server/generated/prisma/client';
 
 export const masterHistoryFields = {
+ clients: ['name', 'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'phoneNumber2', 'faxNumber1', 'faxNumber2', 'notes', 'companyName', 'contactName', 'contactDepartment', 'contactEmail', 'contactMobile'],
+ projects: ['name','description','clientId','contractStartsOn','contractEndsOn'],
 	departments: ['name', 'sortOrder', 'notes'],
 	'employee-groups': ['name', 'departmentId', 'sortOrder', 'notes'],
 	positions: ['name', 'sortOrder', 'notes'],
@@ -23,14 +25,16 @@ type Snapshot = Record<string, string | { id: number } | null>;
 
 function value(raw: unknown, field: string): string | null {
 	if (raw === null || raw === undefined) return null;
-	if (raw instanceof Date) return field === 'openedOn' || field === 'closedOn' || field === 'sourceCheckedOn' ? raw.toISOString().slice(0, 10) : raw.toISOString();
+	if (raw instanceof Date) return field === 'contractStartsOn' || field === 'contractEndsOn' || field === 'openedOn' || field === 'closedOn' || field === 'sourceCheckedOn' ? raw.toISOString().slice(0, 10) : raw.toISOString();
 	return String(raw);
 }
 
 export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource: MasterHistoryResource, id: number): Promise<Snapshot | null> {
 	let item: unknown;
 	switch (resource) {
-		case 'departments': item = await tx.department.findUnique({ where: { id } }); break;
+		case 'clients': item = await tx.client.findUnique({ where: { id } }); break;
+        case 'projects': item = await tx.project.findUnique({ where: { id }, include: { client: { select: { name: true } } } }); break;
+        case 'departments': item = await tx.department.findUnique({ where: { id } }); break;
 		case 'employee-groups': item = await tx.employeeGroup.findUnique({ where: { id }, include: { department: { select: { name: true } } } }); break;
 		case 'positions': item = await tx.position.findUnique({ where: { id } }); break;
 		case 'employment-types': item = await tx.employmentType.findUnique({ where: { id } }); break;
@@ -48,7 +52,8 @@ export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource:
 	}
 	if (!item) return null;
 	const record = item as Record<string, unknown>;
-	if (resource === 'employee-groups') record.departmentId = (record.department as { name: string }).name;
+	if (resource === 'projects') record.clientId = (record.client as {name:string}|null)?.name ?? null;
+ if (resource === 'employee-groups') record.departmentId = (record.department as { name: string }).name;
 	if (resource === 'room') record.branchId = (record.branch as { name: string }).name;
 	if (resource === 'storage') record.roomId = (record.room as { name: string }).name;
 	if (resource === 'cpu-types') record.manufacturerId = (record.manufacturer as { name: string }).name;

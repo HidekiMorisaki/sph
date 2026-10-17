@@ -1,4 +1,254 @@
 {
+  "business": {
+    "clients": [
+      {
+        "name": "Aoba Trading (Sample)",
+        "company_name": "Aoba Trading Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Alex Morgan",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-1@example.test"
+      },
+      {
+        "name": "Minato Logistics (Sample)",
+        "company_name": "Minato Logistics Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Jordan Taylor",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-2@example.test"
+      },
+      {
+        "name": "Komorebi Manufacturing (Sample)",
+        "company_name": "Komorebi Manufacturing Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Casey Lee",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-3@example.test"
+      },
+      {
+        "name": "Hikari Retail (Sample)",
+        "company_name": "Hikari Retail Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Robin Clark",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-4@example.test"
+      },
+      {
+        "name": "Sakura Services (Sample)",
+        "company_name": "Sakura Services Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Avery Green",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-5@example.test"
+      },
+      {
+        "name": "Tsubasa Systems (Sample)",
+        "company_name": "Tsubasa Systems Ltd (Fictional)",
+        "country_code": "US",
+        "contact_name": "Jamie Reed",
+        "contact_department": "Information Systems",
+        "contact_email": "sample-client-6@example.test"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Sales Management Renewal",
+        "description": "Fictional sample project. Integrate orders, sales and billing, migrate legacy records and roll out the service."
+      },
+      {
+        "name": "Employee Portal",
+        "description": "Fictional sample project. Bring employee procedures and internal services into one portal."
+      },
+      {
+        "name": "Web Inventory Management",
+        "description": "Fictional sample project. Modernize stock receipts, dispatches and location-level inventory queries."
+      },
+      {
+        "name": "Customer Data Integration",
+        "description": "Fictional sample project. Consolidate customer records, sales activity and enquiry history."
+      },
+      {
+        "name": "Business Server Cloud Migration",
+        "description": "Fictional sample project. Move business servers to the cloud and establish monitoring and backup procedures."
+      },
+      {
+        "name": "Office Network Renewal",
+        "description": "Fictional sample project. Renew wired and wireless office networks and improve access management."
+      },
+      {
+        "name": "Management Analytics Platform",
+        "description": "Fictional sample project. Combine revenue, cost and departmental results for management reporting."
+      },
+      {
+        "name": "Online Store Improvements",
+        "description": "Fictional sample project. Improve product search, checkout, order integration and performance."
+      },
+      {
+        "name": "Digital Approval Workflows",
+        "description": "Fictional sample project. Replace paper requests with electronic approvals and status tracking."
+      },
+      {
+        "name": "Core System API Integration",
+        "description": "Fictional sample project. Connect business services with reliable synchronization and retry processing."
+      },
+      {
+        "name": "Business Test Automation",
+        "description": "Fictional sample project. Automate regression tests for major workflows and run them in CI."
+      },
+      {
+        "name": "Access Control Review",
+        "description": "Fictional sample project. Review application authentication, permissions and operating procedures."
+      }
+    ],
+    "skills": [
+      {
+        "name": "TypeScript",
+        "category": "Programming languages",
+        "description": "Sample skill definition. Type design, asynchronous processing and maintainable web applications."
+      },
+      {
+        "name": "JavaScript",
+        "category": "Programming languages",
+        "description": "Sample skill definition. Browser and server development and existing code improvements."
+      },
+      {
+        "name": "Python",
+        "category": "Programming languages",
+        "description": "Sample skill definition. Business automation, data processing and backend development."
+      },
+      {
+        "name": "Java",
+        "category": "Programming languages",
+        "description": "Sample skill definition. Object-oriented design and business application maintenance."
+      },
+      {
+        "name": "C#",
+        "category": "Programming languages",
+        "description": "Sample skill definition. .NET business applications and API development."
+      },
+      {
+        "name": "Go",
+        "category": "Programming languages",
+        "description": "Sample skill definition. Concurrent API services and batch processing."
+      },
+      {
+        "name": "SQL",
+        "category": "Databases",
+        "description": "Sample skill definition. Data queries, aggregation and query optimization."
+      },
+      {
+        "name": "HTML / CSS",
+        "category": "Frontend",
+        "description": "Sample skill definition. Semantic markup and responsive interfaces."
+      },
+      {
+        "name": "React",
+        "category": "Frontend",
+        "description": "Sample skill definition. Component design, state management and web interfaces."
+      },
+      {
+        "name": "Vue.js",
+        "category": "Frontend",
+        "description": "Sample skill definition. Business interfaces using Vue components."
+      },
+      {
+        "name": "Svelte / SvelteKit",
+        "category": "Frontend",
+        "description": "Sample skill definition. Svelte interfaces and server-side rendering with SvelteKit."
+      },
+      {
+        "name": "Web Accessibility",
+        "category": "Frontend",
+        "description": "Sample skill definition. Keyboard navigation, labels and screen reader support."
+      },
+      {
+        "name": "PostgreSQL",
+        "category": "Database",
+        "description": "Sample skill definition. Data modeling, indexes and performance analysis."
+      },
+      {
+        "name": "Linux",
+        "category": "Infrastructure",
+        "description": "Sample skill definition. Server setup, operations and troubleshooting."
+      },
+      {
+        "name": "AWS",
+        "category": "Cloud",
+        "description": "Sample skill definition. Cloud architecture and operations."
+      },
+      {
+        "name": "Microsoft Azure",
+        "category": "Cloud",
+        "description": "Sample skill definition. Cloud service setup and administration."
+      },
+      {
+        "name": "Docker",
+        "category": "Infrastructure",
+        "description": "Sample skill definition. Containerization and runtime environments."
+      },
+      {
+        "name": "Kubernetes",
+        "category": "Infrastructure",
+        "description": "Sample skill definition. Container orchestration and monitoring."
+      },
+      {
+        "name": "Terraform",
+        "category": "Infrastructure",
+        "description": "Sample skill definition. Infrastructure as code and environment provisioning."
+      },
+      {
+        "name": "Network Design",
+        "category": "Networking",
+        "description": "Sample skill definition. Branch networks and connectivity design."
+      },
+      {
+        "name": "Information Security",
+        "category": "Security",
+        "description": "Sample skill definition. Access controls, risk assessment and operational safeguards."
+      },
+      {
+        "name": "Test Automation",
+        "category": "Quality assurance",
+        "description": "Sample skill definition. Regression testing and CI."
+      },
+      {
+        "name": "Requirements Analysis",
+        "category": "Business analysis",
+        "description": "Sample skill definition. Business analysis and requirements definition."
+      },
+      {
+        "name": "Project Management",
+        "category": "Management",
+        "description": "Sample skill definition. Planning, delivery tracking, risks and stakeholder coordination."
+      }
+    ],
+    "teams": [
+      {
+        "name": "Business Applications",
+        "description": "Fictional sample team. Develop sales, inventory and customer management applications."
+      },
+      {
+        "name": "Internal Services",
+        "description": "Fictional sample team. Improve the employee portal and approval workflows."
+      },
+      {
+        "name": "Cloud Platform",
+        "description": "Fictional sample team. Deliver server migrations, monitoring and backup operations."
+      },
+      {
+        "name": "Network Operations",
+        "description": "Fictional sample team. Manage office networks and connectivity."
+      },
+      {
+        "name": "Data Analytics",
+        "description": "Fictional sample team. Integrate and visualize management data."
+      },
+      {
+        "name": "Quality and Security",
+        "description": "Fictional sample team. Improve automated tests and access controls."
+      }
+    ]
+  },
   "software": {
     "manufacturer": "Example Works",
     "families": ["Document Studio", "Sheet Studio", "Slide Studio", "Mail Desk", "Meeting Hub", "Design Canvas", "Code Editor", "Data Insight", "Backup Vault", "Project Board"],

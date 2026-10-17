@@ -1,4 +1,254 @@
 {
+  "business": {
+    "clients": [
+      {
+        "name": "あおば商事（サンプル）",
+        "company_name": "株式会社あおば商事（架空）",
+        "country_code": "JP",
+        "contact_name": "佐藤 葵",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-1@example.test"
+      },
+      {
+        "name": "みなと物流（サンプル）",
+        "company_name": "株式会社みなと物流（架空）",
+        "country_code": "JP",
+        "contact_name": "鈴木 湊",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-2@example.test"
+      },
+      {
+        "name": "こもれび製作所（サンプル）",
+        "company_name": "株式会社こもれび製作所（架空）",
+        "country_code": "JP",
+        "contact_name": "高橋 光",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-3@example.test"
+      },
+      {
+        "name": "ひかりリテール（サンプル）",
+        "company_name": "株式会社ひかりリテール（架空）",
+        "country_code": "JP",
+        "contact_name": "田中 桜",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-4@example.test"
+      },
+      {
+        "name": "さくらサービス（サンプル）",
+        "company_name": "株式会社さくらサービス（架空）",
+        "country_code": "JP",
+        "contact_name": "伊藤 翼",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-5@example.test"
+      },
+      {
+        "name": "つばさシステムズ（サンプル）",
+        "company_name": "株式会社つばさシステムズ（架空）",
+        "country_code": "JP",
+        "contact_name": "渡辺 楓",
+        "contact_department": "情報システム部",
+        "contact_email": "sample-client-6@example.test"
+      }
+    ],
+    "projects": [
+      {
+        "name": "販売管理システム刷新",
+        "description": "架空のサンプル案件。受注・売上・請求業務を統合し、既存データの移行と利用部門への展開を行う案件。"
+      },
+      {
+        "name": "従業員ポータル構築",
+        "description": "架空のサンプル案件。社内手続き、従業員情報、各種業務サービスへの入口を集約するポータルの構築案件。"
+      },
+      {
+        "name": "在庫管理システムWeb化",
+        "description": "架空のサンプル案件。既存の在庫管理業務をWeb化し、入出庫管理と拠点別在庫の照会を改善する案件。"
+      },
+      {
+        "name": "顧客管理基盤統合",
+        "description": "架空のサンプル案件。部門ごとに分散した顧客情報を統合し、営業活動と問い合わせ履歴を共有する案件。"
+      },
+      {
+        "name": "業務サーバークラウド移行",
+        "description": "架空のサンプル案件。オンプレミスの業務サーバーをクラウドへ移行し、監視・バックアップ・運用手順を整備する案件。"
+      },
+      {
+        "name": "社内ネットワーク更改",
+        "description": "架空のサンプル案件。拠点内ネットワークと無線LANを更改し、ネットワーク分離と接続管理を改善する案件。"
+      },
+      {
+        "name": "経営データ分析基盤整備",
+        "description": "架空のサンプル案件。売上・原価・部門別実績を集約し、経営指標を可視化するデータ基盤の整備案件。"
+      },
+      {
+        "name": "ECサイト機能改善",
+        "description": "架空のサンプル案件。商品検索、購入手続き、受注連携を改善し、利用状況の分析と性能検証を行う案件。"
+      },
+      {
+        "name": "社内申請ワークフロー電子化",
+        "description": "架空のサンプル案件。紙やメールで運用している申請・承認業務を電子化し、処理状況を確認できるようにする案件。"
+      },
+      {
+        "name": "基幹システムAPI連携",
+        "description": "架空のサンプル案件。基幹システムと周辺サービスをAPIで連携し、データ同期と障害時の再処理を整備する案件。"
+      },
+      {
+        "name": "業務システムテスト自動化",
+        "description": "架空のサンプル案件。主要な業務フローの回帰テストを自動化し、CIでの実行と結果確認を整備する案件。"
+      },
+      {
+        "name": "社内システム認証・権限見直し",
+        "description": "架空のサンプル案件。既存システムの認証と権限を点検し、アクセス制御と運用ルールを改善する案件。"
+      }
+    ],
+    "skills": [
+      {
+        "name": "TypeScript",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。型設計、非同期処理、保守しやすいWebアプリケーションの実装。"
+      },
+      {
+        "name": "JavaScript",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。ブラウザーとサーバーでのJavaScript実装、既存コードの改善。"
+      },
+      {
+        "name": "Python",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。業務自動化、データ処理、バックエンドサービスの開発。"
+      },
+      {
+        "name": "Java",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。オブジェクト指向設計と業務システムの開発・保守。"
+      },
+      {
+        "name": "C#",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。.NETを用いた業務アプリケーションとAPIの開発。"
+      },
+      {
+        "name": "Go",
+        "category": "開発言語",
+        "description": "サンプルのスキル定義。並行処理を活用したAPI・バッチ処理の実装。"
+      },
+      {
+        "name": "SQL",
+        "category": "データベース",
+        "description": "サンプルのスキル定義。データ抽出、集計、更新処理とクエリの改善。"
+      },
+      {
+        "name": "HTML / CSS",
+        "category": "フロントエンド",
+        "description": "サンプルのスキル定義。意味のあるHTML構造とレスポンシブな画面の実装。"
+      },
+      {
+        "name": "React",
+        "category": "フロントエンド",
+        "description": "サンプルのスキル定義。コンポーネント設計、状態管理、Web画面の実装。"
+      },
+      {
+        "name": "Vue.js",
+        "category": "フロントエンド",
+        "description": "サンプルのスキル定義。Vueコンポーネントを用いた業務画面の開発。"
+      },
+      {
+        "name": "Svelte / SvelteKit",
+        "category": "フロントエンド",
+        "description": "サンプルのスキル定義。Svelteによる画面開発とSvelteKitによるSSRの実装。"
+      },
+      {
+        "name": "Webアクセシビリティ",
+        "category": "フロントエンド",
+        "description": "サンプルのスキル定義。キーボード操作、適切なラベル、読み上げを考慮した画面設計。"
+      },
+      {
+        "name": "PostgreSQL",
+        "category": "データベース",
+        "description": "サンプルのスキル定義。データ設計、索引設計、性能分析。"
+      },
+      {
+        "name": "Linux",
+        "category": "インフラ",
+        "description": "サンプルのスキル定義。サーバー構築、運用、障害調査。"
+      },
+      {
+        "name": "AWS",
+        "category": "クラウド",
+        "description": "サンプルのスキル定義。クラウド構成設計と運用。"
+      },
+      {
+        "name": "Microsoft Azure",
+        "category": "クラウド",
+        "description": "サンプルのスキル定義。クラウドサービスの構築と管理。"
+      },
+      {
+        "name": "Docker",
+        "category": "インフラ",
+        "description": "サンプルのスキル定義。コンテナー化と実行環境の整備。"
+      },
+      {
+        "name": "Kubernetes",
+        "category": "インフラ",
+        "description": "サンプルのスキル定義。コンテナーの運用と監視。"
+      },
+      {
+        "name": "Terraform",
+        "category": "インフラ",
+        "description": "サンプルのスキル定義。構成のコード化と環境の自動構築。"
+      },
+      {
+        "name": "ネットワーク設計",
+        "category": "ネットワーク",
+        "description": "サンプルのスキル定義。拠点ネットワークと接続管理の設計。"
+      },
+      {
+        "name": "情報セキュリティ",
+        "category": "セキュリティ",
+        "description": "サンプルのスキル定義。アクセス制御、リスク評価、運用対策。"
+      },
+      {
+        "name": "テスト自動化",
+        "category": "品質保証",
+        "description": "サンプルのスキル定義。回帰テストとCIの整備。"
+      },
+      {
+        "name": "要件定義",
+        "category": "業務設計",
+        "description": "サンプルのスキル定義。業務課題の整理と要件の合意。"
+      },
+      {
+        "name": "プロジェクト管理",
+        "category": "マネジメント",
+        "description": "サンプルのスキル定義。計画、進捗、課題、関係者の調整。"
+      }
+    ],
+    "teams": [
+      {
+        "name": "業務アプリ開発",
+        "description": "架空のサンプルチーム。販売・在庫・顧客管理の業務アプリケーションを開発するチーム。"
+      },
+      {
+        "name": "社内サービス",
+        "description": "架空のサンプルチーム。従業員ポータルと申請ワークフローを改善するチーム。"
+      },
+      {
+        "name": "クラウド基盤",
+        "description": "架空のサンプルチーム。サーバー移行、監視、バックアップを担当するチーム。"
+      },
+      {
+        "name": "ネットワーク運用",
+        "description": "架空のサンプルチーム。拠点ネットワークと接続管理を担当するチーム。"
+      },
+      {
+        "name": "データ分析",
+        "description": "架空のサンプルチーム。経営データの統合と可視化を担当するチーム。"
+      },
+      {
+        "name": "品質・セキュリティ",
+        "description": "架空のサンプルチーム。テスト自動化とアクセス制御の改善を担当するチーム。"
+      }
+    ]
+  },
   "software": {
     "manufacturer": "サンプルワークス",
     "families": ["文書スタジオ", "表計算スタジオ", "発表スタジオ", "メールデスク", "会議ハブ", "デザインキャンバス", "コードエディター", "データ分析", "バックアップ保管庫", "プロジェクトボード"],

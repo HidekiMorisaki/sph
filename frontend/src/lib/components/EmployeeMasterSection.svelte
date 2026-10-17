@@ -156,7 +156,7 @@
 </script>
 
 {#snippet headerActions()}
-	{#if canManage}<AddButton bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}
+	{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}
 {/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />

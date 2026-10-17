@@ -50,7 +50,7 @@
 	}
 </script>
 
-<div aria-labelledby="my-page-title"><MasterPageHeader title={pageText.title} titleId="my-page-title" description={formatLocaleTemplate(pageText.welcome, formatEmployeeName(user, $localization) || user.username)} />
+<div aria-labelledby="my-page-title"><MasterPageHeader title={pageText.title} titleId="my-page-title" />
 {#if !noticeDismissed}<StatusNotice message={pageText.underDevelopment} tone="info" onDismiss={() => noticeDismissed = true} />{/if}
 {#if widgetError}<StatusNotice message={labels.loadFailed} tone="error" onDismiss={() => widgetError = false} />{/if}
 <section class="panel widget-config"><h2>{labels.widgets}</h2><div class="widget-controls">{#each [...widgets].sort((a, b) => a.sortOrder - b.sortOrder) as widget}<div><strong>{labels[widget.code as keyof typeof labels] ?? widget.code}</strong><button type="button" disabled={saving} onclick={() => toggle(widget.code)}>{widget.enabled ? labels.hide : labels.show}</button><button type="button" disabled={saving || widget.sortOrder === 0} aria-label={`${labels.up}: ${widget.code}`} onclick={() => move(widget.code, -1)}>↑</button><button type="button" disabled={saving || widget.sortOrder === widgets.length - 1} aria-label={`${labels.down}: ${widget.code}`} onclick={() => move(widget.code, 1)}>↓</button></div>{/each}</div></section>

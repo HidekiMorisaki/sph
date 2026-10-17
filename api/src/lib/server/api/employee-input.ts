@@ -1,3 +1,4 @@
+import { parseTeamIds } from './teams';
 import type { ApiErrorDetail } from '$lib/server/api/response';
 import { addressCountry, validPostalCode, type AddressCountry } from './postal-address';
 
@@ -13,6 +14,7 @@ type EmployeeInput = {
 		hiredAt: Date; groupId: number | null;
 		employmentTypeId: number; branchId: number; retiredAt: Date | null; notes: string | null;
 	};
+	teamIds?: number[];
 	departmentIds: number[];
 	primaryDepartmentId: number | null;
 	positionIds: number[];
@@ -162,6 +164,7 @@ export function parseEmployeeInput(value: unknown, currentCountry: AddressCountr
 		success: true,
 		data: {
 			employee: { employeeCode, firstName, middleName, lastName, nameKana, birthDate, gender, bloodType, countryCode, postalCode, prefecture, city, streetAddress, buildingName, mobilePhone, email: email.toLowerCase(), hiredAt, groupId, employmentTypeId, branchId, retiredAt, notes },
+			teamIds: parseTeamIds(body.teamIds),
 			departmentIds,
 			primaryDepartmentId,
 			positionIds,

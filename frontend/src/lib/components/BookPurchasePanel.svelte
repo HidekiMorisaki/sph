@@ -5,6 +5,7 @@
  import { bookPurchaseMessages, type PurchaseRequest, type PurchaseOrder } from '$lib/book-purchase-messages';
  import BookPurchaseFields from './BookPurchaseFields.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
+ import AddButton from './AddButton.svelte';
  import StatusNotice from './StatusNotice.svelte';
  let { titleId, branchId, canRequest = false, requestOpen = false, onChanged, onReceive }: { titleId?: number; branchId?: number; canRequest?: boolean; requestOpen?: boolean; onChanged?: () => void; onReceive?: (order: PurchaseOrder) => void } = $props();
  let text = $derived(bookPurchaseMessages[$localization.displayLanguage]);
@@ -87,7 +88,7 @@
  {#each orders.filter(item => history || ['approved','ordered'].includes(item.status)) as item (item.id)}<section class="purchase-card"><h4>{item.title.name} · {item.branch.name}</h4><p>{stateLabel(item.status)} · {text.planned}: {item.quantity} · {text.received}: {item.received}</p>
   {#if item.decisionReason}<p>{text.decisionReason}: {item.decisionReason}</p>{/if}
   {#if item.canManage && item.status === 'approved'}<label>{text.decisionReason}<textarea maxlength="5000" rows="2" bind:value={reasons[`order:${item.id}`]}></textarea></label><div class="actions"><ModalActionButton label={text.order} disabled={busy} onclick={() => void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'ordered' })} /><ModalActionButton label={text.reject} variant="danger" disabled={busy} onclick={() => { const reason = reasons[`order:${item.id}`]; if (!reason?.trim()) { error = text.reasonRequired; return; } void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'rejected', decisionReason: reason }); }} /></div>{/if}
-  {#if item.status === 'ordered' && onReceive}<ModalActionButton label={text.receive} variant="secondary" disabled={busy} onclick={() => onReceive?.(item)} />{/if}
+  {#if item.status === 'ordered' && onReceive}<AddButton label={text.receive} disabled={busy} onclick={() => onReceive?.(item)} />{/if}
  </section>{/each}
 </section>
 <style>

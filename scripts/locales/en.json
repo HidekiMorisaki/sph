@@ -2,7 +2,7 @@
 	"locale.code": "en",
 	"samples.prompt": "Optional samples (fictional business data and book introductions)",
 	"samples.no": "Do not add samples (initial administrator and required settings only)",
-	"samples.yes": "Add localized samples: 360 employees, 3 branches, 128 IT assets, 101 software products, 51 contracts, notes and history, 11 book titles (retrieved from openBD; no physical copies). Terms: https://openbd.jp/terms/",
+	"samples.yes": "Add",
 	"locale.name": "English",
 	"locale.prompt": "Language",
 	"progress.total": "Total",

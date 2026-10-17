@@ -64,9 +64,7 @@ cd sph
 The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
 > [!NOTE]
-> At the "Optional samples (fictional business data and book introductions)" prompt, select "2. Add localized samples" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
-
-Optional samples retrieve current bibliographic details and covers for 11 ISBNs selected for the display language (Japanese technical books or English-language academic books) from openBD, with zero physical copies. Unavailable titles are skipped; failed cover imports retain the title without an image. The Docker installer reports warnings at completion; affected ISBNs appear in migration logs. Provider data/images are not bundled. Review the [openBD terms](https://openbd.jp/terms/).
+> At the "Optional samples (fictional business data and book introductions)" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
 
 <a id="installing-on-blitz-cloud"></a>
 
@@ -252,17 +250,11 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 ![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
 ![Financial trends](./docs/gallery/FinancialTrends_en.png)
 
-### PDF export results
-![Annual hiring, retirement, and turnover rates](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_1.png)
-![Annual employee count and average age trends](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_2.png)
-![Employee count by age group and gender](./docs/gallery/EmployeeAnalysis_en_Exported_PDF_3.png)
-![Financial trends](./docs/gallery/FinancialTrends_en_Exported_PDF_1.png)
-
 ## Work calendars
 ![Work calendars](./docs/gallery/WorkCalendars_en.png)
 
-## Employee list
-![Employee list](./docs/gallery/EmployeeList_en.png)
+## Employees
+![Employees](./docs/gallery/EmployeeList_en.png)
 
 ## Acknowledgements
 

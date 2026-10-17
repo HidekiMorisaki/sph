@@ -47,6 +47,9 @@ export type EmployeeProfile = {
 };
 
 export type Employee = EmployeeProfile & {
+	teamIds: number[];
+	teams: Array<{ id: number; name: string }>;
+	teamNames: string;
 	avatar?: string | null;
 	employeeCode: string;
 	age: number;

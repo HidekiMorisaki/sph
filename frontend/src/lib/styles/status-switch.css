@@ -13,7 +13,7 @@ button.app-status-switch[role='switch'] {
 	cursor: pointer;
 }
 
-button.app-status-switch[role='switch']:hover:not(:disabled) { background: var(--border); }
+button.app-status-switch[role='switch']:hover:not(:disabled) { background: var(--surface-hover,var(--border)); }
 button.app-status-switch[role='switch'].is-on { border-color: #1abb9c; background: #1abb9c; color: #fff; }
 button.app-status-switch[role='switch'].is-on:hover:not(:disabled) { background: #159a80; }
 button.app-status-switch[role='switch']:focus-visible { outline: 2px solid var(--action-primary); outline-offset: 2px; }

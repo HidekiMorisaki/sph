@@ -344,7 +344,7 @@
 
 <AssetManagementShell title={text.title}>
 <div class="software-page">
-	<MasterPageHeader title={text.title} description={text.description} />
+	<MasterPageHeader title={text.title} />
 	{#if error && !editor && !activeDetail}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
 	{#if notice && !editor && !activeDetail}<StatusNotice message={notice} tone="success" onDismiss={() => notice = ''} />{/if}
 	{#if loading}<LoadingSpinner label={text.loading} />{:else}

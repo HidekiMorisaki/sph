@@ -11,6 +11,8 @@
 	"links": "外部リンク",
 	"linkSettings": "外部リンクの設定",
 	"information": "システム情報",
+	"serverInformation": "サーバー情報",
+	"aboutSph": "SPHについて",
 	"linksDescription": "全ユーザーのサイドメニューに表示する他のシステムへのリンクを管理します。",
 	"noLinks": "外部リンクがありません。",
 	"reorderHint": "ドラッグ、または上下の矢印キーで順序を変更",

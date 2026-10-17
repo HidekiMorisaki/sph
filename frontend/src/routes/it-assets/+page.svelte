@@ -563,11 +563,11 @@
 
 <AssetManagementShell title={text.title}>
 	<ViewportListPage>
-	<MasterPageHeader title={text.title} description={text.description} actions={pageActions} />
+	<MasterPageHeader title={text.title} />
 	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
 	{#if employeeDetailError && !detailAsset}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
 	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<button type="button" class="type-filter-retry" onclick={() => void load()}>{text.retryTypeFilter}</button>{/if}
-	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
+	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} headerActions={pageActions} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
 		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
 		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },

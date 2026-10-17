@@ -3,6 +3,7 @@
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import AnalyticsChart from '$lib/components/AnalyticsChart.svelte';
+	import OrganizationSummary from '$lib/components/OrganizationSummary.svelte';
 	import AnalyticsHeadcountAgeChart from '$lib/components/AnalyticsHeadcountAgeChart.svelte';
 	import AnalyticsPeriodControls from '$lib/components/AnalyticsPeriodControls.svelte';
 	import AnalyticsTurnoverChart from '$lib/components/AnalyticsTurnoverChart.svelte';
@@ -201,7 +202,7 @@
 	{/if}
 {/snippet}
 <AssetManagementShell title={text.title} active="">
-	<MasterPageHeader title={text.title} description={text.description} actions={pdfActions} />
+	<MasterPageHeader title={text.title} />
 	{#if pdfBusy && !pdfBusyDismissed}<StatusNotice message={text.pdfGenerating} tone="info" onDismiss={() => pdfBusyDismissed = true} />{/if}
 	{#if pdfError}<StatusNotice message={text[pdfError]} tone="error" onDismiss={() => pdfError = null} />{/if}
 	{#if today}
@@ -210,6 +211,7 @@
 		{#if data && savedSelection}
 			<div class="shared-period-controls"><AnalyticsPeriodControls id="analytics-period" bind:fromMonth bind:toMonth maxMonth={data.referenceDate.slice(0, 7)} loading={updating} onApply={applyPeriod} /></div>
 		{/if}
+		<div class="analysis-actions">{@render pdfActions()}</div>
 		</div>
 		{#if periodError && !periodErrorDismissed}<StatusNotice message={text[periodError]} tone="error" onDismiss={() => periodErrorDismissed = true} />{/if}
 	{/if}
@@ -233,6 +235,7 @@
 				<section class="metric" title={metric.label === text.turnover ? text.summaryFormula : undefined}><h2>{metric.label}</h2><strong>{metric.value}{#if metric.unit}<span class="metric-unit">{metric.unit}</span>{/if}</strong><p>{metric.note}</p></section>
 			{/each}
 		</div>
+		<OrganizationSummary />
 		<div class="charts">
 			<section class="panel turnover-panel" aria-busy={charts.turnover.loading}>
 				<header class="panel-header"><h2>{text.rates}</h2></header>
@@ -295,7 +298,8 @@
 
 <style>
 	.pdf-download{display:inline-flex;align-items:center;justify-content:center;gap:6px}.pdf-download svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-	.analysis-controls{display:flex;align-items:flex-start;flex-wrap:wrap;gap:16px;margin:0 0 16px;min-width:0}
+	.analysis-controls{display:flex;align-items:flex-start;flex-wrap:wrap;gap:16px;margin:0 0 16px;min-width:0;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
+	.analysis-actions{margin-left:auto;align-self:flex-end}
 	.analysis-controls :global(.custom-date .required){display:none}
 	.reference-controls{width:180px;max-width:100%;min-width:0}
 	.shared-period-controls{width:340px;max-width:100%;min-width:0}

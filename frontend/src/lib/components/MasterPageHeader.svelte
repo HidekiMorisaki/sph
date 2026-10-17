@@ -1,32 +1,12 @@
 <script lang="ts">
-	import { localization } from '$lib/localization';
-	import { page } from '$app/state';
-	import type { Snippet } from 'svelte';
-	import { groupLabelForPath } from '$lib/components/sidebarNavigation';
-
-	let { title, titleId, description, actions }: {
+	let { title, titleId }: {
 		title: string;
 		titleId?: string;
-		description?: string;
-		actions?: Snippet;
 	} = $props();
-	let groupLabel = $derived(groupLabelForPath(page.url.pathname, $localization.displayLanguage));
 </script>
 
-<header class="master-page-header">
-	<div>
-		{#if groupLabel}<p>{groupLabel}</p>{/if}
-		<h1 id={titleId}>{title}</h1>
-		{#if description}<span>{description}</span>{/if}
-	</div>
-	{#if actions}<div class="master-page-actions">{@render actions()}</div>{/if}
-</header>
+<h1 class="sr-only" id={titleId}>{title}</h1>
 
 <style>
-	.master-page-header{display:flex;flex:none;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}
-	.master-page-header p{margin:0;color:#1abb9c;font-size:var(--font-size-support);font-weight:700;letter-spacing:.08em}
-	.master-page-header h1{margin:4px 0;color:var(--text);line-height:1.2}
-	.master-page-header span{display:block;color:var(--muted);font-size:var(--font-size-body)}
-	.master-page-actions{display:flex;align-items:center;gap:8px}
-	@media(max-width:700px){.master-page-header{align-items:stretch;flex-direction:column}.master-page-actions{width:100%;flex-direction:column;align-items:stretch}}
+	.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>

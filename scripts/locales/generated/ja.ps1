@@ -93,7 +93,7 @@
 	'prompt.selection' = '{1}:'
 	'samples.no' = '追加しない（初期管理者と必須設定のみ）'
 	'samples.prompt' = 'サンプルデータ（架空の業務データと書籍紹介、任意）'
-	'samples.yes' = '追加する：従業員360人、拠点3件、IT資産128件、ソフトウェア製品101件、契約51件、メモ・履歴、書誌11件（openBDから取得、所蔵0冊）。利用条件: https://openbd.jp/terms/'
+	'samples.yes' = '追加する'
 	'stage.build' = 'サービスイメージの構築'
 	'stage.check' = 'ローカルでの起動確認'
 	'stage.cleanup' = '初期管理者情報の削除・サービスの再作成'

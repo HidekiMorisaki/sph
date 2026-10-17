@@ -7,6 +7,7 @@
 	import { safeLoginDestination } from '$lib/login-redirect';
 	import { clearAvatar, loadAvatarFor } from '$lib/avatar';
 	import type { SessionUser } from '$lib/auth';
+	import { isSidebarGroupId, readSidebarGroups, saveSidebarGroups, sidebarGroupExpanded, type SidebarGroupState } from '$lib/sidebar-groups';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import AppSidebar from '$lib/components/AppSidebar.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
@@ -19,6 +20,22 @@
 	// Initialize before child rendering; later changes use the applied client store.
 	setContext(LOCALIZATION_CONTEXT, untrack(() => initializeLocalization(data.initialLocalization)));
 	let user = $state<SessionUser | null>(null);
+	let sidebarGroups = $state<SidebarGroupState>({});
+	let sidebarOwner: number | null = null;
+	function setSidebarUser(current: SessionUser | null) {
+		const employeeId = current?.id ?? null;
+		if (employeeId !== sidebarOwner) {
+			sidebarGroups = employeeId === null ? {} : readSidebarGroups(employeeId);
+			sidebarOwner = employeeId;
+		}
+		// Restore preferences before the new employee's navigation can render.
+		user = current;
+	}
+	function toggleSidebarGroup(id: string) {
+		if (!user || sidebarOwner !== user.id || !isSidebarGroupId(id)) return;
+		sidebarGroups = { ...sidebarGroups, [id]: !sidebarGroupExpanded(sidebarGroups, id) };
+		saveSidebarGroups(user.id, sidebarGroups);
+	}
 	let collapsed = $state(false);
 	let title = $state('');
 	let sessionRevision = 0;
@@ -31,7 +48,7 @@
 	setContext('asset-shell-title', (value: string) => { title = value; });
 	function toggleSidebar() {
 		collapsed = !collapsed;
-		localStorage.setItem('asset-sidebar-collapsed', String(collapsed));
+		try { localStorage.setItem('asset-sidebar-collapsed', String(collapsed)); } catch { /* Width can change without persistence. */ }
 		document.documentElement.dataset.assetSidebarCollapsed = String(collapsed);
 	}
 	async function logout() {
@@ -57,13 +74,13 @@
 			if (revision !== sessionRevision) return;
 			if (current) await applyLocalization(current);
 			if (revision === sessionRevision) {
-				user = current;
+				setSidebarUser(current);
 				if (current) void loadAvatarFor(current.id).catch(() => undefined);
 				else { clearAvatar(); sessionStorage.removeItem('book-overdue-checked'); overdueNotice = ''; }
 				if (current) void checkOverdueNotice(current.id);
 			}
 		} catch {
-			if (revision === sessionRevision) { user = null; clearAvatar(); }
+			if (revision === sessionRevision) { setSidebarUser(null); clearAvatar(); }
 		}
 	}
 	async function checkOverdueNotice(employeeId: number) {
@@ -96,7 +113,7 @@
 		void refreshSession();
 	});
 	onMount(() => {
-		collapsed = localStorage.getItem('asset-sidebar-collapsed') === 'true';
+		try { collapsed = localStorage.getItem('asset-sidebar-collapsed') === 'true'; } catch { /* Keep the default width. */ }
 		document.documentElement.dataset.assetSidebarCollapsed = String(collapsed);
 		const updateProfile = (event: Event) => {
 			const detail = (event as CustomEvent<Pick<SessionUser, 'firstName' | 'middleName' | 'lastName'>>).detail;
@@ -106,7 +123,7 @@
 			const current = (event as CustomEvent<SessionUser>).detail;
 			if (!current || (user && current.id !== user.id)) return;
 			++sessionRevision;
-			user = current;
+			setSidebarUser(current);
 			void applyLocalization(current);
 		};
 		window.addEventListener('profile-updated', updateProfile);
@@ -125,7 +142,7 @@
 </svelte:head>
 
 <div class:shell={showShell} class:collapsed>
-	{#if showShell}<AppSidebar {collapsed} {user} currentPath={page.url.pathname} onLogout={logout} />{/if}
+	{#if showShell}<AppSidebar {collapsed} {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={logout} />{/if}
 	<div class:workspace={showShell}>
 		{#if showShell}<AppHeader {collapsed} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
 		<div class:app-main={showShell}>{#if logoutError}<StatusNotice message={localeMessages[$localization.displayLanguage].navigation.logoutFailed} tone="error" onDismiss={() => logoutError = false} />{/if}{#if overdueNotice}<StatusNotice message={overdueNotice} tone="warning" onDismiss={() => overdueNotice = ''} />{/if}{@render children()}</div>

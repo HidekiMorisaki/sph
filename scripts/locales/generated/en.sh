@@ -94,7 +94,7 @@ installer_template() {
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' 'Do not add samples (initial administrator and required settings only)' ;;
 		'samples.prompt') printf '%s' 'Optional samples (fictional business data and book introductions)' ;;
-		'samples.yes') printf '%s' 'Add localized samples: 360 employees, 3 branches, 128 IT assets, 101 software products, 51 contracts, notes and history, 11 book titles (retrieved from openBD; no physical copies). Terms: https://openbd.jp/terms/' ;;
+		'samples.yes') printf '%s' 'Add' ;;
 		'stage.build') printf '%s' 'Building service images' ;;
 		'stage.check') printf '%s' 'Checking local application responses' ;;
 		'stage.cleanup') printf '%s' 'Removing initial setup credentials and refreshing services' ;;

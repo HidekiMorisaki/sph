@@ -41,6 +41,7 @@ export const editablePermissionCatalog = [
 ];
 
 export const ownBranchOperations = new Set([
+	'employees.skills.create', 'employees.skills.update', 'employees.skills.delete', 'employees.participations.create', 'employees.participations.update', 'employees.participations.delete', 'teams.members.add', 'teams.members.remove',
 	'employees.read', 'employees.manage', 'employees.create', 'employees.update', 'employees.delete', 'employees.invite',
 	'masters.read', 'branches.manage', 'branches.update', 'branches.delete',
 	'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
@@ -66,6 +67,19 @@ export function hasScopedPermissionOperation(user: AuthenticatedUser, operation:
 
 export function capabilitiesFor(user: AuthenticatedUser) {
 	return {
+		canReadSkills: hasPermissionOperation(user, 'skills.read'),
+		canReadProjects: hasPermissionOperation(user, 'projects.read'),
+        canReadClients: hasPermissionOperation(user, 'clients.read'),
+		workforceOperations: user.permissionOperations.filter(code => code.startsWith('skills.') || code.startsWith('projects.') || code.startsWith('clients.')),
+		canAddTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.add'),
+		canRemoveTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.remove'),
+		canReadTeams: hasPermissionOperation(user, 'teams.read'),
+		canCreateTeams: hasPermissionOperation(user, 'teams.create'),
+		canUpdateTeams: hasPermissionOperation(user, 'teams.update'),
+		canDeleteTeams: hasPermissionOperation(user, 'teams.delete'),
+		canAddTeamMembers: hasPermissionOperation(user, 'teams.members.add') || hasOwnBranchPermissionOperation(user, 'teams.members.add'),
+		canRemoveTeamMembers: hasPermissionOperation(user, 'teams.members.remove') || hasOwnBranchPermissionOperation(user, 'teams.members.remove'),
+		canManageTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.add') && hasPermissionOperation(user, 'teams.members.remove'),
 		canManageSystemSettings: hasPermissionOperation(user, permissionOperations.systemManagement),
 		canManageAdministration: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasPermissionOperation(user, permissionOperations.masterManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.employeeManagement),
 		canManageEmployees: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.employeeManagement),

@@ -52,6 +52,7 @@
 	let draftCurrency = $state<FinancialCurrency>('JPY'), preview = $state<PreviewTotals | null>(null), previewBusy = $state(false);
 	let previewButton = $state<HTMLButtonElement>();
 	let editorDialog = $state<HTMLDialogElement>();
+	let editorScroll: Array<{ top: number; left: number }> = [];
 	let editorTrigger: HTMLButtonElement | null = null;
 	let initialEditorSnapshot = $state('');
 	let confirmingDiscard = $state(false);
@@ -245,6 +246,8 @@
 	}
 	async function showPreview() {
 		if (!editing || previewBusy || saving) return;
+		editorScroll = [...(editorDialog?.querySelectorAll<HTMLElement>('.app-modal-form-body, .app-table-scroll') ?? [])]
+			.map(element => ({ top: element.scrollTop, left: element.scrollLeft }));
 		if (!valid()) { editError = text.invalidAmount; return; }
 		previewBusy = true; editError = '';
 		try {
@@ -261,14 +264,21 @@
 				if (missingMonths !== null) await refresh();
 				return;
 			}
-			preview = await apiData<PreviewTotals>(response);
+			const totals = await apiData<PreviewTotals>(response);
 			if (missingMonths !== null) await refresh();
+			preview = totals;
 		} catch { editError = text.previewFailed; }
 		finally { previewBusy = false; }
 	}
 	function closePreview() {
 		preview = null;
-		void tick().then(() => previewButton?.focus());
+		void tick().then(() => {
+			editorDialog?.querySelectorAll<HTMLElement>('.app-modal-form-body, .app-table-scroll').forEach((element, index) => {
+				const position = editorScroll[index];
+				if (position) { element.scrollTop = position.top; element.scrollLeft = position.left; }
+			});
+			previewButton?.focus({ preventScroll: true });
+		});
 	}
 	async function toggle(item: Item) {
 		if (busy || (!item.published && item.completedMonths !== 12)) return;
@@ -290,7 +300,7 @@
 
 <svelte:window onkeydown={handleEditorKeydown} />
 <AssetManagementShell {title}>
-	<div class="finance-page"><MasterPageHeader {title} description={text.description} />
+	<div class="finance-page"><MasterPageHeader {title} />
 		{#if loading}<LoadingSpinner label={common.loading} />
 		{:else if denied}{#if !deniedDismissed}<StatusNotice message={localeMessages[$localization.displayLanguage].systemSettings.accessDenied} tone="error" onDismiss={() => deniedDismissed = true} />{/if}
 		{:else}
@@ -326,7 +336,7 @@
 </AssetManagementShell>
 
 <style>
-	.finance-page{display:grid;gap:16px;min-width:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);min-width:0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{font-size:1.13rem;margin:0 0 4px}p{margin:0;color:var(--text-secondary)}.controls{display:flex;align-items:end;gap:10px}input{min-height:34px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit}.controls :global(.custom-date){width:130px}.secondary,.edit-button,.pagination button{min-height:34px;padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--action-primary);font:inherit;cursor:pointer}.secondary:hover,.edit-button:hover,.pagination button:hover{background:var(--surface-secondary)}button:disabled{opacity:.55;cursor:not-allowed}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px 10px;border-bottom:1px solid var(--border);text-align:right;font-size:var(--font-size-body)}th:first-child,td:first-child{text-align:left;padding-left:20px}th:last-child,td:last-child{padding-right:20px}thead th{color:var(--text-secondary);font-weight:600;background:var(--surface-secondary)}tbody th{font-weight:600}tbody tr:last-child>*{border-bottom:0}.negative{color:#b43636}.editor-currency{display:flex;align-items:end;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}.editor-currency :global(.form-select-field){width:140px}.editor-currency p{padding-bottom:8px;font-size:var(--font-size-support)}.month-table input{width:135px;height:36px;padding:0 12px;text-align:right;outline:none;transition:border-color 150ms,box-shadow 150ms}.month-table input:hover:not(:focus){border-color:var(--muted)}.month-table input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.month-table th,.month-table td{text-align:left}.pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 20px}@media(max-width:700px){.toolbar{align-items:stretch;flex-direction:column}.controls{justify-content:space-between}.editor-currency{align-items:stretch;flex-direction:column}.table-wrap{max-width:100%}}
+	.finance-page{display:grid;gap:16px;min-width:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);min-width:0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{font-size:1.13rem;margin:0 0 4px}p{margin:0;color:var(--text-secondary)}.controls{display:flex;align-items:end;gap:10px}input{min-height:34px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit}.controls :global(.custom-date){width:130px}.secondary,.edit-button,.pagination button{min-height:34px;padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--action-primary);font:inherit;cursor:pointer}.secondary:hover,.edit-button:hover,.pagination button:hover{background:var(--surface-hover,var(--surface-secondary))}button:disabled{opacity:.55;cursor:not-allowed}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px 10px;border-bottom:1px solid var(--border);text-align:right;font-size:var(--font-size-body)}th:first-child,td:first-child{text-align:left;padding-left:20px}th:last-child,td:last-child{padding-right:20px}thead th{color:var(--text-secondary);font-weight:600;background:var(--surface-secondary)}tbody th{font-weight:600}tbody tr:last-child>*{border-bottom:0}.negative{color:#b43636}.editor-currency{display:flex;align-items:end;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}.editor-currency :global(.form-select-field){width:140px}.editor-currency p{padding-bottom:8px;font-size:var(--font-size-support)}.month-table input{width:135px;height:36px;padding:0 12px;text-align:right;outline:none;transition:border-color 150ms,box-shadow 150ms}.month-table input:hover:not(:focus){border-color:var(--muted)}.month-table input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.month-table th,.month-table td{text-align:left}.pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 20px}@media(max-width:700px){.toolbar{align-items:stretch;flex-direction:column}.controls{justify-content:space-between}.editor-currency{align-items:stretch;flex-direction:column}.table-wrap{max-width:100%}}
 	.amount-field{display:flex;align-items:center;gap:8px}
 	.amount-field input{flex:0 0 135px}
 	.amount-unit{color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}

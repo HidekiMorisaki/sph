@@ -68,8 +68,6 @@ cd sph
 > [!NOTE]
 > "サンプルデータ（架空の業務データと書籍紹介、任意）" で "2：追加する" を選択することで、選択した言語に合わせたサンプルデータを自動的に追加することができます。SPH の評価にお役立てください。
 
-サンプルを追加する場合、表示言語に応じた11冊（日本語は既存の技術書、英語は情報科学・工学などの英語書籍）のISBNに対する最新の書誌情報・書影をopenBDから取得し、所蔵0冊で登録します。書誌を取得できなかった書籍はスキップし、書影だけ取得できなかった場合は書誌のみ登録します。Docker版のインストーラーは完了時に警告を表示し、対象ISBNはmigrationのログに記録します。書誌・書影は配布物に同梱しません。[openBD利用条件](https://openbd.jp/terms/)を確認してください。
-
 <a id="installing-on-blitz-cloud"></a>
 
 ## blitz.cloudへのインストール
@@ -244,17 +242,11 @@ docker compose -f docker-compose.local.yml up -d
 ![従業員分析](./docs/gallery/EmployeeAnalysis_ja.png)
 ![経営状況](./docs/gallery/FinancialTrends_ja.png)
 
-### PDF エクスポート結果
-![年別入社・退職・離職率](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_1.png)
-![年別従業員数・平均年齢の推移](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_2.png)
-![年代別従業員数・男女比](./docs/gallery/EmployeeAnalysis_ja_Exported_PDF_3.png)
-![経営状況](./docs/gallery/FinancialTrends_ja_Exported_PDF_1.png)
-
 ## 勤務カレンダー
 ![勤務カレンダー](./docs/gallery/WorkCalendars_ja.png)
 
-## 従業員リスト
-![従業員リスト](./docs/gallery/EmployeeList_ja.png)
+## 従業員
+![従業員](./docs/gallery/EmployeeList_ja.png)
 
 ## 謝辞
 

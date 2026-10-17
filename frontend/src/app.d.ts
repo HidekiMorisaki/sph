@@ -8,7 +8,7 @@ declare global {
 			initialLocalization?: import('$lib/localization').LocalizationSettings;
 		}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState { employeeSearch?: import('$lib/search').SearchDefinition }
 		// interface Platform {}
 	}
 }

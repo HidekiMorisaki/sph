@@ -23,10 +23,10 @@ export function roleOutput({ permissions, defaultKey, ...role }: RoleRecord) {
 	const permissionCodes = [...new Set(permissions.flatMap((entry) => entry.permission.operations.map((operation) => operation.operation)))].sort();
 	const permissionScopes = permissions.flatMap((entry) => entry.permission.operations.map(({ operation }) => ({ code: operation, scopeType: entry.scopeType as 'global' | 'own_branch' }))).sort((a, b) => a.code.localeCompare(b.code));
 	const defaultRole = defaultRoles.find((entry) => entry.key === defaultKey);
-	const defaultPermissionCodes = defaultRole ? [...defaultRole.permissionCodes,
+	const defaultPermissionCodes = defaultRole ? [...new Set([...defaultRole.permissionCodes,
 		...granularOperations.filter((operation) => (!operation.systemOnly || defaultKey === 'system_administrator' || (defaultKey === 'branch_administrator' && ['branches.update', 'branches.delete'].includes(operation.code))) &&
 			(Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some((code) => defaultRole.permissionCodes.includes(code)))
-			.map((operation) => operation.code)].sort() : null;
+			.map((operation) => operation.code)])].sort() : null;
 	return {
 		...role,
 		permissionCodes,

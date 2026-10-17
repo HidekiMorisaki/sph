@@ -1,22 +1,22 @@
 [
 	{
 		"key": "system_administrator",
-		"permissionCodes": ["system.manage", "employees.read", "employees.manage", "masters.read", "masters.manage", "branches.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "software.read", "software.manage", "software.keys.read", "software.keys.write", "books.read", "books.titles.manage", "books.manage", "calendars.read", "calendars.assign"]
+		"permissionCodes": ["system.manage", "employees.read", "employees.manage", "masters.read", "masters.manage", "branches.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "software.read", "software.manage", "software.keys.read", "software.keys.write", "books.read", "books.titles.manage", "books.manage", "calendars.read", "calendars.assign", "teams.read", "teams.create", "teams.update", "teams.delete", "teams.members.add", "teams.members.remove", "skills.read", "projects.read", "employees.skills.create", "employees.skills.update", "employees.skills.delete", "employees.participations.create", "employees.participations.update", "employees.participations.delete", "skills.create", "skills.update", "skills.delete", "projects.create", "projects.update", "projects.delete", "search_filters.read", "search_filters.create", "search_filters.update", "search_filters.delete", "clients.read", "clients.create", "clients.update", "clients.delete"]
 	},
 	{
 		"key": "business_administrator",
-		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "software.read", "books.read", "books.titles.manage", "books.manage", "calendars.read"]
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "software.read", "books.read", "books.titles.manage", "books.manage", "calendars.read", "teams.read", "teams.create", "teams.update", "teams.delete", "teams.members.add", "teams.members.remove", "skills.read", "projects.read", "employees.skills.create", "employees.skills.update", "employees.skills.delete", "employees.participations.create", "employees.participations.update", "employees.participations.delete", "skills.create", "skills.update", "skills.delete", "projects.create", "projects.update", "projects.delete", "search_filters.read", "search_filters.create", "search_filters.update", "search_filters.delete", "clients.read", "clients.create", "clients.update", "clients.delete"]
 	},
 	{
 		"key": "general_user",
-		"permissionCodes": ["employees.read", "masters.read", "assets.read", "assets.manage", "books.read", "calendars.read"]
+		"permissionCodes": ["employees.read", "masters.read", "assets.read", "assets.manage", "books.read", "calendars.read", "teams.read", "skills.read", "projects.read", "search_filters.read", "search_filters.create", "search_filters.update", "search_filters.delete", "clients.read"]
 	},
 	{
 		"key": "server_administrator",
-		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "software.read", "books.read", "calendars.read"]
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "masters.manage", "roles.read", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "software.read", "books.read", "calendars.read", "teams.read", "teams.create", "teams.update", "teams.delete", "teams.members.add", "teams.members.remove", "skills.read", "projects.read", "employees.skills.create", "employees.skills.update", "employees.skills.delete", "employees.participations.create", "employees.participations.update", "employees.participations.delete", "skills.create", "skills.update", "skills.delete", "projects.create", "projects.update", "projects.delete", "search_filters.read", "search_filters.create", "search_filters.update", "search_filters.delete", "clients.read"]
 	},
 	{
 		"key": "branch_administrator",
-		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "branches.manage", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "books.read", "books.manage", "calendars.read", "calendars.assign"]
+		"permissionCodes": ["employees.read", "employees.manage", "masters.read", "branches.manage", "assets.read", "assets.manage", "assets.credentials.read", "assets.credentials.write", "books.read", "books.manage", "calendars.read", "calendars.assign", "teams.read", "teams.create", "teams.update", "teams.delete", "teams.members.add", "teams.members.remove", "skills.read", "projects.read", "employees.skills.create", "employees.skills.update", "employees.skills.delete", "employees.participations.create", "employees.participations.update", "employees.participations.delete", "search_filters.read", "search_filters.create", "search_filters.update", "search_filters.delete", "clients.read"]
 	}
 ]

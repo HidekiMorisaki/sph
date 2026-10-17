@@ -94,7 +94,7 @@ installer_template() {
 		'prompt.selection') printf '%s' '{1}:' ;;
 		'samples.no') printf '%s' '追加しない（初期管理者と必須設定のみ）' ;;
 		'samples.prompt') printf '%s' 'サンプルデータ（架空の業務データと書籍紹介、任意）' ;;
-		'samples.yes') printf '%s' '追加する：従業員360人、拠点3件、IT資産128件、ソフトウェア製品101件、契約51件、メモ・履歴、書誌11件（openBDから取得、所蔵0冊）。利用条件: https://openbd.jp/terms/' ;;
+		'samples.yes') printf '%s' '追加する' ;;
 		'stage.build') printf '%s' 'サービスイメージの構築' ;;
 		'stage.check') printf '%s' 'ローカルでの起動確認' ;;
 		'stage.cleanup') printf '%s' '初期管理者情報の削除・サービスの再作成' ;;

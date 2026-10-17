@@ -18,7 +18,7 @@
 <style>
 	.detail-action-buttons{display:flex;align-items:center;gap:4px}
 	button{display:grid;place-items:center;width:34px;height:34px;padding:7px;border:0;border-radius:4px;background:transparent;color:var(--text-secondary);cursor:pointer}
-	button:hover:not(:disabled){background:var(--bg)}
+	button:hover:not(:disabled){background:var(--surface-hover,var(--bg))}
 	button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	button:disabled{opacity:.5;cursor:not-allowed}
 	.detail-header-delete{color:var(--danger)}

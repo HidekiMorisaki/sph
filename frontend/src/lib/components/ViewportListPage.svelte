@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, setContext, type Snippet } from 'svelte';
 
-	let { children }: { children: Snippet } = $props();
+	let { children, naturalMobileScroll = false }: { children: Snippet; naturalMobileScroll?: boolean } = $props();
 	let container: HTMLDivElement;
 	let availableHeight = $state<number>();
 	setContext('viewport-list-page', true);
@@ -44,10 +44,11 @@
 	});
 </script>
 
-<div bind:this={container} class="viewport-list-page" style:height={availableHeight === undefined ? undefined : `${availableHeight}px`}>
+<div bind:this={container} class="viewport-list-page" class:natural-mobile-scroll={naturalMobileScroll} style:height={availableHeight === undefined ? undefined : `${availableHeight}px`}>
 	{@render children()}
 </div>
 
 <style>
 	.viewport-list-page{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:auto}
+	@media(max-width:700px){.viewport-list-page.natural-mobile-scroll{height:auto!important;overflow:visible}}
 </style>

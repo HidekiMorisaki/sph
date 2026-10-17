@@ -36,6 +36,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 			branchId: true,
 			retiredAt: true,
 			notes: true,
+			teamAssignments: { where: { deletedAt: null, team: { deletedAt: null } }, select: { team: { select: { id: true, name: true } } }, orderBy: { teamId: 'asc' } },
 			group: { select: { name: true } },
 			departmentAssignments: {
 				where: { deletedAt: null, department: { deletedAt: null } },
@@ -76,6 +77,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 		hiredAt: field(date(employee.hiredAt)),
 		departments: field(employee.departmentAssignments.map((assignment) => assignment.departmentId).join('|'), employee.departmentAssignments.map((assignment) => assignment.department.name).join(', ')),
 		primaryDepartmentId: field(employee.departmentAssignments.find((assignment) => assignment.isPrimary)?.departmentId ?? null, employee.departmentAssignments.find((assignment) => assignment.isPrimary)?.department.name ?? null),
+		teams: field(employee.teamAssignments.map(item => item.team.id).join('|'), employee.teamAssignments.map(item => item.team.name).join(', ')),
 		groupId: field(employee.groupId, employee.group?.name ?? null),
 		positions: field(employee.positionAssignments.map((assignment) => assignment.positionId).join('|'), employee.positionAssignments.map((assignment) => assignment.position.name).join(', ')),
 		primaryPositionId: field(employee.positionAssignments.find((assignment) => assignment.isPrimary)?.positionId ?? null, employee.positionAssignments.find((assignment) => assignment.isPrimary)?.position.name ?? null),

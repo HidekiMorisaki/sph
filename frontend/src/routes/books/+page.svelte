@@ -1,4 +1,9 @@
 <script lang="ts">
+ import { initialSearch } from '$lib/search';
+ import SearchPanel from '$lib/components/SearchPanel.svelte';
+ import CsvExportButton from '$lib/components/CsvExportButton.svelte';
+ import { searchCsv, downloadCsv, csvFilename, type CsvColumn } from '$lib/csv-export';
+ let searchState=$state(initialSearch('books'));
 	import BookPurchaseFields from '$lib/components/BookPurchaseFields.svelte';
 	import BookPurchasePanel from '$lib/components/BookPurchasePanel.svelte';
 	import BookPurchaseBadge from '$lib/components/BookPurchaseBadge.svelte';
@@ -13,6 +18,7 @@
 	import MasterList from '$lib/components/MasterList.svelte';
 	import ViewportListPage from '$lib/components/ViewportListPage.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
+	import AddMenu from '$lib/components/AddMenu.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
@@ -36,8 +42,8 @@
 	type ApiError = { error?: { code?: string; message?: string; details?: Array<{ field?: string; reason: string }> } };
 
 	const messages = {
-		en: { title: 'Books', description: 'Manage purchased books and individual copies.', list: 'Book catalog', addTitle: 'Add book', addCopies: 'Add copies', name: 'Title', author: 'Author', publisher: 'Publisher', edition: 'Edition', isbn: 'ISBN', copies: 'Copies', storage: 'Storage', branch: 'Branch', status: 'Status', rental: 'Rental', rentable: 'Rentable', notRentable: 'Not rentable', bookInformation: 'Bibliographic information', available: 'Available', unavailable: 'Unavailable', purchasedOn: 'Purchase date', quantity: 'Quantity', sharedStorage: 'Storage for all copies', notes: 'Notes', code: 'Asset code (optional)', save: 'Save', cancel: 'Cancel', close: 'Close', noBooks: 'No books found.', loading: 'Loading books…', loadFailed: 'Unable to load books.', saveFailed: 'Unable to save books.', savedTitle: 'Book registered.', savedCopies: 'Copies registered.', selectBook: 'Select a book', selectStorage: 'Select storage', choose: 'Select…', row: 'Copy', detail: 'Book details', noCopies: 'No copies registered.', countHelp: 'Enter 1–100 copies. Change storage or code for individual copies below.', duplicate: 'An asset code already exists.', forbidden: 'You do not have permission for this branch.', retry: 'Retry', existing: 'Existing book' },
-		ja: { title: '書籍', description: '購入した書籍と現物を管理します。', list: '書籍一覧', addTitle: '書誌を登録', addCopies: '現物を追加', name: '書名', author: '著者', publisher: '出版社', edition: '版', isbn: 'ISBN', copies: '冊数', storage: '保管場所', branch: '拠点', status: '状態', rental: 'レンタル可否', rentable: '可', notRentable: '不可', bookInformation: '書誌情報', available: '利用可能', unavailable: '利用不可', purchasedOn: '購入日', quantity: '購入冊数', sharedStorage: '共通の保管場所', notes: '備考', code: '資産番号（任意）', save: '保存', cancel: 'キャンセル', close: '閉じる', noBooks: '書籍がありません。', loading: '書籍を読み込み中…', loadFailed: '書籍を読み込めませんでした。', saveFailed: '保存できませんでした。', savedTitle: '書誌を登録しました。', savedCopies: '現物を登録しました。', selectBook: '書籍を選択', selectStorage: '保管場所を選択', choose: '選択してください', row: '現物', detail: '書籍の詳細', noCopies: '現物はまだ登録されていません。', countHelp: '1～100冊を入力し、配置先や番号が異なる現物だけ下の行で変更できます。', duplicate: '資産番号が重複しています。', forbidden: 'この拠点への権限がありません。', retry: '再試行', existing: '登録済み書籍' }
+		en: { catalogCode: 'Catalog code', title: 'Books', description: 'Manage purchased books and individual copies.', list: 'Book catalog', addTitle: 'Add book', addCopies: 'Add copies', name: 'Title', author: 'Author', publisher: 'Publisher', edition: 'Edition', isbn: 'ISBN', copies: 'Copies', storage: 'Storage', branch: 'Branch', status: 'Status', rental: 'Rental', rentable: 'Rentable', notRentable: 'Not rentable', bookInformation: 'Bibliographic information', available: 'Available', unavailable: 'Unavailable', purchasedOn: 'Purchase date', quantity: 'Quantity', sharedStorage: 'Storage for all copies', notes: 'Notes', code: 'Asset code (optional)', save: 'Save', cancel: 'Cancel', close: 'Close', noBooks: 'No books found.', loading: 'Loading books…', loadFailed: 'Unable to load books.', saveFailed: 'Unable to save books.', savedTitle: 'Book registered.', savedCopies: 'Copies registered.', selectBook: 'Select a book', selectStorage: 'Select storage', choose: 'Select…', row: 'Copy', detail: 'Book details', noCopies: 'No copies registered.', countHelp: 'Enter 1–100 copies. Change storage or code for individual copies below.', duplicate: 'An asset code already exists.', forbidden: 'You do not have permission for this branch.', retry: 'Retry', existing: 'Existing book' },
+		ja: { catalogCode: '書誌コード', title: '書籍', description: '購入した書籍と現物を管理します。', list: '書籍一覧', addTitle: '書誌を登録', addCopies: '現物を追加', name: '書名', author: '著者', publisher: '出版社', edition: '版', isbn: 'ISBN', copies: '冊数', storage: '保管場所', branch: '拠点', status: '状態', rental: 'レンタル可否', rentable: '可', notRentable: '不可', bookInformation: '書誌情報', available: '利用可能', unavailable: '利用不可', purchasedOn: '購入日', quantity: '購入冊数', sharedStorage: '共通の保管場所', notes: '備考', code: '資産番号（任意）', save: '保存', cancel: 'キャンセル', close: '閉じる', noBooks: '書籍がありません。', loading: '書籍を読み込み中…', loadFailed: '書籍を読み込めませんでした。', saveFailed: '保存できませんでした。', savedTitle: '書誌を登録しました。', savedCopies: '現物を登録しました。', selectBook: '書籍を選択', selectStorage: '保管場所を選択', choose: '選択してください', row: '現物', detail: '書籍の詳細', noCopies: '現物はまだ登録されていません。', countHelp: '1～100冊を入力し、配置先や番号が異なる現物だけ下の行で変更できます。', duplicate: '資産番号が重複しています。', forbidden: 'この拠点への権限がありません。', retry: '再試行', existing: '登録済み書籍' }
 	};
 	let purchaseText = $derived(bookPurchaseMessages[$localization.displayLanguage]);
 	let purchaseRequested = $state(false), purchaseOnly = $state(false), purchaseReady = $state(false);
@@ -45,6 +51,7 @@
 	let purchaseOverview = $state(false);
 	let purchaseOverviewProcessing = $state(false);
 	let purchaseOverviewTrigger = $state<HTMLElement | null>(null);
+	let addActionTrigger: HTMLButtonElement | null = null;
 	let returnToPurchaseOverview = $state(false);
 	let purchaseTitleId = $state('');
 	let receiptOrderId = $state('');
@@ -76,6 +83,33 @@
 	let actionText = $derived($localization.displayLanguage === 'ja' ? { editTitle: '書誌を編集', editCopy: '現物を編集', deleteTitle: '書誌を削除', deleteCopy: '現物を削除', deleteConfirm: 'この削除は通常の一覧から対象を除外します。続けますか？' } : { editTitle: 'Edit book', editCopy: 'Edit copy', deleteTitle: 'Delete book', deleteCopy: 'Delete copy', deleteConfirm: 'This removes the item from normal lists. Continue?' });
 	let user = $state<SessionUser | null>(null);
 	let titleList = $state<MasterList>();
+	let exporting = $state(false);
+	let exportError = $state(false);
+	let exportErrorText = $derived($localization.displayLanguage === 'ja' ? '書籍を出力できませんでした。' : 'Unable to export books.');
+	async function exportCsv() {
+		if (exporting || !searchState.success || searchState.loading || searchState.error) return;
+		exporting = true; exportError = false;
+		const columns: CsvColumn<Title>[] = [
+			{ header: t.catalogCode, value: row => row.catalogCode },
+			{ header: t.name, value: row => row.name },
+			{ header: t.author, value: row => row.author },
+			{ header: t.publisher, value: row => row.publisher },
+			{ header: t.edition, value: row => row.edition },
+			{ header: t.isbn, value: row => row.isbn },
+			{ header: t.notes, value: row => row.notes },
+			{ header: t.copies, value: row => row.copyCount },
+			{ header: t.rental, value: row => row.rentable ? t.rentable : t.notRentable }
+		];
+		try {
+			const filename = csvFilename('books');
+			// Capture the translated values too, so switching language while fetching
+			// cannot mix languages within one file.
+			const rentable = t.rentable, notRentable = t.notRentable;
+			columns[8].value = row => row.rentable ? rentable : notRentable;
+			const content = await searchCsv<Title>({ endpoint: '/v1/book-searches', searchState, columns });
+			downloadCsv(content, filename);
+		} catch { exportError = true; } finally { exporting = false; }
+	}
 	let titles = $state<Title[]>([]);
 	let storage = $state<Storage[]>([]);
 	let loaded = $state(false);
@@ -350,6 +384,10 @@
 		returnToPurchaseOverview = false;
 		if (reopenPurchaseOverview) purchaseOverview = true;
 		detailNotice = null; error = ''; fieldErrors = {}; activeDateField = null; confirmingDiscard = false;
+		if (!modal && !purchaseOverview && addActionTrigger) {
+			const trigger = addActionTrigger; addActionTrigger = null;
+			void tick().then(() => trigger.focus({ preventScroll: true }));
+		}
 	}
 	function requestClose(escape = false) {
 		if (saving) return;
@@ -575,13 +613,17 @@
 {#snippet coverCell(item: Title)}<BookCover titleId={item.id} refresh={coverRefresh} />{/snippet}
 
 {#snippet pageActions()}
-	<ModalActionButton label={purchaseText.heading} variant="secondary" onclick={(event) => openPurchaseOverview('', event.currentTarget as HTMLButtonElement)} />
-	{#if user?.capabilities.canManageBookTitles}<AddButton label={t.addTitle} onclick={() => openTitle()} />{/if}
-	{#if user?.capabilities.canManageBooks}<AddButton label={t.addCopies} onclick={() => openCopies()} />{/if}
+	<AddMenu label={$localization.displayLanguage === 'ja' ? '書籍の登録・購入依頼' : 'Add books or request purchase'} items={[
+		...(user?.capabilities.canManageBookTitles ? [{ label: t.addTitle, action: (trigger: HTMLButtonElement) => { addActionTrigger = trigger; openTitle(); } }] : []),
+		...(user?.capabilities.canManageBooks ? [{ label: t.addCopies, action: (trigger: HTMLButtonElement) => { addActionTrigger = trigger; openCopies(); } }] : []),
+		{ label: purchaseText.heading, action: (trigger) => openPurchaseOverview('', trigger) }
+	]} />
 {/snippet}
 
+{#snippet listActions()}<CsvExportButton {exporting} disabled={!searchState.success || searchState.loading || searchState.error} onExport={() => void exportCsv()} />{@render pageActions()}{/snippet}
+
 {#snippet detailActions()}
-	{#if user?.capabilities.canManageBooks && selectedTitle}<button type="button" class="app-primary-action" onclick={() => openCopies(selectedTitle!)}>{t.addCopies}</button>{/if}
+	{#if user?.capabilities.canManageBooks && selectedTitle}<AddButton label={t.addCopies} onclick={() => openCopies(selectedTitle!)} />{/if}
 {/snippet}
 
 {#snippet detailHeaderActions()}
@@ -646,7 +688,7 @@
 			{#if !purchaseOverviewProcessing && user?.capabilities.canRequestBookPurchases}
 				<FormSection title={purchaseText.submit} framed>
 					<div class="wide"><SearchSelect label={t.selectBook} field="book-purchase-title" value={purchaseTitleId} options={titleOptions} onSelect={(value) => purchaseTitleId = value} /></div>
-					{#if user.capabilities.canManageBookTitles}<div class="wide"><ModalActionButton label={$localization.displayLanguage === 'ja' ? '未登録の書籍を登録して購入依頼' : 'Register a new book and request purchase'} variant="secondary" onclick={startNewPurchase} /></div>{/if}
+					{#if user.capabilities.canManageBookTitles}<div class="wide"><AddButton label={$localization.displayLanguage === 'ja' ? '未登録の書籍を登録して購入依頼' : 'Register a new book and request purchase'} onclick={startNewPurchase} /></div>{/if}
 				</FormSection>
 			{/if}
 			{#key `${purchaseTitleId}:${purchasePanelRevision}`}
@@ -655,11 +697,12 @@
 		</DetailModal>
 		</div>
 	{/if}
-	<ViewportListPage>
-	<MasterPageHeader title={t.title} description={t.description} actions={pageActions} />
+	<ViewportListPage naturalMobileScroll>
+	<MasterPageHeader title={t.title} />
+	{#if exportError}<StatusNotice message={exportErrorText} tone="error" onDismiss={() => exportError = false} />{/if}
 	{#if notice && !modal}<StatusNotice message={notice} tone={noticeTone} onDismiss={() => notice = ''} />{/if}
 	{#if loadError}<div class="book-load-error"><p role="alert">{t.loadFailed}</p><button type="button" onclick={() => void load()}>{t.retry}</button></div>{/if}
-	{#if loaded}<MasterList bind:this={titleList} endpoint="/v1/book-titles" searchParam="q" title={t.list} listHeading={t.list} headerActions={sourceCredit} toolbarFilters={purchaseFilter} queryParams={purchaseOnly ? { purchaseRequests: true } : {}} initialSortBy="name" pageSizeStorageKey="books-page-size" minTableWidth={760} canDetail actionLabel={(item) => (item as Title).name} loadingLabel={t.loading} emptyLabel={t.noBooks} columns={[
+	{#if loaded}<SearchPanel target="books" userId={user?.id ?? null} bind:searchState draftOptions={purchaseOnly?{purchaseRequests:true}:{}} onRestoreOptions={options=>purchaseOnly=options.purchaseRequests===true} filters={purchaseFilter}/><MasterList bind:searchState bind:this={titleList} endpoint="/v1/book-searches" title={t.list} listHeading={t.list} headerActions={listActions} footerLeading={sourceCredit} initialSortBy="name" pageSizeStorageKey="books-page-size" minTableWidth={760} canDetail actionLabel={(item) => (item as Title).name} loadingLabel={t.loading} emptyLabel={t.noBooks} columns={[
 		{ key: 'cover', label: coverText.cover, width: '76px', cell: coverCell, sortable: false },
 		{ key: 'name', label: t.name, width: 'calc(70% - 296px)', cell: titleCell, value: (item) => (item as Title).name, sortable: true },
 		{ key: 'author', label: t.author, width: 30, value: (item) => (item as Title).author ?? '' },
@@ -690,7 +733,7 @@
 									{#if editingTitleId === null}<small class="field-hint">{lookupText.help}</small>
 									{#if lookupStatus === 'empty'}<p role="status">{lookupText.empty}</p>{/if}
 									{#if lookupStatus === 'error'}<p role="alert">{lookupErrorCode === 'BOOK_LOOKUP_TIMEOUT' ? lookupText.timeout : lookupErrorCode === 'BOOK_LOOKUP_RATE_LIMITED' ? lookupText.limited : lookupText.failed}</p>{/if}
-										{#if lookupExisting}<div class="book-lookup-existing"><strong>{lookupText.existing} {lookupExisting.name}</strong><ModalActionButton label={purchaseText.existing} variant="secondary" onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) void showDetail(item, null); }} />{#if user?.capabilities.canManageBooks}<ModalActionButton label={lookupText.addCopy} variant="secondary" onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) openCopies(item); }} />{/if}</div>{/if}
+										{#if lookupExisting}<div class="book-lookup-existing"><strong>{lookupText.existing} {lookupExisting.name}</strong><ModalActionButton label={purchaseText.existing} variant="secondary" onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) void showDetail(item, null); }} />{#if user?.capabilities.canManageBooks}<AddButton label={lookupText.addCopy} onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) openCopies(item); }} />{/if}</div>{/if}
 										{#if lookupCandidates.length}<div class="book-lookup-results" aria-label={lookupText.candidates}><h3>{lookupText.candidates}</h3>{#each lookupCandidates as candidate (candidate.isbn)}<div class="book-lookup-result"><BookCover titleId={null} image={candidate.coverImage} /><div class="book-lookup-result-details"><strong>{candidate.title}</strong><span>{candidate.author ?? ''} · {candidate.publisher ?? ''} · {candidate.isbn}</span><ModalActionButton label={lookupText.apply} variant="secondary" onclick={() => applyBookLookup(candidate)} /></div></div>{/each}</div>{/if}
 										{#if lookupSource}<ModalActionButton label={lookupText.manual} variant="secondary" onclick={discardBookLookup} /><p class="book-source">{lookupText.source} <a href={lookupSource.sourceUrl} target="_blank" rel="noopener noreferrer">{lookupSource.sourceUrl}</a></p>{/if}
 									{/if}
@@ -767,7 +810,7 @@
 </AssetManagementShell>
 
 <style>
-	.book-purchase-check,.book-purchase-filter{display:flex;align-items:center;gap:8px}.book-purchase-check input,.book-purchase-filter input{width:16px;height:16px;flex:none}
+	.book-purchase-check,.book-purchase-filter{display:flex;align-items:center;gap:8px}.book-purchase-filter{flex:0 1 auto;align-self:flex-end;min-height:32px;max-width:100%;margin:0;padding:0;color:var(--text-secondary);font-size:var(--font-size-support);cursor:pointer}.book-purchase-check input,.book-purchase-filter input{width:16px;height:16px;flex:none}
 	.book-load-error{padding:24px;border:1px solid var(--border);border-radius:12px;color:var(--text)}
 	.book-dialog{width:min(100%,900px)}
 	.book-dialog.app-modal--compact .book-dialog-body{flex:initial}
@@ -787,9 +830,9 @@
 	.book-lookup{display:grid;gap:8px;min-width:0}.book-lookup-results{display:grid;gap:8px;max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:12px}.book-lookup-results h3{margin:0;font-size:var(--font-size-section)}.book-lookup-result,.book-lookup-existing{display:grid;gap:5px;border-top:1px solid var(--border);padding-top:8px}.book-lookup-result span,.book-source{overflow-wrap:anywhere;font-size:var(--font-size-support);color:var(--muted)}.book-lookup p{margin:0}
 	.book-isbn-row{grid-column:1/-1;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 12px}.book-isbn-row>.field-error,.book-isbn-row>.field-hint,.book-isbn-row>p,.book-isbn-row>.book-lookup-existing,.book-isbn-row>.book-lookup-results,.book-isbn-row>.book-source{grid-column:1/-1}.book-isbn-edit label{grid-column:1/-1}.book-title-notes{white-space:pre-wrap;overflow-wrap:anywhere}
 	.book-lookup-result{grid-template-columns:44px minmax(0,1fr);align-items:start;gap:12px}.book-lookup-result-details{display:grid;min-width:0;gap:5px}.book-lookup-result-details strong{overflow-wrap:anywhere}
-	.book-source-credit{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 4px;margin:0;text-align:right;color:var(--muted);font-size:var(--font-size-support)}.book-source-credit a,.book-source a,.book-detail-source a{color:var(--link-color,#337ab7)}
+	.book-source-credit{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:0 4px;margin:0;text-align:left;color:var(--muted);font-size:var(--font-size-support)}.book-source-credit a,.book-source a,.book-detail-source a{color:var(--link-color,#337ab7)}
 	.book-edit-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}.book-detail button.danger{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}.book-detail button.danger{border-color:#b91c1c;color:#b91c1c}
-	.book-cover-picker{display:grid;gap:8px;min-width:0}.book-cover-picker input[hidden]{display:none}.book-cover-label{font-size:var(--font-size-support);font-weight:500}.book-cover-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:160px;padding:24px;border:2px dashed var(--border);border-radius:6px;background:var(--surface)!important;color:var(--text-secondary)!important;font:inherit;text-align:center;overflow-wrap:anywhere;cursor:pointer}.book-cover-dropzone:hover:not(:disabled),.book-cover-dropzone.dragging{border-color:var(--action-primary);background:var(--surface-secondary)!important}.book-cover-dropzone:focus-visible{outline:2px solid var(--action-primary);outline-offset:3px}.book-cover-dropzone:disabled{opacity:.65;cursor:not-allowed}.book-cover-filename{max-width:100%;color:var(--text)}
+	.book-cover-picker{display:grid;gap:8px;min-width:0}.book-cover-picker input[hidden]{display:none}.book-cover-label{font-size:var(--font-size-support);font-weight:500}.book-cover-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:160px;padding:24px;border:2px dashed var(--border);border-radius:6px;background:var(--surface)!important;color:var(--text-secondary)!important;font:inherit;text-align:center;overflow-wrap:anywhere;cursor:pointer}.book-cover-dropzone:hover:not(:disabled),.book-cover-dropzone.dragging{border-color:var(--action-primary);background:var(--surface-secondary)!important}.book-cover-dropzone:hover:not(:disabled){border-color:var(--action-primary);background:var(--surface-hover,var(--surface-secondary))!important}.book-cover-dropzone:focus-visible{outline:2px solid var(--action-primary);outline-offset:3px}.book-cover-dropzone:disabled{opacity:.65;cursor:not-allowed}.book-cover-filename{max-width:100%;color:var(--text)}
 	.book-detail button,.book-reserve button{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
 	.book-reserve{display:flex;align-items:end;gap:8px;margin:0 0 14px}.book-reserve :global(.form-select-field){min-width:180px;max-width:280px;flex:1}
 	@media(max-width:700px){.book-detail-overview{grid-template-columns:1fr;gap:14px}.book-detail-cover{justify-content:flex-start}.book-reservation-row{align-items:flex-start;flex-direction:column}}

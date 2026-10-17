@@ -214,7 +214,7 @@
 	onMount(() => { void initialize(); });
 </script>
 
-{#snippet headerActions()}{#if canManage}<AddButton bind:element={addButton} label={text.addButton} ariaLabel={text.cpuAdd} onclick={() => openModal('add')} />{/if}{/snippet}
+{#snippet headerActions()}{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={text.cpuAdd} onclick={() => openModal('add')} />{/if}{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />
 	<div class="cpu-page">

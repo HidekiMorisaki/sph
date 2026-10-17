@@ -1,6 +1,19 @@
 import type { LocalizationSettings } from '$lib/localization';
 
 export type Capabilities = {
+ canReadSkills: boolean;
+ canReadProjects: boolean;
+ canReadClients: boolean;
+ workforceOperations: string[];
+ canReadTeams: boolean;
+ canCreateTeams: boolean;
+ canUpdateTeams: boolean;
+ canDeleteTeams: boolean;
+ canAddTeamMembers: boolean;
+ canRemoveTeamMembers: boolean;
+ canManageTeamMembersGlobally: boolean;
+ canAddTeamMembersGlobally: boolean;
+ canRemoveTeamMembersGlobally: boolean;
 	canManageSystemSettings: boolean;
 	canManageAdministration: boolean;
 	canManageEmployees: boolean;

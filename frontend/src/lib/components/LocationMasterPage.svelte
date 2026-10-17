@@ -145,7 +145,7 @@
 	});
 </script>
 
-{#snippet headerActions()}{#if canManage && (tab!=='branches'||canCreateBranches)}<AddButton bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
+{#snippet headerActions()}{#if canManage && (tab!=='branches'||canCreateBranches)}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
 
 {#snippet nameField()}
 	<label><span>{text.name} <span class="required">*</span></span><input name="name" bind:value={form.name} maxlength="128" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name?'location-name-error':undefined} oninput={()=>clearError('name')}/>{#if errors.name}<small id="location-name-error" class="field-error">{m(errors.name)}</small>{/if}</label>

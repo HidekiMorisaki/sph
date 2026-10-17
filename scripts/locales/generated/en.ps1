@@ -93,7 +93,7 @@
 	'prompt.selection' = '{1}:'
 	'samples.no' = 'Do not add samples (initial administrator and required settings only)'
 	'samples.prompt' = 'Optional samples (fictional business data and book introductions)'
-	'samples.yes' = 'Add localized samples: 360 employees, 3 branches, 128 IT assets, 101 software products, 51 contracts, notes and history, 11 book titles (retrieved from openBD; no physical copies). Terms: https://openbd.jp/terms/'
+	'samples.yes' = 'Add'
 	'stage.build' = 'Building service images'
 	'stage.check' = 'Checking local application responses'
 	'stage.cleanup' = 'Removing initial setup credentials and refreshing services'

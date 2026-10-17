@@ -253,7 +253,8 @@
 			'employees.read': [], 'roles.read': [], 'masters.read': [], 'assets.read': [], 'software.read': [], 'calendars.read': []
 		};
 		for (const permission of permissions) {
-			if (permission.code.startsWith('employees.') && permission.code !== 'employees.read') prerequisites[permission.code] = ['employees.read'];
+			if (permission.code.startsWith('teams.') && permission.code !== 'teams.read') prerequisites[permission.code] = permission.code.startsWith('teams.members.') ? ['teams.read', 'employees.read'] : ['teams.read'];
+			else if (permission.code.startsWith('employees.') && permission.code !== 'employees.read') prerequisites[permission.code] = ['employees.read'];
 			else if (scopeType === 'own_branch' && /^(rooms|storage|financial)\./.test(permission.code)) prerequisites[permission.code] = ['branches.manage', 'masters.read'];
 			else if (/^(masters|branches|rooms|storage|financial)\./.test(permission.code) && permission.code !== 'masters.read') prerequisites[permission.code] = ['masters.read'];
 			else if (permission.code.startsWith('assets.') && permission.code !== 'assets.read') prerequisites[permission.code] = ['assets.read'];
@@ -271,6 +272,7 @@
 					else selectedCodes = selectedCodes.filter((item) => item !== dependent);
 				}
 			}
+			if (selectedCodes.includes('teams.read')) nextScopes['teams.read'] = 'global';
 			scopeByCode = nextScopes;
 		}
 		permissionError = '';
@@ -363,7 +365,7 @@
 
 <style>
 	.permission-reset-button{height:32px;min-height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-support);font-weight:500;line-height:1;white-space:nowrap}
-	.permission-reset-button:hover:not(:disabled){background:var(--surface-secondary)!important;color:var(--text)!important}
+	.permission-reset-button:hover:not(:disabled){background:var(--surface-hover,var(--surface-secondary))!important;color:var(--text)!important}
 	.permission-reset-button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.permission-reset-button:disabled{cursor:not-allowed;opacity:.6}
 	.role-dialog,:global(dialog[aria-labelledby="role-detail-title"]){width:min(100%,650px)}.role-form-body{grid-template-columns:1fr}.permission-section{display:grid;gap:12px}.permission-section fieldset{border:1px solid var(--border-light);border-radius:5px;padding:10px}.permission-section legend{font-weight:600;padding:0 4px}

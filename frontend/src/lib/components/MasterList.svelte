@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { SearchState } from '$lib/search';
 	import PaginationIcon from '$lib/components/PaginationIcon.svelte';
 	import '$lib/styles/table-scroll.css';
 	import { localization } from '$lib/localization';
@@ -19,8 +20,8 @@
 	type Column = { key: string; label: string; value?: (item: any) => string | number | null | undefined; cell?: Snippet<[any]>; width?: number | string; align?: 'left' | 'center' | 'right'; headerNoWrap?: boolean; sortable?: boolean; searchKeys?: string[] };
 	type TreeParent = { id: number; label: string; order?: number; ancestor?: { id: number; label: string; order?: number } };
 	type TreeGroup = { id: number; label: string; order?: number; children: Row[]; groups: TreeGroup[] };
-	let { endpoint, columns, title, listHeading, description, initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, searchParam = 'search', queryParams = {}, edgePagination = true, unpaged = false, hideColumnHeaders = false, showNameIcon = false, treeParent, canManage = false, canDetail, actionLabel, usageLabel, headerActions, toolbarFilters, loadingLabel, emptyLabel, reorderEndpoint, reorderHint, reorderSavingLabel, onReorderError, onReordered, onDetail }: {
-		endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; searchParam?: string; queryParams?: Record<string, string | number | boolean>; edgePagination?: boolean; unpaged?: boolean; hideColumnHeaders?: boolean; showNameIcon?: boolean; treeParent?: (item: Row) => TreeParent | null; canManage?: boolean; canDetail?: Permission; actionLabel?: (item: Row) => string; usageLabel?: (count: number) => string; headerActions?: Snippet; toolbarFilters?: Snippet; loadingLabel?: string; emptyLabel?: string; reorderEndpoint?: string; reorderHint?: string; reorderSavingLabel?: string; onReorderError?: (reason: 'conflict' | 'forbidden' | 'failed') => void; onReordered?: (orderedIds: number[]) => void;
+	let { searchState = $bindable<SearchState | undefined>(), endpoint, columns, title, listHeading, description, initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, searchParam = 'search', queryParams = {}, edgePagination = true, unpaged = false, hideColumnHeaders = false, showNameIcon = false, treeParent, canManage = false, canDetail, actionLabel, usageLabel, headerActions, footerLeading, toolbarFilters, loadingLabel, emptyLabel, reorderEndpoint, reorderHint, reorderSavingLabel, onReorderError, onReordered, onDetail }: {
+		searchState?: SearchState; endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; searchParam?: string; queryParams?: Record<string, string | number | boolean>; edgePagination?: boolean; unpaged?: boolean; hideColumnHeaders?: boolean; showNameIcon?: boolean; treeParent?: (item: Row) => TreeParent | null; canManage?: boolean; canDetail?: Permission; actionLabel?: (item: Row) => string; usageLabel?: (count: number) => string; headerActions?: Snippet; footerLeading?: Snippet; toolbarFilters?: Snippet; loadingLabel?: string; emptyLabel?: string; reorderEndpoint?: string; reorderHint?: string; reorderSavingLabel?: string; onReorderError?: (reason: 'conflict' | 'forbidden' | 'failed') => void; onReordered?: (orderedIds: number[]) => void;
 		onDetail?: (item: Row, trigger: HTMLElement | null) => void;
 	} = $props();
 	let visibleSearchKeys = $derived([...new Set(columns.flatMap((column) => column.searchKeys ?? []))].join(','));
@@ -69,7 +70,8 @@
 	let controller: AbortController | null = null;
 	let queryParamsReady = false;
 	let queryParamsKey = $derived(JSON.stringify(queryParams));
-	const sizes = [10, 20, 30, 40, 50];
+ let externalSearchVersion=$derived(searchState?.version);
+	let sizes=$derived(searchState?[10,20,30,40,50,100,250,500]:[10,20,30,40,50]);
 	let pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
 	let first = $derived(total ? (page - 1) * pageSize + 1 : 0);
 	let last = $derived(Math.min(page * pageSize, total));
@@ -170,6 +172,7 @@
 		controller?.abort();
 		const current = new AbortController(); controller = current;
 		loading = !unpaged || !items.length || loadedEndpoint !== endpoint; error = ''; errorDismissed = false;
+		if(searchState) searchState = {...searchState,loading:true,success:false,error:false};
 		try {
 			const collected: Row[] = [];
 			let nextTotal = 0;
@@ -177,8 +180,8 @@
 				const params = new URLSearchParams({ offset: String(unpaged ? collected.length : (page - 1) * pageSize), limit: String(unpaged ? 500 : pageSize), sortBy: activeSortBy, sortOrder });
 				if (!unpaged && appliedSearch) params.set(searchParam, appliedSearch);
 				if (!unpaged && appliedSearch && visibleSearchKeys) { params.set('visibleSearch', visibleSearchKeys); params.set('searchLocale', $localization.displayLanguage); }
-				for (const [key, value] of Object.entries(queryParams)) params.set(key, String(value));
-				const response = await fetch(`${endpoint}?${params}`, { signal: current.signal });
+				if(!searchState) for (const [key, value] of Object.entries(queryParams)) params.set(key, String(value));
+				const response = searchState ? await fetch(endpoint,{method:'POST',signal:current.signal,headers:{'content-type':'application/json'},body:JSON.stringify({definition:searchState.definition,offset:(page-1)*pageSize,...(visibleSearchKeys?{visibleSearch:visibleSearchKeys,searchLocale:$localization.displayLanguage}:{})})}) : await fetch(`${endpoint}?${params}`, { signal: current.signal });
 				if (!response.ok) throw new Error(response.status===401?'signInRequired':'loadFailed');
 				const payload = await response.json() as { data: Row[]; meta: { total: number } };
 				if (current.signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -187,22 +190,25 @@
 				nextTotal = payload.meta.total;
 			} while (unpaged && collected.length < nextTotal);
 			items = collected; total = nextTotal; loadedEndpoint = endpoint;
+			if(searchState) searchState={...searchState,total:nextTotal,success:true,error:false,visibleSearch:visibleSearchKeys,searchLocale:$localization.displayLanguage};
 			if (!unpaged && page > Math.max(1, Math.ceil(total / pageSize))) { page = Math.max(1, Math.ceil(total / pageSize)); void refresh(); }
 		} catch (cause) {
 			if (controller === current && !(cause instanceof DOMException && cause.name === 'AbortError')) error = cause instanceof Error && cause.message === 'signInRequired' ? 'signInRequired' : 'loadFailed';
-		} finally { if (controller === current) loading = false; }
+		} finally { if (controller === current) {loading = false;if(searchState)searchState={...searchState,loading:false,error:Boolean(error),success:!error&&searchState.success};} }
 	}
 	function searchChanged(value: string) {
 		search = value;
 		clearTimeout(timer);
 		timer = window.setTimeout(() => { appliedSearch = search.trim(); page = 1; void refresh(); }, 350);
 	}
-	function changeSort(key: string) { const nextOrder = activeSortBy === key && sortOrder === 'asc' ? 'desc' : 'asc'; sortOrder = nextOrder; sortBy = key; if (persistedSortKey) localStorage.setItem(persistedSortKey, JSON.stringify({ field: key, order: nextOrder })); page = 1; void refresh(); }
+	function changeSort(key: string) { if(searchState){const order=activeSortBy===key&&sortOrder==='asc'?'desc':'asc';sortBy=key;sortOrder=order;page=1;searchState={...searchState,definition:{...searchState.definition,sortBy:key,sortOrder:order}};void refresh();return;} const nextOrder = activeSortBy === key && sortOrder === 'asc' ? 'desc' : 'asc'; sortOrder = nextOrder; sortBy = key; if (persistedSortKey) localStorage.setItem(persistedSortKey, JSON.stringify({ field: key, order: nextOrder })); page = 1; void refresh(); }
 	function changePage(next: number) { if (next < 1 || next > pageCount || next === page) return; page = next; void refresh(); }
-	function changeSize(next: number) { pageSize = next; page = 1; localStorage.setItem(storageKey, String(next)); void refresh(); }
-	$effect(() => { endpoint; initialSortBy; storageKey; persistedSortKey; searchParam; unpaged; if (typeof window !== 'undefined') { page = 1; search = ''; appliedSearch = ''; let nextSortBy = initialSortBy; let nextSortOrder: 'asc' | 'desc' = 'asc'; if (persistedSortKey) { try { const storedSort = JSON.parse(localStorage.getItem(persistedSortKey) ?? 'null') as { field?: unknown; order?: unknown } | null; const allowed = untrack(() => columns.some((column) => column.key === storedSort?.field && column.sortable !== false)); if (storedSort && typeof storedSort.field === 'string' && allowed && (storedSort.order === 'asc' || storedSort.order === 'desc')) { nextSortBy = storedSort.field; nextSortOrder = storedSort.order; } else if (localStorage.getItem(persistedSortKey) !== null) localStorage.removeItem(persistedSortKey); } catch { localStorage.removeItem(persistedSortKey); } } sortBy = nextSortBy; sortOrder = nextSortOrder; if (!unpaged) { const stored = Number(localStorage.getItem(storageKey)); pageSize = sizes.includes(stored) ? stored : 10; } untrack(() => void refresh()); } });
-	$effect(() => { queryParamsKey; if (typeof window !== 'undefined') { if (queryParamsReady) { page = 1; untrack(() => void refresh()); } else queryParamsReady = true; } });
-	$effect(() => { visibleSearchSignature; if (typeof window !== 'undefined') { if (searchSignatureReady && untrack(() => appliedSearch)) { page = 1; untrack(() => void refresh()); } else searchSignatureReady = true; } });
+	function changeSize(next: number) { if(searchState)searchState={...searchState,definition:{...searchState.definition,limit:next}};pageSize = next; page = 1; localStorage.setItem(storageKey, String(next)); void refresh(); }
+	$effect(() => { if(untrack(()=>Boolean(searchState)))return; endpoint; initialSortBy; storageKey; persistedSortKey; searchParam; unpaged; if (typeof window !== 'undefined') { page = 1; search = ''; appliedSearch = ''; let nextSortBy = initialSortBy; let nextSortOrder: 'asc' | 'desc' = 'asc'; if (persistedSortKey) { try { const storedSort = JSON.parse(localStorage.getItem(persistedSortKey) ?? 'null') as { field?: unknown; order?: unknown } | null; const allowed = untrack(() => columns.some((column) => column.key === storedSort?.field && column.sortable !== false)); if (storedSort && typeof storedSort.field === 'string' && allowed && (storedSort.order === 'asc' || storedSort.order === 'desc')) { nextSortBy = storedSort.field; nextSortOrder = storedSort.order; } else if (localStorage.getItem(persistedSortKey) !== null) localStorage.removeItem(persistedSortKey); } catch { localStorage.removeItem(persistedSortKey); } } sortBy = nextSortBy; sortOrder = nextSortOrder; if (!unpaged) { const stored = Number(localStorage.getItem(storageKey)); pageSize = sizes.includes(stored) ? stored : 10; } untrack(() => void refresh()); } });
+	$effect(() => { if(untrack(()=>Boolean(searchState)))return; queryParamsKey; if (typeof window !== 'undefined') { if (queryParamsReady) { page = 1; untrack(() => void refresh()); } else queryParamsReady = true; } });
+	$effect(() => { visibleSearchSignature; if (untrack(()=>Boolean(searchState))) { if(searchSignatureReady)untrack(()=>void refresh());else searchSignatureReady=true;return; } if (typeof window !== 'undefined') { if (searchSignatureReady && untrack(() => appliedSearch)) { page = 1; untrack(() => void refresh()); } else searchSignatureReady = true; } });
+	$effect(()=>{const version=externalSearchVersion;if(version===undefined||typeof window==='undefined')return;untrack(()=>{if(!searchState)return;sortBy=searchState.definition.sortBy;sortOrder=searchState.definition.sortOrder;pageSize=searchState.definition.limit;page=1;void refresh();});});
+
 	onMount(() => () => { clearTimeout(timer); controller?.abort(); });
 </script>
 
@@ -221,13 +227,13 @@
 			</tr>
 {/snippet}
 
-<div class="master-list" class:viewport-fit={viewportFit} style:--list-footer-height={`${footerHeight}px`}>
+<div class="master-list" class:viewport-fit={viewportFit} class:external-search={Boolean(searchState)} style:--list-footer-height={`${footerHeight}px`}>
 <div class="master-controls">
-<header class="master-header"><div><h2>{listHeading ?? formatLocaleTemplate(commonText.allItems, title.toLowerCase())}</h2>{#if description !== ''}<p>{description ?? commonText.description}</p>{/if}</div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>
+{#if listHeading !== '' || description !== '' || headerActions}<header class="master-header"><div>{#if listHeading !== ''}<h2>{listHeading ?? formatLocaleTemplate(commonText.allItems, title.toLowerCase())}</h2>{/if}{#if description !== ''}<p>{description ?? commonText.description}</p>{/if}</div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>{/if}
 {#if !unpaged}
 <div class="master-toolbar">
 	<div class="master-toolbar-main">
-	<div class="master-toolbar-filters"><SearchInput label={formatLocaleTemplate(commonText.searchLabel, title)} value={search} onValueChange={searchChanged} />{#if toolbarFilters}{@render toolbarFilters()}{/if}</div>
+	{#if !searchState}<div class="master-toolbar-filters"><SearchInput label={formatLocaleTemplate(commonText.searchLabel, title)} value={search} onValueChange={searchChanged} />{#if toolbarFilters}{@render toolbarFilters()}{/if}</div>{/if}
 	<div class="page-size">{commonText.showPrefix} <PageSizePicker value={pageSize} options={sizes} label={commonText.entriesPerPage} onChange={changeSize} /> {commonText.showSuffix}</div>
 	</div>
 	<div class="master-toolbar-pagination"><p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p><nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></div>
@@ -259,19 +265,23 @@
 		</tbody>
 	</table>
 </div>
-{#if !unpaged}<footer bind:clientHeight={footerHeight} class="master-footer"><p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p><nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></footer>{/if}
+{#if !unpaged}<footer bind:clientHeight={footerHeight} class="master-footer" class:has-leading={Boolean(footerLeading)}>{#if footerLeading}<div class="master-footer-leading">{@render footerLeading()}</div>{:else}<p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p>{/if}<nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></footer>{/if}
 </div>
 {#if reorderSaving}<span class="sr-only" role="status">{reorderSavingLabel}</span>{/if}
 
 <style>
 	.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 	.master-list{display:flex;min-width:0;max-height:calc(100dvh - 200px);flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
-	.master-header{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-light)}
+	.master-header{display:flex;flex:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-light)}
 	.master-header h2{margin:0;color:var(--text);font-size:var(--font-size-section)}
 	.master-header p{margin:1px 0 0;color:var(--muted);font-size:var(--font-size-support)}
-	.master-header-actions{display:flex;align-items:center;gap:8px}
+	.master-header-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;max-width:100%;gap:8px}
+	.master-list .master-header:has(:global(.app-add-icon)){flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+	.master-header:has(:global(.app-add-icon))>div:first-child{min-width:0;flex:1 1 180px}
+	.master-header:has(:global(.app-add-icon)) .master-header-actions{width:auto;flex:none;margin-left:auto}
 	.master-toolbar{display:flex;flex:none;flex-direction:column;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-light)}
 	.master-toolbar-main,.master-toolbar-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px}
+	.master-toolbar-main>.page-size{margin-left:auto}
 	.master-toolbar-filters{display:flex;min-width:0;align-items:center;gap:12px}
 	.master-toolbar-pagination{padding-top:12px;border-top:1px solid var(--border-light)}
 	.master-toolbar-pagination p{flex:none;margin:0;color:var(--muted);font-size:var(--font-size-support)}
@@ -284,7 +294,7 @@
 	.empty{height:96px;color:var(--muted);text-align:center}
 	@media(max-width:700px){.empty{text-align:left;padding-left:16px}}
 	.column-label{text-transform:uppercase}
-	tbody tr:hover{background:var(--surface-secondary)}
+	tbody tr:hover{background:var(--surface-hover,var(--surface-secondary))}
 	tbody tr.detail-row{cursor:pointer}
 	.tree-parent-row{background:color-mix(in srgb,var(--surface-secondary) 30%,var(--surface))}
 	.tree-parent-row td{padding:0 12px!important}
@@ -306,7 +316,7 @@
 	.name-with-usage{display:flex;min-width:0;align-items:center;gap:7px}.name-with-usage>span:first-child{min-width:0;overflow-wrap:anywhere}.usage-badge{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:24px;min-height:24px;padding:2px 6px;background:rgba(51,122,183,.12);color:#337ab7;border:1px solid rgba(51,122,183,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1}
 	.name-with-icon{display:flex;min-width:0;align-items:center;gap:9px}.name-hamburger-icon{width:16px;height:16px;flex:none;color:var(--muted)}.name-icon-label{min-width:0;flex:0 1 auto;overflow-wrap:anywhere}
 	.name-reorder-handle{display:inline-flex;width:28px;height:28px;flex:none;align-items:center;justify-content:center;margin:-4px;padding:0;background:transparent!important;border:0;border-radius:4px;color:var(--muted)!important;touch-action:none;user-select:none}
-	.name-reorder-handle:hover{background:var(--surface-secondary)!important;cursor:grab}
+	.name-reorder-handle:hover{background:var(--surface-hover,var(--surface-secondary))!important;cursor:grab}
 	.name-reorder-handle.dragging{cursor:grabbing}
 	.name-reorder-handle:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
 	.sort-button{display:inline-flex;align-items:center;gap:6px;margin:0;padding:0;background:transparent!important;color:var(--muted)!important;border:0;border-radius:2px;text-align:left;font:inherit;letter-spacing:inherit;text-transform:uppercase;cursor:pointer}
@@ -323,9 +333,12 @@
 	.master-footer p{margin:0;color:var(--muted);font-size:var(--font-size-support)}
 	.master-footer nav{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
 	.master-footer .pagination-numbers{display:contents}
+	.master-footer.has-leading{flex-direction:row;align-items:center;flex-wrap:wrap}
+	.master-footer-leading{min-width:0;flex:1 1 260px}
+	.master-footer.has-leading nav{margin-left:auto}
 	.pagination-ellipsis{padding:0 4px;color:var(--muted)}
 	.master-footer button,.master-toolbar-pagination button{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;margin:0;padding:0 8px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-body);font-weight:500}
-	.master-footer button:hover:not(:disabled):not([aria-current='page']),.master-toolbar-pagination button:hover:not(:disabled):not([aria-current='page']){background:var(--surface-secondary)!important;color:var(--text)!important}
+	.master-footer button:hover:not(:disabled):not([aria-current='page']),.master-toolbar-pagination button:hover:not(:disabled):not([aria-current='page']){background:var(--surface-hover,var(--surface-secondary))!important;color:var(--text)!important}
 	.master-footer button[aria-current='page'],.master-toolbar-pagination button[aria-current='page']{background:#1abb9c!important;color:#fff!important;border-color:#169f85}
 	.master-footer button:disabled,.master-toolbar-pagination button:disabled{cursor:not-allowed;opacity:.5}
 	.master-footer button:focus-visible,.master-toolbar-pagination button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
@@ -334,4 +347,5 @@
 	.master-controls{display:contents}
 	.viewport-fit .master-controls{display:block;flex:none;min-height:0;max-height:max(0px,calc(100% - var(--list-footer-height) - 82px));overflow:auto}
 	.viewport-fit .master-scroll{flex:1;min-height:0}
+.external-search.viewport-fit{flex:1 0 260px;min-height:260px}@media(max-width:700px){.external-search.viewport-fit{flex:none;min-height:280px;max-height:600px}.external-search .master-scroll{min-height:160px}}
 </style>

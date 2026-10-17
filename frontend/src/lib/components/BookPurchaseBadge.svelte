@@ -12,7 +12,8 @@
 		if (!tooltip.matches(':popover-open')) tooltip.showPopover();
 		const anchor = button.getBoundingClientRect(), bounds = tooltip.getBoundingClientRect();
 		left = Math.max(8, Math.min(innerWidth - bounds.width - 8, anchor.left + (anchor.width - bounds.width) / 2));
-		top = anchor.bottom + bounds.height + 14 <= innerHeight ? anchor.bottom + 6 : Math.max(8, anchor.top - bounds.height - 6);
+		const preferredTop = anchor.bottom + bounds.height + 14 <= innerHeight ? anchor.bottom + 6 : anchor.top - bounds.height - 6;
+		top = Math.max(8, Math.min(innerHeight - bounds.height - 8, preferredTop));
 	}
 	function viewportChanged() {
 		if (focused && tooltip?.matches(':popover-open')) showTooltip();
@@ -37,6 +38,6 @@
 
 <style>
 	.book-purchase-badge{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:28px;margin:0 0 0 8px;padding:3px 6px;vertical-align:middle;border:1px solid color-mix(in srgb,var(--action-primary) 20%,transparent);border-radius:4px;background:color-mix(in srgb,var(--action-primary) 10%,var(--surface))!important;color:color-mix(in srgb,var(--action-primary) 70%,var(--text))!important;font-family:inherit;font-size:var(--font-size-support);font-weight:600;line-height:1;white-space:nowrap;cursor:pointer}
-	.book-purchase-badge svg{width:20px;height:20px;flex:none}.book-purchase-badge:hover{background:color-mix(in srgb,var(--action-primary) 18%,var(--surface))!important}.book-purchase-badge:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
+	.book-purchase-badge svg{width:20px;height:20px;flex:none}.book-purchase-badge:hover{background:var(--surface-hover,color-mix(in srgb,var(--action-primary) 18%,var(--surface)))!important}.book-purchase-badge:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.book-purchase-tooltip{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:max-content;max-width:calc(100vw - 16px);padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.16);font-family:inherit;font-size:var(--font-size-support);font-weight:400;line-height:1.6;white-space:normal;overflow-wrap:anywhere;pointer-events:none}
 </style>

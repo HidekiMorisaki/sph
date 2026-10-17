@@ -61,7 +61,13 @@ export const calendarNoteTooltip: Action<HTMLElement, CalendarNoteOptions> = (no
 	function focus() { focused = true; dismissed = false; show(); }
 	function blur(event: FocusEvent) { if (event.relatedTarget instanceof Node && node.contains(event.relatedTarget)) return; focused = false; scheduleClose(); }
 	function dismiss() { dismissed = true; hide(); }
-	function keydown(event: KeyboardEvent) { if (event.key === 'Escape' && popup) { event.preventDefault(); event.stopPropagation(); dismiss(); } }
+	function keydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape' || !popup) return;
+		const ownsFocus = event.target instanceof Node && (node.contains(event.target) || popup.contains(event.target));
+		dismiss();
+		// A note awaiting its blur delay must not consume Escape from a modal.
+		if (ownsFocus) { event.preventDefault(); event.stopPropagation(); }
+	}
 	function scroll(event: Event) { if (popup && event.target instanceof Node && popup.contains(event.target)) return; dismiss(); }
 
 	node.addEventListener('pointerenter', enter);

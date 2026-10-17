@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, type Snippet } from 'svelte';
 	import ModalBackdrop from './ModalBackdrop.svelte';
+	import { rememberDetailReturn, takeDetailReturn, forgetDetailReturn } from '$lib/detail-modal-return';
 
 	let {
 		title,
@@ -33,8 +34,17 @@
 	let dialogElement = $state<HTMLDialogElement>();
 
 	function close() {
+		const target = returnFocus;
+		forgetDetailReturn(target, titleId);
 		onClose();
-		void tick().then(() => returnFocus?.focus({ preventScroll: true }));
+		void tick().then(() => target?.focus({ preventScroll: true }));
+	}
+
+	function rememberAction(event: MouseEvent) {
+		const button = event.target instanceof Element ? event.target.closest('button') : null;
+		const selector = button?.classList.contains('detail-header-edit') ? '.detail-header-edit'
+			: button?.classList.contains('detail-header-delete') ? '.detail-header-delete' : null;
+		if (selector && dialogElement) rememberDetailReturn(returnFocus, titleId, dialogElement, selector);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -66,7 +76,12 @@
 		}
 	}
 
-	onMount(() => void tick().then(() => dialogElement?.querySelector<HTMLElement>(initialFocusSelector)?.focus()));
+	onMount(() => void tick().then(() => {
+		const state = takeDetailReturn(returnFocus, titleId);
+		const body = dialogElement?.querySelector<HTMLElement>('.app-detail-body');
+		if (state && body) { body.scrollTop = state.scrollTop; body.scrollLeft = state.scrollLeft; }
+		(dialogElement?.querySelector<HTMLElement>(state?.selector ?? initialFocusSelector))?.focus({ preventScroll: Boolean(state) });
+	}));
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -77,7 +92,7 @@
 				{#if pretitle}<p class="app-detail-pretitle">{pretitle}</p>{/if}
 				<h2 id={titleId}>{title}</h2>
 			</div>
-			<div class="app-detail-header-actions">{#if headerActions}{@render headerActions()}{/if}<button class="app-modal-close" type="button" aria-label={closeLabel} onclick={close}>
+			<div class="app-detail-header-actions" onclickcapture={rememberAction}>{#if headerActions}{@render headerActions()}{/if}<button class="app-modal-close" type="button" aria-label={closeLabel} onclick={close}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 			</button></div>
 		</header>

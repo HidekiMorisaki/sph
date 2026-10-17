@@ -7,7 +7,7 @@ export const catalogFor = language => JSON.parse(readFileSync(new URL(`sample-da
 const defaultRoles = JSON.parse(readFileSync(new URL('../src/lib/server/auth/default-role-permissions.json', import.meta.url), 'utf8'));
 const granularOperations = JSON.parse(readFileSync(new URL('../src/lib/server/auth/granular-operations.json', import.meta.url), 'utf8'));
 const branchScopedCodes = new Set([
- 'employees.read', 'employees.manage', 'masters.read', 'branches.manage', 'assets.read', 'assets.manage',
+ 'employees.skills.create', 'employees.skills.update', 'employees.skills.delete', 'employees.participations.create', 'employees.participations.update', 'employees.participations.delete', 'teams.members.add', 'teams.members.remove', 'employees.read', 'employees.manage', 'masters.read', 'branches.manage', 'assets.read', 'assets.manage',
  'assets.credentials.read', 'assets.credentials.write', 'calendars.read', 'calendars.assign',
  'employees.create', 'employees.update', 'employees.delete', 'employees.invite', 'branches.update', 'branches.delete',
  'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
@@ -15,10 +15,10 @@ const branchScopedCodes = new Set([
  'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
  'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
-const roleCodes = role => [...role.permissionCodes, ...granularOperations.filter(operation =>
+const roleCodes = role => [...new Set([...role.permissionCodes, ...granularOperations.filter(operation =>
  (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && ['branches.update', 'branches.delete'].includes(operation.code))) &&
  (Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some(code => role.permissionCodes.includes(code))
-).map(operation => operation.code)];
+).map(operation => operation.code)])];
 const employmentKeys = ['Regular','Contract','Part Time','Temporary'];
 export function employmentName(catalog, key) {
  const index = employmentKeys.indexOf(key);
@@ -338,6 +338,55 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
    concurrent_limit:licenseType==='concurrent'?5+(i%8)*5:null,
    evidence_status:'unverified',notes:software.unverifiedNote
   });
+ }
+ // Business masters belong to the same initial-configuration transaction. Internal
+ // project/team codes are deliberately omitted so PostgreSQL allocates them.
+ const clientIds = [];
+ for (const row of catalog.business.clients) clientIds.push(await insert(client, 'clients', {...row, notes: note}));
+ const projects = [], skills = [];
+ for (const [index, row] of catalog.business.projects.entries()) {
+  const id = await insert(client, 'projects', {...row, client_id: clientIds[index % clientIds.length], contract_starts_on: dayFromToday(-90 - index * 7), contract_ends_on: index % 3 === 0 ? null : dayFromToday(90 + index * 14)});
+  projects.push({id, name: row.name});
+ }
+ for (const row of catalog.business.skills) skills.push({id: await insert(client, 'skills', {...row, name_key: row.name.trim().toLowerCase()}), name: row.name});
+ for (const row of catalog.business.teams) await insert(client, 'teams', row);
+ // Three out of four active sample employees receive three distinct skills.
+ // Across 216 employees, every one of 24 skills has 27 assignments, nine per
+ // proficiency level. Each employee also receives all three proficiency levels.
+ if (skills.length !== 24 || projects.length !== 12) throw new Error('Unexpected sample workforce catalog size.');
+ const skilledEmployees = employees.filter(employee => !employee.retired && !employee.deleted).filter((_, index) => index % 4 !== 3);
+ const workforceHistory = async (employeeId, resource, resourceId, snapshot) => {
+  const changes = Object.entries(snapshot).map(([field, after]) => ({field, before: null, after: after == null ? null : String(after)}));
+  const id = await insert(client, 'workforce_change_history', {employee_id: employeeId, actor_id: adminId, resource, resource_id: resourceId, action: 'create', changes: JSON.stringify(changes)});
+  await insert(client, 'audit_logs', {actor_id: adminId, action: 'sample_import', resource: 'workforce_change_history', resource_id: id, detail: JSON.stringify({sample: true, language: displayLanguage, simulatedAction: 'create'})});
+ };
+ for (const [index, employee] of skilledEmployees.entries()) {
+  employee.skills = [];
+  for (let slot = 0; slot < 3; slot++) {
+   const skill = skills[index % 8 + slot * 8], proficiency = 1 + (Math.floor(index / 8) + slot) % 3;
+   const experienceYears = proficiency - 0.5;
+   const id = await insert(client, 'employee_skills', {employee_id: employee.id, skill_id: skill.id, proficiency, experience_years: experienceYears, notes: note});
+   employee.skills.push(skill.name);
+   await workforceHistory(employee.id, 'skills', id, {skill: skill.name, proficiency, experienceYears, notes: note});
+  }
+ }
+ // Spread half the skilled employees over the eligible cohort, rather than
+ // assigning its first branch/department only. Past examples start after hire.
+ const eligible = skilledEmployees.filter(employee => employee.hire <= dayFromToday(-60));
+ const participantCount = Math.floor(skilledEmployees.length / 2);
+ if (eligible.length < participantCount) throw new Error('Insufficient sample employees for participation dates.');
+ // Reproducible small, medium and large projects, in catalog order.
+ const projectSizes = [18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11, 6];
+ const participationProjects = projects.flatMap((project, index) => Array(projectSizes[index]).fill(project));
+ if (participationProjects.length !== participantCount) throw new Error('Sample project sizes must match the participant count.');
+ for (let index = 0; index < participantCount; index++) {
+  const employee = eligible[Math.floor(index * eligible.length / participantCount)], project = participationProjects[index];
+  const phase = index % 3;
+  const startsOn = dayFromToday(phase === 0 ? -60 : phase === 1 ? -30 : 14);
+  const endsOn = phase === 0 ? dayFromToday(-10) : phase === 1 ? null : dayFromToday(60);
+  const responsibility = displayLanguage === 'ja' ? `サンプル参画。担当スキル: ${employee.skills.join(' / ')}` : `Sample participation. Assigned skills: ${employee.skills.join(' / ')}`;
+  const id = await insert(client, 'project_participations', {employee_id: employee.id, project_id: project.id, starts_on: startsOn, ends_on: endsOn, responsibility});
+  await workforceHistory(employee.id, 'participations', id, {project: project.name, startsOn, endsOn, responsibility});
  }
  const failedBooks = await installBookSamples(client, { adminId, note: displayLanguage === 'ja' ? 'インストール時に追加した書籍紹介サンプルです。' : 'Book introduction sample added during installation.', displayLanguage });
  return { failedHolidayCountries: ['JP', 'US'].filter((_, index) => holidayImports[index].status === 'failed'), failedBooks };

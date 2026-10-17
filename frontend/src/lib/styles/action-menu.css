@@ -5,6 +5,7 @@
 .menu-popover > button[role='menuitem']{width:100%;background:transparent!important;border:0}
 .menu-popover > a[role='menuitem']{text-decoration:none}
 .menu-popover > [role='menuitem']:hover,.menu-popover > [role='menuitem']:focus-visible{background:var(--surface-secondary)!important}
+.menu-popover > [role='menuitem']:hover{background:var(--surface-hover,var(--surface-secondary))!important}
 .menu-item-icon{width:16px;height:16px;flex:none}
 .menu-popover > button.delete-item{color:#d63939!important}
 .menu-popover > button[role='menuitem']:disabled{cursor:not-allowed;opacity:.5}

@@ -31,6 +31,10 @@ export function validateEditableRolePermissions(value: unknown):
 	}
 	const selected = value as PermissionScope[];
 	const grants = new Map(selected.map((entry) => [entry.code, entry.scopeType]));
+	if (selected.some(entry => entry.code.startsWith('teams.'))) grants.set('teams.read', 'global');
+	for (const entry of selected.filter(entry => entry.code.startsWith('teams.members.'))) {
+		if (grants.get('employees.read') !== 'global') grants.set('employees.read', entry.scopeType);
+	}
 	const addPrerequisite = (code: string, scopeType: PermissionScope['scopeType']) => {
 		if (grants.get(code) !== 'global') grants.set(code, scopeType === 'global' ? 'global' : grants.get(code) ?? 'own_branch');
 	};

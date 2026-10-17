@@ -1,6 +1,6 @@
 # Postal address lookup data sources
 
-The application queries these services at request time. It does not bundle their databases or retain lookup results as a postal database. Users may save a selected address as part of an employee or branch record. The address form names and links the relevant providers.
+The application queries these services at request time. It does not bundle their databases or retain lookup results as a postal database. Users may save a selected address as part of an employee, branch or client record. The address form names and links the relevant providers. The official provider terms and license texts below were rechecked on 2026-10-17 when reusing the existing lookup component for clients; attribution links and manual correction remain available.
 
 | Country | Provider and terms | Use and required notice |
 | --- | --- | --- |

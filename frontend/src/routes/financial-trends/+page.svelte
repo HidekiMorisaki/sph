@@ -115,7 +115,7 @@
 {/snippet}
 <AssetManagementShell {title}>
 	<div class="trends-page">
-		<MasterPageHeader {title} description={text.description} actions={pdfActions} />
+		<MasterPageHeader {title} />
 		{#if pdfBusy && !pdfBusyDismissed}<StatusNotice message={text.pdfGenerating} tone="info" onDismiss={() => pdfBusyDismissed = true} />{/if}
 		{#if pdfError}<StatusNotice message={text.pdfError} tone="error" onDismiss={() => pdfError = false} />{/if}
 		<section class="panel" aria-label={text.chartTitle}>
@@ -124,6 +124,7 @@
 				<div class="controls">
 					<DatePicker label={text.startYear} field="financial-trends-start-year" value={String(startYear)} mode="year" min="1980" max="2100" required disabled={loading || pdfBusy} open={activeYearPicker === 'start'} onToggle={() => activeYearPicker = activeYearPicker === 'start' ? null : 'start'} onSelect={(value) => { activeYearPicker = null; chooseStart(value); }} />
 					<DatePicker label={text.endYear} field="financial-trends-end-year" value={String(endYear)} mode="year" min="1980" max="2100" align="end" required disabled={loading || pdfBusy} open={activeYearPicker === 'end'} onToggle={() => activeYearPicker = activeYearPicker === 'end' ? null : 'end'} onSelect={(value) => { activeYearPicker = null; chooseEnd(value); }} />
+					{@render pdfActions()}
 				</div>
 			</div>
 			<div class="content">
@@ -146,7 +147,7 @@
 </AssetManagementShell>
 
 <style>
-	.trends-page{display:grid;gap:16px;min-width:0}.branch-heading{margin:12px 0 0;font-size:1.25rem}.panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.toolbar{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{margin:0 0 4px;font-size:1.13rem}.toolbar p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.controls{display:flex;gap:12px}.controls :global(.custom-date){width:130px}.content{padding:20px}.state{margin:8px 0;color:var(--text-secondary)}@media(max-width:700px){.toolbar{align-items:stretch;flex-direction:column}.controls :global(.custom-date){flex:1;width:auto}}
+	.trends-page{display:grid;gap:16px;min-width:0}.branch-heading{margin:12px 0 0;font-size:1.25rem}.panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.toolbar{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{margin:0 0 4px;font-size:1.13rem}.toolbar p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px}.controls :global(.custom-date){width:130px}.content{padding:20px}.state{margin:8px 0;color:var(--text-secondary)}@media(max-width:700px){.toolbar{align-items:stretch;flex-direction:column}.controls :global(.custom-date){flex:1;width:auto}}
 	.pdf-download{display:inline-flex;align-items:center;justify-content:center;gap:6px}.pdf-download svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 	@media(max-width:700px){.pdf-download{width:100%}}
 </style>

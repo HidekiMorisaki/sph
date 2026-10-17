@@ -1,50 +1,15 @@
 import { canonicalIsbn } from '$lib/server/api/book-isbn';
-import { createPurchaseRequest, purchaseInput, purchaseActor, openPurchaseStatuses, managedPurchaseBranches } from '$lib/server/api/book-purchases';
+import { createPurchaseRequest, purchaseInput, purchaseActor } from '$lib/server/api/book-purchases';
 import { writeAuditLog, requireOperationApi } from '$lib/server/api/admin';
 import { BookInputError, bookErrorResponse, nextBookCode, objectBody, optionalText, recordBookChange, requiredText } from '$lib/server/api/books';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
 import { failure, success } from '$lib/server/api/response';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { getPrisma } from '$lib/server/prisma';
 import { lookupOpenBdBooks, openBdSourceUrl, BookLookupUnavailable } from '$lib/server/api/openbd-book-lookup';
 import { importOpenBdCover, type CoverImport } from '$lib/server/api/openbd-book-cover';
 
-export async function GET({ locals, url }: import('./$types').RequestEvent) {
-	const actor = requireOperationApi(locals.user, permissionOperations.bookRead);
-	const query = parseListQuery(url, ['name', 'author', 'isbn', 'createdAt'] as const, 'name');
-	const q = url.searchParams.get('q')?.trim() ?? '';
-	if (q.length > 200) return failure(422, 'INVALID_SEARCH', 'Search is too long.');
-	const purchaseBranchIds = [...new Set([actor.branchId, ...await managedPurchaseBranches(getPrisma(), actor)])];
-	const purchaseWhere = { branchId: { in: purchaseBranchIds }, branch: { deletedAt: null }, status: { in: openPurchaseStatuses }, deletedAt: null };
-	const where = { deletedAt: null, ...(url.searchParams.get('purchaseRequests') === 'true' ? { purchaseRequests: { some: purchaseWhere } } : {}), ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' as const } }, { author: { contains: q, mode: 'insensitive' as const } }, { isbn: { contains: q } }] } : {}) };
-	const [items, total] = await Promise.all([
-		getPrisma().bookTitle.findMany({ where, select: { id: true, catalogCode: true, name: true, author: true, publisher: true, edition: true, isbn: true, notes: true, sourceProvider: true, sourceUrl: true, sourceRetrievedAt: true, _count: { select: { purchaseRequests: { where: purchaseWhere }, copies: { where: { deletedAt: null } } } } }, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'asc' }], skip: query.offset, take: query.limit }),
-		getPrisma().bookTitle.count({ where })
-	]);
-	const titleIds = items.map(item => item.id);
-	const [availableCopies, heldReservations] = titleIds.length ? await Promise.all([
-		getPrisma().bookCopy.findMany({
-			where: { titleId: { in: titleIds }, deletedAt: null, status: 'available', storage: { deletedAt: null } },
-			select: { titleId: true, storage: { select: { branchId: true } }, loans: { where: { returnedOn: null, deletedAt: null }, select: { id: true }, take: 1 } }
-		}),
-		getPrisma().bookReservation.groupBy({
-			by: ['titleId', 'branchId'],
-			where: { titleId: { in: titleIds }, status: 'held', deletedAt: null },
-			_count: { id: true }
-		})
-	]) : [[], []];
-	const branchInventory = new Map<string, { available: number; loaned: number }>();
-	for (const copy of availableCopies) {
-		const key = `${copy.titleId}:${copy.storage.branchId}`;
-		const inventory = branchInventory.get(key) ?? { available: 0, loaned: 0 };
-		inventory.available += 1;
-		if (copy.loans.length) inventory.loaned += 1;
-		branchInventory.set(key, inventory);
-	}
-	const heldByBranch = new Map(heldReservations.map(reservation => [`${reservation.titleId}:${reservation.branchId}`, reservation._count.id]));
-	const rentableTitleIds = new Set([...branchInventory].filter(([key, inventory]) => inventory.available - inventory.loaned - (heldByBranch.get(key) ?? 0) > 0).map(([key]) => Number(key.split(':')[0])));
-	return success(items.map(({ _count, ...item }) => ({ ...item, copyCount: _count.copies, purchaseRequestCount: _count.purchaseRequests, rentable: rentableTitleIds.has(item.id) })), 200, listMeta(query, items.length, total));
-}
+import { bookList } from '$lib/server/api/book-list';
+export async function GET({locals,url}: import('./$types').RequestEvent){return bookList(locals.user,url);}
 
 export async function POST({ locals, request, fetch }: import('./$types').RequestEvent) {
 	const actor = requireOperationApi(locals.user, permissionOperations.bookRead);

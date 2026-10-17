@@ -60,7 +60,7 @@
 	"rateMissingMonths": "Exchange rates for {1} could not be retrieved. Try again later.",
 	"rateFetchFailed": "Unable to fetch exchange rates.",
 	"rateFallbackJPY": "Exchange rates could not be retrieved, so amounts are temporarily shown in JPY. Your display currency setting has not changed.",
-	"rateHint": "Normal conversions use the Bank of Japan monthly average JPY per USD rate (FXERM07). Installer sample data uses fictional exchange rates. Stored rates do not change automatically.",
+	"rateHint": "Normal conversions use the Bank of Japan monthly average JPY per USD rate (FXERM07). Stored rates do not change automatically.",
 	"rateCreditPrefix": "This service uses the API provided by the ",
 	"rateCreditLink": "Bank of Japan Time-Series Data Search",
 	"rateCreditSuffix": ". The Bank of Japan does not guarantee the content of the service.",

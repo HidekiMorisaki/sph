@@ -169,7 +169,7 @@
 	onMount(() => { window.addEventListener('os-vendors-changed', onVendorsChanged); void load(); return () => window.removeEventListener('os-vendors-changed', onVendorsChanged); });
 </script>
 
-{#snippet headerActions()}{#if canManage}<AddButton bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
+{#snippet headerActions()}{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} onclick={(event) => { if (sourceDateOpen && event.target instanceof Element && !event.target.closest('[data-field="master-source-checked"]')) sourceDateOpen = false; }} />
 	<div class="master-section">

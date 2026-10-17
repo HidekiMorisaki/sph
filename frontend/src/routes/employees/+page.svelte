@@ -1,6 +1,14 @@
 <script lang="ts">
+ import { initialSearch } from '$lib/search';
+ import SearchPanel from '$lib/components/SearchPanel.svelte';
+ import CsvExportButton from '$lib/components/CsvExportButton.svelte';
+ import { searchCsv, downloadCsv, csvFilename } from '$lib/csv-export';
+ let searchState=$state(initialSearch('employees'));
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
+	import { page } from '$app/state';
+	import { workforceOptions, type WorkforceMaster } from '$lib/workforce';
+	import { loadTeamOptions, type Team } from '$lib/teams';
 	import { apiData } from '$lib/api';
 	import type { SessionUser } from '$lib/auth';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -25,9 +33,6 @@
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
 
 	type InvitationPayload = { invitationUrl: string; invitationExpiresAt: string };
-	type ExportColumn = { key: string; columnName: string; comment: string | null };
-	type ListMeta = { offset: number; limit: number; returned: number; total: number; hasMore: boolean; search: string; calculatedAsOf: string; sort: { field: string; order: 'asc' | 'desc' }; columns?: ExportColumn[] };
-	type ApiListPayload = { status: 'success'; responseCode: number; data: Employee[]; meta: ListMeta };
 
 	const resources = ['departments', 'employee-groups', 'positions', 'employment-types'];
 
@@ -55,6 +60,19 @@
 	let canManageSystemSettings = $state(false);
 	let canInviteEmployees = $state(false);
 	let canAssignEmployeeRoles = $state(false);
+	let workforceText = $derived(localeMessages[$localization.displayLanguage].workforce);
+	let skillOptions = $state<WorkforceMaster[]>([]);
+	let canReadSkills = $state(false);
+	let skillSelection = $state<string[]>([]);
+	let skillMode = $state('all');
+	let minProficiency = $state('1');
+	let participationStatus = $state('');
+	let endingWithinDays = $state('');
+	let workforceQuery = $derived({...(skillSelection.length?{skillIds:skillSelection.join(','),skillMode,minProficiency}:{}),...(participationStatus?{participationStatus}:{}),...(endingWithinDays?{endingWithinDays}: {})});
+	let teamOptions = $state<Team[]>([]);
+	let teamSelection = $state<string[]>([]);
+	let canManageTeamMemberships = $state(false);
+	let teamsReady = $state(false);
 	let currentUserId = $state<number | null>(null);
 	let canManageEmployees = $derived(canManageAdministration);
 	let exporting = $state(false);
@@ -64,9 +82,11 @@
 	let branchSelection = $state<string[]>([allBranchesValue]);
 	let branchFilterReady = $state(false);
 	let branchFilterError = $state(false);
-	let employeeQueryParams = $derived({ includeRetired, includeDeleted, includeAvatar: true, ...(branchSelection.includes(allBranchesValue) ? {} : { branchIds: branchSelection.join(',') }) });
+	let employeeQueryParams = $derived({ ...workforceQuery, includeRetired, includeDeleted, includeAvatar: true, ...(teamSelection.length ? { teamIds: teamSelection.join(',') } : {}), ...(branchSelection.includes(allBranchesValue) ? {} : { branchIds: branchSelection.join(',') }) });
 
-	const dateIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+ function restoreSearchOptions(options:Record<string,string|boolean>){includeRetired=options.includeRetired===true;includeDeleted=options.includeDeleted===true;branchSelection=typeof options.branchIds==='string'?options.branchIds.split(','):[allBranchesValue];teamSelection=typeof options.teamIds==='string'?options.teamIds.split(','):[];skillSelection=typeof options.skillIds==='string'?options.skillIds.split(','):[];skillMode=String(options.skillMode??'all');minProficiency=String(options.minProficiency??'1');participationStatus=String(options.participationStatus??'');endingWithinDays=String(options.endingWithinDays??'');}
+ let searchDraftOptions=$derived(Object.fromEntries(Object.entries(employeeQueryParams).filter(([key,value])=>key!=='includeAvatar'&&value!==false&&value!=='')) as Record<string,string|boolean>);
+
 	const fullName = (employee: Employee) => formatEmployeeName(employee, $localization);
 	const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 	function monogram(item: Employee): string {
@@ -99,11 +119,14 @@
 		const [roleResponse, sessionResponse] = await Promise.all([fetch('/v1/employees/assignable-roles'), fetch('/v1/auth/session')]);
 		if (roleResponse.ok) roles = await apiData<EmployeeRole[]>(roleResponse);
 		if (sessionResponse.ok) {
-			const current = (await apiData<{ user: { id: number; capabilities: { canManageEmployees: boolean; canManageSystemSettings: boolean; canAssignEmployeeRoles: boolean; canInviteEmployees: boolean } } }>(sessionResponse)).user;
+			const current = (await apiData<{ user: { id: number; capabilities: { canReadSkills: boolean; canManageEmployees: boolean; canManageSystemSettings: boolean; canAssignEmployeeRoles: boolean; canInviteEmployees: boolean; canReadTeams: boolean; canAddTeamMembers: boolean; canRemoveTeamMembers: boolean } } }>(sessionResponse)).user;
+			canReadSkills = current.capabilities.canReadSkills;
 			canManageAdministration = current.capabilities.canManageEmployees;
 			canManageSystemSettings = current.capabilities.canManageSystemSettings;
 			canInviteEmployees = current.capabilities.canInviteEmployees;
 			canAssignEmployeeRoles = current.capabilities.canAssignEmployeeRoles;
+			canManageTeamMemberships = current.capabilities.canAddTeamMembers && current.capabilities.canRemoveTeamMembers;
+			if (current.capabilities.canReadTeams) { teamOptions = await loadTeamOptions(); teamsReady = true; }
 			currentUserId = current.id;
 		} else throw new Error('Unable to load current user.');
 	}
@@ -112,10 +135,12 @@
 		try {
 			await Promise.all([loadMasters(), loadBranchOptions(), loadRoleOptions()]);
 			if (currentUserId === null) throw new Error('Current user unavailable.');
+			if (canReadSkills) skillOptions = await workforceOptions('skills');
 			const storageKey = `employees-branch-filter:${currentUserId}`;
 			let saved: string | null = null;
 			try { saved = localStorage.getItem(storageKey); } catch { /* Browsing without storage uses all branches. */ }
 			branchSelection = branchOptions.length === 1 ? [String(branchOptions[0].id)] : restoreBranchSelection(saved, branchOptions.map((branch) => String(branch.id)));
+			if (page.state.employeeSearch) { searchState={...searchState,definition:structuredClone(page.state.employeeSearch)};restoreSearchOptions(searchState.definition.options); }
 			branchFilterReady = true;
 			try { localStorage.setItem(storageKey, JSON.stringify(branchSelection.filter((value) => value !== allBranchesValue))); } catch { /* The filter still works for this visit. */ }
 		} catch { branchFilterError = true; }
@@ -177,7 +202,7 @@
 	}
 	function closeInvitation() {
 		invitation = null;
-		const target = invitationReturnToDetail ? invitationReturnFocus : document.querySelector<HTMLButtonElement>('.app-add-button');
+		const target = invitationReturnToDetail ? invitationReturnFocus : document.querySelector<HTMLButtonElement>('.master-header-actions .app-add-icon');
 		invitationReturnToDetail = false; invitationReturnFocus = null;
 		void tick().then(() => target?.focus({ preventScroll: true }));
 	}
@@ -213,32 +238,13 @@
 		if (event.key !== 'Escape') return;
 		if (invitation) { event.preventDefault(); closeInvitation(); }
 	}
-	function csvCell(value: unknown) {
-		let text = value === null || value === undefined ? '' : String(value);
-		if (/^[=+\-@]/.test(text)) text = `'${text}`;
-		return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-	}
 	async function exportCsv() {
-		if (!canManageEmployees) return;
+		if (!canManageEmployees || exporting || !searchState.success || searchState.loading || searchState.error) return;
 		exporting = true; message = '';
 		try {
-			const rows: Employee[] = []; let columns: ExportColumn[] = []; let offset = 0; let exportTotal = 0;
-			do {
-				const params = new URLSearchParams({ offset: String(offset), limit: '500', sortBy: 'employeeCode', sortOrder: 'asc' });
-				params.set('includeRetired', String(includeRetired));
-				params.set('includeDeleted', String(includeDeleted));
-				if (offset === 0) params.set('includeColumns', 'true');
-				const response = await fetch(`/v1/employees?${params}`); if (!response.ok) throw new Error('export request failed');
-				const payload = await response.json() as ApiListPayload;
-				rows.push(...payload.data); exportTotal = payload.meta.total; if (payload.meta.columns) columns = payload.meta.columns; offset += payload.data.length;
-				if (payload.data.length === 0) break;
-			} while (offset < exportTotal);
-			if (columns.length === 0) throw new Error('column metadata unavailable');
-			const csvRows = [columns.map((column) => csvCell(column.comment?.trim() || column.columnName)).join(',')];
-			for (const row of rows) csvRows.push(columns.map((column) => csvCell((row as unknown as Record<string, unknown>)[column.key])).join(','));
-			const blob = new Blob(['\uFEFF', csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob);
-			const anchor = document.createElement('a'); anchor.href = url; anchor.download = `employees-${dateIso(new Date())}.csv`; document.body.appendChild(anchor); anchor.click(); anchor.remove();
-			window.setTimeout(() => URL.revokeObjectURL(url), 0);
+			const filename = csvFilename('employees');
+			const content = await searchCsv<Employee>({ endpoint: '/v1/employee-searches', searchState, serverColumns: true });
+			downloadCsv(content, filename);
 		} catch { message = 'exportFailed'; } finally { exporting = false; }
 	}
 	onMount(() => {
@@ -252,18 +258,24 @@
 {#snippet positionsCell(item: Employee)}<div class="position-badges">{#each item.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</div>{/snippet}
 {#snippet departmentsCell(item: Employee)}<div class="position-badges">{#each item.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</div>{/snippet}
 {#snippet pageActions()}<AddButton label={text.add} disabled={!canManageEmployees} onclick={create} />{/snippet}
-{#snippet branchFilter()}<div class="employee-branch-filter"><span>{text.branchFilter}</span>{#if branchOptions.length === 1}<SearchSelect label={text.branchFilter} field="employeeBranchFilter" value={String(branchOptions[0].id)} options={[{ value: String(branchOptions[0].id), label: branchOptions[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.branchFilter} field="employeeBranchFilter" values={branchSelection} options={[{ value: allBranchesValue, label: text.allBranches }, ...branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))]} onChange={chooseBranches} />{/if}</div>{/snippet}
-{#snippet exportAction()}<div class="employee-list-actions"><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div><button class="export-button" type="button" disabled={exporting || !canManageEmployees} onclick={() => void exportCsv()}>{exporting ? commonText.exporting : commonText.exportCsv}</button></div>{/snippet}
+{#snippet branchFilter()}<div class="employee-workforce-filters">
+ {#if canReadSkills}<div class="employee-branch-filter"><span>{workforceText.skills}</span><SearchMultiSelect label={workforceText.skills} field="employeeSkillFilter" values={skillSelection} options={skillOptions.map(skill=>({value:String(skill.id),label:skill.name}))} placeholder={workforceText.allSkills} onChange={values=>skillSelection=values}/></div>{/if}
+ {#if skillSelection.length}<div class="employee-branch-filter"><SearchSelect label={workforceText.skillMode} field="employeeSkillMode" value={skillMode} searchable={false} options={[{value:'all',label:workforceText.all},{value:'any',label:workforceText.any}]} onSelect={value=>skillMode=value}/></div><div class="employee-branch-filter"><SearchSelect label={workforceText.minProficiency} field="employeeProficiencyFilter" value={minProficiency} searchable={false} options={[{value:'1',label:workforceText.level1},{value:'2',label:workforceText.level2},{value:'3',label:workforceText.level3}]} onSelect={value=>minProficiency=value}/></div>{/if}
+ <div class="employee-branch-filter"><SearchSelect label={workforceText.participationStatus} field="employeeParticipationStatus" value={participationStatus} searchable={false} options={[{value:'',label:workforceText.allStatuses},{value:'planned',label:workforceText.planned},{value:'active',label:workforceText.active},{value:'ended',label:workforceText.ended},{value:'none',label:workforceText.none}]} onSelect={value=>{participationStatus=value;if(value!=='active'&&value!=='')endingWithinDays='';}}/></div>
+ <div class="employee-branch-filter"><SearchSelect label={workforceText.endingWithinDays} field="employeeEndingWithinDays" value={endingWithinDays} searchable={false} options={[{value:'',label:workforceText.anyEnd},{value:'30',label:workforceText.days30},{value:'60',label:workforceText.days60},{value:'90',label:workforceText.days90}]} onSelect={value=>{endingWithinDays=value;if(value)participationStatus='active';}}/></div>
+<div class="employee-branch-filter"><span>{text.teamFilter}</span><SearchMultiSelect label={text.teamFilter} field="employeeTeamFilter" values={teamSelection} options={teamOptions.map(team => ({ value: String(team.id), label: team.name }))} placeholder={text.allTeams} onChange={values => teamSelection = values} /></div><div class="employee-branch-filter"><span>{text.branchFilter}</span>{#if branchOptions.length === 1}<SearchSelect label={text.branchFilter} field="employeeBranchFilter" value={String(branchOptions[0].id)} options={[{ value: String(branchOptions[0].id), label: branchOptions[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.branchFilter} field="employeeBranchFilter" values={branchSelection} placeholderValues={[allBranchesValue]} options={[{ value: allBranchesValue, label: text.allBranches }, ...branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))]} onChange={chooseBranches} />{/if}</div><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div></div>{/snippet}
+{#snippet exportAction()}<div class="employee-list-actions"><CsvExportButton {exporting} disabled={!canManageEmployees || !searchState.success || searchState.loading || searchState.error} onExport={() => void exportCsv()} /></div>{/snippet}
+{#snippet listActions()}{@render exportAction()}{@render pageActions()}{/snippet}
 {#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
 
 <AssetManagementShell title={text.title} active="Employees">
-	<ViewportListPage>
-	<MasterPageHeader title={text.title} actions={pageActions} />
+	<ViewportListPage naturalMobileScroll>
+	<MasterPageHeader title={text.title} />
 	{#if message}<StatusNotice message={text[message]} tone={message === 'created' || message === 'updated' || message === 'removed' ? 'success' : 'error'} onDismiss={() => message = ''} />{/if}
 		{#if branchFilterError}<StatusNotice message={text.branchFilterLoadFailed} tone="error" onDismiss={() => branchFilterError = false} /><button type="button" class="branch-retry" onclick={() => void initialize()}>{text.retryBranchFilter}</button>{/if}
-		{#if branchFilterReady}<MasterList bind:this={employeeList} endpoint="/v1/employees" queryParams={employeeQueryParams} title={text.title} listHeading={text.title} description={commonText.description} initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} actionLabel={(item) => fullName(item as Employee)} headerActions={exportAction} toolbarFilters={branchFilter} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
+		{#if branchFilterReady}<SearchPanel target="employees" userId={currentUserId} bind:searchState draftOptions={searchDraftOptions} onRestoreOptions={restoreSearchOptions} filters={branchFilter}/><MasterList bind:searchState bind:this={employeeList} endpoint="/v1/employee-searches" title={text.title} listHeading={text.title} description="" initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} actionLabel={(item) => fullName(item as Employee)} headerActions={listActions} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
 		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell, searchKeys: ['name', 'employeeCode', 'employmentStatus'] },
-		{ key: 'age', label: text.age, width: 6, value: (item) => (item as Employee).age, searchKeys: ['age'] },
+		{ key: 'teams', label: text.teams, width: 12, value: item => (item as Employee).teamNames, searchKeys: teamsReady ? ['teams'] : [], sortable: teamsReady },
 		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization), searchKeys: ['lengthOfService'] },
 		{ key: 'department', label: text.departments, width: 12, cell: departmentsCell, searchKeys: ['department'] },
 		{ key: 'group', label: text.groupId, width: 9, value: (item) => (item as Employee).group?.name, searchKeys: ['group'] },
@@ -274,21 +286,28 @@
 		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	</ViewportListPage>
 
-	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} />{/if}
+	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} {canManageTeamMemberships} {teamOptions} {teamsReady} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} />{/if}
 
-	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)} inert={Boolean(invitation)}><EmployeeDetailModal employee={detailEmployee} returnFocus={detailReturnFocus} footer={canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onEdit={detailEmployee.employmentStatus !== 'deleted' && (canManageEmployees || detailEmployee.id === currentUserId) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={canManageEmployees && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
+	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)} inert={Boolean(invitation)}><EmployeeDetailModal employee={detailEmployee} onUpdated={updated => { detailEmployee = updated; void employeeList?.refresh(); }} returnFocus={detailReturnFocus} footer={canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onEdit={detailEmployee.employmentStatus !== 'deleted' && (canManageEmployees || detailEmployee.id === currentUserId) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={canManageEmployees && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
 	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
 <style>
+ .employee-workforce-filters{display:flex;flex:1;flex-wrap:wrap;align-items:flex-start;gap:12px;min-width:0}
+ :global(.master-toolbar-filters:has(.employee-workforce-filters)){flex:1;align-items:flex-start}
+ .employee-workforce-filters .employee-branch-filter{display:grid;align-content:start;gap:6px;flex:0 1 200px;width:200px;max-width:100%;white-space:normal}
+ .employee-workforce-filters .employee-branch-filter :global(.form-multi-select-field){width:100%}
+ .employee-workforce-filters .employee-branch-filter :global(.form-select-field){width:100%;min-width:0}
+ .employee-workforce-filters .employee-branch-filter :global(.form-select-trigger){height:32px}
+ @media(max-width:700px){.employee-workforce-filters{width:100%}}
+
 	.employee-cell>div{min-width:0}
 	.employee-branch-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.employee-branch-filter :global(.form-multi-select-field){width:220px}.employee-branch-filter :global(.form-multi-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.employee-branch-filter :global(.form-multi-select-trigger){height:32px}.branch-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
 	.employee-name{display:flex;min-width:0;align-items:center;gap:6px}.employee-status{display:inline-flex;flex:none;align-items:center;min-height:18px;padding:1px 6px;border:1px solid;border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1.2;text-transform:uppercase}.employee-status.retired{background:rgba(243,156,18,.12);color:#c87f0a;border-color:rgba(243,156,18,.3)}.employee-status.deleted{background:rgba(231,76,60,.12);color:#d13b2d;border-color:rgba(231,76,60,.3)}
 	.role-badges{display:flex;flex-wrap:wrap;gap:4px}.role-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:rgba(26,187,156,.12);color:#169f85;border:1px solid rgba(26,187,156,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:600;line-height:1.2}
 	.position-badges{display:flex;flex-wrap:wrap;gap:4px}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;font-size:var(--font-size-support);font-weight:500;line-height:1.2}.position-badges>span.primary{background:rgba(51,122,183,.12);color:#337ab7;border-color:rgba(51,122,183,.28)}
-	.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 12px}.employee-visibility label{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap;cursor:pointer}.employee-visibility input{width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.export-button{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);font-size:var(--font-size-body);font-weight:500;line-height:1;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms;white-space:nowrap}.export-button:hover{background:var(--surface-secondary)!important;color:var(--text)!important}.export-button:disabled{cursor:wait;opacity:.6}.export-button:focus{outline:none}.export-button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:var(--font-size-support);font-weight:600}.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions,.export-button{width:100%}.employee-visibility{align-items:flex-start;flex-direction:column}}
+	.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px}.employee-visibility{flex:0 1 auto;align-self:flex-end;min-height:32px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:6px 12px;min-width:0;max-width:100%}.employee-visibility label{display:inline-flex;flex:0 1 auto;max-width:100%;min-width:0;align-items:center;gap:6px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:normal;cursor:pointer}.employee-visibility input{flex:none;width:14px;height:14px;margin:0;accent-color:#1abb9c}.employee-visibility input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:8px}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:#1abb9c;color:#fff;border-radius:50%;font-size:var(--font-size-support);font-weight:600}.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:500;text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:8px}.employee-visibility{justify-content:flex-start}}@media(max-width:700px){.employee-list-actions{width:100%}.employee-visibility{align-items:center;flex-direction:row}}
 	/* Keep the actions visible while the fields scroll. */
 	.invitation-body{display:grid;gap:14px;padding:24px;overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:6px;font-weight:600}.invitation-body input{width:100%;min-width:0;padding:9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
-	.export-button:disabled{cursor:not-allowed;opacity:.5}
-	@media(max-width:700px){.employee-branch-filter,.employee-branch-filter :global(.form-multi-select-field){width:100%}}
+	@media(max-width:700px){.employee-branch-filter :global(.form-multi-select-field){width:100%}}
 </style>

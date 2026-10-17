@@ -2,6 +2,7 @@
 	"groups": {
 		"dashboard": "ダッシュボード",
 		"general": "一般",
+		"businessManagement": "業務管理",
 		"assets": "資産管理",
 		"siteManagement": "システム管理",
 		"masterManagement": "マスター管理",
@@ -12,7 +13,7 @@
 		"financialTrends": "経営状況",
 		"myPage": "マイページ",
 		"workCalendars": "勤務カレンダー",
-		"employees": "従業員リスト",
+		"employees": "従業員",
 		"itAssets": "IT",
 		"softwareLicenses": "ライセンス",
 		"books": "書籍",
@@ -33,7 +34,11 @@
 		"manufacturers": "メーカー",
 		"cpuTypes": "CPU種別",
 		"operatingSystems": "OS",
-		"statuses": "状態"
+		"statuses": "状態",
+		"skills": "スキル",
+		"projects": "案件",
+		"teams": "チーム",
+		"clients": "取引先"
 	},
 	"home": "ホーム",
 	"settings": "個人設定",

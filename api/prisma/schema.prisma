@@ -21,6 +21,11 @@ enum DisposalDatePolicy {
 }
 
 model Employee {
+  savedSearchFilters SavedSearchFilter[]
+  skills EmployeeSkill[]
+  projectParticipations ProjectParticipation[]
+  workforceHistory WorkforceChangeHistory[] @relation("WorkforceSubject")
+  workforceActions WorkforceChangeHistory[] @relation("WorkforceActor")
   id                      Int                     @id @default(autoincrement())
   employeeCode            String                  @unique @map("employee_code")
   firstName               String                  @map("first_name")
@@ -77,6 +82,7 @@ model Employee {
   softwareChangesRecorded SoftwareChangeHistory[]
   roleGrants              EmployeeRole[]          @relation("Grantee")
   departmentAssignments   EmployeeDepartment[]
+  teamAssignments         EmployeeTeam[]
   positionAssignments     EmployeePosition[]
   scopedGrants            EmployeeRole[]          @relation("ScopeEmployee")
   managedBranches         Branch[]                @relation("BranchManager")
@@ -88,6 +94,24 @@ model Employee {
 
   @@index([workCalendarId])
   @@map("employees")
+}
+
+model SavedSearchFilter {
+  id              Int      @id @default(autoincrement())
+  ownerEmployeeId Int      @map("owner_employee_id")
+  target          String   @db.VarChar(16)
+  name            String   @db.VarChar(100)
+  filterCode      String   @unique @default(dbgenerated("gen_random_uuid()")) @map("filter_code") @db.Uuid
+  definition      Json     @db.JsonB
+  schemaVersion   Int      @default(1) @map("schema_version")
+  revision        Int      @default(1)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  owner           Employee @relation(fields: [ownerEmployeeId], references: [id], onDelete: Restrict)
+
+  @@index([ownerEmployeeId, target, deletedAt])
+  @@map("saved_search_filters")
 }
 
 model EmployeeAvatar {
@@ -328,6 +352,149 @@ model EmployeeDepartment {
   @@unique([employeeId, departmentId])
   @@index([departmentId])
   @@map("employee_departments")
+}
+
+model Skill {
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(128)
+  nameKey     String          @unique @map("name_key") @db.VarChar(128)
+  category    String?         @db.VarChar(128)
+  description String?         @db.VarChar(5000)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz(3)
+  employees   EmployeeSkill[]
+
+  @@map("skills")
+}
+
+model Client {
+  id                      Int       @id @default(autoincrement())
+  name                    String    @unique @db.VarChar(128)
+  countryCode             String    @default("JP") @map("country_code") @db.VarChar(2)
+  postalCode              String?   @map("postal_code") @db.VarChar(10)
+  prefecture              String?   @db.VarChar(64)
+  city                    String?   @db.VarChar(128)
+  streetAddress           String?   @map("street_address") @db.VarChar(255)
+  buildingName            String?   @map("building_name") @db.VarChar(255)
+  phoneNumber1            String?   @map("phone_number_1") @db.VarChar(32)
+  phoneNumber2            String?   @map("phone_number_2") @db.VarChar(32)
+  faxNumber1              String?   @map("fax_number_1") @db.VarChar(32)
+  faxNumber2              String?   @map("fax_number_2") @db.VarChar(32)
+  notes                   String?
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt               DateTime? @map("deleted_at") @db.Timestamptz(3)
+  companyName             String    @map("company_name") @db.VarChar(128)
+  contactName             String?   @map("contact_name") @db.VarChar(128)
+  contactDepartment       String?   @map("contact_department") @db.VarChar(128)
+  contactEmail            String?   @map("contact_email") @db.VarChar(254)
+  contactMobile           String?   @map("contact_mobile") @db.VarChar(32)
+  projects                Project[]
+
+  @@map("clients")
+}
+
+model Project {
+  clientId Int? @map("client_id")
+  contractStartsOn DateTime? @map("contract_starts_on") @db.Date
+  contractEndsOn DateTime? @map("contract_ends_on") @db.Date
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  id             Int                    @id @default(autoincrement())
+  code           String                 @unique @default(dbgenerated("('PRJ-'::text || (nextval('project_code_seq'::regclass))::text)")) @db.VarChar(64)
+  name           String                 @db.VarChar(128)
+  description    String?                @db.VarChar(5000)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime?              @map("deleted_at") @db.Timestamptz(3)
+  participations ProjectParticipation[]
+
+  @@index([clientId])
+  @@map("projects")
+}
+
+model EmployeeSkill {
+  id              Int       @id @default(autoincrement())
+  employeeId      Int       @map("employee_id")
+  skillId         Int       @map("skill_id")
+  proficiency     Int       @db.SmallInt
+  experienceYears Decimal?  @map("experience_years") @db.Decimal(3, 1)
+  notes           String?   @db.VarChar(5000)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  skill           Skill     @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, skillId])
+  @@index([skillId])
+  @@map("employee_skills")
+}
+
+model ProjectParticipation {
+  id             Int       @id @default(autoincrement())
+  employeeId     Int       @map("employee_id")
+  projectId      Int       @map("project_id")
+  startsOn       DateTime  @map("starts_on") @db.Date
+  endsOn         DateTime? @map("ends_on") @db.Date
+  responsibility String?   @db.VarChar(5000)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, projectId, startsOn])
+  @@index([projectId, endsOn])
+  @@map("project_participations")
+}
+
+model WorkforceChangeHistory {
+  id         Int       @id @default(autoincrement())
+  eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
+  employeeId Int       @map("employee_id")
+  actorId    Int       @map("actor_id")
+  resource   String    @db.VarChar(40)
+  resourceId Int       @map("resource_id")
+  action     String    @db.VarChar(20)
+  changes    Json
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee  @relation("WorkforceSubject", fields: [employeeId], references: [id], onDelete: Restrict)
+  actor      Employee  @relation("WorkforceActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, createdAt])
+  @@map("workforce_change_history")
+}
+
+model Team {
+  id          Int            @id @default(autoincrement())
+  code        String         @unique @default(dbgenerated("('TEAM-'::text || (nextval('team_code_seq'::regclass))::text)")) @db.VarChar(64)
+  /// Migration m0031 enforces case-insensitive, trimmed uniqueness for active team names.
+  name        String         @db.VarChar(128)
+  description String?        @db.VarChar(5000)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  members     EmployeeTeam[]
+
+  @@map("teams")
+}
+
+model EmployeeTeam {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  teamId     Int      @map("team_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, teamId])
+  @@index([teamId])
+  @@map("employee_teams")
 }
 
 model EmployeeGroup {
