@@ -2,5 +2,6 @@
 @{
 	Codes = @('en', 'ja')
 	Menu = '1. English / 2. 日本語'
+	Label = 'Language / 言語'
 	Prompt = 'Language / 言語 [1]'
 }

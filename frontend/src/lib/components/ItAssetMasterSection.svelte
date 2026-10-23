@@ -1,4 +1,6 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { formatDate, localization } from '$lib/localization';
 	import { onMount, tick } from 'svelte';
@@ -169,15 +171,15 @@
 	onMount(() => { window.addEventListener('os-vendors-changed', onVendorsChanged); void load(); return () => window.removeEventListener('os-vendors-changed', onVendorsChanged); });
 </script>
 
-{#snippet headerActions()}{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
+{#snippet headerActions()}{#if allowedOperation('masters.create')}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} onclick={(event) => { if (sourceDateOpen && event.target instanceof Element && !event.target.closest('[data-field="master-source-checked"]')) sourceDateOpen = false; }} />
 	<div class="master-section">
 		{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={() => message = ''} />{/if}
-		<div class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon actionLabel={resource === 'operating-systems' ? (row) => osName(row as Item) : undefined} treeParent={resource === 'operating-systems' ? operatingSystemTreeParent : undefined} minTableWidth={0} headerActions={headerActions} {initialSortBy} reorderEndpoint={`/v1/it-asset-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={() => { if (resource === 'operating-system-vendors') notifyVendorsChanged(); }} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
+		<div class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} listHeading={title} description={sectionDescription} canManage={allowedOperation('masters.reorder')} unpaged showNameIcon actionLabel={resource === 'operating-systems' ? (row) => osName(row as Item) : undefined} treeParent={resource === 'operating-systems' ? operatingSystemTreeParent : undefined} minTableWidth={0} headerActions={headerActions} {initialSortBy} reorderEndpoint={`/v1/it-asset-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={() => { if (resource === 'operating-system-vendors') notifyVendorsChanged(); }} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
 	</div>
 	{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId={`it-master-detail-${resource}`} sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} endpoint={`/v1/${resource}`} itemId={detailItem.id} fields={detailFields} hiddenHistoryFields={['sortOrder']} dateFields={['sourceCheckedOn']} valueFormatters={{ disposalDatePolicy: (value) => m(value) }} onClose={() => detailItem = null}>
-		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); }} onDelete={() => void remove(detailItem!)} />{/if}{/snippet}
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('masters.update') ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
 	</MasterRecordDetailModal>{/if}
 
 	{#if canManage && formOpen}

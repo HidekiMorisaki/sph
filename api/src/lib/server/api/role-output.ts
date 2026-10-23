@@ -1,3 +1,4 @@
+import { derivedPermissionCodes } from '$lib/server/auth/permission-dependencies';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import defaultRoles from '$lib/server/auth/default-role-permissions.json';
 import granularOperations from '$lib/server/auth/granular-operations.json';
@@ -24,13 +25,14 @@ export function roleOutput({ permissions, defaultKey, ...role }: RoleRecord) {
 	const permissionScopes = permissions.flatMap((entry) => entry.permission.operations.map(({ operation }) => ({ code: operation, scopeType: entry.scopeType as 'global' | 'own_branch' }))).sort((a, b) => a.code.localeCompare(b.code));
 	const defaultRole = defaultRoles.find((entry) => entry.key === defaultKey);
 	const defaultPermissionCodes = defaultRole ? [...new Set([...defaultRole.permissionCodes,
-		...granularOperations.filter((operation) => (!operation.systemOnly || defaultKey === 'system_administrator' || (defaultKey === 'branch_administrator' && ['branches.update', 'branches.delete'].includes(operation.code))) &&
+		...granularOperations.filter((operation) => (defaultKey !== 'branch_administrator' || operation.code !== 'books.covers.update') && (!operation.systemOnly || defaultKey === 'system_administrator' || (defaultKey === 'branch_administrator' && operation.code === 'branches.update')) &&
 			(Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some((code) => defaultRole.permissionCodes.includes(code)))
 			.map((operation) => operation.code)])].sort() : null;
 	return {
 		...role,
 		permissionCodes,
 		permissionScopes,
+		derivedPermissionScopes: permissionScopes.filter(({ code }) => derivedPermissionCodes.has(code)),
 		editablePermissionScopes: permissionScopes.filter(({ code }) => editableCodesFrom([code]).length > 0),
 		editablePermissionCodes: editableCodesFrom(permissionCodes),
 		defaultPermissionCodes,

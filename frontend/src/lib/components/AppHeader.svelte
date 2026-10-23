@@ -52,6 +52,7 @@
 	</div>
 	<button
 		class="theme"
+		title={navigationText.switchTheme}
 		aria-label={theme === 'light' ? navigationText.darkMode : navigationText.lightMode}
 		type="button"
 		onclick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -79,5 +80,5 @@
 	.app-header.collapsed .menu svg{transform:rotate(180deg)}
 	:global(html[data-asset-sidebar-collapsed='true']) .app-header{left:64px}
 	:global(html[data-asset-sidebar-collapsed='true']) .menu svg{transform:rotate(180deg)}
-	@media(max-width:760px){.app-header{left:64px;padding:0 16px}.crumb{font-size:var(--font-size-support)}}
+	@media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.app-header,.app-header.collapsed,:global(html[data-asset-sidebar-collapsed='true']) .app-header{left:0;padding:0 16px}.crumb{font-size:var(--font-size-support)}}
 </style>

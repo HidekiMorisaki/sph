@@ -37,6 +37,24 @@ export const searchConfigurations: Record<SearchTarget, SearchConfiguration> = {
 			widths: { employeeCode: '160px', lastName: '144px', firstName: '144px', middleName: '176px', nameKana: '208px', gender: '112px', bloodType: '112px', age: '224px', countryCode: '144px', postalCode: '128px', prefecture: '160px', city: '176px', streetAddress: '256px', buildingName: '240px', mobilePhone: '176px', email: '272px', employmentStatus: '176px', serviceMonths: '144px', notes: '320px' }
 		}
 	},
+	assets: {
+        fieldsEndpoint: '/v1/it-asset-search-fields', keywordExample: 'assetKeyword', filterNameExample: 'assetFilterName',
+        fields: {
+            rootContext: 'asset', initialSection: 'basic',
+            sections(contexts) {
+                const fields = (contexts.find(context => context.code === 'asset')?.fields ?? []).map(field => ({ context: 'asset', field, root: true, exampleCode: field.code === 'notes' ? 'assetNotes' : field.code }));
+                return [
+                    { code: 'basic', fields: fields.filter(item => ['assetTag','modelNumber','serialNumber','status','purchasedOn','disposalOn','notes'].includes(item.field.code)) },
+                    { code: 'hardware', fields: fields.filter(item => ['manufacturer','cpu','operatingSystem','ramGb'].includes(item.field.code)) },
+                    { code: 'placement', fields: fields.filter(item => ['room','storage','assigneeName','assigneeCode','assignedAt'].includes(item.field.code)) },
+                    { code: 'network', fields: fields.filter(item => item.field.code === 'hostname'), contexts: contexts.filter(context => context.code === 'ipAddresses') },
+                    { code: 'management', fields: fields.filter(item => ['createdAt','updatedAt'].includes(item.field.code)) },
+                    { code: 'quick', fields: [] }
+                ];
+            },
+            widths: { assetTag: '176px', modelNumber: '224px', serialNumber: '224px', notes: '320px', hostname: '240px', assigneeName: '224px', assigneeCode: '176px', ramGb: '128px' }
+        }
+    },
 	books: {
 		fieldsEndpoint: '/v1/book-search-fields', keywordExample: 'bookKeyword', filterNameExample: 'bookFilterName',
 		fields: {

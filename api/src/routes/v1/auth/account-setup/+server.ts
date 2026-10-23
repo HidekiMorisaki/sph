@@ -1,3 +1,4 @@
+import { employeeReferenceDate } from '$lib/server/api/employee-derived';
 import { hashPassword } from '$lib/server/auth/session';
 import { isStrongPassword } from '$lib/server/auth/password';
 import { invitationHash, readInvitationToken } from '$lib/server/auth/invitation';
@@ -26,7 +27,7 @@ export async function POST({ request }: import('./$types').RequestEvent) {
 			id: locked[0].id, tokenHash, usedAt: null, deletedAt: null, expiresAt: { gt: new Date() },
 			employee: {
 				deletedAt: null, accountStatus: 'unprovisioned',
-				OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
+				OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }],
 				roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
 			}
 		}, select: { id: true, employeeId: true, emailAtIssue: true, employee: { select: { email: true } } } });

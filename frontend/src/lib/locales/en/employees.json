@@ -76,7 +76,7 @@
 	"roleRequired": "Select exactly one role.",
 	"required": "This field is required.",
 	"roleForbidden": "You cannot assign or remove the System Administrator role.",
-	"lastAdministrator": "The last System Administrator role cannot be removed.",
+	"lastAdministrator": "At least one active system administrator must remain after the change.",
 	"roleHelp": "Only a System Administrator can change a role with system management permission.",
 	"deleteConfirm": "Delete {1}?",
 	"invitationDescription": "Send this link to the employee below yourself. It is shown only now and expires at {1}.",

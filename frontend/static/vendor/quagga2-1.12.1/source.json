@@ -1,0 +1,16 @@
+{
+  "package": "@ericblade/quagga2",
+  "version": "1.12.1",
+  "packageUrl": "https://registry.npmjs.org/@ericblade/quagga2/-/quagga2-1.12.1.tgz",
+  "upstreamCommit": "c124025c6c72dc2cdcee0e4af8fb0705711c021a",
+  "file": "dist/quagga.min.js",
+  "modified": false,
+  "sha256": "ae6c469103c5d427625a9a4c41175bd15420a14aa5579ea57dc1571d42346f4d",
+  "reviewedBundleModules": [
+    "Quagga2 (MIT)",
+    "gl-matrix 3.4.4 (MIT)",
+    "lodash 4.17.21 (MIT; Underscore attribution retained)",
+    "@babel/runtime 7.28.4 (MIT; regenerator attribution retained)",
+    "webpack 4.44.2 bootstrap (MIT)"
+  ]
+}

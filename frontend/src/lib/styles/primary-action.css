@@ -1,6 +1,13 @@
+/* Muted primary actions share one palette across buttons and calculator equals. */
+:root{--action-primary-background:color-mix(in srgb,var(--action-primary) 14%,var(--surface));--action-primary-background-hover:color-mix(in srgb,var(--action-primary) 28%,var(--surface));--action-primary-button-border:color-mix(in srgb,var(--action-primary) 35%,var(--surface));--action-primary-text:#285b84}
+:root[data-theme='dark']{--action-primary-background:color-mix(in srgb,var(--action-primary) 22%,var(--surface));--action-primary-background-hover:color-mix(in srgb,var(--action-primary) 40%,var(--surface));--action-primary-text:#bdd4e6}
 /* Shared visual treatment for primary actions, with icons supplied by specialized components. */
-.app-primary-action{display:inline-flex;flex:none;align-items:center;justify-content:center;height:32px;min-height:32px;margin:0;padding:0 12px;background:var(--action-primary)!important;color:#fff!important;border:1px solid var(--action-primary-border);border-radius:4px;font-family:inherit;font-size:var(--font-size-body);font-weight:500;line-height:1;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms}
-.app-primary-action:hover:not(:disabled){background:var(--action-primary-hover)!important}
+.app-primary-action{display:inline-flex;flex:none;align-items:center;justify-content:center;height:32px;min-height:32px;margin:0;padding:0 12px;background:var(--action-primary-background)!important;color:var(--action-primary-text)!important;border:1px solid var(--action-primary-button-border);border-radius:4px;font-family:inherit;font-size:var(--font-size-body);font-weight:500;line-height:1;white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms,color 120ms,box-shadow 120ms}
+.app-primary-action:hover:not(:disabled){background:var(--action-primary-background-hover)!important}
 .app-primary-action:focus{outline:none}
 .app-primary-action:focus-visible{outline:2px solid var(--action-primary)!important;outline-offset:2px}
 .app-primary-action:disabled{cursor:not-allowed;opacity:.65}
+
+/* Keep semantic action colors consistent inside page-specific form styles. */
+.app-primary-action,.app-add-icon,.calendar-add-icon,.datetime-apply{background:var(--action-primary-background)!important;color:var(--action-primary-text)!important;border-color:var(--action-primary-button-border)!important}
+.app-primary-action:hover:not(:disabled),.app-add-icon:hover:not(:disabled),.calendar-add-icon:hover:not(:disabled),.datetime-apply:hover:not(:disabled){background:var(--action-primary-background-hover)!important}

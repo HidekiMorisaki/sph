@@ -12,6 +12,7 @@ export type FeatureCatalogs = {
 	masters: typeof import('./locales/en/masters.json');
 	analytics: typeof import('./locales/en/analytics.json');
 	assets: typeof import('./locales/en/assets.json');
+	assetOverview: typeof import('./locales/en/assetOverview.json');
 	software: typeof import('./locales/en/software.json');
 	financial: typeof import('./locales/en/financial.json');
 	financialTrends: typeof import('./locales/en/financialTrends.json');
@@ -33,14 +34,16 @@ let activeNamespaces: readonly LocaleNamespace[] = [];
 
 export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/') return ['login', 'analytics'];
-	if (path === '/my-page') return ['myPage'];
+	if (path === '/employee-analytics') return ['analytics'];
+	if (path === '/my-page') return ['myPage', 'employees', 'teams', 'workforce'];
 	if (path === '/skills' || path === '/projects' || path === '/clients') return ['workforce'];
 	if (path === '/teams') return ['teams', 'employees', 'workforce'];
 	if (path === '/employees') return ['employees', 'employeeForm', 'teams', 'workforce'];
 	if (path === '/work-calendars') return ['workCalendars'];
-	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial'];
+	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial', 'employees', 'teams', 'workforce'];
 	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
 	if (path === '/financial-information') return ['systemSettings', 'financial'];
+	if (path === '/asset-overview') return ['assetOverview'];
 	if (path === '/financial-trends') return ['financialTrends'];
 	if (path === '/personal-settings') return ['settings'];
 	if (path === '/locations') return ['masters', 'employees', 'teams', 'workforce'];
@@ -69,7 +72,7 @@ export async function loadLocaleNamespaces(language: MessageLanguage, namespaces
 export function isLocaleLoaded(language: MessageLanguage, namespace: LocaleNamespace): boolean { return cache.has(`${language}/${namespace}`); }
 function catalog(language: MessageLanguage, core: typeof enCore, common: typeof enCommon, navigation: typeof enNavigation): Catalog {
 	const result = { ...core, common, navigation };
-	for (const namespace of ['workforce', 'teams', 'masters', 'analytics', 'assets', 'software', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
+	for (const namespace of ['workforce', 'teams', 'masters', 'analytics', 'assets', 'assetOverview', 'software', 'financial', 'financialTrends', 'employees', 'employeeForm', 'login', 'myPage', 'settings', 'systemSettings', 'systemReleases', 'workCalendars'] as const) {
 		Object.defineProperty(result, namespace, { enumerable: true, get() {
 			const value = cache.get(`${language}/${namespace}`);
 			if (!value) throw new Error(`Locale namespace not loaded: ${language}/${namespace}`);

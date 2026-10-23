@@ -1,4 +1,6 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
  import { onMount } from 'svelte';
  import { localization } from '$lib/localization';
  import { apiData } from '$lib/api';
@@ -88,7 +90,7 @@
  {#each orders.filter(item => history || ['approved','ordered'].includes(item.status)) as item (item.id)}<section class="purchase-card"><h4>{item.title.name} · {item.branch.name}</h4><p>{stateLabel(item.status)} · {text.planned}: {item.quantity} · {text.received}: {item.received}</p>
   {#if item.decisionReason}<p>{text.decisionReason}: {item.decisionReason}</p>{/if}
   {#if item.canManage && item.status === 'approved'}<label>{text.decisionReason}<textarea maxlength="5000" rows="2" bind:value={reasons[`order:${item.id}`]}></textarea></label><div class="actions"><ModalActionButton label={text.order} disabled={busy} onclick={() => void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'ordered' })} /><ModalActionButton label={text.reject} variant="danger" disabled={busy} onclick={() => { const reason = reasons[`order:${item.id}`]; if (!reason?.trim()) { error = text.reasonRequired; return; } void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'rejected', decisionReason: reason }); }} /></div>{/if}
-  {#if item.status === 'ordered' && onReceive}<AddButton label={text.receive} disabled={busy} onclick={() => onReceive?.(item)} />{/if}
+  {#if item.status === 'ordered' && onReceive && allowedOperation('books.copies.create', item.branchId)}<AddButton label={text.receive} disabled={busy} onclick={() => onReceive?.(item)} />{/if}
  </section>{/each}
 </section>
 <style>

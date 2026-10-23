@@ -1,4 +1,5 @@
 const resources: Record<string, [string, string]> = {
+ widgets: ['ウィジェット', 'Widgets'],
  clients: ['取引先', 'Clients'],
  search_filters: ['個人用保存フィルター', 'Personal saved filters'],
 	skills: ['スキル', 'Skills'], projects: ['案件', 'Projects'],
@@ -10,6 +11,9 @@ const resources: Record<string, [string, string]> = {
 };
 
 const nouns: Record<string, [string, string]> = {
+ drafts:['開発用下書き','development drafts'],
+ records: ['保存データ', 'saved records'],
+ layout: ['ウィジェット配置', 'widget layout'],
 	skills: ['従業員スキル', 'employee skills'], participations: ['案件参画期間', 'project participations'], members: ['チームメンバー', 'team members'],
 	purchases: ['購入依頼', 'purchase requests'], titles: ['書誌', 'book titles'], copies: ['現物', 'book copies'], reservations: ['予約', 'reservations'], loans: ['貸出', 'loans'], covers: ['カバー', 'covers'], credentials: ['認証情報', 'credentials'], entries: ['日付', 'entries'], holidays: ['祝日', 'holidays'],
 	settings: ['設定', 'settings'], rates: ['為替レート', 'exchange rates'], links: ['外部リンク', 'external links'],

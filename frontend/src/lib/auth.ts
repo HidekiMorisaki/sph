@@ -1,6 +1,10 @@
 import type { LocalizationSettings } from '$lib/localization';
 
 export type Capabilities = {
+ canReadFinancialInformation?: boolean;
+ operationScopes?: Record<string, 'global' | 'own_branch'>;
+ canReadWidgetDrafts?:boolean;
+ widgetDraftOperations?:string[];
  canReadSkills: boolean;
  canReadProjects: boolean;
  canReadClients: boolean;
@@ -26,6 +30,7 @@ export type Capabilities = {
 	canReadCalendars: boolean;
 	canAssignCalendars: boolean;
 	canManageAssets: boolean;
+	canReadAssets: boolean;
 	canReadAssetCredentials: boolean;
 	canWriteAssetCredentials: boolean;
 	canReadSoftware: boolean;
@@ -52,7 +57,13 @@ export type SessionUser = {
 	middleName: string | null;
 	lastName: string;
 	roles: SessionRole[];
+	operationScopes?: Record<string, 'global' | 'own_branch'>;
 	capabilities: Capabilities;
 } & LocalizationSettings;
 
 export const roleNames = (user: Pick<SessionUser, 'roles'>) => user.roles.map((role) => role.name).join(', ');
+
+export function canOperate(user: SessionUser | null | undefined, code: string, branchId?: number): boolean {
+ const scope = (user?.operationScopes ?? user?.capabilities.operationScopes)?.[code];
+ return scope === 'global' || scope === 'own_branch' && (branchId === undefined || branchId === user?.branchId);
+}

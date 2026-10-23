@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
 	import type { SearchState } from '$lib/search';
 	import PaginationIcon from '$lib/components/PaginationIcon.svelte';
 	import '$lib/styles/table-scroll.css';
 	import { localization } from '$lib/localization';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { getContext, onMount, tick, untrack, type Snippet } from 'svelte';
+	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import PageSizePicker from '$lib/components/PageSizePicker.svelte';
@@ -12,16 +13,18 @@
 	import '$lib/styles/page-size-picker.css';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
-	const viewportFit = getContext<boolean>('viewport-list-page') ?? false;
-	let footerHeight = $state(0);
+	let mobileSettingsOpen = $state(false);
+ let compactMode=$state(false);
+ onMount(()=>{const query=matchMedia(COMPACT_CONTENT_QUERY);compactMode=query.matches;const update=()=>compactMode=query.matches;query.addEventListener('change',update);return()=>query.removeEventListener('change',update);});
+	let listElement = $state<HTMLDivElement>();
 
 	type Row = { id: number; [key: string]: any };
 	type Permission = boolean | ((item: Row) => boolean);
 	type Column = { key: string; label: string; value?: (item: any) => string | number | null | undefined; cell?: Snippet<[any]>; width?: number | string; align?: 'left' | 'center' | 'right'; headerNoWrap?: boolean; sortable?: boolean; searchKeys?: string[] };
 	type TreeParent = { id: number; label: string; order?: number; ancestor?: { id: number; label: string; order?: number } };
 	type TreeGroup = { id: number; label: string; order?: number; children: Row[]; groups: TreeGroup[] };
-	let { searchState = $bindable<SearchState | undefined>(), endpoint, columns, title, listHeading, description, initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, searchParam = 'search', queryParams = {}, edgePagination = true, unpaged = false, hideColumnHeaders = false, showNameIcon = false, treeParent, canManage = false, canDetail, actionLabel, usageLabel, headerActions, footerLeading, toolbarFilters, loadingLabel, emptyLabel, reorderEndpoint, reorderHint, reorderSavingLabel, onReorderError, onReordered, onDetail }: {
-		searchState?: SearchState; endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; searchParam?: string; queryParams?: Record<string, string | number | boolean>; edgePagination?: boolean; unpaged?: boolean; hideColumnHeaders?: boolean; showNameIcon?: boolean; treeParent?: (item: Row) => TreeParent | null; canManage?: boolean; canDetail?: Permission; actionLabel?: (item: Row) => string; usageLabel?: (count: number) => string; headerActions?: Snippet; footerLeading?: Snippet; toolbarFilters?: Snippet; loadingLabel?: string; emptyLabel?: string; reorderEndpoint?: string; reorderHint?: string; reorderSavingLabel?: string; onReorderError?: (reason: 'conflict' | 'forbidden' | 'failed') => void; onReordered?: (orderedIds: number[]) => void;
+	let { mobileItem, searchState = $bindable<SearchState | undefined>(), endpoint, columns, title, listHeading, description, initialSortBy = 'code', pageSizeStorageKey, sortStorageKey, minTableWidth = 720, searchParam = 'search', queryParams = {}, edgePagination = true, unpaged = false, hideColumnHeaders = false, showNameIcon = false, treeParent, canManage = false, canDetail, actionLabel, usageLabel, headerActions, footerLeading, toolbarFilters, loadingLabel, emptyLabel, reorderEndpoint, reorderHint, reorderSavingLabel, onReorderError, onReordered, onDetail }: {
+		mobileItem?: Snippet<[any]>; searchState?: SearchState; endpoint: string; columns: Column[]; title: string; listHeading?: string; description?: string; initialSortBy?: string; pageSizeStorageKey?: string; sortStorageKey?: string; minTableWidth?: number; searchParam?: string; queryParams?: Record<string, string | number | boolean>; edgePagination?: boolean; unpaged?: boolean; hideColumnHeaders?: boolean; showNameIcon?: boolean; treeParent?: (item: Row) => TreeParent | null; canManage?: boolean; canDetail?: Permission; actionLabel?: (item: Row) => string; usageLabel?: (count: number) => string; headerActions?: Snippet; footerLeading?: Snippet; toolbarFilters?: Snippet; loadingLabel?: string; emptyLabel?: string; reorderEndpoint?: string; reorderHint?: string; reorderSavingLabel?: string; onReorderError?: (reason: 'conflict' | 'forbidden' | 'failed') => void; onReordered?: (orderedIds: number[]) => void;
 		onDetail?: (item: Row, trigger: HTMLElement | null) => void;
 	} = $props();
 	let visibleSearchKeys = $derived([...new Set(columns.flatMap((column) => column.searchKeys ?? []))].join(','));
@@ -55,6 +58,9 @@
 	let appliedSearch = $state('');
 	let page = $state(1);
 	let pageSize = $state(10);
+ let effectivePageSize=$derived(mobileItem && compactMode ? 20 : pageSize);
+ let responsiveSizeReady=false;
+ $effect(()=>{const mobile=Boolean(mobileItem)&&compactMode;if(responsiveSizeReady)untrack(()=>{page=1;void refresh();});else responsiveSizeReady=true;});
 	let sortBy = $state('');
 	let activeSortBy = $derived(sortBy || initialSortBy);
 	let sortOrder = $state<'asc' | 'desc'>('asc');
@@ -71,10 +77,10 @@
 	let queryParamsReady = false;
 	let queryParamsKey = $derived(JSON.stringify(queryParams));
  let externalSearchVersion=$derived(searchState?.version);
-	let sizes=$derived(searchState?[10,20,30,40,50,100,250,500]:[10,20,30,40,50]);
-	let pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
-	let first = $derived(total ? (page - 1) * pageSize + 1 : 0);
-	let last = $derived(Math.min(page * pageSize, total));
+	const sizes = [10, 20, 30, 40, 50];
+	let pageCount = $derived(Math.max(1, Math.ceil(total / effectivePageSize)));
+	let first = $derived(total ? (page - 1) * effectivePageSize + 1 : 0);
+	let last = $derived(Math.min(page * effectivePageSize, total));
 	let pageNumbers = $derived.by((): Array<number | 'ellipsis'> => {
 		if (!edgePagination) return Array.from({ length: Math.min(5, pageCount) }, (_, i) => Math.max(1, Math.min(page - 2, pageCount - 4)) + i);
 		if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1);
@@ -92,7 +98,8 @@
 	function rowClick(event: MouseEvent, item: Row) {
 		if (!detailAllowed(item)) return;
 		const target = event.target;
-		if (target instanceof Element && target.closest('button,a,input,select,textarea,label,[role="button"],[role="menuitem"],[contenteditable="true"]')) return;
+		const control = target instanceof Element ? target.closest('button,a,input,select,textarea,label,[role="button"],[role="menuitem"],[contenteditable="true"]') : null;
+		if (control && control !== event.currentTarget) return;
 		const row = event.currentTarget as HTMLTableRowElement;
 		const selection = window.getSelection();
 		if (selection && !selection.isCollapsed && selection.toString() && (row.contains(selection.anchorNode) || row.contains(selection.focusNode))) return;
@@ -144,6 +151,14 @@
 		const target = siblings[index + (event.key === 'ArrowUp' ? -1 : 1)];
 		if (target) void moveItem(item.id, target.id, event.key === 'ArrowDown');
 	}
+ function neighbor(item: Row, direction: number) {
+  const siblings = treeParent ? items.filter(row => treeParent(row)?.id === treeParent(item)?.id) : items;
+  return siblings[siblings.findIndex(row => row.id === item.id) + direction];
+ }
+ function moveNeighbor(item: Row, direction: number) {
+  const target = neighbor(item,direction);
+  if(target) void moveItem(item.id,target.id,direction>0);
+ }
 	async function moveItem(sourceId: number, targetId: number, after: boolean) {
 		if (!reorderEndpoint || reorderSaving) return;
 		const previous = items;
@@ -177,11 +192,11 @@
 			const collected: Row[] = [];
 			let nextTotal = 0;
 			do {
-				const params = new URLSearchParams({ offset: String(unpaged ? collected.length : (page - 1) * pageSize), limit: String(unpaged ? 500 : pageSize), sortBy: activeSortBy, sortOrder });
+				const params = new URLSearchParams({ offset: String(unpaged ? collected.length : (page - 1) * effectivePageSize), limit: String(unpaged ? 500 : effectivePageSize), sortBy: activeSortBy, sortOrder });
 				if (!unpaged && appliedSearch) params.set(searchParam, appliedSearch);
 				if (!unpaged && appliedSearch && visibleSearchKeys) { params.set('visibleSearch', visibleSearchKeys); params.set('searchLocale', $localization.displayLanguage); }
 				if(!searchState) for (const [key, value] of Object.entries(queryParams)) params.set(key, String(value));
-				const response = searchState ? await fetch(endpoint,{method:'POST',signal:current.signal,headers:{'content-type':'application/json'},body:JSON.stringify({definition:searchState.definition,offset:(page-1)*pageSize,...(visibleSearchKeys?{visibleSearch:visibleSearchKeys,searchLocale:$localization.displayLanguage}:{})})}) : await fetch(`${endpoint}?${params}`, { signal: current.signal });
+				const response = searchState ? await fetch(endpoint,{method:'POST',signal:current.signal,headers:{'content-type':'application/json'},body:JSON.stringify({definition:{...searchState.definition,limit:effectivePageSize},offset:(page-1)*effectivePageSize,...(visibleSearchKeys?{visibleSearch:visibleSearchKeys,searchLocale:$localization.displayLanguage}:{})})}) : await fetch(`${endpoint}?${params}`, { signal: current.signal });
 				if (!response.ok) throw new Error(response.status===401?'signInRequired':'loadFailed');
 				const payload = await response.json() as { data: Row[]; meta: { total: number } };
 				if (current.signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -191,7 +206,7 @@
 			} while (unpaged && collected.length < nextTotal);
 			items = collected; total = nextTotal; loadedEndpoint = endpoint;
 			if(searchState) searchState={...searchState,total:nextTotal,success:true,error:false,visibleSearch:visibleSearchKeys,searchLocale:$localization.displayLanguage};
-			if (!unpaged && page > Math.max(1, Math.ceil(total / pageSize))) { page = Math.max(1, Math.ceil(total / pageSize)); void refresh(); }
+			if (!unpaged && page > Math.max(1, Math.ceil(total / effectivePageSize))) { page = Math.max(1, Math.ceil(total / effectivePageSize)); void refresh(); }
 		} catch (cause) {
 			if (controller === current && !(cause instanceof DOMException && cause.name === 'AbortError')) error = cause instanceof Error && cause.message === 'signInRequired' ? 'signInRequired' : 'loadFailed';
 		} finally { if (controller === current) {loading = false;if(searchState)searchState={...searchState,loading:false,error:Boolean(error),success:!error&&searchState.success};} }
@@ -202,44 +217,61 @@
 		timer = window.setTimeout(() => { appliedSearch = search.trim(); page = 1; void refresh(); }, 350);
 	}
 	function changeSort(key: string) { if(searchState){const order=activeSortBy===key&&sortOrder==='asc'?'desc':'asc';sortBy=key;sortOrder=order;page=1;searchState={...searchState,definition:{...searchState.definition,sortBy:key,sortOrder:order}};void refresh();return;} const nextOrder = activeSortBy === key && sortOrder === 'asc' ? 'desc' : 'asc'; sortOrder = nextOrder; sortBy = key; if (persistedSortKey) localStorage.setItem(persistedSortKey, JSON.stringify({ field: key, order: nextOrder })); page = 1; void refresh(); }
-	function changePage(next: number) { if (next < 1 || next > pageCount || next === page) return; page = next; void refresh(); }
+	function changePage(next: number) { if (next < 1 || next > pageCount || next === page) return; page = next; void refresh().then(() => { if(mobileItem && matchMedia(COMPACT_CONTENT_QUERY).matches) listElement?.scrollIntoView({block:'start'}); }); }
 	function changeSize(next: number) { if(searchState)searchState={...searchState,definition:{...searchState.definition,limit:next}};pageSize = next; page = 1; localStorage.setItem(storageKey, String(next)); void refresh(); }
 	$effect(() => { if(untrack(()=>Boolean(searchState)))return; endpoint; initialSortBy; storageKey; persistedSortKey; searchParam; unpaged; if (typeof window !== 'undefined') { page = 1; search = ''; appliedSearch = ''; let nextSortBy = initialSortBy; let nextSortOrder: 'asc' | 'desc' = 'asc'; if (persistedSortKey) { try { const storedSort = JSON.parse(localStorage.getItem(persistedSortKey) ?? 'null') as { field?: unknown; order?: unknown } | null; const allowed = untrack(() => columns.some((column) => column.key === storedSort?.field && column.sortable !== false)); if (storedSort && typeof storedSort.field === 'string' && allowed && (storedSort.order === 'asc' || storedSort.order === 'desc')) { nextSortBy = storedSort.field; nextSortOrder = storedSort.order; } else if (localStorage.getItem(persistedSortKey) !== null) localStorage.removeItem(persistedSortKey); } catch { localStorage.removeItem(persistedSortKey); } } sortBy = nextSortBy; sortOrder = nextSortOrder; if (!unpaged) { const stored = Number(localStorage.getItem(storageKey)); pageSize = sizes.includes(stored) ? stored : 10; } untrack(() => void refresh()); } });
 	$effect(() => { if(untrack(()=>Boolean(searchState)))return; queryParamsKey; if (typeof window !== 'undefined') { if (queryParamsReady) { page = 1; untrack(() => void refresh()); } else queryParamsReady = true; } });
 	$effect(() => { visibleSearchSignature; if (untrack(()=>Boolean(searchState))) { if(searchSignatureReady)untrack(()=>void refresh());else searchSignatureReady=true;return; } if (typeof window !== 'undefined') { if (searchSignatureReady && untrack(() => appliedSearch)) { page = 1; untrack(() => void refresh()); } else searchSignatureReady = true; } });
-	$effect(()=>{const version=externalSearchVersion;if(version===undefined||typeof window==='undefined')return;untrack(()=>{if(!searchState)return;sortBy=searchState.definition.sortBy;sortOrder=searchState.definition.sortOrder;pageSize=searchState.definition.limit;page=1;void refresh();});});
+ $effect(()=>{const version=externalSearchVersion;if(version===undefined||typeof window==='undefined')return;untrack(()=>{if(!searchState)return;sortBy=searchState.definition.sortBy;sortOrder=searchState.definition.sortOrder;pageSize=sizes.includes(searchState.definition.limit)?searchState.definition.limit:10;if(pageSize!==searchState.definition.limit)searchState={...searchState,definition:{...searchState.definition,limit:pageSize}};page=1;void refresh();});});
 
 	onMount(() => () => { clearTimeout(timer); controller?.abort(); });
 </script>
 
 {#snippet paginationControls()}
-	<button type="button" aria-label={commonText.firstPage} disabled={page === 1} onclick={() => changePage(1)}><PaginationIcon direction="first" /></button>
+	<button type="button" class="pagination-edge" aria-label={commonText.firstPage} disabled={page === 1} onclick={() => changePage(1)}><PaginationIcon direction="first" /></button>
 	<button type="button" aria-label={commonText.previousPage} disabled={page === 1} onclick={() => changePage(page - 1)}><PaginationIcon direction="previous" /></button>
-	<span class="pagination-numbers">{#each pageNumbers as number}{#if number === 'ellipsis'}<span class="pagination-ellipsis" aria-hidden="true">…</span>{:else}<button type="button" aria-current={number === page ? 'page' : undefined} onclick={() => changePage(number)}>{number}</button>{/if}{/each}</span>
+	<span class="mobile-page-number">{page} / {pageCount}</span><span class="pagination-numbers">{#each pageNumbers as number}{#if number === 'ellipsis'}<span class="pagination-ellipsis" aria-hidden="true">…</span>{:else}<button type="button" aria-current={number === page ? 'page' : undefined} onclick={() => changePage(number)}>{number}</button>{/if}{/each}</span>
 	<button type="button" aria-label={commonText.nextPage} disabled={page === pageCount} onclick={() => changePage(page + 1)}><PaginationIcon direction="next" /></button>
-	<button type="button" aria-label={commonText.lastPage} disabled={page === pageCount} onclick={() => changePage(pageCount)}><PaginationIcon direction="last" /></button>
+	<button type="button" class="pagination-edge" aria-label={commonText.lastPage} disabled={page === pageCount} onclick={() => changePage(pageCount)}><PaginationIcon direction="last" /></button>
 {/snippet}
 
 {#snippet itemRow(item: Row, treeDepth: 0 | 1 | 2)}
 			{@const canOpenDetail = detailAllowed(item)}
 			<tr data-row-id={item.id} class:detail-row={canOpenDetail} class:tree-child={treeDepth > 0} class:tree-grandchild={treeDepth === 2} class:drag-source={draggedId === item.id} class:drop-before={dropTargetId === item.id && !dropAfter} class:drop-after={dropTargetId === item.id && dropAfter} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? formatLocaleTemplate(commonText.viewDetails, itemLabel(item)) : undefined} onclick={(event) => rowClick(event, item)} onkeydown={(event) => rowKeydown(event, item)}>
-				{#each columns as column, index}<td style:padding-left={index === 0 && treeDepth > 0 ? treeDepth === 2 ? '58px' : '38px' : undefined} style:text-align={column.align}>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if showNameIcon && column.key === 'name'}<span class="name-with-icon">{#if reorderEndpoint && canManage && items.length > 1}<button class="name-reorder-handle" class:dragging={draggedId === item.id} type="button" disabled={reorderSaving} aria-label={`${reorderHint}: ${itemLabel(item)}`} title={reorderHint} onpointerdown={(event) => pointerDown(event, item)} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={pointerCancel} onkeydown={(event) => reorderKeydown(event, item)}><svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg></button>{:else}<svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>{/if}<span class="name-icon-label">{value}</span>{#if typeof item.usageCount === 'number'}<span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span>{/if}</span>{:else if ['name', 'displayName'].includes(column.key) && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}
+				{#each columns as column, index}<td data-label={index > 0 ? column.label : undefined} style:padding-left={index === 0 && treeDepth > 0 ? treeDepth === 2 ? '58px' : '38px' : undefined} style:text-align={column.align}>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if showNameIcon && column.key === 'name'}<span class="name-with-icon">{#if reorderEndpoint && canManage && items.length > 1}<button class="name-reorder-handle" class:dragging={draggedId === item.id} type="button" disabled={reorderSaving} aria-label={`${reorderHint}: ${itemLabel(item)}`} title={reorderHint} onpointerdown={(event) => pointerDown(event, item)} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={pointerCancel} onkeydown={(event) => reorderKeydown(event, item)}><svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg></button>{:else}<svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>{/if}<span class="name-icon-label">{value}</span>{#if unpaged && reorderEndpoint && canManage && items.length > 1}<span class="mobile-order-actions"><button type="button" disabled={reorderSaving || !neighbor(item,-1)} aria-label={`${commonText.moveUp}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,-1)}>↑</button><button type="button" disabled={reorderSaving || !neighbor(item,1)} aria-label={`${commonText.moveDown}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,1)}>↓</button></span>{/if}{#if typeof item.usageCount === 'number'}<span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span>{/if}</span>{:else if ['name', 'displayName'].includes(column.key) && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}
 			</tr>
 {/snippet}
 
-<div class="master-list" class:viewport-fit={viewportFit} class:external-search={Boolean(searchState)} style:--list-footer-height={`${footerHeight}px`}>
+{#snippet searchFilters()}
+	<SearchInput label={formatLocaleTemplate(commonText.searchLabel, title)} value={search} onValueChange={searchChanged} />
+	{#if toolbarFilters}{@render toolbarFilters()}{/if}
+{/snippet}
+
+<div bind:this={listElement} class="master-list" class:unpaged class:mobile-layout={Boolean(mobileItem)} class:mobile-settings-open={mobileSettingsOpen} class:external-search={Boolean(searchState)}>
 <div class="master-controls">
 {#if listHeading !== '' || description !== '' || headerActions}<header class="master-header"><div>{#if listHeading !== ''}<h2>{listHeading ?? formatLocaleTemplate(commonText.allItems, title.toLowerCase())}</h2>{/if}{#if description !== ''}<p>{description ?? commonText.description}</p>{/if}</div>{#if headerActions}<div class="master-header-actions">{@render headerActions()}</div>{/if}</header>{/if}
 {#if !unpaged}
+{#if !searchState && mobileItem && compactMode}<div class="mobile-search-filters">{@render searchFilters()}</div>{/if}
+{#if mobileItem}<button class="mobile-settings-toggle" type="button" aria-expanded={mobileSettingsOpen} onclick={() => mobileSettingsOpen = !mobileSettingsOpen}>{commonText.displaySettings} <span aria-hidden="true">{mobileSettingsOpen ? '−' : '+'}</span></button>{/if}
 <div class="master-toolbar">
 	<div class="master-toolbar-main">
-	{#if !searchState}<div class="master-toolbar-filters"><SearchInput label={formatLocaleTemplate(commonText.searchLabel, title)} value={search} onValueChange={searchChanged} />{#if toolbarFilters}{@render toolbarFilters()}{/if}</div>{/if}
+	{#if !searchState && (!mobileItem || !compactMode)}<div class="master-toolbar-filters">{@render searchFilters()}</div>{/if}
+	{#if mobileItem}<div class="mobile-sort"><select aria-label={commonText.sortBy} value={activeSortBy} onchange={event => { if(event.currentTarget.value !== activeSortBy) changeSort(event.currentTarget.value); }}>{#each columns.filter(column => column.sortable !== false) as column}<option value={column.key}>{column.label}</option>{/each}</select><select class="mobile-sort-direction" aria-label={commonText.sortDirection} value={sortOrder} onchange={event => { if(event.currentTarget.value !== sortOrder) changeSort(activeSortBy); }}><option value="asc">{commonText.ascending}</option><option value="desc">{commonText.descending}</option></select></div>{/if}
 	<div class="page-size">{commonText.showPrefix} <PageSizePicker value={pageSize} options={sizes} label={commonText.entriesPerPage} onChange={changeSize} /> {commonText.showSuffix}</div>
 	</div>
 	<div class="master-toolbar-pagination"><p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p><nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></div>
 </div>
 {/if}
 </div>
+{#if mobileItem && compactMode}
+<div class="mobile-results" aria-busy={loading}>
+ <p class="mobile-result-count" role="status">{formatLocaleTemplate(commonText.showing, first, last, total)}</p>
+ {#if loading}<div class="mobile-state"><LoadingSpinner label={loadingLabel ?? commonText.loading} /></div>
+ {:else if error}<div class="mobile-state">{#if !errorDismissed}<StatusNotice message={commonText[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}</div>
+ {:else if !items.length}<p class="mobile-state">{emptyLabel ?? commonText.noItems}</p>
+ {:else}<ul class="mobile-items">{#each items as item (item.id)}{@const canOpenDetail = detailAllowed(item)}<li><div class="mobile-row" data-row-id={item.id} role="button" aria-disabled={!canOpenDetail} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? formatLocaleTemplate(commonText.viewDetails, itemLabel(item)) : undefined} onclick={event => rowClick(event, item)} onkeydown={event => rowKeydown(event, item)}><div class="mobile-item-content">{@render mobileItem(item)}</div>{#if canOpenDetail}<span class="mobile-chevron" aria-hidden="true">›</span>{/if}</div></li>{/each}</ul>{/if}
+</div>
+{/if}
 <div class="master-scroll app-table-scroll">
 	<table style={`min-width:${minTableWidth}px`}>
 		<colgroup>{#each columns as column}<col style:width={typeof column.width === 'string' ? column.width : `${column.width ?? 100 / columns.length}%`} />{/each}</colgroup>
@@ -265,13 +297,13 @@
 		</tbody>
 	</table>
 </div>
-{#if !unpaged}<footer bind:clientHeight={footerHeight} class="master-footer" class:has-leading={Boolean(footerLeading)}>{#if footerLeading}<div class="master-footer-leading">{@render footerLeading()}</div>{:else}<p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p>{/if}<nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></footer>{/if}
+{#if !unpaged}<footer class="master-footer" class:has-leading={Boolean(footerLeading)}>{#if footerLeading}<div class="master-footer-leading">{@render footerLeading()}</div>{:else}<p>{formatLocaleTemplate(commonText.showing, first, last, total)}</p>{/if}<nav aria-label={formatLocaleTemplate(commonText.pages, title)}>{@render paginationControls()}</nav></footer>{/if}
 </div>
 {#if reorderSaving}<span class="sr-only" role="status">{reorderSavingLabel}</span>{/if}
 
 <style>
 	.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-	.master-list{display:flex;min-width:0;max-height:calc(100dvh - 200px);flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
+	.master-list{display:flex;min-width:0;flex:none;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
 	.master-header{display:flex;flex:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-light)}
 	.master-header h2{margin:0;color:var(--text);font-size:var(--font-size-section)}
 	.master-header p{margin:1px 0 0;color:var(--muted);font-size:var(--font-size-support)}
@@ -287,12 +319,12 @@
 	.master-toolbar-pagination p{flex:none;margin:0;color:var(--muted);font-size:var(--font-size-support)}
 	.master-toolbar-pagination nav{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:auto}
 	.master-toolbar-pagination .pagination-numbers{display:contents}
-	.master-scroll{min-height:0;overflow:auto}
+	.master-scroll{flex:none;overflow-x:auto}
 	table{width:100%;min-width:720px;table-layout:fixed;border-collapse:collapse;font-size:var(--font-size-body)}
 	th{position:sticky;top:0;z-index:2;padding:8px 16px;background:var(--surface-secondary);color:var(--muted);font-size:var(--font-size-support);font-weight:700;letter-spacing:.3px;text-align:left;text-transform:uppercase}
 	td{padding:8px 16px;color:var(--text-secondary);font-size:var(--font-size-body);vertical-align:middle;border-bottom:1px solid var(--border-light);overflow-wrap:anywhere}
 	.empty{height:96px;color:var(--muted);text-align:center}
-	@media(max-width:700px){.empty{text-align:left;padding-left:16px}}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.empty{text-align:left;padding-left:16px}}
 	.column-label{text-transform:uppercase}
 	tbody tr:hover{background:var(--surface-hover,var(--surface-secondary))}
 	tbody tr.detail-row{cursor:pointer}
@@ -342,10 +374,59 @@
 	.master-footer button[aria-current='page'],.master-toolbar-pagination button[aria-current='page']{background:#1abb9c!important;color:#fff!important;border-color:#169f85}
 	.master-footer button:disabled,.master-toolbar-pagination button:disabled{cursor:not-allowed;opacity:.5}
 	.master-footer button:focus-visible,.master-toolbar-pagination button:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
-	@media(max-width:700px){.master-header,.master-toolbar-main,.master-toolbar-pagination,.master-footer,.master-toolbar-filters{align-items:stretch;flex-direction:column}.master-toolbar-pagination nav{margin-left:0}.master-header-actions{width:100%}}
-	.master-list.viewport-fit{flex:1;min-height:0;max-height:none}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.master-header,.master-toolbar-main,.master-toolbar-pagination,.master-footer,.master-toolbar-filters{align-items:stretch;flex-direction:column}.master-toolbar-pagination nav{margin-left:0}.master-header-actions{width:100%}}
 	.master-controls{display:contents}
-	.viewport-fit .master-controls{display:block;flex:none;min-height:0;max-height:max(0px,calc(100% - var(--list-footer-height) - 82px));overflow:auto}
-	.viewport-fit .master-scroll{flex:1;min-height:0}
-.external-search.viewport-fit{flex:1 0 260px;min-height:260px}@media(max-width:700px){.external-search.viewport-fit{flex:none;min-height:280px;max-height:600px}.external-search .master-scroll{min-height:160px}}
+
+ .mobile-results,.mobile-settings-toggle,.mobile-sort,.mobile-page-number{display:none}
+ @media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){
+  .mobile-layout .master-controls{overflow:visible;max-height:none}
+  .mobile-search-filters{display:flex;flex-direction:column;gap:12px;padding:12px;border-bottom:1px solid var(--border-light)}
+  .mobile-search-filters :global(.search-box){width:100%;min-width:0}
+  .mobile-search-filters :global(input[type='search']){min-height:44px}
+  .mobile-layout .master-scroll,.mobile-layout .master-toolbar-pagination{display:none}
+  .mobile-layout .mobile-results{display:block}
+  .mobile-layout .mobile-settings-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;padding:8px 12px;background:var(--surface);color:var(--text);border:0;border-bottom:1px solid var(--border);font:inherit;text-align:left}
+  .mobile-layout .master-toolbar{display:none;padding:12px}
+  .mobile-layout.mobile-settings-open .master-toolbar{display:flex}
+  .mobile-layout .master-toolbar-main{gap:12px}
+  .mobile-layout .mobile-sort{display:flex;align-items:center;gap:8px;max-width:100%}
+  .mobile-sort select{flex:0 1 auto;width:auto;max-width:100%;min-width:0;min-height:44px;padding:8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font:inherit}
+  .mobile-layout .page-size{display:none}
+  .mobile-result-count{margin:0;padding:8px 12px;color:var(--muted);font-size:var(--font-size-support)}
+  .mobile-items{margin:0;padding:0;list-style:none}.mobile-items li+li{border-top:1px solid var(--border-light)}
+  .mobile-row{display:flex;align-items:center;gap:8px;min-height:72px;padding:12px;cursor:pointer}.mobile-row:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.mobile-row:hover{background:var(--surface-hover,var(--surface-secondary))}
+  .mobile-item-content{flex:1;min-width:0}.mobile-chevron{flex:none;color:var(--muted);font-size:24px}.mobile-state{margin:0;padding:20px 12px}
+  .mobile-layout .master-header{gap:8px;padding:12px}.mobile-layout .master-header h2{font-size:var(--font-size-subsection)}
+  .mobile-layout .master-header p{display:none}
+  .mobile-layout .master-header-actions :global(.export-button){width:auto;min-height:44px}
+  .mobile-layout .master-header-actions :global(.employee-list-actions){display:contents}
+  .mobile-layout .master-header-actions :global(.app-add-icon){width:44px;height:44px}
+  .mobile-layout .mobile-results :global(.book-purchase-badge){min-height:44px;min-width:44px}
+  .mobile-layout .master-header:has(:global(.app-add-icon))>div:first-child{flex:1 1 100px}
+  .mobile-layout .master-footer{gap:8px;padding:12px}.mobile-layout .master-footer>p{display:none}.mobile-layout .master-footer nav{width:100%;justify-content:space-between;margin:0}
+  .mobile-layout .master-footer .pagination-edge,.mobile-layout .master-footer .pagination-numbers{display:none}.mobile-layout .mobile-page-number{display:inline;font-size:var(--font-size-support)}
+  .mobile-layout .master-footer button{min-width:44px;min-height:44px}
+ }
+
+
+.mobile-order-actions{display:none}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){
+ .master-list.unpaged{max-height:none;overflow:visible}
+ .unpaged .master-scroll{overflow:visible;max-height:none}
+ .unpaged table{display:block;min-width:0!important;width:100%}
+ .unpaged colgroup{display:none}.unpaged tbody{display:block}
+ .unpaged thead:not(.sr-only),.unpaged thead:not(.sr-only) tr{display:flex;flex-wrap:wrap}.unpaged thead:not(.sr-only){border-bottom:1px solid var(--border)}
+ .unpaged thead th{display:block;position:static;box-shadow:none;padding:4px 8px}.unpaged .sort-button{min-height:44px}
+ .unpaged tbody tr{display:block;padding:8px 12px;border-bottom:1px solid var(--border-light)}
+ .unpaged tbody td{display:block;padding:3px 0!important;border:0;text-align:left!important;overflow-wrap:anywhere}
+ .unpaged tbody td[data-label]:not([data-label=''])::before{content:attr(data-label) ': ';color:var(--muted);font-size:var(--font-size-support)}
+ .unpaged tbody tr.tree-child{padding-left:24px}.unpaged tbody tr.tree-grandchild{padding-left:36px}
+ .unpaged .tree-parent-row{padding:0}.unpaged .tree-toggle{min-height:44px}
+ .unpaged .name-with-icon{display:flex;gap:8px;width:100%;min-height:44px}.unpaged .name-icon-label{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere}
+ .unpaged .name-reorder-handle{display:none}
+ .unpaged .mobile-order-actions{display:flex;flex:none;gap:4px;margin-left:auto}
+ .mobile-order-actions button{width:44px;min-height:44px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--action-primary);font:inherit}.mobile-order-actions button:disabled{opacity:.4}
+ .unpaged .master-header{flex-direction:row;align-items:center;gap:8px;padding:12px}.unpaged .master-header>div:first-child{flex:1;min-width:0}.unpaged .master-header-actions{width:auto}
+ .unpaged .master-header-actions :global(.app-add-icon){width:44px;height:44px}
+}
 </style>

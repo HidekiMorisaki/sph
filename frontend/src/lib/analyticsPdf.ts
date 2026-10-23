@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import { jsPDF } from '../../vendor/jspdf/index.js';
 import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '$lib/analytics';
 import { productName } from '$lib/brand';
 import { DISPLAY_LANGUAGES, formatDate, formatMonthYear, type LocalizationSettings } from '$lib/localization';
@@ -73,7 +73,7 @@ export function createAnalyticsPdf(data: AnalyticsData, settings: LocalizationSe
 		label(`${text.appliedPeriod}: ${month(period!.fromMonth)} - ${month(period!.toMonth)}`, pageWidth - margin, 54, 10, colors.muted, 'right');
 		line(margin, height - 38, pageWidth - margin, height - 38);
 		label(text.title, margin, height - 20, 9, colors.muted);
-		label(`${text.pdfPage} ${page} / 3`, pageWidth - margin, height - 20, 9, colors.muted, 'right');
+		label(`${text.pdfPage} ${page} / 4`, pageWidth - margin, height - 20, 9, colors.muted, 'right');
 	}
 	function nextPage(section: string, page: number, height: number) {
 		doc.addPage([pageWidth / unit, height / unit], 'landscape');
@@ -94,31 +94,32 @@ export function createAnalyticsPdf(data: AnalyticsData, settings: LocalizationSe
 		{ name: text.hires, value: count(data.summary.hires), unit: text.peopleUnit, note: text.ytd },
 		{ name: text.departures, value: count(data.summary.departures), unit: text.peopleUnit, note: text.ytd },
 		{ name: text.referenceAverageAge, value: referenceAverageAge === null ? text.unavailable : ages.format(referenceAverageAge), unit: referenceAverageAge === null ? '' : text.averageAgeUnit, note: text.referenceAverageAgeNote },
+		{ name: text.averageTenure, value: data.summary.averageTenureMonths === null ? '—' : ages.format(data.summary.averageTenureMonths / 12), unit: data.summary.averageTenureMonths === null ? '' : text.averageAgeUnit, note: text.averageTenureNote },
 		{ name: text.turnover, value: data.summary.turnoverRate === null ? text.unavailable : rate(data.summary.turnoverRate).replace(/\s*%$/, ''), unit: data.summary.turnoverRate === null ? '' : '%', note: text.ytd }
 	];
-	const metricWidth = (pageWidth - 2 * margin - (metrics.length - 1) * 12) / metrics.length;
+	const metricWidth = (pageWidth - 2 * margin - 2 * 12) / 3;
 	for (const [index, metric] of metrics.entries()) {
-		const x = margin + index * (metricWidth + 12);
-		rectangle(x, 82, metricWidth, 99, colors.pale, colors.border);
-		paragraph(metric.name, x + 12, 102, metricWidth - 24, 10);
+		const x = margin + index % 3 * (metricWidth + 12), offsetY = Math.floor(index / 3) * 106;
+		rectangle(x, 82 + offsetY, metricWidth, 94, colors.pale, colors.border);
+		paragraph(metric.name, x + 12, 102 + offsetY, metricWidth - 24, 10);
 		const unitSize = 12;
 		const unitGap = metric.unit ? 6 : 0;
 		const valueSize = Math.min(28, 28 * (metricWidth - 24 - measure(metric.unit, unitSize) - unitGap) / Math.max(1, measure(metric.value, 28)));
-		label(metric.value, x + 12, 139, valueSize);
-		if (metric.unit) label(metric.unit, x + 12 + measure(metric.value, valueSize) + unitGap, 139, unitSize, colors.muted);
-		paragraph(metric.note, x + 12, 159, metricWidth - 24, 7.5);
+		label(metric.value, x + 12, 135 + offsetY, valueSize);
+		if (metric.unit) label(metric.unit, x + 12 + measure(metric.value, valueSize) + unitGap, 135 + offsetY, unitSize, colors.muted);
+		paragraph(metric.note, x + 12, 151 + offsetY, metricWidth - 24, 7.5);
 	}
 	const left = 100, plotWidth = pageWidth - 200;
 	const spacing = plotWidth / Math.max(1, data.annual.length);
 	const x = (index: number) => left + spacing * (index + 0.5);
-	label(text.rates, margin, 234, 16, colors.green);
+	label(text.rates, margin, 307, 16, colors.green);
 	let legendX = margin;
 	for (const [name, fill] of [[text.hiresLabel, colors.blue], [text.departuresLabel, colors.orange], [text.turnoverLabel, colors.green]] as const) {
-		rectangle(legendX, 258, 10, 10, fill);
-		label(name, legendX + 17, 267, 10);
+		rectangle(legendX, 319, 10, 10, fill);
+		label(name, legendX + 17, 328, 10);
 		legendX += measure(name, 10) + 44;
 	}
-	const turnoverTop = 346, turnoverHeight = 270;
+	const turnoverTop = 375, turnoverHeight = 241;
 	const countAxis = niceAxis(data.annual.flatMap((item) => [item.hires, item.departures]));
 	const rateAxis = niceAxis(data.annual.map((item) => item.turnoverRate ?? 0), 0.1);
 	const countMaximum = countAxis.maximum;
@@ -127,8 +128,8 @@ export function createAnalyticsPdf(data: AnalyticsData, settings: LocalizationSe
 	const rateY = (value: number) => turnoverTop + turnoverHeight - value / rateMaximum * turnoverHeight;
 	ticks(left, turnoverTop, plotWidth, turnoverHeight, countAxis.ticks, count);
 	ticks(left, turnoverTop, plotWidth, turnoverHeight, rateAxis.ticks, rate, true);
-	label(text.employees, left, 334, 10, colors.muted);
-	label(text.percent, left + plotWidth, 334, 10, colors.muted, 'right');
+	label(text.employees, left, 363, 10, colors.muted);
+	label(text.percent, left + plotWidth, 363, 10, colors.muted, 'right');
 	const barWidth = Math.min(24, spacing * 0.23);
 	for (const [index, item] of data.annual.entries()) {
 		for (const [value, offset, fill] of [[item.hires, -barWidth - 3, colors.blue], [item.departures, 3, colors.orange]] as const) {
@@ -258,6 +259,21 @@ export function createAnalyticsPdf(data: AnalyticsData, settings: LocalizationSe
 			rectangle(legendX, 574, 8, 8, slice.color);
 			label(name, legendX + 14, 582, 9);
 			legendX += width + legendGap;
+		}
+	}
+	nextPage(text.tenure, 4, pageHeight);
+	paragraph(text.tenureNote, margin, 100, pageWidth - 2 * margin);
+	if (!data.tenure.total) label(text.empty, pageWidth / 2, 400, 11, colors.muted, 'center');
+	else {
+		const left = margin + 45, top = 155, height = 410, width = pageWidth - 2 * margin - 60;
+		const axis = niceAxis(data.tenure.groups.map((group) => group.count));
+		ticks(left, top, width, height, axis.ticks, count);
+		const spacing = width / data.tenure.groups.length;
+		for (const [index, group] of data.tenure.groups.entries()) {
+			const x = left + spacing * (index + 0.5), barHeight = group.count / axis.maximum * height;
+			rectangle(x - spacing * 0.28, top + height - barHeight, spacing * 0.56, barHeight, colors.blue);
+			label(count(group.count), x, top + height - barHeight - 6, 10, colors.ink, 'center');
+			label(text.tenureLabels[group.key], x, top + height + 25, 9, colors.muted, 'center');
 		}
 	}
 	return { document: doc, fileName: `employee-analysis_${data.referenceDate}_${period.fromMonth}_${period.toMonth}.pdf` };

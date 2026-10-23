@@ -1,4 +1,6 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 	import { onMount, tick } from 'svelte';
@@ -156,17 +158,17 @@
 </script>
 
 {#snippet headerActions()}
-	{#if canManage}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}
+	{#if allowedOperation('masters.create')}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}
 {/snippet}
 
 <svelte:window onkeydown={handleWindowKeydown} />
 <div class="master-section">
 	{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={() => message = ''} />{/if}
-	<div class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} {canManage} unpaged showNameIcon {treeParent} minTableWidth={0} headerActions={headerActions} initialSortBy="sortOrder" reorderEndpoint={`/v1/workforce-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={handleReordered} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
+	<div class="panel"><MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} canManage={allowedOperation('masters.reorder')} unpaged showNameIcon {treeParent} minTableWidth={0} headerActions={headerActions} initialSortBy="sortOrder" reorderEndpoint={`/v1/workforce-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={handleReordered} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
 </div>
 
 {#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId="employee-master-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} {endpoint} itemId={detailItem.id} fields={[{ key: 'name', label: text.name, value: detailItem.name }, ...(isGroup ? [{ key: 'departmentId', label: text.department, value: detailItem.department?.name ?? detailItem.departmentId }] : []), { key: 'notes', label: text.notes, value: detailItem.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailItem = null}>
-	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); }} onDelete={() => void remove(detailItem!)} />{/if}{/snippet}
+	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('masters.update') ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
 </MasterRecordDetailModal>{/if}
 
 {#if canManage && formOpen}

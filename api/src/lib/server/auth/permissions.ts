@@ -1,3 +1,4 @@
+import { permissionDependencies, derivedPermissionCodes } from './permission-dependencies';
 import type { AuthenticatedUser } from './types';
 import granularOperations from './granular-operations.json';
 
@@ -38,7 +39,7 @@ export const editablePermissionCatalog = [
 	{ code: permissionOperations.bookTitleManage, category: 'books' },
 	{ code: permissionOperations.bookManage, category: 'books' },
 	...granularOperations.filter((operation) => !operation.systemOnly).map(({ code, category }) => ({ code, category }))
-];
+].filter(({ code }) => !derivedPermissionCodes.has(code));
 
 export const ownBranchOperations = new Set([
 	'employees.skills.create', 'employees.skills.update', 'employees.skills.delete', 'employees.participations.create', 'employees.participations.update', 'employees.participations.delete', 'teams.members.add', 'teams.members.remove',
@@ -47,7 +48,7 @@ export const ownBranchOperations = new Set([
 	'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
 	'assets.read', 'assets.manage', 'assets.create', 'assets.update', 'assets.delete', 'assets.assign', 'assets.return',
 	'assets.credentials.read', 'assets.credentials.write', 'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
-	'books.manage', 'books.copies.create', 'books.copies.update', 'books.copies.delete', 'books.covers.update', 'books.reservations.manage', 'books.loans.create', 'books.loans.return',
+	'books.manage', 'books.copies.create', 'books.copies.update', 'books.copies.delete', 'books.purchases.manage', 'books.loans.create', 'books.loans.return',
 	'calendars.read', 'calendars.assign', 'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 
@@ -65,12 +66,39 @@ export function hasScopedPermissionOperation(user: AuthenticatedUser, operation:
 		(hasOwnBranchPermissionOperation(user, operation) && user.branchId === branchId);
 }
 
+export function operationScopesFor(user: AuthenticatedUser): Record<string, 'global' | 'own_branch'> {
+ const scopes: Record<string, 'global' | 'own_branch'> = {};
+ for (const code of new Set([...user.permissionOperations, ...(user.ownBranchPermissionOperations ?? [])])) {
+  const pending = [code], seen = new Set<string>();
+  let valid = true, ownBranch = false;
+  while (pending.length) {
+   const current = pending.shift()!;
+   if (seen.has(current)) continue;
+   seen.add(current);
+   const global = user.permissionOperations.includes(current);
+   if (!global && !user.ownBranchPermissionOperations?.includes(current)) { valid = false; break; }
+   if (!global) ownBranch = true;
+   for (const dependency of permissionDependencies(current, global ? 'global' : 'own_branch')) {
+    if (dependency.scopeType === 'global' && !ownBranchOperations.has(dependency.code) && !user.permissionOperations.includes(dependency.code)) { valid = false; break; }
+    pending.push(dependency.code);
+   }
+  }
+  if (valid) scopes[code] = ownBranch ? 'own_branch' : 'global';
+ }
+ return scopes;
+}
+
 export function capabilitiesFor(user: AuthenticatedUser) {
+	const scopes = operationScopesFor(user);
 	return {
+		canReadFinancialInformation: Boolean(scopes['financial.read']),
+		operationScopes: scopes,
+		widgetDraftOperations:Object.keys(scopes).filter(code=>code.startsWith('widgets.drafts.')),
+		canReadWidgetDrafts: hasPermissionOperation(user,'widgets.read')&&hasPermissionOperation(user,'widgets.drafts.read'),
 		canReadSkills: hasPermissionOperation(user, 'skills.read'),
 		canReadProjects: hasPermissionOperation(user, 'projects.read'),
         canReadClients: hasPermissionOperation(user, 'clients.read'),
-		workforceOperations: user.permissionOperations.filter(code => code.startsWith('skills.') || code.startsWith('projects.') || code.startsWith('clients.')),
+		workforceOperations: Object.keys(scopes).filter(code => code.startsWith('skills.') || code.startsWith('projects.') || code.startsWith('clients.')),
 		canAddTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.add'),
 		canRemoveTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.remove'),
 		canReadTeams: hasPermissionOperation(user, 'teams.read'),
@@ -90,9 +118,10 @@ export function capabilitiesFor(user: AuthenticatedUser) {
 		canCreateBranches: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement),
 		canDeleteBranches: hasPermissionOperation(user, 'branches.delete') || hasOwnBranchPermissionOperation(user, 'branches.delete'),
 		canReadCalendars: hasPermissionOperation(user, permissionOperations.calendarRead),
-		canAssignCalendars: (hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.calendarAssignment)) || hasOwnBranchPermissionOperation(user, permissionOperations.calendarAssignment),
+		canAssignCalendars: Boolean(scopes['calendars.assign']),
 		canManageAssets: hasPermissionOperation(user, permissionOperations.assetManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.assetManagement),
-		canReadAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialRead) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialRead),
+		canReadAssets: hasPermissionOperation(user, permissionOperations.assetRead) || hasOwnBranchPermissionOperation(user, permissionOperations.assetRead),
+		canReadAssetCredentials: Boolean(scopes['assets.credentials.view']),
 		canWriteAssetCredentials: hasPermissionOperation(user, permissionOperations.assetCredentialWrite) || hasOwnBranchPermissionOperation(user, permissionOperations.assetCredentialWrite),
 		canReadSoftware: hasPermissionOperation(user, permissionOperations.softwareRead),
 		canManageBookTitles: hasPermissionOperation(user, permissionOperations.bookRead) && hasPermissionOperation(user, 'books.titles.create'),

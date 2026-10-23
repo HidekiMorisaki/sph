@@ -4,7 +4,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/releases) [![License](https://img.shields.io/github/license/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/blob/main/LICENSE)
 
-![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
+![Title Imagepng](./docs/gallery/TitleImage.png)
 
 SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and various asset management functions.
 
@@ -13,28 +13,28 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 
 ## Main features
 
-| Feature | Overview |
-| --- | --- |
-| Employee analytics | Analyze employees using multiple metrics |
-| Financial analytics | View charts showing published financial trends by branch and year |
-| Employee management and access control | Manage employee information and role-based access control |
-| Internal calendars | Create and publish internal calendars |
-| Location management | Manage branches, rooms, and storage locations |
-| IT asset management | Manage IT asset records, assignments, returns, and change history |
-| License management | Manage software licenses |
-| Book management | Manage bibliographic records, physical copies, reservations, loans, and returns |
-| Master data management | Manage employee-related and other master data |
-| Personal settings | Set time zone, display language, display currency, and more |
+| Feature                                | Overview                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| Employee analytics                     | Analyze employees using multiple metrics                                        |
+| Financial analytics                    | View charts showing published financial trends by branch and year               |
+| Employee management and access control | Manage employee information and role-based access control                       |
+| Internal calendars                     | Create and publish internal calendars                                           |
+| Location management                    | Manage branches, rooms, and storage locations                                   |
+| IT asset management                    | Manage IT asset records, assignments, returns, and change history               |
+| License management                     | Manage software licenses                                                        |
+| Book management                        | Manage bibliographic records, physical copies, reservations, loans, and returns |
+| Master data management                 | Manage employee-related and other master data                                   |
+| Personal settings                      | Set time zone, display language, display currency, and more                     |
 
 ## Installation instructions
 
-| Your goal | Read this section |
-| --- | --- |
-| Try and evaluate the system | [Quick Start for Users](#quick-start-for-users) |
-| Try it on free cloud hosting (experimental deployment) | [Installing on blitz.cloud](#installing-on-blitz-cloud) |
-| Install on a server for access from other PCs | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
-| Diagnose an installation problem | [Quick Start troubleshooting](#quick-start-troubleshooting) |
-| Start or stop an existing installation | [Starting and stopping the system](#starting-and-stopping-the-system) |
+| Your goal                                              | Read this section                                                             |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Try and evaluate the system                            | [Quick Start for Users](#quick-start-for-users)                               |
+| Try it on free cloud hosting (experimental deployment) | [Installing on blitz.cloud](#installing-on-blitz-cloud)                       |
+| Install on a server for access from other PCs          | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
+| Diagnose an installation problem                       | [Quick Start troubleshooting](#quick-start-troubleshooting)                   |
+| Start or stop an existing installation                 | [Starting and stopping the system](#starting-and-stopping-the-system)         |
 
 Financial figures use the [Bank of Japan Time-Series Data Search](https://www.stat-search.boj.or.jp/index_en.html) API for USD/JPY conversion. Monthly rates are stored in the database and are not automatically revised. If you install SPH and make it publicly available, review the [Bank of Japan API usage notice](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf) and provide the required service notification before publication. The financial page displays the data source.
 Optional installer samples include published financial periods and clearly marked
@@ -56,10 +56,10 @@ cd sph
 
 ### 3. Run the installer
 
-| Platform | Run from the downloaded folder |
-| --- | --- |
-| Windows | Double-click `install.bat`, or run `.\install.ps1` in PowerShell. |
-| macOS / Linux | Run `bash ./install.sh` in a terminal. |
+| Platform      | Run from the downloaded folder                                    |
+| ------------- | ----------------------------------------------------------------- |
+| Windows       | Double-click `install.bat`, or run `.\install.ps1` in PowerShell. |
+| macOS / Linux | Run `bash ./install.sh` in a terminal.                            |
 
 The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
@@ -94,12 +94,12 @@ The installer may time out waiting for `/v1/health` even though the build finish
 Run the download and installer steps on the machine that will host the system.
 Choose a connection mode in the installer:
 
-| Mode | URL and certificate | Network and trust requirements |
-| --- | --- | --- |
-| Local only | `http://localhost:3000` by default | Available only from the PC where SPH is installed. The web port binds only to that PC's loopback interface. |
-| Internal HTTP | `http://` followed by the server's private IPv4 address and optional web port | Allow access only from devices on the local area network. All traffic, including passwords, session cookies, and employee and asset data, is unencrypted, but no server certificate is required. |
-| Internal HTTPS | Your internal `https://` hostname, with a certificate issued and renewed by the built-in Caddy CA | Allow access only from devices on the local area network. Client devices must be able to reach TCP `443` on the server. An administrator must securely distribute the exported CA root certificate to each client and configure it as trusted. |
-| Public domain | Your `https://` domain, with a Let's Encrypt certificate obtained and renewed automatically by the built-in gateway | Point public DNS to this server and make TCP `80` and `443` reachable from the internet. During installation, you must enter an ACME contact email address and accept the Let's Encrypt subscriber agreement. |
+| Mode           | URL and certificate                                                                                                 | Network and trust requirements                                                                                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local only     | `http://localhost:3000` by default                                                                                  | Available only from the PC where SPH is installed. The web port binds only to that PC's loopback interface.                                                                                                                                    |
+| Internal HTTP  | `http://` followed by the server's private IPv4 address and optional web port                                       | Allow access only from devices on the local area network. All traffic, including passwords, session cookies, and employee and asset data, is unencrypted, but no server certificate is required.                                               |
+| Internal HTTPS | Your internal `https://` hostname, with a certificate issued and renewed by the built-in Caddy CA                   | Allow access only from devices on the local area network. Client devices must be able to reach TCP `443` on the server. An administrator must securely distribute the exported CA root certificate to each client and configure it as trusted. |
+| Public domain  | Your `https://` domain, with a Let's Encrypt certificate obtained and renewed automatically by the built-in gateway | Point public DNS to this server and make TCP `80` and `443` reachable from the internet. During installation, you must enter an ACME contact email address and accept the Let's Encrypt subscriber agreement.                                  |
 
 For the internal HTTPS mode, the installer exports the public CA root certificate to `.runtime/ca/root.crt`. Verify the certificate's identity on the server before distributing it to client devices through your organization's certificate management process. The CA private key is stored in Docker's `gateway_data` volume. Include the `gateway_data` volume in backups: losing it changes the CA and invalidates existing trust. Certificates are renewed automatically while the CA data persists.
 
@@ -136,6 +136,23 @@ keep it protected until recovery is complete, then securely remove this temporar
 file. It may contain credentials.
 
 ### Verify the installation
+
+The local startup order is database readiness → successful migration → API
+readiness → frontend → gateway. `GET /v1/health` checks the API process and
+configuration; `GET /v1/readiness` additionally checks the database, authentication
+schema, session write permissions and unfinished migrations. Readiness returns
+only a generic 200/503 JSON result, with caching disabled.
+
+The production frontend waits for `/v1/readiness` at `API_INTERNAL_ORIGIN` before
+listening. This applies to both Docker images and `npm start`; set that server-only
+origin when running outside Compose. Migration remains a separate job. The sign-in
+page also checks readiness through the public `/v1/readiness` route and validates
+the session before showing the form. It displays a startup message, switches to an
+unavailable message after 30 seconds, and retries automatically. A dependency
+failure during sign-in returns to this waiting state without replaying credentials.
+If services are hosted separately, route `/v1/*` to the API on the same public
+origin and run migrations successfully before releasing the API.
+
 
 Show all containers, including the one-time migration container:
 
@@ -258,12 +275,28 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 
 ## Acknowledgements
 
-The UI design of SPH was inspired by [Gentelella v4 - Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella). We are grateful to the Gentelella contributors—and to all developers who generously make high-quality design templates available to the community at no cost.
+### Design
 
-SPH uses the following external APIs and public data sources. We thank their providers for making these services and data available.
+The UI design was inspired by [Gentelella v4 - Free Admin Dashboard Template](https://github.com/colorlibhq/gentelella). We are grateful to the Gentelella contributors—and to all developers who generously make high-quality design templates available to the community at no cost.
+
+### Libraries
+
+We also thank the contributors to the libraries and font used for barcode scanning, PDF reports, and image processing:
+
+- [Quagga2](https://github.com/ericblade/quagga2): Reads ISBN barcodes through the browser camera. Notices for the browser bundle and its included modules are preserved in [the bundled licenses](./frontend/static/vendor/quagga2-1.12.1/LICENSES.txt); see [ISBN camera scanning](./docs/ISBN_Scanner.md) for source and version details.
+- [jsPDF](https://github.com/parallax/jsPDF): Generates PDF reports in the browser.
+- [Noto Sans JP](https://github.com/notofonts/noto-cjk): Provides the font embedded in English and Japanese PDF reports. See the [font source and transformation record](./frontend/static/fonts/README.md) and [SIL Open Font License](./frontend/static/fonts/OFL.txt).
+- [pngjs](https://github.com/pngjs/pngjs) and [jpeg-js](https://github.com/jpeg-js/jpeg-js): Process avatar images and book covers. License texts and copyright notices are linked in [the image processing license record](./docs/licenses/README.md).
+
+See [third-party license records](./licenses/README.md) for component-specific license texts, notices, and source records. These acknowledgements complement the applicable license and redistribution requirements.
+
+### APIs
+
+We use the following external APIs and public data sources. We thank their providers for making these services and data available.
 
 - [zipcloud Postal Code Search API](https://zipcloud.ibsnet.co.jp/doc/api): Looks up Japanese address candidates from postal codes.
 - [Zippopotam.us API](https://zippopotam.us/): Looks up U.S. address candidates from ZIP codes.
+- [GeoNames](https://www.geonames.org/): Supplies the underlying postal code data used by Zippopotam.us. See [postal address data sources and usage conditions](./docs/Postal_Address_Data_Sources.md).
 - [openBD](https://openbd.jp/): Provides bibliographic details and available book covers for ISBN lookup in the book catalog.
 - [Bank of Japan Time-Series Data Search API](https://www.stat-search.boj.or.jp/index_en.html): Retrieves monthly average USD/JPY exchange rates for converting financial figures. The Bank of Japan does not guarantee the content of SPH.
 - [Cabinet Office of Japan public holiday data](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html): Supplies the public CSV data imported into Japanese work calendars.

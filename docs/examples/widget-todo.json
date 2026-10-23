@@ -1,0 +1,29 @@
+{
+  "id": "example.todo",
+  "provider": "SPH example",
+  "author": "SPH",
+  "version": "1.0.0",
+  "schemaVersion": 1,
+  "name": {"ja": "ToDo", "en": "ToDo"},
+  "sizes": ["2x2"],
+  "sizeLayouts": {"2x2": {"rows": 2, "columns": 2}},
+  "capabilities": [],
+  "settings": {},
+  "storage": {
+    "fields": {
+      "task": {"type": "string", "label": {"ja": "タスク", "en": "Task"}, "required": true, "maxLength": 200},
+      "dueDate": {"type": "date", "label": {"ja": "期限", "en": "Due date"}},
+      "completed": {"type": "boolean", "label": {"ja": "完了", "en": "Completed"}, "default": false},
+      "notes": {"type": "text", "label": {"ja": "備考", "en": "Notes"}, "maxLength": 16000},
+      "priority": {"type": "number", "label": {"ja": "優先度", "en": "Priority"}, "min": 0, "max": 10},
+      "category": {"type": "select", "label": {"ja": "分類", "en": "Category"}, "options": [{"value": "work", "label": {"ja": "仕事", "en": "Work"}}, {"value": "other", "label": {"ja": "その他", "en": "Other"}}]},
+      "tags": {"type": "stringArray", "label": {"ja": "タグ", "en": "Tags"}, "maxLength": 100}
+    },
+    "fieldOrder": ["task", "dueDate", "completed", "priority", "category", "notes", "tags"],
+    "titleField": "task",
+    "listFields": ["task", "dueDate", "completed"],
+    "operations": {"create": true, "update": true, "delete": true}
+  },
+  "view": [{"type": "records"}],
+  "license": {"name": "MIT", "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"}
+}

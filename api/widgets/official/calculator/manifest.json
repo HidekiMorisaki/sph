@@ -1,0 +1,45 @@
+{
+  "id": "sph.calculator",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "電卓（標準）",
+    "en": "Calculator (Standard)"
+  },
+  "description": {
+    "ja": "四則演算、小数、パーセント、符号切り替え、C（すべてクリア）、CE（入力クリア）、1文字削除に対応する標準電卓です。キーボードの数字・演算子・Enter・Backspace・Delete・Escapeでも操作できます。計算は入力順に実行し、結果は有効数字16桁に丸めます。計算内容はブラウザー内だけで処理し、ページを再読み込みするとリセットされます。",
+    "en": "A standard calculator with arithmetic, decimals, percentages, sign changes, C (clear all), CE (clear entry) and backspace. Supports keyboard digits, operators, Enter, Backspace, Delete and Escape. Operations execute in entry order, with results rounded to 16 significant digits. Calculations stay in the browser and reset when the page reloads."
+  },
+  "sizes": [
+    "2x1",
+    "2x2",
+    "3x2"
+  ],
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  },
+  "sizeLayouts": {
+    "2x1": {
+      "rows": 2,
+      "columns": 1
+    },
+    "2x2": {
+      "rows": 2,
+      "columns": 2
+    },
+    "3x2": {
+      "rows": 3,
+      "columns": 2
+    }
+  }
+}

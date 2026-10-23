@@ -152,5 +152,8 @@
 		"codeConflict": "This management code is already in use.",
 		"ipConflict": "This IP address is already in use in the selected room.",
 		"serialConflict": "This serial number is already in use for the selected manufacturer."
-	}
+	},
+	"summaryFilter": "Unassigned (disposed assets excluded)",
+	"clearSummaryFilter": "Clear summary filters",
+	"allBranches": "All branches"
 }

@@ -4,11 +4,13 @@ import { promisify } from 'node:util';
 import { dev } from '$app/environment';
 
 import { getPrisma } from '$lib/server/prisma';
+import type { Prisma } from '$lib/server/generated/prisma/client';
+import { employeeReferenceDate } from '$lib/server/api/employee-derived';
 import { throwApiError } from '$lib/server/api/response';
 
 import type { AuthenticatedSession, AuthenticatedUser } from './types';
 import { DEFAULT_DISPLAY_CURRENCY, DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayCurrency, isDisplayLanguage, isTimeZone } from './localization';
-import { hasPermissionOperation, permissionOperations } from './permissions';
+import { hasPermissionOperation, ownBranchOperations, permissionOperations } from './permissions';
 
 const scrypt = promisify(scryptCallback);
 
@@ -52,11 +54,11 @@ export async function verifyPassword(password: string, passwordHash: string): Pr
 	return actualKey.length === expectedKey.length && timingSafeEqual(actualKey, expectedKey);
 }
 
-export async function createSession(employeeId: number): Promise<{ token: string; expiresAt: Date }> {
+export async function createSession(employeeId: number, database: Pick<Prisma.TransactionClient, 'session'> = getPrisma()): Promise<{ token: string; expiresAt: Date }> {
 	const token = randomBytes(32).toString('base64url');
 	const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
 
-	await getPrisma().session.create({
+	await database.session.create({
 		data: {
 			tokenHash: hashToken(token),
 			employeeId,
@@ -73,7 +75,7 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	}
 
 	const record = await getPrisma().session.findFirst({
-		where: { tokenHash: hashToken(token), deletedAt: null, employee: { deletedAt: null, accountStatus: 'active', OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }] } },
+		where: { tokenHash: hashToken(token), deletedAt: null, employee: { deletedAt: null, accountStatus: 'active', OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }] } },
 		select: {
 			id: true,
 			expiresAt: true,
@@ -114,13 +116,13 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	// These approved operations have no branch scope. Saved filters remain owner-only
 	// in their service; target-resource reads still use their existing scope checks.
 	// Every operation requires an active global DB permission grant.
-	const globalTeamOperations = new Set(['search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'projects.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
+	const globalTeamOperations = new Set(['books.read', 'books.titles.create', 'books.purchases.read', 'books.purchases.create', 'books.purchases.cancel', 'books.reservations.create', 'books.reservations.cancel', 'widgets.drafts.read','widgets.drafts.create','widgets.drafts.update','widgets.drafts.delete','widgets.read', 'widgets.layout.update', 'widgets.records.create', 'widgets.records.update', 'widgets.records.delete', 'search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'projects.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
 	for (const grant of grants.filter(grant => grant.scopeType === 'own_branch' && grant.role.defaultKey === 'branch_administrator')) {
 		for (const entry of grant.role.permissions.filter(entry => entry.scopeType === 'global')) {
 			for (const { operation } of entry.permission.operations) if (globalTeamOperations.has(operation) && !grantedOperations.includes(operation)) grantedOperations.push(operation);
 		}
 	}
-	const ownBranchPermissionOperations = [...new Set(grants.flatMap((grant) => grant.role.permissions.filter((entry) => grant.scopeType === 'own_branch' || entry.scopeType === 'own_branch').flatMap((entry) => entry.permission.operations.map((operation) => operation.operation))))];
+	const ownBranchPermissionOperations = [...new Set(grants.flatMap(grant => grant.role.permissions.flatMap(entry => entry.permission.operations.filter(({ operation }) => ownBranchOperations.has(operation) && (entry.scopeType === 'own_branch' || grant.scopeType === 'own_branch' && !globalTeamOperations.has(operation))).map(({ operation }) => operation))))];
 	const settings = record.employee.settings?.deletedAt == null ? record.employee.settings : null;
 	const displayLanguage = isDisplayLanguage(settings?.displayLanguage) ? settings.displayLanguage : DEFAULT_DISPLAY_LANGUAGE;
 

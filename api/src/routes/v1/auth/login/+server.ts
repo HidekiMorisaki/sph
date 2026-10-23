@@ -1,12 +1,12 @@
-import { createSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieSecure, verifyPassword } from '$lib/server/auth/session';
-import { getPrisma } from '$lib/server/prisma';
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieSecure } from '$lib/server/auth/session';
+import { authenticateLogin } from '$lib/server/auth/login';
 import { failure, success } from '$lib/server/api/response';
 
 function invalidCredentials() {
 	return failure(401, 'INVALID_CREDENTIALS', 'Invalid email or password.');
 }
 
-export async function POST({ request, cookies }: import('./$types').RequestEvent) {
+export async function POST({ request, cookies, getClientAddress }: import('./$types').RequestEvent) {
 	let body: unknown;
 	try {
 		body = await request.json();
@@ -28,22 +28,22 @@ export async function POST({ request, cookies }: import('./$types').RequestEvent
 		return invalidCredentials();
 	}
 
-	const user = await getPrisma().employee.findFirst({
-		where: {
-			...(identifier.includes('@') ? { email: identifier.trim().toLowerCase() } : { username: identifier.trim() }),
-			deletedAt: null,
-			accountStatus: 'active',
-			OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
-			roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
-		},
-		select: { id: true, passwordHash: true }
-	});
-
-	if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
-		return invalidCredentials();
+	let result;
+	try { result = await authenticateLogin(identifier, password, getClientAddress()); }
+	catch {
+		const response = failure(503, 'SERVICE_UNAVAILABLE', 'The service is not ready.');
+		response.headers.set('Retry-After', '2');
+		return response;
 	}
-
-	const session = await createSession(user.id);
+	if (result.status === 'limited') {
+		const response = failure(429, 'LOGIN_RATE_LIMITED', 'Too many sign-in attempts. Try again after the restriction expires.', [
+			{ field: 'login', reason: 'RATE_LIMITED', retryAfterSeconds: result.retryAfterSeconds }
+		]);
+		response.headers.set('Retry-After', String(result.retryAfterSeconds));
+		return response;
+	}
+	if (result.status === 'invalid') return invalidCredentials();
+	const session = result.session;
 	cookies.set(SESSION_COOKIE_NAME, session.token, {
 		path: '/',
 		httpOnly: true,

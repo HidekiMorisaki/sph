@@ -1,4 +1,4 @@
-export const analyticsChartKeys = ['age', 'gender', 'trend', 'turnover'] as const;
+export const analyticsChartKeys = ['age', 'gender', 'trend', 'turnover', 'tenure'] as const;
 export type ChartKey = typeof analyticsChartKeys[number];
 export type AnalyticsSelection = { referenceDate: string; charts: Record<ChartKey, { fromMonth: string; toMonth: string }> };
 export type SaveStatus = 'saving' | 'saved' | 'saveFailed';

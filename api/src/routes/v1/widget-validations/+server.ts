@@ -1,0 +1,2 @@
+import {draftActor,draftBody} from '$lib/server/widgets/drafts';import {manifest} from '$lib/server/widgets/contract';import {success,failure} from '$lib/server/api/response';
+export async function POST({locals,request}:import('./$types').RequestEvent){draftActor(locals.user,'read');const body=await draftBody(request);try{return success(manifest(body));}catch{return failure(422,'INVALID_WIDGET','The definition does not match the widget contract. Check metadata, sizes, storage and SDK version.');}}

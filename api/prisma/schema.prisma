@@ -77,7 +77,8 @@ model Employee {
   bookReservations        BookReservation[]
   bookLoans               BookLoan[]                @relation("BookBorrower")
   bookLoansManaged        BookLoan[]                @relation("BookLoanManager")
-  widgets                 EmployeeWidget[]
+  widgetDrafts            WidgetDraft[]
+  widgetLayout            WidgetLayout?
   masterChangeHistory     MasterChangeHistory[]
   softwareChangesRecorded SoftwareChangeHistory[]
   roleGrants              EmployeeRole[]          @relation("Grantee")
@@ -1294,21 +1295,6 @@ model BookChangeHistory {
   @@map("book_change_history")
 }
 
-model EmployeeWidget {
-  id         Int       @id @default(autoincrement())
-  employeeId Int       @map("employee_id")
-  code       String    @db.VarChar(50)
-  sortOrder  Int       @default(0) @map("sort_order")
-  enabled    Boolean   @default(true)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
-  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-
-  @@unique([employeeId, code])
-  @@map("employee_widgets")
-}
-
 model AuditLog {
   id         Int       @id @default(autoincrement())
   eventKey   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("event_key") @db.Uuid
@@ -1343,6 +1329,18 @@ model MasterChangeHistory {
   @@index([resource, resourceId, changedAt])
   @@index([actorId])
   @@map("master_change_history")
+}
+
+model AuthenticationThrottle {
+  id           Int        @id @default(autoincrement())
+  bucketKey    String     @unique @map("bucket_key") @db.VarChar(64)
+  failureTimes DateTime[] @default([]) @map("failure_times") @db.Timestamptz(3)
+  blockedUntil DateTime?  @map("blocked_until") @db.Timestamptz(3)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("authentication_throttles")
 }
 
 model Session {
@@ -1409,4 +1407,105 @@ model AccountInvitation {
   @@index([issuedById])
   @@index([expiresAt])
   @@map("account_invitations")
+}
+
+model WidgetSource {
+  id Int @id @default(autoincrement())
+  sourceKey String @unique @map("source_key") @db.VarChar(100)
+  name String @db.VarChar(128)
+  url String @unique @db.VarChar(2048)
+  releases WidgetRelease[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@map("widget_sources")
+}
+
+model WidgetRelease {
+  id Int @id @default(autoincrement())
+  sourceId Int @map("source_id")
+  widgetCode String @map("widget_code") @db.VarChar(100)
+  version String @db.VarChar(40)
+  definition Json @db.JsonB
+  digest String @db.VarChar(64)
+  source WidgetSource @relation(fields:[sourceId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  approval WidgetApproval?
+  instances WidgetInstance[]
+  @@unique([sourceId,widgetCode,version])
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@map("widget_releases")
+}
+
+model WidgetApproval {
+  id Int @id @default(autoincrement())
+  releaseId Int @unique @map("release_id")
+  allowed Boolean @default(false)
+  release WidgetRelease @relation(fields:[releaseId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@map("widget_approvals")
+}
+
+model WidgetLayout {
+  id Int @id @default(autoincrement())
+  employeeId Int @unique @map("employee_id")
+  revision Int @default(1)
+  employee Employee @relation(fields:[employeeId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  instances WidgetInstance[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@map("widget_layouts")
+}
+
+model WidgetInstance {
+  id Int @id @default(autoincrement())
+  instanceKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("instance_key") @db.Uuid
+  layoutId Int @map("layout_id")
+  releaseId Int @map("release_id")
+  size String @db.VarChar(8)
+  enabled Boolean @default(true)
+  sortOrder Int @default(0) @map("sort_order")
+  settings Json @default("{}") @db.JsonB
+  records WidgetRecord[]
+  layout WidgetLayout @relation(fields:[layoutId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  release WidgetRelease @relation(fields:[releaseId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@index([layoutId,deletedAt])
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@map("widget_instances")
+}
+
+model WidgetRecord {
+  id Int @id @default(autoincrement())
+  instanceId Int @map("instance_id")
+  recordKey String @map("record_key") @db.VarChar(64)
+  values Json @db.JsonB
+  revision Int @default(1)
+  instance WidgetInstance @relation(fields:[instanceId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  @@unique([instanceId,recordKey])
+  @@index([instanceId,deletedAt])
+  @@map("widget_records")
+}
+
+model WidgetDraft {
+ id Int @id @default(autoincrement())
+ employeeId Int @map("employee_id")
+ widgetCode String @map("widget_code") @db.VarChar(100)
+ version String @db.VarChar(40)
+ content Json @db.JsonB
+ revision Int @default(1)
+ employee Employee @relation(fields:[employeeId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ @@unique([employeeId,widgetCode,version])
+ @@map("widget_drafts")
 }

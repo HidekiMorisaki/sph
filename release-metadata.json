@@ -3,6 +3,54 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.6.0",
+			"releasedAt": "2026-10-23",
+			"changeGroups": {
+				"newFeatures": [
+					"v0_6_0_widget_platform",
+					"v0_6_0_widget_sdk",
+					"v0_6_0_it_asset_search",
+					"v0_6_0_asset_overview",
+					"v0_6_0_isbn_camera_scanner"
+				],
+				"improvements": [
+					"v0_6_0_installer_improvements",
+					"v0_6_0_modal_viewport_height",
+					"v0_6_0_shared_page_tabs",
+					"v0_6_0_mobile_lists",
+					"v0_6_0_system_information_saved_tab",
+					"v0_6_0_mysql2_update",
+					"v0_6_0_pg_update",
+					"v0_6_0_prisma_patch_update",
+					"v0_6_0_role_permission_dependencies",
+					"v0_6_0_operation_action_visibility",
+					"v0_6_0_login_rate_limit",
+					"v0_6_0_administrator_protection",
+					"v0_6_0_asset_credential_permissions",
+					"v0_6_0_branch_book_permissions",
+					"v0_6_0_master_reorder_permissions",
+					"v0_6_0_team_delete_scope"
+				],
+				"bugFixes": [
+					"v0_6_0_startup_readiness",
+					"v0_6_0_esbuild_security",
+					"v0_6_0_vite_security",
+					"v0_6_0_gateway_security",
+					"v0_6_0_zlib_security",
+					"v0_6_0_postcss_security",
+					"v0_6_0_svelte_security",
+					"v0_6_0_sveltekit_security",
+					"v0_6_0_cookie_security",
+					"v0_6_0_source_map_security",
+					"v0_6_0_html_asset_preloads",
+					"v0_6_0_role_modal_overlay",
+					"v0_6_0_retirement_auth",
+					"v0_6_0_api_cache",
+					"v0_6_0_id_boundaries"
+				]
+			}
+		},
+		{
 			"version": "0.5.0",
 			"releasedAt": "2026-10-18",
 			"changeGroups": {
@@ -124,7 +172,5 @@
 			]
 		}
 	],
-	"noticeIds": [
-		"v0_5_0_development_notice"
-	]
+	"noticeIds": []
 }

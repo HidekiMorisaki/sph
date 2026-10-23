@@ -1,0 +1,9 @@
+**
+!gateway/
+!gateway/Dockerfile
+!gateway/main.go
+!gateway/go.mod
+!gateway/go.sum
+!licenses/
+!licenses/caddy/
+!licenses/caddy/**

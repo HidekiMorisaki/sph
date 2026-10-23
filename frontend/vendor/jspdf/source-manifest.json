@@ -1,0 +1,134 @@
+{
+  "upstreamVersion": "4.2.1",
+  "source": "https://codeload.github.com/parallax/jsPDF/tar.gz/refs/tags/v4.2.1",
+  "archiveSha256": "1514865f23370e632d2e22f0c4685db76a8ef5fa28c6a172482f03e2dd7b8e92",
+  "files": [
+    {
+      "upstreamPath": "src/jspdf.js",
+      "path": "jspdf.js",
+      "upstreamSha256": "3434312514aa563281738622e28899432835fbf742f0e9fccce2e1722c3058f8",
+      "sha256": "feaaa802590fa090436787a6542d4aef939db3e6d9d9a521df0810ffe60111d0",
+      "modified": true
+    },
+    {
+      "upstreamPath": "types/index.d.ts",
+      "path": "index.d.ts",
+      "upstreamSha256": "98137bb3bf4804403e7f845acea4cbfa7cdad2c860706a120f71a1206d9b65a1",
+      "sha256": "64493d35230a667a220389a224d936dc021a0aa5f5e5c97aba0129da02555ac3",
+      "modified": true
+    },
+    {
+      "upstreamPath": "LICENSE",
+      "path": "LICENSE",
+      "upstreamSha256": "dc388ec35ff463288cdde3588a36fd4ed12a45deff053243b37309acc9ef583b",
+      "sha256": "dc388ec35ff463288cdde3588a36fd4ed12a45deff053243b37309acc9ef583b",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/filters.js",
+      "path": "modules/filters.js",
+      "upstreamSha256": "537d4c38416f9d2efca65a7996b341fc82d093b0286d79316fae6417308a8e4f",
+      "sha256": "537d4c38416f9d2efca65a7996b341fc82d093b0286d79316fae6417308a8e4f",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/vfs.js",
+      "path": "modules/vfs.js",
+      "upstreamSha256": "6a1b0325d0e625631267b893a7f7013fd9ac470221ff94f2fa476595ed176d09",
+      "sha256": "6a1b0325d0e625631267b893a7f7013fd9ac470221ff94f2fa476595ed176d09",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/ttfsupport.js",
+      "path": "modules/ttfsupport.js",
+      "upstreamSha256": "80db0988581ef7e6a508eb126aaa34919438c70a119a65625f1832b622bac77d",
+      "sha256": "80db0988581ef7e6a508eb126aaa34919438c70a119a65625f1832b622bac77d",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/utf8.js",
+      "path": "modules/utf8.js",
+      "upstreamSha256": "01c68ecdcf49dbee21e091dc41f57476bad72d91886d7894298136c3a6435acb",
+      "sha256": "01c68ecdcf49dbee21e091dc41f57476bad72d91886d7894298136c3a6435acb",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/standard_fonts_metrics.js",
+      "path": "modules/standard_fonts_metrics.js",
+      "upstreamSha256": "6b32f16a20cfe4a73de8430b885b3203222b2705b0441d88ec48ea8ec03be03a",
+      "sha256": "6b32f16a20cfe4a73de8430b885b3203222b2705b0441d88ec48ea8ec03be03a",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/split_text_to_size.js",
+      "path": "modules/split_text_to_size.js",
+      "upstreamSha256": "c225e69b35a9857b3e269c903f6a55f0c87757b9f35b56af9da8f7144e555ee7",
+      "sha256": "c225e69b35a9857b3e269c903f6a55f0c87757b9f35b56af9da8f7144e555ee7",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/annotations.js",
+      "path": "modules/annotations.js",
+      "upstreamSha256": "de191d879cd8b7b16e6009eb7d589d42a901d38c05b6c571513a43889776cc27",
+      "sha256": "de191d879cd8b7b16e6009eb7d589d42a901d38c05b6c571513a43889776cc27",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/modules/setlanguage.js",
+      "path": "modules/setlanguage.js",
+      "upstreamSha256": "2e867161f8689b65dc6c533791bd7c3b8c461fb3351cdd905b020d2630267d30",
+      "sha256": "2e867161f8689b65dc6c533791bd7c3b8c461fb3351cdd905b020d2630267d30",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/globalObject.js",
+      "path": "libs/globalObject.js",
+      "upstreamSha256": "f415ca58e4d1a5ed3f49a3373e6985e25073485e03982845e055d3bbb0ba4b22",
+      "sha256": "f415ca58e4d1a5ed3f49a3373e6985e25073485e03982845e055d3bbb0ba4b22",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/AtobBtoa.js",
+      "path": "libs/AtobBtoa.js",
+      "upstreamSha256": "ee5e782256c56c70b141655efad186fea39694d34151121e7fb0cab1ec7a7fb0",
+      "sha256": "ee5e782256c56c70b141655efad186fea39694d34151121e7fb0cab1ec7a7fb0",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/console.js",
+      "path": "libs/console.js",
+      "upstreamSha256": "28d8fa7e5007ec0ee1fc942d5997124e3630378068ae57df1162af325e69d046",
+      "sha256": "28d8fa7e5007ec0ee1fc942d5997124e3630378068ae57df1162af325e69d046",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/pdfname.js",
+      "path": "libs/pdfname.js",
+      "upstreamSha256": "de233630ca6d154dde6066d20e9d2130122e3fb28b48a5a9191a604aa97e179d",
+      "sha256": "de233630ca6d154dde6066d20e9d2130122e3fb28b48a5a9191a604aa97e179d",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/fflate.js",
+      "path": "libs/fflate.js",
+      "upstreamSha256": "d4957c1138635b8493bbed047bb2a64b23234411dd5935d170125504a50a7f9c",
+      "sha256": "d4957c1138635b8493bbed047bb2a64b23234411dd5935d170125504a50a7f9c",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/ttffont.js",
+      "path": "libs/ttffont.js",
+      "upstreamSha256": "e1f6c408efef81bd66dabb9e5d9897a01cb74aeb60f9f4cd4bc3582d5469e6e5",
+      "sha256": "e1f6c408efef81bd66dabb9e5d9897a01cb74aeb60f9f4cd4bc3582d5469e6e5",
+      "modified": false
+    },
+    {
+      "upstreamPath": "src/libs/bidiEngine.js",
+      "path": "libs/bidiEngine.js",
+      "upstreamSha256": "18bdc699e171f45cd0f822780df1f3260c23ff9cad4bea157e4b5069489bf866",
+      "sha256": "18bdc699e171f45cd0f822780df1f3260c23ff9cad4bea157e4b5069489bf866",
+      "modified": false
+    }
+  ],
+  "noticeSha256": "664be4ccfe702decdc5b1c35141694e360b3acc170ae21d802516ef47bd8278e"
+}

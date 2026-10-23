@@ -1,4 +1,6 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
 	import { masterReason } from '$lib/master-reasons';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
@@ -145,7 +147,7 @@
 	});
 </script>
 
-{#snippet headerActions()}{#if canManage && (tab!=='branches'||canCreateBranches)}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
+{#snippet headerActions()}{#if allowedOperation((tab === 'locations' ? 'storage' : tab) + '.create')}<AddButton iconOnly bind:element={addButton} label={text.addButton} ariaLabel={addLabel} onclick={add} />{/if}{/snippet}
 
 {#snippet nameField()}
 	<label><span>{text.name} <span class="required">*</span></span><input name="name" bind:value={form.name} maxlength="128" class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name?'location-name-error':undefined} oninput={()=>clearError('name')}/>{#if errors.name}<small id="location-name-error" class="field-error">{m(errors.name)}</small>{/if}</label>
@@ -196,7 +198,7 @@
 <svelte:window onkeydown={handleWindowKeydown} />
 {#if message}<StatusNotice message={m(message)} tone="error" onDismiss={() => message = ''} />{/if}
 <div class="panel">
-		<MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} {canManage} {minTableWidth} {headerActions} {treeParent} unpaged showNameIcon initialSortBy="sortOrder" {reorderEndpoint} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason)=>message=reason==='conflict'?'reorderConflict':reason==='forbidden'?'reorderForbidden':'reorderFailed'} onReordered={notifyRelatedSections} actionLabel={(item)=>locationName(item as Branch|Room|Storage)} onDetail={(item,trigger)=>showDetail(item as Branch|Room|Storage,trigger)} />
+		<MasterList bind:this={list} {endpoint} {columns} {title} listHeading={title} description={sectionDescription} canManage={allowedOperation('masters.reorder')} {minTableWidth} {headerActions} {treeParent} unpaged showNameIcon initialSortBy="sortOrder" {reorderEndpoint} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason)=>message=reason==='conflict'?'reorderConflict':reason==='forbidden'?'reorderForbidden':'reorderFailed'} onReordered={notifyRelatedSections} actionLabel={(item)=>locationName(item as Branch|Room|Storage)} onDetail={(item,trigger)=>showDetail(item as Branch|Room|Storage,trigger)} />
 </div>
 
 {#if detailBranch}
@@ -205,7 +207,7 @@
 	{@const deputyManager=detailBranch.deputyManager}
 <div hidden={Boolean(detailEmployee)} inert={Boolean(detailEmployee)}>
 	<DetailModal title={text.branchDetail} titleId="branch-detail-title" closeLabel={text.branchDetailClose} returnFocus={returnFocus} compact dialogClass="branch-detail-dialog" onClose={closeDetail}>
-		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailBranch!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); }} onDelete={canDeleteBranches ? () => void remove(detailBranch!) : undefined} />{/if}{/snippet}
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('branches.update', detailBranch?.id) ? () => { const item = detailBranch!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('branches.delete', detailBranch?.id) ? () => void remove(detailBranch!) : undefined} />{/if}{/snippet}
 		<section class="app-detail-section"><h3>{text.basicInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{detailBranch.name}</dd></div><div><dt>{text.openingDate}</dt><dd>{display(formatDate(detailBranch.openedOn,$localization))}</dd></div><div><dt>{text.closingDate}</dt><dd>{display(formatDate(detailBranch.closedOn,$localization))}</dd></div></dl></section>
 		<section class="app-detail-section"><h3>{text.responsibility}</h3>{#if detailEmployeeError}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={()=>detailEmployeeError=false} />{/if}<dl class="app-detail-grid"><div><dt>{text.primaryPerson}</dt><dd>{#if primaryManager}<button class="branch-person-link" type="button" data-responsibility="primary" disabled={detailEmployeeLoading} aria-label={t('primaryDetails',employeeName(primaryManager))} onclick={(event)=>void openEmployeeDetail(primaryManager.id,event.currentTarget)}>{employeeName(primaryManager)}</button>{/if}</dd></div><div><dt>{text.deputyPerson}</dt><dd>{#if deputyManager}<button class="branch-person-link" type="button" data-responsibility="deputy" disabled={detailEmployeeLoading} aria-label={t('deputyDetails',employeeName(deputyManager))} onclick={(event)=>void openEmployeeDetail(deputyManager.id,event.currentTarget)}>{employeeName(deputyManager)}</button>{/if}</dd></div></dl></section>
 		<section class="app-detail-section"><div class="branch-detail-section-header"><h3>{text.address}</h3>{#if mapHref}<a class="branch-map-link" href={mapHref} target="_blank" rel="noopener noreferrer" aria-label={t('mapLabel',detailBranch.name)}>{text.openMap}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 3h7v7M13 3 5 11M11 9v4H3V5h4" /></svg></a>{/if}</div><dl class="app-detail-grid"><div><dt>{$localization.displayLanguage==='ja'?'国':'Country'}</dt><dd>{detailBranch.countryCode==='US'?($localization.displayLanguage==='ja'?'米国':'United States'):($localization.displayLanguage==='ja'?'日本':'Japan')}</dd></div><div><dt>{detailBranch.countryCode==='US'?'ZIP Code':text.postalCode}</dt><dd>{display(detailBranch.postalCode)}</dd></div><div><dt>{detailBranch.countryCode==='US'?($localization.displayLanguage==='ja'?'州':'State'):text.prefecture}</dt><dd>{display(detailBranch.prefecture)}</dd></div><div><dt>{text.city}</dt><dd>{display(detailBranch.city)}</dd></div><div><dt>{text.streetAddress}</dt><dd>{display(detailBranch.streetAddress)}</dd></div><div><dt>{text.buildingName}</dt><dd>{display(detailBranch.buildingName)}</dd></div></dl></section>
@@ -217,10 +219,10 @@
 {/if}
 {#if detailEmployee}<EmployeeDetailModal employee={detailEmployee} returnFocus={employeeReturnFocus} onClose={closeEmployeeDetail} />{/if}
 {#if detailRoom}<MasterRecordDetailModal title={`${text.rooms} ${commonText.detail}`} titleId="room-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={returnFocus} endpoint="/v1/rooms" itemId={detailRoom.id} fields={[{key:'name',label:text.name,value:detailRoom.name},{key:'branchId',label:text.branch,value:detailRoom.branch.name},{key:'notes',label:text.notes,value:detailRoom.notes}]} onClose={closeDetail}>
-	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailRoom!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); }} onDelete={() => void remove(detailRoom!)} />{/if}{/snippet}
+	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('rooms.update', detailRoom?.branchId) ? () => { const item = detailRoom!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('rooms.delete', detailRoom?.branchId) ? () => void remove(detailRoom!) : undefined} />{/if}{/snippet}
 </MasterRecordDetailModal>{/if}
 {#if detailStorage}<MasterRecordDetailModal title={`${text.storages} ${commonText.detail}`} titleId="storage-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={returnFocus} endpoint="/v1/storages" itemId={detailStorage.id} fields={[{key:'name',label:text.name,value:detailStorage.name},{key:'roomId',label:text.room,value:detailStorage.room.name},{key:'notes',label:text.notes,value:detailStorage.notes}]} onClose={closeDetail}>
-	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailStorage!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); }} onDelete={() => void remove(detailStorage!)} />{/if}{/snippet}
+	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('storage.update', detailStorage?.branchId) ? () => { const item = detailStorage!; const row = returnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('storage.delete', detailStorage?.branchId) ? () => void remove(detailStorage!) : undefined} />{/if}{/snippet}
 </MasterRecordDetailModal>{/if}
 
 {#if canManage && formOpen}

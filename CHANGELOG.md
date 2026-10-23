@@ -4,6 +4,54 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.6.0] - 2026-10-23
+
+### New features
+
+- Added widgets that system administrators can approve for use on My Page. The official catalogue includes World clock, Calculator (Standard), Calculator (Programmer), Notes, Timer, Stopwatch and Unit converter, with size selection, multiple instances and drag reordering.
+- Added a widget SDK and code editor for custom HTML, CSS and JavaScript widgets, with private drafts, isolated previews, JSON distribution and administrator approval. All seven official widgets use the same SDK.
+- Added Simple search, Advanced search and personal Saved filters to IT assets, including type, branch and unassigned filters and conditions inherited from Asset Overview.
+- Added Asset Overview to the Dashboard group, with unassigned IT asset totals by type and branch and links to matching assets, excluding disposed assets.
+- Added ISBN barcode scanning with PC and smartphone cameras to fill the ISBN and look up book details during registration.
+
+### Existing feature improvements
+
+- Improved the installer with preflight checks for write access, Docker, disk space and memory, plus guidance and confirmation before continuing when resources may be insufficient. Messages, questions, choices and default values are distinguished by color, and aligned progress bars show both stage and overall percentages.
+- Height limits for modal windows now follow the available viewport. Long content uses as much screen height as possible, with vertical scrolling only when content exceeds the available height.
+- Unified license, master management, system settings and personal settings pages with tabs that remember and restore each user’s selection.
+- Improved smartphone layouts throughout the application.
+- The System information page now remembers each user's selected tab in the browser and restores it on the next visit or reload.
+- Updated the pinned Prisma transitive dependency mysql2 to 3.24.6.
+- Updated the PostgreSQL connection library pg to 8.23.1.
+- Updated Prisma CLI, Client, and the PostgreSQL adapter to 7.10.1.
+- Role settings now automatically include supporting permissions required by selected operations and make operation permissions and scopes easier to review. Unused operation permissions have also been removed.
+- Action buttons for employees, IT assets, books, licenses and settings now reflect the user’s operation permissions, scope and the state of the target data.
+- Limited failed sign-in attempts by account and source, shared across API instances and restarts. The sign-in page explains the restriction and shows the remaining wait.
+- Restricted changes, deletion and invitation reissue for employees with system management permissions to system administrators. Changes that would leave no active system administrator are also prevented, including scheduled departures, role changes and concurrent operations.
+- Unified permission and scope checks for IT asset credential changes, including changes made during asset creation, editing and moves. Failed authorization no longer allows partial changes to be saved.
+- Aligned branch administrator permissions for catalogue and inventory viewing, title registration, personal reservations and purchase requests, and management of physical copies and loans within their branch. Purchase management checks both operation scope and branch principal or deputy requirements.
+- Fixed IT asset master reordering to check master management operation permissions, allowing authorized business administrators to reorder entries.
+- Team deletion now checks membership removal and employee viewing permissions and scopes for every active member. Deletion is rejected for the entire team when any member is outside the permitted scope.
+
+### Bug fixes
+
+- Kept the sign-in form hidden until the API and database are ready, with automatic retry during startup. Local Docker now starts the frontend after API readiness and publishes through the gateway after both are healthy.
+- Updated frontend esbuild to 0.28.2 with the Windows development server file access security fix.
+- Updated API and frontend Vite to 7.3.7 with development server security fixes.
+- Kept Caddy 2.11.7 and rebuilt the gateway with Go 1.26.10, HTTP/2 security fixes and updated CA certificates.
+- Applied the Alpine zlib security fix to the Docker environment.
+- Updated PostCSS to 8.5.30, including security fixes for CSS processing and its nanoid dependency.
+- Updated Svelte to 5.57.2 to address vulnerabilities affecting server-side rendering and related processing.
+- Updated SvelteKit to 2.70.3 and its devalue dependency to address frontend security vulnerabilities.
+- Updated the SvelteKit cookie dependency to 0.7.2 with stricter cookie field validation.
+- Updated source-map-js to 1.2.2 to address denial of service when processing malformed source maps.
+- Moved JavaScript and CSS preload hints into HTML to prevent page reload failures on reverse proxies with small response-header limits.
+- Fixed the role editor in System settings appearing behind the fixed header.
+- Aligned sign-in, sessions, invitations and administrator protection with the Japanese retirement date, stopping access at midnight.
+- Prevented caching of protected API responses, including authentication and error responses.
+- Rejected IDs outside the database integer range before querying, avoiding internal errors for invalid IDs.
+
+
 ## [v0.5.0] - 2026-10-18
 
 ### New features

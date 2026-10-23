@@ -1,6 +1,7 @@
 Caddy 2.11.7 gateway runtime: license texts and notices
-Image source: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
-Only the Caddy executable and the Mozilla CA certificate bundle are copied into the distributed gateway image.
+Image source: alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+Caddy is rebuilt from the unchanged v2.11.7 entry point with Go 1.26.10 and x/net v0.60.0.
+The distributed image contains that static executable, the Mozilla CA bundle 20261020-r0 and these notices.
 
 
 ===== Caddy 2.11.7 =====
@@ -210,8 +211,8 @@ Source: https://raw.githubusercontent.com/caddyserver/caddy/v2.11.7/LICENSE
    limitations under the License.
 
 
-===== Go standard library 1.26.8 =====
-Source: https://raw.githubusercontent.com/golang/go/go1.26.8/LICENSE
+===== Go standard library 1.26.10 =====
+Source: https://raw.githubusercontent.com/golang/go/go1.26.10/LICENSE
 
 Copyright 2009 The Go Authors.
 
@@ -242,8 +243,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-===== Mozilla CA certificate data 20260909 =====
-Source: https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/20260909/ca-certificates-20260909.tar.bz2
+===== Mozilla CA certificate data 20261020 =====
+Source: https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/20261020/ca-certificates-20261020.tar.bz2
 
 Mozilla Public License Version 2.0
 ==================================
@@ -620,8 +621,8 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 
 
-===== Alpine CA certificate packaging 20260909 =====
-Source: https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/20260909/ca-certificates-20260909.tar.bz2
+===== Alpine CA certificate packaging 20261020 =====
+Source: https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/20261020/ca-certificates-20261020.tar.bz2
 
 MIT License
 
@@ -18288,8 +18289,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-===== golang.org/x/net 0.59.0 / caddy-license-audit\golang.org__x__net@0.59.0__LICENSE =====
-Source: https://proxy.golang.org/golang.org/x/net/@v/v0.59.0.zip
+===== golang.org/x/net 0.60.0 / caddy-license-audit\golang.org__x__net@0.60.0__LICENSE =====
+Source: https://proxy.golang.org/golang.org/x/net/@v/v0.60.0.zip
 
 Copyright 2009 The Go Authors.
 
@@ -19341,3 +19342,45 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+
+===== Go 1.26.10 PATENTS =====
+Source: https://raw.githubusercontent.com/golang/go/go1.26.10/PATENTS
+
+Additional IP Rights Grant (Patents)
+
+"This implementation" means the copyrightable works distributed by
+Google as part of the Go project.
+
+Google hereby grants to You a perpetual, worldwide, non-exclusive,
+no-charge, royalty-free, irrevocable (except as stated in this section)
+patent license to make, have made, use, offer to sell, sell, import,
+transfer and otherwise run, modify and propagate the contents of this
+implementation of Go, where such license applies only to those patent
+claims, both currently owned or controlled by Google and acquired in
+the future, licensable by Google that are necessarily infringed by this
+implementation of Go.  This grant does not include claims that would be
+infringed only as a consequence of further modification of this
+implementation.  If you or your agent or exclusive licensee institute or
+order or agree to the institution of patent litigation against any
+entity (including a cross-claim or counterclaim in a lawsuit) alleging
+that this implementation of Go or any code incorporated within this
+implementation of Go constitutes direct or contributory patent
+infringement, or inducement of patent infringement, then any patent
+rights granted to you under this License for this implementation of Go
+shall terminate as of the date such litigation is filed.
+
+
+===== Go 1.26.10 lib/time/README =====
+Source: https://raw.githubusercontent.com/golang/go/go1.26.10/lib/time/README
+
+The zoneinfo.zip archive contains time zone files compiled using
+the code and data maintained as part of the IANA Time Zone Database.
+The IANA asserts that the database is in the public domain.
+
+For more information, see
+https://www.iana.org/time-zones
+ftp://ftp.iana.org/tz/code/tz-link.html
+https://datatracker.ietf.org/doc/html/rfc6557
+
+To rebuild the archive, read and run update.bash.

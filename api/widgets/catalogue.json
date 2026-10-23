@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 2,
+  "widgets": [
+    {
+      "id": "sph.calculator",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "電卓（標準）",
+        "en": "Calculator (Standard)"
+      },
+      "description": {
+        "ja": "四則演算、小数、パーセント、符号切り替え、C（すべてクリア）、CE（入力クリア）、1文字削除に対応する標準電卓です。キーボードの数字・演算子・Enter・Backspace・Delete・Escapeでも操作できます。計算は入力順に実行し、結果は有効数字16桁に丸めます。計算内容はブラウザー内だけで処理し、ページを再読み込みするとリセットされます。",
+        "en": "A standard calculator with arithmetic, decimals, percentages, sign changes, C (clear all), CE (clear entry) and backspace. Supports keyboard digits, operators, Enter, Backspace, Delete and Escape. Operations execute in entry order, with results rounded to 16 significant digits. Calculations stay in the browser and reset when the page reloads."
+      },
+      "sizes": [
+        "2x1",
+        "2x2",
+        "3x2"
+      ],
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "sizeLayouts": {
+        "2x1": {
+          "rows": 2,
+          "columns": 1
+        },
+        "2x2": {
+          "rows": 2,
+          "columns": 2
+        },
+        "3x2": {
+          "rows": 3,
+          "columns": 2
+        }
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\r\nbutton,input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}\r\nbutton{cursor:pointer;touch-action:manipulation}\r\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\r\nbutton:disabled{opacity:.35;cursor:default}\r\n.tool{display:grid;gap:8px;min-width:0;padding:2px}\r\n#calculator,#programmer{height:auto;container-type:inline-size}\r\n#root[data-layout=\"stretch\"]>#calculator,#root[data-layout=\"stretch\"]>#programmer{height:100%}\r\n.expression{min-height:26px;font-size:clamp(20px,4cqi,26px);line-height:1.3;color:var(--muted);text-align:right;overflow-wrap:anywhere}\r\n.copy{padding:0;border:0;background:transparent;text-align:right;cursor:copy;width:100%;min-height:0}\r\n.result{display:block;min-width:0;max-width:100%;font-size:clamp(48px,10cqi,72px);font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\r\n.result-long{font-size:clamp(22px,4.5cqi,40px)}\r\n.error{font-size:20px;line-height:1.35;color:var(--danger);overflow-wrap:anywhere}\r\n.error:empty{display:none}\r\n.keys,.six{display:grid;gap:6px;min-width:0;min-height:0;grid-auto-rows:minmax(44px,1fr)}\r\n.keys{grid-template-columns:repeat(4,minmax(0,1fr))}\r\n.six{grid-template-columns:repeat(6,minmax(0,1fr))}\r\n.keys button,.six button{min-height:44px;padding:4px;white-space:nowrap;font-size:clamp(28px,6cqi,40px);font-weight:500;line-height:1.1}\r\n.key-number{background:color-mix(in srgb,var(--surface) 94%,var(--text));font-weight:600!important}\r\n.key-function,.key-bit{background:color-mix(in srgb,var(--surface) 87%,var(--text))}\r\n.key-operator{background:color-mix(in srgb,#d89326 19%,var(--surface));color:light-dark(#704514,#ffda9b);border-color:color-mix(in srgb,#d89326 48%,var(--border))}\r\n.key-clear{background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:light-dark(#9f1d2b,#ffb4b4);border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}\r\n.keys button:hover:not(:disabled),.six button:hover:not(:disabled){box-shadow:inset 0 0 0 100vmax color-mix(in srgb,var(--text) 8%,transparent)}\r\n.primary,.bases [aria-pressed=\"true\"]{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary));font-weight:600}\r\n.primary:hover:not(:disabled),.bases [aria-pressed=\"true\"]:hover:not(:disabled){background:var(--action-primary-background-hover,var(--surface-secondary));filter:none}\r\n#calculator{grid-template-rows:auto auto auto minmax(0,1fr)}\r\n#expression{grid-row:1}#copy{grid-row:2}#error{grid-row:3}.keys{grid-row:4;grid-template-rows:repeat(6,minmax(44px,1fr))}\r\n.keys button{font-size:clamp(32px,7cqi,44px);min-height:56px}\r\n.keys .primary{grid-column:1/-1}\r\n",
+        "javascript": "const initialCalculator = () => ({ entry: '0', operand: null, operation: null, replace: false, operandEntered: false, repeatOperation: null, repeatOperand: null, expression: '', error: null });\nconst power = (n) => 10n ** BigInt(n);\nfunction fraction(value) {\n    const match = /^(-?)(\\d+)(?:\\.(\\d*))?(?:e([+-]?\\d+))?$/i.exec(value);\n    if (!match)\n        throw Error('range');\n    const scale = (match[3]?.length ?? 0) - Number(match[4] ?? 0);\n    const n = BigInt((match[1] || '') + match[2] + (match[3] ?? ''));\n    return scale >= 0 ? [n, power(scale)] : [n * power(-scale), 1n];\n}\nfunction format(n, d) {\n    if (d === 0n)\n        throw Error('zero');\n    if (n === 0n)\n        return '0';\n    const negative = (n < 0n) !== (d < 0n);\n    n = n < 0n ? -n : n;\n    d = d < 0n ? -d : d;\n    let exponent = n.toString().length - d.toString().length;\n    if (exponent >= 0 ? n < d * power(exponent) : n * power(-exponent) < d)\n        exponent--;\n    if (exponent > 99 || exponent < -99)\n        throw Error('range');\n    const shift = 15 - exponent, top = shift >= 0 ? n * power(shift) : n, bottom = shift >= 0 ? d : d * power(-shift);\n    let rounded = (top + bottom / 2n) / bottom;\n    if (rounded.toString().length > 16) {\n        rounded /= 10n;\n        exponent++;\n    }\n    if (exponent > 99)\n        throw Error('range');\n    const digits = rounded.toString().padStart(16, '0');\n    let result;\n    if (exponent >= 16 || exponent < -8) {\n        const tail = digits.slice(1).replace(/0+$/, '');\n        result = digits[0] + (tail ? '.' + tail : '') + 'e' + (exponent >= 0 ? '+' : '') + exponent;\n    }\n    else {\n        const point = exponent + 1;\n        result = point <= 0 ? '0.' + '0'.repeat(-point) + digits : point >= digits.length ? digits + '0'.repeat(point - digits.length) : digits.slice(0, point) + '.' + digits.slice(point);\n        if (result.includes('.'))\n            result = result.replace(/0+$/, '').replace(/\\.$/, '');\n    }\n    return (negative ? '-' : '') + result;\n}\nfunction calculatorValue(a, b, operation) {\n    const [an, ad] = fraction(a), [bn, bd] = fraction(b);\n    if (operation === '+')\n        return format(an * bd + bn * ad, ad * bd);\n    if (operation === '-')\n        return format(an * bd - bn * ad, ad * bd);\n    if (operation === '*')\n        return format(an * bn, ad * bd);\n    return format(an * bd, ad * bn);\n}\nfunction calculatorInput(previous, key) {\n    if (key === 'C')\n        return initialCalculator();\n    let state = { ...previous };\n    if (state.error) {\n        if (/^\\d$|^\\.$|^CE$/.test(key))\n            state = initialCalculator();\n        else\n            return state;\n    }\n    try {\n        if (/^\\d$/.test(key) || key === '.') {\n            if (state.replace) {\n                state.entry = '0';\n                state.replace = false;\n                if (!state.operation)\n                    state.expression = '';\n            }\n            if (key === '.') {\n                if (!state.entry.includes('.') && !state.entry.includes('e'))\n                    state.entry += '.';\n            }\n            else if (state.entry.replace(/[-.]/g, '').length < 16)\n                state.entry = state.entry === '0' ? key : state.entry === '-0' ? '-' + key : state.entry + key;\n            state.operandEntered = true;\n            state.repeatOperation = null;\n            state.repeatOperand = null;\n            return state;\n        }\n        if (key === 'CE') {\n            state.entry = '0';\n            state.replace = false;\n            state.operandEntered = true;\n            state.repeatOperation = null;\n            state.repeatOperand = null;\n            if (!state.operation)\n                state.expression = '';\n            return state;\n        }\n        if (key === 'Backspace') {\n            if (!state.replace && !state.entry.includes('e')) {\n                state.entry = state.entry.slice(0, -1);\n                if (!state.entry || state.entry === '-')\n                    state.entry = '0';\n            }\n            return state;\n        }\n        if (key === 'sign') {\n            if (state.entry !== '0')\n                state.entry = state.entry.startsWith('-') ? state.entry.slice(1) : '-' + state.entry;\n            state.replace = false;\n            state.operandEntered = true;\n            return state;\n        }\n        if (key === '%') {\n            let percent = calculatorValue(state.entry, '100', '/');\n            if (state.operand !== null && (state.operation === '+' || state.operation === '-'))\n                percent = calculatorValue(state.operand, percent, '*');\n            state.entry = percent;\n            state.replace = true;\n            state.operandEntered = true;\n            return state;\n        }\n        if (['+', '-', '*', '/'].includes(key)) {\n            if (state.operand !== null && state.operation && state.operandEntered)\n                state.entry = calculatorValue(state.operand, state.entry, state.operation);\n            state.operand = state.entry;\n            state.operation = key;\n            state.replace = true;\n            state.operandEntered = false;\n            state.repeatOperation = null;\n            state.repeatOperand = null;\n            state.expression = state.entry + ' ' + key;\n            return state;\n        }\n        if (key === '=') {\n            const operation = state.operation ?? state.repeatOperation, operand = state.operation ? state.entry : state.repeatOperand;\n            if (operation && operand !== null) {\n                const first = state.operand ?? state.entry;\n                state.entry = calculatorValue(first, operand, operation);\n                state.expression = first + ' ' + operation + ' ' + operand + ' =';\n                state.repeatOperation = operation;\n                state.repeatOperand = operand;\n            }\n            state.operand = null;\n            state.operation = null;\n            state.replace = true;\n            return state;\n        }\n        return state;\n    }\n    catch (error) {\n        return { ...initialCalculator(), error: error instanceof Error && error.message === 'zero' ? 'zero' : 'range' };\n    }\n}\n\nsph.ready(context=>{\r\n let state=initialCalculator(),lang=context.language;\r\n const keys=[['%','%'],['CE','CE'],['C','C'],['Backspace','⌫'],['7','7'],['8','8'],['9','9'],['/','÷'],['4','4'],['5','5'],['6','6'],['*','×'],['1','1'],['2','2'],['3','3'],['-','−'],['sign','±'],['0','0'],['.','.'],['+','+'],['=','=']];\r\n const keyClass=key=>key==='='?'primary':/^[0-9.]$/.test(key)?'key-number':['+','-','*','/'].includes(key)?'key-operator':['C','CE','Backspace'].includes(key)?'key-clear':'key-function';\r\n function draw(){sph.ui.patch([{id:'expression',text:state.expression.replaceAll('*','×').replaceAll('/','÷')},{id:'result',text:state.error?'—':state.entry},{id:'result',attribute:'class',attributeValue:'result'+(state.entry.length>10?' result-long':'')},{id:'error',text:state.error?(lang==='ja'?(state.error==='zero'?'0で割ることはできません。':'計算結果が範囲外です。'):(state.error==='zero'?'Cannot divide by zero.':'Result is out of range.')):''}]);}\r\n function press(key){state=calculatorInput(state,key);draw();}\r\n sph.ui.html('<div id=\"calculator\" class=\"tool\" role=\"group\" tabindex=\"0\" aria-label=\"Calculator\"><div id=\"expression\" class=\"expression\"></div><button id=\"copy\" class=\"copy\" data-copy=\"result\" aria-label=\"Copy result\"><output id=\"result\" class=\"result\">0</output></button><small id=\"error\" class=\"error\" role=\"alert\"></small><div class=\"keys\">'+keys.map(([key,label],i)=>'<button id=\"key'+i+'\" data-calc-key=\"'+key+'\" class=\"'+keyClass(key)+'\">'+label+'</button>').join('')+'</div></div>');\r\n keys.forEach(([key],i)=>sph.ui.on('key'+i,'click',()=>press(key)));\r\n const keyboard=['0','1','2','3','4','5','6','7','8','9','.','+','-','*','/','%','Enter','Backspace','Delete','Escape'];\r\n sph.ui.on('calculator','keydown',e=>press(({Enter:'=',Delete:'CE',Escape:'C'})[e.key]??e.key),keyboard);draw();\r\n sph.ui.on('$context','change',c=>{lang=c.language;draw();});\r\n});\r\n"
+      }
+    },
+    {
+      "id": "sph.personal_note",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "メモ",
+        "en": "Note"
+      },
+      "description": {
+        "ja": "本人専用のプレーンテキストメモです。設定画面で最大5,000文字を入力して保存します。長文は詳細画面で確認できます。HTMLやスクリプトは実行しません。",
+        "en": "A private plain-text note. Edit and save up to 5,000 characters in settings. Open details to read longer notes. HTML and scripts are never executed."
+      },
+      "sizes": [
+        "2x2",
+        "1x2"
+      ],
+      "sizeLayouts": {
+        "2x2": {
+          "rows": 2,
+          "columns": 2
+        },
+        "1x2": {
+          "rows": 1,
+          "columns": 2
+        }
+      },
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "storage": {
+        "fields": {
+          "note": {
+            "type": "text",
+            "label": {
+              "ja": "本文",
+              "en": "Note"
+            },
+            "default": "",
+            "maxLength": 5000
+          }
+        },
+        "titleField": "note",
+        "listFields": [
+          "note"
+        ],
+        "operations": {
+          "create": false,
+          "update": true,
+          "delete": false
+        },
+        "maxRecords": 1,
+        "initialRecords": [
+          {
+            "recordKey": "default",
+            "values": {
+              "note": ""
+            }
+          }
+        ]
+      },
+      "configuration": {
+        "fields": {
+          "title": {
+            "type": "string",
+            "label": {
+              "ja": "タイトル（任意）",
+              "en": "Title (optional)"
+            },
+            "default": "",
+            "maxLength": 40
+          }
+        },
+        "titleField": "title",
+        "listFields": [
+          "title"
+        ],
+        "operations": {
+          "create": false,
+          "update": false,
+          "delete": false
+        }
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\r\nbutton,input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}\r\nbutton{min-height:44px;padding:6px 10px;font-size:24px;line-height:1.25;cursor:pointer}\r\nbutton:hover{background:var(--surface-secondary)}\r\nbutton:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\r\nbutton:disabled{opacity:.45;cursor:default}\r\n.tool{padding:2px;display:grid;gap:6px;min-width:0;container-type:inline-size}\r\n.primary{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary))}\r\n.primary:hover{background:var(--action-primary-background-hover,var(--surface-secondary))}\r\n.hidden{display:none}\r\n.summary,.full{font-size:26px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;min-width:0}\r\n.note-layout{height:320px;grid-template-rows:minmax(0,1fr)}\r\n#root[data-layout=\"stretch\"]>.note-layout{height:100%}\r\n.note-layout.truncated{grid-template-rows:minmax(0,1fr) auto}\r\n.summary{min-height:0;overflow:hidden}\r\n.empty{display:flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:16px;border:1px dashed var(--border);border-radius:6px;color:var(--muted);font-size:22px;line-height:1.5;text-align:center;overflow-wrap:anywhere}\r\n",
+        "javascript": "\nsph.ready(async context=>{\r\n let record;try{record=await sph.records.get('default');}catch{record={values:{note:''}};}\r\n let renderId=0;\r\n async function render(){\r\n  const current=++renderId,text=String(record.values.note??''),empty=!text.trim(),ja=context.language==='ja';\r\n  sph.ui.html('<div id=\"note-layout\" class=\"tool note-layout\"><p id=\"note\" class=\"'+(empty?'empty':context.expanded?'full':'summary')+'\"></p><button id=\"expand\" class=\"hidden\">'+(ja?'全文を表示':'Read full note')+'</button></div>');\r\n  sph.ui.patch([{id:'note',text:empty?(ja?'設定アイコンからメモを入力して保存できます。':'Write and save a note in settings.'):text}]);\r\n  sph.ui.on('expand','click',()=>sph.expand('<p class=\"full\">'+text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</p>'));\r\n  if(empty||context.expanded)return;\r\n  // Measure with the button hidden so the entire card body is available first.\r\n  const bounds=await sph.ui.measure('note');if(current!==renderId)return;\r\n  if(bounds.scrollHeight>bounds.clientHeight+1)sph.ui.patch([{id:'note-layout',attribute:'class',attributeValue:'tool note-layout truncated'},{id:'expand',attribute:'class',attributeValue:''}]);\r\n }\r\n await render();sph.ui.on('$context','change',c=>{context=c;render();});\r\n});\r\n"
+      }
+    },
+    {
+      "id": "sph.programmer_calculator",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "電卓（プログラマー）",
+        "en": "Calculator (Programmer)"
+      },
+      "description": {
+        "ja": "HEX・DEC・OCT・BINの相互変換、8・16・32・64ビット、符号付き／符号なしの整数演算に対応します。四則演算、剰余、AND・OR・XOR・NOT、左右シフトを入力順に実行します。桁あふれは選択幅の下位ビットに折り返し、右シフトはゼロ埋めです。シフト数は0以上、ビット幅未満とします。割り算は小数部を切り捨て（0方向）、剰余は左の値の符号に従います。ビット幅や符号モードの変更は計算途中をクリアします。ビット幅を広げる際、符号付きの負数は符号拡張します。計算内容はブラウザー内だけで処理し、再読み込みでリセットします。",
+        "en": "Converts between HEX, DEC, OCT and BIN, with 8-, 16-, 32- and 64-bit signed or unsigned integer arithmetic. Supports entry-order arithmetic, remainder, AND, OR, XOR, NOT and shifts. Overflow wraps to the selected word width; right shift fills with zeroes. Shift counts must be at least zero and less than the word width. Division truncates toward zero; remainder follows the left operand sign. Changing word width or signed mode clears pending operations. Widening signed negative values sign-extends them. Calculations stay in browser memory and reset on reload."
+      },
+      "sizes": [
+        "3x2",
+        "3x3",
+        "3x4",
+        "2x2"
+      ],
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "sizeLayouts": {
+        "3x2": {
+          "rows": 3,
+          "columns": 2
+        },
+        "3x3": {
+          "rows": 3,
+          "columns": 3
+        },
+        "3x4": {
+          "rows": 3,
+          "columns": 4
+        },
+        "2x2": {
+          "rows": 2,
+          "columns": 2
+        }
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\r\nbutton,input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}\r\nbutton{cursor:pointer;touch-action:manipulation}\r\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\r\nbutton:disabled{opacity:.35;cursor:default}\r\n.tool{display:grid;gap:8px;min-width:0;padding:2px}\r\n#calculator,#programmer{height:auto;container-type:inline-size}\r\n#root[data-layout=\"stretch\"]>#calculator,#root[data-layout=\"stretch\"]>#programmer{height:100%}\r\n.expression{min-height:26px;font-size:clamp(20px,4cqi,26px);line-height:1.3;color:var(--muted);text-align:right;overflow-wrap:anywhere}\r\n.copy{padding:0;border:0;background:transparent;text-align:right;cursor:copy;width:100%;min-height:0}\r\n.result{display:block;min-width:0;max-width:100%;font-size:clamp(48px,10cqi,72px);font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\r\n.result-long{font-size:clamp(22px,4.5cqi,40px)}\r\n.error{font-size:20px;line-height:1.35;color:var(--danger);overflow-wrap:anywhere}\r\n.error:empty{display:none}\r\n.keys,.six{display:grid;gap:6px;min-width:0;min-height:0;grid-auto-rows:minmax(44px,1fr)}\r\n.keys{grid-template-columns:repeat(4,minmax(0,1fr))}\r\n.six{grid-template-columns:repeat(6,minmax(0,1fr))}\r\n.keys button,.six button{min-height:44px;padding:4px;white-space:nowrap;font-size:clamp(28px,6cqi,40px);font-weight:500;line-height:1.1}\r\n.key-number{background:color-mix(in srgb,var(--surface) 94%,var(--text));font-weight:600!important}\r\n.key-function,.key-bit{background:color-mix(in srgb,var(--surface) 87%,var(--text))}\r\n.key-operator{background:color-mix(in srgb,#d89326 19%,var(--surface));color:light-dark(#704514,#ffda9b);border-color:color-mix(in srgb,#d89326 48%,var(--border))}\r\n.key-clear{background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:light-dark(#9f1d2b,#ffb4b4);border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}\r\n.keys button:hover:not(:disabled),.six button:hover:not(:disabled){box-shadow:inset 0 0 0 100vmax color-mix(in srgb,var(--text) 8%,transparent)}\r\n.primary,.bases [aria-pressed=\"true\"]{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary));font-weight:600}\r\n.primary:hover:not(:disabled),.bases [aria-pressed=\"true\"]:hover:not(:disabled){background:var(--action-primary-background-hover,var(--surface-secondary));filter:none}\r\n#programmer{grid-template-rows:auto auto auto auto auto auto minmax(88px,2fr) minmax(244px,5fr)}\r\n.bases{grid-row:1;grid-template-columns:repeat(4,minmax(0,1fr))}\r\n.bases button{font-size:clamp(20px,4cqi,26px);background:var(--surface-secondary)}\r\n.word{grid-row:2;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:20px;line-height:1.3}\r\n.word label{display:flex;gap:6px;align-items:center}\r\n.word select{min-height:44px;padding:4px;font-size:20px}\r\n.word input{width:22px;height:22px;accent-color:var(--primary)}\r\n.conversions{grid-row:3;display:grid;gap:3px}\r\n.conversions>div{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline}\r\n.conversions small{font-size:18px;color:var(--muted)}\r\n.conversions output{font-size:clamp(20px,3cqi,26px);line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\r\n#expression{grid-row:4}#copy{grid-row:5}#error{grid-row:6}.bit-keys{grid-row:7}.keys{grid-row:8}\r\n.bit-keys button{font-size:clamp(16px,3.7cqi,28px)}\r\n.bases [aria-pressed=\"true\"]{background:var(--action-primary-background,var(--primary-bg))}\r\n#programmer.short{gap:4px;grid-template-rows:auto auto auto auto auto auto minmax(68px,2fr) minmax(176px,5fr)}\r\n.short .keys,.short .six{gap:4px;grid-auto-rows:minmax(32px,1fr)}\r\n.short .keys button,.short .six button{min-height:32px;padding:2px;font-size:clamp(24px,4cqi,30px)}\r\n.short .bases button{font-size:18px}\r\n.short .bit-keys button{font-size:clamp(16px,3cqi,22px)}\r\n.short .word{font-size:18px;gap:8px}\r\n.short .word select{min-height:32px;font-size:18px;padding:2px}\r\n.short .conversions{gap:2px}\r\n.short .conversions small{font-size:16px}\r\n.short .conversions output{font-size:18px;line-height:1.2}\r\n.short .expression{min-height:20px;font-size:20px}\r\n.short .result{font-size:clamp(36px,7cqi,48px)}\r\n.short .result-long{font-size:clamp(20px,4cqi,28px)}\r\n",
+        "javascript": "const initialProgrammer = () => ({ value: 0n, base: 10, bits: 64, signed: true, left: null, operation: null, replace: false, entered: false, repeat: null, repeatValue: null, last: null, error: null });\nconst integer = (value, bits, signed) => signed ? BigInt.asIntN(bits, value) : BigInt.asUintN(bits, value);\nconst programmerFormat = (value, base, bits, signed) => (base === 10 ? integer(value, bits, signed) : BigInt.asUintN(bits, value)).toString(base).toUpperCase();\nconst programmerDisplay = (state) => programmerFormat(state.value, state.base, state.bits, state.signed);\nfunction programmerValue(left, right, operation, bits, signed) {\n    const a = integer(left, bits, signed), b = integer(right, bits, signed);\n    let result;\n    switch (operation) {\n        case '+':\n            result = a + b;\n            break;\n        case '-':\n            result = a - b;\n            break;\n        case '*':\n            result = a * b;\n            break;\n        case '/':\n            if (b === 0n)\n                throw Error('zero');\n            result = a / b;\n            break;\n        case 'mod':\n            if (b === 0n)\n                throw Error('zero');\n            result = a % b;\n            break;\n        case 'and':\n            result = left & right;\n            break;\n        case 'or':\n            result = left | right;\n            break;\n        case 'xor':\n            result = left ^ right;\n            break;\n        case 'shl':\n        case 'shr':\n            if (right < 0n || right >= BigInt(bits))\n                throw Error('shift');\n            result = operation === 'shl' ? BigInt.asUintN(bits, left) << right : BigInt.asUintN(bits, left) >> right;\n            break;\n    }\n    return BigInt.asUintN(bits, result);\n}\nfunction programmerConfigure(state, change) {\n    if (change.base !== undefined && ![2, 8, 10, 16].includes(change.base) || change.bits !== undefined && ![8, 16, 32, 64].includes(change.bits))\n        return state;\n    let result = { ...state, ...change };\n    if (change.bits !== undefined || change.signed !== undefined) {\n        result = { ...initialProgrammer(), base: result.base, bits: result.bits, signed: result.signed, value: BigInt.asUintN(result.bits, integer(state.value, state.bits, state.signed)) };\n    }\n    return result;\n}\nconst read = (text, base) => BigInt(base === 10 ? text : (base === 16 ? '0x' : base === 8 ? '0o' : '0b') + text);\nfunction programmerInput(previous, key) {\n    const reset = () => ({ ...initialProgrammer(), base: previous.base, bits: previous.bits, signed: previous.signed });\n    if (key === 'clear')\n        return reset();\n    let state = { ...previous };\n    if (state.error) {\n        if (/^[0-9A-F]$/.test(key) || key === 'ce')\n            state = reset();\n        else\n            return state;\n    }\n    try {\n        if (/^[0-9A-F]$/.test(key)) {\n            const digit = parseInt(key, 16);\n            if (digit >= state.base)\n                return state;\n            const current = state.replace ? 0n : state.base === 10 ? integer(state.value, state.bits, state.signed) : state.value;\n            const next = current < 0n ? current * BigInt(state.base) - BigInt(digit) : current * BigInt(state.base) + BigInt(digit);\n            const max = state.base === 10 && state.signed ? (1n << BigInt(state.bits - 1)) - 1n : (1n << BigInt(state.bits)) - 1n;\n            const min = state.base === 10 && state.signed ? -(1n << BigInt(state.bits - 1)) : 0n;\n            if (next < min || next > max)\n                return state;\n            state.value = BigInt.asUintN(state.bits, next);\n            state.replace = false;\n            state.entered = true;\n            state.repeat = null;\n            state.repeatValue = null;\n            state.last = null;\n            return state;\n        }\n        if (key === 'ce') {\n            state.value = 0n;\n            state.replace = false;\n            state.entered = true;\n            state.repeat = null;\n            state.repeatValue = null;\n            state.last = null;\n            return state;\n        }\n        if (key === 'back') {\n            if (!state.replace) {\n                const text = programmerDisplay(state).slice(0, -1);\n                state.value = BigInt.asUintN(state.bits, read(!text || text === '-' ? '0' : text, state.base));\n            }\n            return state;\n        }\n        if (key === 'not' || key === 'sign') {\n            state.value = BigInt.asUintN(state.bits, key === 'not' ? ~state.value : -state.value);\n            state.replace = key === 'not';\n            state.entered = true;\n            return state;\n        }\n        if (['+', '-', '*', '/', 'mod', 'and', 'or', 'xor', 'shl', 'shr'].includes(key)) {\n            if (state.left !== null && state.operation && state.entered)\n                state.value = programmerValue(state.left, state.value, state.operation, state.bits, state.signed);\n            state.left = state.value;\n            state.operation = key;\n            state.replace = true;\n            state.entered = false;\n            state.repeat = null;\n            state.repeatValue = null;\n            state.last = null;\n            return state;\n        }\n        if (key === '=') {\n            const operation = state.operation ?? state.repeat, right = state.operation ? state.value : state.repeatValue;\n            if (operation && right !== null) {\n                const left = state.left ?? state.value;\n                state.value = programmerValue(left, right, operation, state.bits, state.signed);\n                state.last = { left, right, operation };\n                state.repeat = operation;\n                state.repeatValue = right;\n            }\n            state.left = null;\n            state.operation = null;\n            state.replace = true;\n            return state;\n        }\n        return state;\n    }\n    catch (error) {\n        return { ...reset(), error: error instanceof Error && error.message === 'shift' ? 'shift' : 'zero' };\n    }\n}\n\nsph.ready(context=>{\n let state=initialProgrammer(),lang=context.language;\n const ops=[['and','AND'],['or','OR'],['xor','XOR'],['not','NOT'],['shl','Lsh'],['shr','Rsh']],digits=[['clear','C'],['ce','CE'],['back','⌫'],['mod','mod'],...['7','8','9','/','4','5','6','*','1','2','3','-','sign','0','=','+'].map(k=>[k,k==='sign'?'±':k==='*'?'×':k==='/'?'÷':k])],keys=[...ops,...['A','B','C','D','E','F'].map(k=>[k,k]),...digits];\n const keyClass=key=>key==='='?'primary':/^[0-9A-F]$/.test(key)?'key-number':['+','-','*','/','mod'].includes(key)?'key-operator':['clear','ce','back'].includes(key)?'key-clear':ops.some(([k])=>k===key)?'key-bit':'key-function';\n function draw(){sph.ui.patch([{id:'programmer',attribute:'class',attributeValue:context.size==='2x2'?'tool short':'tool'},{id:'result',text:state.error?'—':programmerDisplay(state)},{id:'result',attribute:'class',attributeValue:'result'+(programmerDisplay(state).length>10?' result-long':'')},{id:'expression',text:state.operation?programmerFormat(state.left??0n,state.base,state.bits,state.signed)+' '+state.operation:state.last?programmerFormat(state.last.left,state.base,state.bits,state.signed)+' '+state.last.operation+' '+programmerFormat(state.last.right,state.base,state.bits,state.signed)+' =':''},{id:'bits-label',text:lang==='ja'?'ビット幅':'Word size'},{id:'signed-label',text:lang==='ja'?'符号付き':'Signed'},{id:'error',text:state.error?(lang==='ja'?(state.error==='zero'?'0で割ることはできません。':'シフト数は0以上、ビット幅未満を指定してください。'):(state.error==='zero'?'Cannot divide by zero.':'Shift count must be smaller than word size.')):''},...[16,10,8,2].map(base=>({id:'conversion'+base,text:programmerFormat(state.value,base,state.bits,state.signed)})),...keys.filter(([k])=>/^[0-9A-F]$/.test(k)).map(([k])=>({id:'key'+keys.findIndex(([a])=>a===k),attribute:'disabled',attributeValue:parseInt(k,16)>=state.base?'':null})),...[16,10,8,2].map(base=>({id:'base'+base,attribute:'aria-pressed',attributeValue:String(base===state.base)}))]);}\n function press(k){state=programmerInput(state,k);draw();}\n sph.ui.html('<div id=\"programmer\" class=\"tool\" role=\"group\" tabindex=\"0\"><div class=\"six bases\">'+[16,10,8,2].map((base,i)=>'<button id=\"base'+base+'\" data-prog-base=\"'+base+'\">'+['HEX','DEC','OCT','BIN'][i]+'</button>').join('')+'</div><div class=\"word\"><label><span id=\"bits-label\">Bits</span><select id=\"bits\">'+[8,16,32,64].map(n=>'<option value=\"'+n+'\" '+(n===64?'selected':'')+'>'+n+' bit</option>').join('')+'</select></label><label><input id=\"signed\" type=\"checkbox\" checked> <span id=\"signed-label\">Signed</span></label></div><div class=\"conversions\">'+[16,10,8,2].map((base,i)=>'<div><small>'+['HEX','DEC','OCT','BIN'][i]+'</small><output id=\"conversion'+base+'\"></output></div>').join('')+'</div><div id=\"expression\" class=\"expression\"></div><button id=\"copy\" class=\"copy\" data-copy=\"result\" aria-label=\"Copy result\"><output id=\"result\" class=\"result\">0</output></button><small id=\"error\" role=\"alert\" class=\"error\"></small><div class=\"six bit-keys\">'+keys.slice(0,12).map(([k,label],i)=>'<button id=\"key'+i+'\" data-prog-key=\"'+k+'\" class=\"'+keyClass(k)+'\">'+label+'</button>').join('')+'</div><div class=\"keys\">'+keys.slice(12).map(([k,label],i)=>'<button id=\"key'+(i+12)+'\" data-prog-key=\"'+k+'\" class=\"'+keyClass(k)+'\">'+label+'</button>').join('')+'</div></div>');\n keys.forEach(([k],i)=>sph.ui.on('key'+i,'click',()=>press(k)));[16,10,8,2].forEach(base=>sph.ui.on('base'+base,'click',()=>{state=programmerConfigure(state,{base});draw();}));\n sph.ui.on('bits','change',e=>{state=programmerConfigure(state,{bits:Number(e.value)});draw();});sph.ui.on('signed','change',e=>{state=programmerConfigure(state,{signed:e.checked});draw();});\n sph.ui.on('programmer','keydown',e=>press(({Enter:'=',Escape:'clear',Delete:'ce',Backspace:'back','&':'and','|':'or','^':'xor','~':'not','<':'shl','>':'shr','%':'mod'})[e.key]??e.key.toUpperCase()),[...'0123456789abcdefABCDEF','+','-','*','/','Enter','Escape','Delete','Backspace','&','|','^','~','<','>','%']);draw();\n sph.ui.on('$context','change',c=>{context=c;lang=c.language;draw();});\n});\n"
+      }
+    },
+    {
+      "id": "sph.stopwatch",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "ストップウォッチ",
+        "en": "Stopwatch"
+      },
+      "description": {
+        "ja": "開始・一時停止・再開・リセットと最大100件のラップ計測ができます。ラップがカードに収まらない場合は全文画面で確認できます。計測とラップは再読込するとリセットされます。",
+        "en": "A stopwatch with start, pause, resume, reset and up to 100 laps. Open the full list when laps do not fit the card. Timing and laps reset on reload."
+      },
+      "sizes": [
+        "2x2"
+      ],
+      "sizeLayouts": {
+        "2x2": {
+          "rows": 2,
+          "columns": 2
+        }
+      },
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\r\nbutton,input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}\r\nbutton{min-height:44px;padding:6px 10px;font-size:24px;line-height:1.25;cursor:pointer}\r\nbutton:hover{background:var(--surface-secondary)}\r\nbutton:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\r\nbutton:disabled{opacity:.45;cursor:default}\r\n.tool{position:relative;height:320px;padding:2px;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:6px;min-width:0;container-type:inline-size}\r\n#root[data-layout=\"stretch\"]>.tool{position:relative;height:100%}\r\n.primary{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary))}\r\n.primary:hover{background:var(--action-primary-background-hover,var(--surface-secondary))}\r\n.hidden{display:none}\r\nlabel{display:grid;gap:4px;font-size:20px;line-height:1.2}\r\n.duration{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}\r\n.duration input{width:100%;min-height:40px;padding:2px 6px;font-size:26px;line-height:1.2}\r\n.time{display:block;text-align:center;font-size:clamp(48px,8cqi,64px);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums}\r\n.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}\r\n#hint{font-size:22px;line-height:1.25;color:var(--muted);overflow-wrap:anywhere}\r\n.laps{display:grid;grid-template-columns:repeat(3,max-content);justify-content:space-evenly;align-content:start;column-gap:0;row-gap:8px;container-type:inline-size;--lap-space:calc(var(--widget-compact-body-font,16px)/2);min-height:0;border:1px dashed var(--border);border-radius:6px;padding:10px 0;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere;font-family:inherit;font-size:22px;line-height:1.5;font-variant-numeric:tabular-nums;margin:10px 0 0}\r\n.laps.full{overflow:visible;margin:0}\r\n.laps.empty{display:flex;align-items:center;justify-content:center;padding:16px;color:var(--muted);text-align:center;white-space:normal}\r\n.time{font-size:clamp(40px,8cqi,64px)}\r\n\r\n.lap-entry{display:grid;gap:2px;min-width:0;width:min(11ch,calc((100cqi - 4 * var(--lap-space))/3));container-type:inline-size;font-family:monospace;text-align:center}\r\n#root .lap-entry .lap-number{font-size:22px;line-height:1.25;color:var(--muted)}\r\n#root .lap-entry .lap-time{display:flex;flex-wrap:wrap;justify-content:center;font-family:monospace;font-size:22px;line-height:1.4;white-space:normal}\r\n.lap-probe{position:absolute;left:3px;right:3px;top:0;display:grid;grid-template-columns:repeat(3,max-content);justify-content:space-evenly;column-gap:0;row-gap:8px;container-type:inline-size;--lap-space:calc(var(--widget-compact-body-font,16px)/2);font-size:22px;visibility:hidden;pointer-events:none}\r\n#root .laps.empty #lap-empty{font-size:inherit;line-height:inherit}\r\n#root[data-compact=\"true\"] :is(.laps:not(.empty),.lap-probe){font-size:var(--widget-compact-body-font)}\r\n#root .lap-entry .lap-time>span{display:block;font-size:inherit;line-height:inherit;white-space:nowrap}\r\n#root[data-compact=\"true\"] .lap-entry :is(.lap-number,.lap-time){font-size:var(--widget-compact-body-font)}\r\n#root[data-compact=\"true\"] .lap-entry{width:min(8ch,calc((100cqi - 4 * var(--lap-space))/3))}\r\n",
+        "javascript": "const elapsedAt = (clock, now) => clock.elapsed + (clock.startedAt === null ? 0 : Math.max(0, now - clock.startedAt));\nconst startClock = (clock, now) => clock.startedAt === null ? { ...clock, startedAt: now } : clock;\nconst pauseClock = (clock, now) => ({ elapsed: elapsedAt(clock, now), startedAt: null });\nfunction formatDuration(milliseconds, fraction = false) {\n    const total = Math.max(0, Math.floor(milliseconds / 1000));\n    const text = [Math.floor(total / 3600), Math.floor(total / 60) % 60, total % 60].map(v => String(v).padStart(2, '0')).join(':');\n    return text + (fraction ? '.' + Math.floor(Math.max(0, milliseconds) % 1000 / 10).toString().padStart(2, '0') : '');\n}\n\nsph.ready(context=>{\r\n let lang=context.language,elapsed=0,started=null,laps=[],renderId=0;\r\n const text=()=>lang==='ja'?{start:'開始',pause:'一時停止',reset:'リセット',lap:'ラップ',all:'すべて表示',empty:'計測中に記録したラップが表示されます。'}:{start:'Start',pause:'Pause',reset:'Reset',lap:'Lap',all:'Show all',empty:'Laps recorded while running appear here.'};\r\n const now=()=>elapsedAt({elapsed,startedAt:started},performance.now());\r\n const format=ms=>formatDuration(ms,true);\r\n const parts=value=>{const time=format(value),colon=time.indexOf(':');return [time.slice(0,colon+1),time.slice(colon+1)];};\r\n const timeHtml=value=>{const [hours,tail]=parts(value);return '<span class=\"lap-hours\">'+hours+'</span><span class=\"lap-tail\">'+tail+'</span>';};\r\n const entry=(value,i,id='')=>'<div '+(id?'id=\"'+id+'\" ':'')+'class=\"lap-entry\"><small class=\"lap-number\">'+(i+1)+'.</small><span class=\"lap-time\">'+timeHtml(value)+'</span></div>';\r\n function draw(){const t=text();sph.ui.patch([{id:'time',text:format(now())},{id:'toggle',text:started===null?t.start:t.pause}]);}\r\n async function renderLaps(){\r\n  const current=++renderId;\r\n  // Measure all laps with the button hidden before reserving any button space.\r\n  sph.ui.patch([{id:'laps',attribute:'class',attributeValue:laps.length?'laps':'laps empty'},{id:'lap-empty',attribute:'class',attributeValue:laps.length?'hidden':''},{id:'expand',attribute:'class',attributeValue:'hidden'},...Array.from({length:100},(_,i)=>({id:'lap-'+i,attribute:'class',attributeValue:i<laps.length?'lap-entry':'hidden'}))]);\r\n  if(laps.length)sph.ui.patch(laps.flatMap((v,i)=>{const [hours,tail]=parts(v);return [{id:'lap-hours-'+i,text:hours},{id:'lap-tail-'+i,text:tail}];}));\r\n  if(!laps.length||context.expanded)return;\r\n  const full=await sph.ui.measure('laps');if(current!==renderId)return;\r\n  if(full.scrollHeight<=full.clientHeight+1)return;\r\n  sph.ui.patch([{id:'expand',attribute:'class',attributeValue:''}]);\r\n  const [bounds,line]=await Promise.all([sph.ui.measure('laps'),sph.ui.measure('lap-line')]);if(current!==renderId)return;\r\n  // clientHeight includes 20px of padding. Each row has three laps and an 8px gap.\r\n  let rows=Math.max(0,Math.floor((bounds.clientHeight-20+8)/(Math.max(1,line.clientHeight)+8))+1);\r\n  // Measure the actual grid to avoid losing a row to rounded clientHeight values.\r\n  while(current===renderId){\r\n   const start=Math.max(0,laps.length-rows*3);\r\n   sph.ui.patch(Array.from({length:100},(_,i)=>({id:'lap-'+i,attribute:'class',attributeValue:i>=start&&i<laps.length?'lap-entry':'hidden'})));\r\n   const fit=await sph.ui.measure('laps');if(current!==renderId)return;\r\n   if(rows===0||fit.scrollHeight<=fit.clientHeight+1)return;\r\n   rows--;\r\n  }\r\n }\r\n function render(){const t=text();\r\n  const cells=Array.from({length:100},(_,i)=>'<div id=\"lap-'+i+'\" class=\"hidden\"><small class=\"lap-number\">'+(i+1)+'.</small><span class=\"lap-time\"><span id=\"lap-hours-'+i+'\" class=\"lap-hours\"></span><span id=\"lap-tail-'+i+'\" class=\"lap-tail\"></span></span></div>').join('');\r\n  sph.ui.html('<div class=\"tool\"><output id=\"time\" class=\"time\"></output><div class=\"actions\"><button id=\"toggle\" class=\"primary\">'+t.start+'</button><button id=\"reset\">'+t.reset+'</button><button id=\"lap\">'+t.lap+'</button></div><div id=\"laps\" class=\"laps empty\"><span id=\"lap-empty\">'+t.empty+'</span>'+cells+'</div><div class=\"lap-probe\" aria-hidden=\"true\">'+[0,1,2].map(i=>entry(0,i,i===0?'lap-line':'')).join('')+'</div><button id=\"expand\" class=\"hidden\">'+t.all+'</button><small id=\"hint\" class=\"hidden\"></small></div>');\r\n  sph.ui.on('toggle','click',()=>{if(started===null)started=performance.now();else{elapsed=now();started=null;}draw();});\r\n  sph.ui.on('reset','click',()=>{elapsed=0;started=null;laps=[];renderLaps();draw();});\r\n  sph.ui.on('lap','click',()=>{if(started!==null&&laps.length<100){laps.push(now());renderLaps();}});\r\n  sph.ui.on('expand','click',()=>sph.expand('<div class=\"laps full\">'+laps.map((v,i)=>entry(v,i)).join('')+'</div>'));\r\n  renderLaps();draw();\r\n }\r\n render();setInterval(draw,100);sph.ui.on('$context','change',c=>{context=c;lang=c.language;render();});\r\n});\r\n"
+      }
+    },
+    {
+      "id": "sph.timer",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "タイマー",
+        "en": "Timer"
+      },
+      "description": {
+        "ja": "開始・一時停止・再開・リセットができるカウントダウンタイマーです。終了は画面表示で通知します。計測はこのページ内のみで、再読込するとリセットされます。",
+        "en": "A countdown timer with start, pause, resume and reset. Completion is indicated on screen. Timing is local to this page and resets on reload."
+      },
+      "sizes": [
+        "1x2"
+      ],
+      "sizeLayouts": {
+        "1x2": {
+          "rows": 1,
+          "columns": 2
+        }
+      },
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\r\nbutton,input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}\r\nbutton{min-height:44px;padding:6px 10px;font-size:24px;line-height:1.25;cursor:pointer}\r\nbutton:hover{background:var(--surface-secondary)}\r\nbutton:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\r\nbutton:disabled{opacity:.45;cursor:default}\r\n.tool{height:240px;padding:6px;display:grid;grid-template-rows:auto minmax(0,1fr) minmax(44px,.8fr);gap:6px;min-width:0;container-type:inline-size}\r\n#root[data-layout=\"stretch\"]>.tool{height:100%}\r\n.primary{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary))}\r\n.primary:hover{background:var(--action-primary-background-hover,var(--surface-secondary))}\r\n.hidden{display:none}\r\nlabel{display:grid;gap:4px;font-size:20px;line-height:1.2}\r\n.duration{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}\r\n.duration input{width:100%;min-height:40px;padding:2px 6px;font-size:26px;line-height:1.2}\r\n.time{display:flex;align-items:center;justify-content:center;text-align:center;font-size:clamp(48px,8cqi,64px);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums}\r\n.actions{display:flex;flex-wrap:wrap;align-items:center;align-content:center;justify-content:center;gap:8px}\r\n#hint{font-size:22px;line-height:1.25;color:var(--muted);overflow-wrap:anywhere}\r\n.laps{min-height:100px;border:1px dashed var(--border);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:22px;line-height:1.5;font-variant-numeric:tabular-nums;margin:0}\r\n",
+        "javascript": "const elapsedAt = (clock, now) => clock.elapsed + (clock.startedAt === null ? 0 : Math.max(0, now - clock.startedAt));\nconst startClock = (clock, now) => clock.startedAt === null ? { ...clock, startedAt: now } : clock;\nconst pauseClock = (clock, now) => ({ elapsed: elapsedAt(clock, now), startedAt: null });\nfunction formatDuration(milliseconds, fraction = false) {\n    const total = Math.max(0, Math.floor(milliseconds / 1000));\n    const text = [Math.floor(total / 3600), Math.floor(total / 60) % 60, total % 60].map(v => String(v).padStart(2, '0')).join(':');\n    return text + (fraction ? '.' + Math.floor(Math.max(0, milliseconds) % 1000 / 10).toString().padStart(2, '0') : '');\n}\n\nsph.ready(context=>{\n const countdown=true;let lang=context.language,h=0,m=25,s=0,elapsed=0,started=null,laps=[],finished=false;\n const text=()=>lang==='ja'?{start:'開始',pause:'一時停止',reset:'リセット',lap:'ラップ',all:'すべて表示',hours:'時間',minutes:'分',seconds:'秒',finished:'時間になりました。',empty:'計測中に記録したラップが表示されます。',invalid:'0より大きい時間を指定してください。'}:{start:'Start',pause:'Pause',reset:'Reset',lap:'Lap',all:'Show all',hours:'Hours',minutes:'Minutes',seconds:'Seconds',finished:'Time is up.',empty:'Laps recorded while running appear here.',invalid:'Enter a positive duration.'};\n const duration=()=>((h*60+m)*60+s)*1000,valid=()=>Number.isInteger(h)&&h>=0&&h<=99&&Number.isInteger(m)&&m>=0&&m<=59&&Number.isInteger(s)&&s>=0&&s<=59&&duration()>0;\n const now=()=>elapsedAt({elapsed,startedAt:started},performance.now());\n function format(ms){return formatDuration(ms,!countdown);}\n\n function draw(){let amount=now();if(countdown&&started!==null&&amount>=duration()){amount=duration();elapsed=amount;started=null;finished=true;}const t=text();sph.ui.patch([{id:'time',text:format(countdown?Math.ceil(Math.max(0,duration()-amount)/1000)*1000:amount)},{id:'toggle',text:started===null?t.start:t.pause},{id:'hint',text:finished?t.finished:countdown&&!valid()?t.invalid:''},{id:'hint',attribute:'class',attributeValue:finished||countdown&&!valid()?'':'hidden'},...['hours','minutes','seconds'].map(id=>({id,attribute:'disabled',attributeValue:started!==null?'':null})).filter(()=>countdown)]);}\n function render(){const t=text();sph.ui.html('<div class=\"tool\">'+(countdown?'<div class=\"duration\">'+[['hours',t.hours,h,99],['minutes',t.minutes,m,59],['seconds',t.seconds,s,59]].map(([id,label,value,max])=>'<label>'+label+'<input id=\"'+id+'\" type=\"number\" min=\"0\" max=\"'+max+'\" step=\"1\" value=\"'+value+'\"></label>').join('')+'</div>':'')+'<output id=\"time\" class=\"time\"></output><div class=\"actions\"><button id=\"toggle\" class=\"primary\">'+t.start+'</button><button id=\"reset\">'+t.reset+'</button>'+(!countdown?'<button id=\"lap\">'+t.lap+'</button>':'')+'</div>'+(!countdown?'<pre id=\"laps\" class=\"laps\">'+t.empty+'</pre><button id=\"expand\">'+t.all+'</button>':'')+'<small id=\"hint\"></small></div>');\n sph.ui.on('toggle','click',()=>{if(countdown&&!valid())return;if(started===null){if(finished){elapsed=0;finished=false;}started=performance.now();}else{elapsed=now();started=null;}draw();});\n sph.ui.on('reset','click',()=>{elapsed=0;started=null;finished=false;laps=[];if(!countdown)sph.ui.patch([{id:'laps',text:text().empty},{id:'expand',attribute:'class',attributeValue:'hidden'}]);draw();});\n if(countdown)for(const id of ['hours','minutes','seconds'])sph.ui.on(id,'input',e=>{const value=e.value.trim()===''?NaN:Number(e.value);if(id==='hours')h=value;if(id==='minutes')m=value;if(id==='seconds')s=value;elapsed=0;finished=false;draw();});\n else {sph.ui.on('lap','click',()=>{if(started!==null&&laps.length<100){laps.push(now());sph.ui.patch([{id:'laps',text:(context.expanded?laps:laps.slice(-5)).map((v,i)=>String(context.expanded?i+1:Math.max(1,laps.length-4)+i)+'. '+format(v)).join('\\n')},{id:'expand',attribute:'class',attributeValue:laps.length>5?'':'hidden'}]);}});sph.ui.on('expand','click',()=>sph.expand());}\n if(!countdown)sph.ui.patch([{id:'expand',attribute:'class',attributeValue:laps.length>5?'':'hidden'}]);draw();}\n render();setInterval(draw,100);sph.ui.on('$context','change',c=>{context=c;lang=c.language;render();});\n});\n"
+      }
+    },
+    {
+      "id": "sph.unit_converter",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "単位変換",
+        "en": "Unit converter"
+      },
+      "description": {
+        "ja": "長さ・面積・重さ・体積・温度・時間・データ容量を変換します。SI接頭辞は1000、KiBなどの2進接頭辞は1024を基準にします。値は保存されません。",
+        "en": "Convert length, area, mass, volume, temperature, time and data size. SI prefixes use 1000; binary prefixes such as KiB use 1024. Values are not saved."
+      },
+      "sizes": [
+        "1x2"
+      ],
+      "sizeLayouts": {
+        "1x2": {
+          "rows": 1,
+          "columns": 2
+        }
+      },
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}\nbutton,input,select{font:inherit;font-size:22px;line-height:1.25;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-height:40px;padding:3px 6px;min-width:0;max-width:100%;width:100%}\nbutton:hover{background:var(--surface-secondary)}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}\nlabel{display:grid;gap:8px;font-size:18px;line-height:1.2;min-width:0}\n.tool{height:238px;padding:6px;container-type:inline-size;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;min-width:0}\n#root[data-layout=\"stretch\"]>.tool{height:100%}\n.inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}\n.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:end;gap:12px;min-width:0}\n#swap{width:auto;white-space:nowrap;padding-inline:8px}\n.result-row{display:grid;align-items:center;min-height:0;padding:4px 6px;background:var(--surface-secondary);border-radius:4px}\n.result{display:block;font-size:32px;line-height:1.2;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;min-width:0}\n.error{font-size:18px;line-height:1.2;color:var(--danger);overflow-wrap:anywhere}\n.hidden{display:none}\n@container(max-width:500px){#swap .swap-label{display:none}#swap{width:40px;padding:2px}}\n .result-row:has(.error:not(.hidden)){padding-block:0}\n",
+        "javascript": "const u = (id, ja, en, factor, offset = 0) => ({ id, ja, en, factor, offset });\nconst unitCategories = [\n    { id: 'length', ja: '長さ', en: 'Length', units: [u('m', 'メートル', 'Metres', 1), u('km', 'キロメートル', 'Kilometres', 1000), u('cm', 'センチメートル', 'Centimetres', .01), u('mm', 'ミリメートル', 'Millimetres', .001), u('in', 'インチ', 'Inches', .0254), u('ft', 'フィート', 'Feet', .3048), u('yd', 'ヤード', 'Yards', .9144), u('mi', 'マイル', 'Miles', 1609.344)] },\n    { id: 'area', ja: '面積', en: 'Area', units: [u('m²', '平方メートル', 'Square metres', 1), u('km²', '平方キロメートル', 'Square kilometres', 1e6), u('ha', 'ヘクタール', 'Hectares', 10000), u('ft²', '平方フィート', 'Square feet', .09290304), u('acre', 'エーカー', 'Acres', 4046.8564224)] },\n    { id: 'mass', ja: '重さ', en: 'Mass', units: [u('kg', 'キログラム', 'Kilograms', 1), u('g', 'グラム', 'Grams', .001), u('mg', 'ミリグラム', 'Milligrams', .000001), u('t', 'トン', 'Tonnes', 1000), u('lb', 'ポンド', 'Pounds', .45359237), u('oz', 'オンス', 'Ounces', .028349523125)] },\n    { id: 'volume', ja: '体積', en: 'Volume', units: [u('L', 'リットル', 'Litres', 1), u('mL', 'ミリリットル', 'Millilitres', .001), u('m³', '立方メートル', 'Cubic metres', 1000), u('US gal', '米液量ガロン', 'US liquid gallons', 3.785411784), u('imp gal', '英ガロン', 'Imperial gallons', 4.54609)] },\n    { id: 'temperature', ja: '温度', en: 'Temperature', units: [u('°C', '摂氏', 'Celsius', 1, 273.15), u('°F', '華氏', 'Fahrenheit', 5 / 9, 273.15 - 32 * 5 / 9), u('K', 'ケルビン', 'Kelvin', 1)] },\n    { id: 'time', ja: '時間', en: 'Time', units: [u('s', '秒', 'Seconds', 1), u('ms', 'ミリ秒', 'Milliseconds', .001), u('min', '分', 'Minutes', 60), u('h', '時間', 'Hours', 3600), u('d', '日（24時間）', 'Days (24 hours)', 86400)] },\n    { id: 'data', ja: 'データ容量', en: 'Data size', units: [u('B', 'バイト', 'Bytes', 1), u('bit', 'ビット', 'Bits', 1 / 8), u('kB', 'キロバイト（1000）', 'Kilobytes (1000)', 1000), u('MB', 'メガバイト', 'Megabytes', 1e6), u('GB', 'ギガバイト', 'Gigabytes', 1e9), u('TB', 'テラバイト', 'Terabytes', 1e12), u('KiB', 'キビバイト（1024）', 'Kibibytes (1024)', 1024), u('MiB', 'メビバイト', 'Mebibytes', 1024 ** 2), u('GiB', 'ギビバイト', 'Gibibytes', 1024 ** 3), u('TiB', 'テビバイト', 'Tebibytes', 1024 ** 4)] }\n];\nfunction convertUnit(input, category, from, to) {\n    if (!/^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[+-]?\\d+)?$/i.test(input.trim()))\n        return null;\n    const value = Number(input), group = unitCategories.find(c => c.id === category), a = group?.units.find(u => u.id === from), b = group?.units.find(u => u.id === to);\n    if (!Number.isFinite(value) || !a || !b)\n        return null;\n    const base = value * a.factor + (a.offset ?? 0);\n    if (category === 'temperature' && base < -1e-10)\n        return null;\n    const result = (base - (b.offset ?? 0)) / b.factor;\n    return Number.isFinite(result) ? (Object.is(result, -0) ? 0 : result) : null;\n}\n\nsph.ready(context=>{\n let lang=context.language,category='length',from='m',to='km',input='1';\n const group=()=>unitCategories.find(c=>c.id===category),escape=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('\"','&quot;');\n function draw(){const result=convertUnit(input,category,from,to),value=result===null?'—':new Intl.NumberFormat(lang,{maximumSignificantDigits:12,notation:result!==0&&(Math.abs(result)>=1e12||Math.abs(result)<1e-6)?'scientific':'standard'}).format(result);sph.ui.patch([{id:'result',text:value+' '+to},{id:'result',attribute:'class',attributeValue:result===null&&input.trim()!==''?'result hidden':'result'},{id:'error',attribute:'class',attributeValue:result===null&&input.trim()!==''?'error':'error hidden'},{id:'error',text:result===null&&input.trim()!==''?(lang==='ja'?'有効な数値を入力してください。温度は絶対零度以上にしてください。':'Enter a finite value. Temperatures must be at or above absolute zero.') :''}]);}\n function render(){const options=selected=>group().units.map(u=>'<option value=\"'+u.id+'\" '+(u.id===selected?'selected':'')+'>'+escape(u[lang])+' ('+u.id+')</option>').join('');sph.ui.html('<div class=\"tool\"><div class=\"inputs\"><label>'+(lang==='ja'?'種類':'Category')+'<select id=\"category\">'+unitCategories.map(c=>'<option value=\"'+c.id+'\" '+(c.id===category?'selected':'')+'>'+c[lang]+'</option>').join('')+'</select></label><label>'+(lang==='ja'?'変換する値':'Value')+'<input id=\"value\" type=\"text\" maxlength=\"100\" value=\"'+escape(input)+'\"></label></div><div class=\"pair\"><label>'+(lang==='ja'?'変換元':'From')+'<select id=\"from\">'+options(from)+'</select></label><label>'+(lang==='ja'?'変換先':'To')+'<select id=\"to\">'+options(to)+'</select></label><button id=\"swap\" aria-label=\"'+(lang==='ja'?'入れ替え':'Swap')+'\" title=\"'+(lang==='ja'?'入れ替え':'Swap')+'\">⇄ <span class=\"swap-label\">'+(lang==='ja'?'入れ替え':'Swap')+'</span></button></div><div class=\"result-row\"><output id=\"result\" class=\"result\"></output><small id=\"error\" class=\"error hidden\" role=\"status\"></small></div></div>');sph.ui.on('category','change',e=>{category=e.value;from=group().units[0].id;to=group().units[1].id;render();});sph.ui.on('value','input',e=>{input=e.value;draw();});sph.ui.on('from','change',e=>{from=e.value;draw();});sph.ui.on('to','change',e=>{to=e.value;draw();});sph.ui.on('swap','click',()=>{[from,to]=[to,from];render();});draw();}\n render();sph.ui.on('$context','change',c=>{lang=c.language;render();});\n});\n"
+      }
+    },
+    {
+      "id": "sph.world_clock",
+      "provider": "SPH Official",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "世界時計",
+        "en": "World clock"
+      },
+      "sizes": [
+        "1x2",
+        "1x4",
+        "1x6"
+      ],
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "sizeLayouts": {
+        "1x2": {
+          "rows": 1,
+          "columns": 2
+        },
+        "1x4": {
+          "rows": 1,
+          "columns": 4
+        },
+        "1x6": {
+          "rows": 1,
+          "columns": 6
+        }
+      },
+      "storage": {
+        "fields": {
+          "timeZones": {
+            "type": "stringArray",
+            "label": {
+              "ja": "タイムゾーン",
+              "en": "Time zones"
+            },
+            "default": [
+              "Asia/Tokyo"
+            ],
+            "maxLength": 64,
+            "required": true,
+            "format": "timeZone"
+          }
+        },
+        "titleField": "timeZones",
+        "listFields": [
+          "timeZones"
+        ],
+        "operations": {
+          "create": false,
+          "update": true,
+          "delete": false
+        },
+        "maxRecords": 1,
+        "initialRecords": [
+          {
+            "recordKey": "default",
+            "values": {
+              "timeZones": [
+                "Asia/Tokyo"
+              ]
+            }
+          }
+        ]
+      },
+      "configuration": {
+        "fields": {
+          "clockDesign": {
+            "type": "select",
+            "label": {
+              "ja": "時計デザイン",
+              "en": "Clock design"
+            },
+            "default": "digital",
+            "options": [
+              {
+                "value": "digital",
+                "label": {
+                  "ja": "デジタル",
+                  "en": "Digital"
+                }
+              },
+              {
+                "value": "analog",
+                "label": {
+                  "ja": "アナログ",
+                  "en": "Analog"
+                }
+              }
+            ]
+          }
+        },
+        "titleField": "clockDesign",
+        "listFields": [
+          "clockDesign"
+        ],
+        "operations": {
+          "create": false,
+          "update": false,
+          "delete": false
+        }
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\" class=\"tool\"></div>\n",
+        "css": "*{box-sizing:border-box}button,input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;min-height:44px;padding:8px;min-width:0;max-width:100%}button:hover{background:var(--surface-secondary)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:1px}button:disabled{opacity:.45;cursor:default}label{display:grid;gap:4px;font-size:14px}p{margin:8px 0}output{display:block;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.actions{display:flex;flex-wrap:wrap;gap:8px}.primary{background:var(--primary-bg);color:var(--primary);border-color:var(--primary)}.error{color:var(--danger)}small{font-size:14px;color:var(--muted)}.tool{padding:2px;display:grid;gap:8px;min-width:0}.result{font-size:32px;text-align:right;min-height:44px}.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.copy{border:0;padding:0;background:transparent;cursor:copy;width:100%}.expression{text-align:right;min-height:22px;font-size:14px;color:var(--muted)}.clock-layout{display:flex;align-items:center;gap:4px}.clocks{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;flex:1}.world-clock{container-type:inline-size;--dial-light:#fffef6;--dial-edge:#e7e0cd;--dial-ink:#26354c;--dial-line:#b2aa91;--dial-ring:#4b586c;--hand-light:#728eaf;--second-hand:#b34f36;display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;text-align:center}.world-clock.night{--dial-light:#273c57;--dial-edge:#101c2d;--dial-ink:#dfe9f6;--dial-line:#627994;--dial-ring:#07111f;--hand-light:#91aed2;--second-hand:#e5b777}.analog-clock{display:block;width:192px;max-width:100%;height:auto;aspect-ratio:1;filter:drop-shadow(0 2px 3px #09111f25)}.numerals{text-anchor:middle;font-size:10px;font-weight:600;letter-spacing:.3px}.city{max-width:100%;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.analog .city{font-size:14px}.clock{font-size:clamp(32px,23cqi,48px);line-height:1.2;white-space:nowrap;max-width:100%}.world-clock small{font-size:14px;white-space:nowrap}.primary{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary))}.primary:hover{background:var(--action-primary-background-hover,var(--surface-secondary))}",
+        "javascript": "\nsph.ready(async context=>{\n let zones=['Asia/Tokyo'],page=0;try{zones=(await sph.records.get('default')).values.timeZones;}catch{}\n const capacity=()=>Math.max(1,Math.floor(((context.width??320)+12)/210)),visible=()=>zones.slice(page,page+capacity());\n function face(i){const uid='face'+i;return `<svg class=\"analog-clock\" viewBox=\"0 0 120 120\" role=\"img\" aria-label=\"Clock\"><defs><linearGradient id=\"${uid}-rim\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop stop-color=\"#f2f6fc\"/><stop offset=\".3\" stop-color=\"#8c9cb2\"/><stop offset=\".53\" stop-color=\"#e6edf7\"/><stop offset=\"1\" stop-color=\"#53647e\"/></linearGradient><radialGradient id=\"${uid}-dial\" cx=\".35\" cy=\".25\" r=\".9\"><stop stop-color=\"var(--dial-light)\"/><stop offset=\"1\" stop-color=\"var(--dial-edge)\"/></radialGradient><linearGradient id=\"${uid}-hand\"><stop stop-color=\"var(--hand-light)\"/><stop offset=\".5\" stop-color=\"var(--hand-light)\"/><stop offset=\".51\" stop-color=\"var(--dial-ink)\"/><stop offset=\"1\" stop-color=\"var(--dial-ink)\"/></linearGradient></defs><circle cx=\"60\" cy=\"61\" r=\"58\" fill=\"#09111f\" opacity=\".18\"/><circle cx=\"60\" cy=\"60\" r=\"57\" fill=\"url(#${uid}-rim)\"/><circle cx=\"60\" cy=\"60\" r=\"53\" fill=\"var(--dial-ring)\"/><circle cx=\"60\" cy=\"60\" r=\"50.5\" fill=\"url(#${uid}-dial)\" stroke=\"var(--dial-line)\" stroke-width=\".6\"/><circle cx=\"60\" cy=\"60\" r=\"40\" fill=\"none\" stroke=\"var(--dial-line)\" stroke-width=\".5\" opacity=\".65\"/>${Array.from({length:60},(_,n)=>'<line x1=\"60\" y1=\"'+(n%5===0?13:15)+'\" x2=\"60\" y2=\"'+(n%5===0?21:18)+'\" stroke=\"var(--dial-ink)\" stroke-width=\"'+(n%5===0?1.8:.65)+'\" opacity=\"'+(n%5===0?1:.55)+'\" transform=\"rotate('+n*6+' 60 60)\"/>').join('')}<g class=\"numerals\" fill=\"var(--dial-ink)\"><text x=\"60\" y=\"34\">12</text><text x=\"87\" y=\"64\">3</text><text x=\"60\" y=\"94\">6</text><text x=\"33\" y=\"64\">9</text></g><path id=\"hour${i}\" d=\"M57.5 66 58.5 39 60 30 61.5 39 62.5 66Z\" fill=\"url(#${uid}-hand)\" stroke=\"var(--dial-ink)\" stroke-width=\".5\"/><path id=\"minute${i}\" d=\"M58.5 67 59 27 60 19 61 27 61.5 67Z\" fill=\"url(#${uid}-hand)\" stroke=\"var(--dial-ink)\" stroke-width=\".45\"/><g id=\"second${i}\"><path d=\"M60 72V16\" stroke=\"var(--second-hand)\" stroke-width=\"1.1\"/><circle cx=\"60\" cy=\"71\" r=\"2.3\" fill=\"none\" stroke=\"var(--second-hand)\" stroke-width=\"1.1\"/></g><circle cx=\"60\" cy=\"60\" r=\"3.5\" fill=\"url(#${uid}-rim)\"/><circle cx=\"60\" cy=\"60\" r=\"1.8\" fill=\"var(--second-hand)\"/></svg>`;}\n function draw(){const now=new Date(),updates=[],analog=context.configuration.clockDesign==='analog';visible().forEach((zone,i)=>{const parts=new Intl.DateTimeFormat('en',{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(now),n=k=>Number(parts.find(p=>p.type===k)?.value??0);updates.push({id:'city'+i,text:zone.replaceAll('_',' ')},{id:'date'+i,text:new Intl.DateTimeFormat(context.language,{timeZone:zone,month:'short',day:'numeric'}).format(now)});if(analog)updates.push({id:'clock'+i,attribute:'class',attributeValue:'world-clock analog'+(n('hour')<6||n('hour')>=18?' night':'')},...['hour','minute','second'].map((hand,j)=>({id:hand+i,attribute:'transform',attributeValue:'rotate('+[(n('hour')%12)*30+n('minute')/2,n('minute')*6+n('second')/10,n('second')*6][j]+' 60 60)'})));else updates.push({id:'time'+i,text:new Intl.DateTimeFormat(context.language,{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(now)});});sph.ui.patch(updates);}\n function render(){page=Math.min(page,Math.max(0,zones.length-capacity()));const analog=context.configuration.clockDesign==='analog';sph.ui.html('<div class=\"clock-layout\">'+(zones.length>capacity()?'<button id=\"prev\" aria-label=\"Previous\">‹</button>':'')+'<div class=\"clocks\">'+visible().map((zone,i)=>'<div id=\"clock'+i+'\" class=\"world-clock '+(analog?'analog':'')+'\">'+(analog?face(i):'')+'<strong id=\"city'+i+'\" class=\"city\"></strong>'+(!analog?'<output id=\"time'+i+'\" class=\"clock\"></output>':'')+'<small id=\"date'+i+'\"></small></div>').join('')+'</div>'+(zones.length>capacity()?'<button id=\"next\" aria-label=\"Next\">›</button>':'')+'</div>');if(zones.length>capacity()){sph.ui.on('prev','click',()=>{page=Math.max(0,page-1);render();});sph.ui.on('next','click',()=>{page=Math.min(zones.length-capacity(),page+1);render();});}draw();}\n render();setInterval(draw,1000);sph.ui.on('$context','change',c=>{context=c;render();});\n});\n"
+      }
+    }
+  ]
+}

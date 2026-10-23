@@ -22,7 +22,6 @@
   { "code": "assets.delete", "category": "assets", "prerequisite": "assets.manage" },
   { "code": "assets.assign", "category": "assets", "prerequisite": "assets.manage" },
   { "code": "assets.return", "category": "assets", "prerequisite": "assets.manage" },
-  { "code": "assets.reorder", "category": "assets", "prerequisite": "assets.manage" },
   { "code": "assets.credentials.view", "category": "assets", "prerequisite": "assets.credentials.read" },
   { "code": "assets.credentials.update", "category": "assets", "prerequisite": "assets.credentials.write" },
   { "code": "assets.credentials.access", "category": "assets", "prerequisite": "assets.credentials.read" },
@@ -38,7 +37,6 @@
   { "code": "books.copies.delete", "category": "books", "prerequisite": "books.manage" },
   { "code": "books.reservations.create", "category": "books", "prerequisite": "books.read" },
   { "code": "books.reservations.cancel", "category": "books", "prerequisite": "books.read" },
-  { "code": "books.reservations.manage", "category": "books", "prerequisite": "books.manage" },
   { "code": "books.loans.create", "category": "books", "prerequisite": "books.manage" },
   { "code": "books.loans.return", "category": "books", "prerequisite": "books.manage" },
   { "code": "books.covers.update", "category": "books", "prerequisite": "books.manage" },
@@ -106,5 +104,16 @@
   {"code": "clients.read", "category": "employees", "prerequisite": "clients.read"},
   {"code": "clients.create", "category": "employees", "prerequisite": "clients.create"},
   {"code": "clients.update", "category": "employees", "prerequisite": "clients.update"},
-  {"code": "clients.delete", "category": "employees", "prerequisite": "clients.delete"}
+  {"code": "clients.delete", "category": "employees", "prerequisite": "clients.delete"},
+ {"code":"system.widgets.sources.update","category":"system","prerequisite":"system.manage","systemOnly":true},
+ {"code":"system.widgets.approvals.update","category":"system","prerequisite":"system.manage","systemOnly":true},
+ {"code":"widgets.drafts.read","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.drafts.create","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.drafts.update","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.drafts.delete","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.read","category":"system","prerequisite":[]},
+ {"code":"widgets.layout.update","category":"system","prerequisite":[]},
+ {"code":"widgets.records.create","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.records.update","category":"system","prerequisite":"widgets.read"},
+ {"code":"widgets.records.delete","category":"system","prerequisite":"widgets.read"}
 ]

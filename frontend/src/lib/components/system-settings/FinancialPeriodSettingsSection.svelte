@@ -90,6 +90,8 @@
 {/if}
 
 <style>
-	.financial-settings{padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}h2{margin:0 0 6px;font-size:1.1rem}p{margin:0 0 16px;color:var(--text-secondary)}.fields{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}.fields :global(.form-select-field){width:180px}button{padding:8px 18px;border:0;border-radius:4px;background:var(--action-primary);color:white;font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
+	.financial-settings{padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}h2{margin:0 0 6px;font-size:1.1rem}p{margin:0 0 16px;color:var(--text-secondary)}.fields{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}.fields :global(.form-select-field){width:180px}button{padding:8px 18px;border:1px solid var(--action-primary-button-border);border-radius:4px;background:var(--action-primary-background);color:var(--action-primary-text);font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
 	.financial-settings-confirm-body{display:grid;gap:16px}.financial-settings-confirm-body p{margin:0}.financial-settings-confirm-body ol{margin:8px 0 0;padding-left:1.5em;color:var(--text-secondary);line-height:1.6}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.financial-settings{padding:12px}.fields{flex-direction:column}.fields :global(.form-select-field){width:100%}.financial-settings button,.fields :global(button){min-height:44px}}
+button:hover:not(:disabled){background:var(--action-primary-background-hover)}
 </style>

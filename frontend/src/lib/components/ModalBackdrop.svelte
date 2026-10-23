@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -38,7 +39,7 @@
 	}
 
 	function handlePointerDown(event: PointerEvent) {
-		if (event.button !== 0 || window.matchMedia('(max-width: 700px)').matches || !backdropElement) return;
+		if (event.button !== 0 || window.matchMedia(COMPACT_CONTENT_QUERY).matches || !backdropElement) return;
 		const target = event.target;
 		if (!(target instanceof Element) || target.closest('button,a,input,textarea,select,[role="button"],[data-modal-drag-ignore]')) return;
 		const header = target.closest<HTMLElement>('dialog.app-modal > header');

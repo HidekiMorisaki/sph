@@ -1,3 +1,4 @@
+import { derivedPermissionCodes } from '$lib/server/auth/permission-dependencies';
 import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { duplicateField, parseId } from '$lib/server/api/database';
@@ -34,7 +35,7 @@ export async function PUT({ locals, params, request }: import('./$types').Reques
 			const before = roleOutput(role).permissionScopes;
 			if (before.some(({ code }) => code === permissionOperations.systemManagement) || role.defaultKey === 'branch_administrator') return { state: 'immutable' as const };
 			if (role.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime()) return { state: 'conflict' as const };
-			const legacyDerived = new Set(['employees.manage', 'masters.manage', 'branches.manage', 'assets.manage', 'assets.credentials.read', 'assets.credentials.write']);
+			const legacyDerived = derivedPermissionCodes;
 			if (before.some(({ code }) => !editableCodesFrom([code]).length && !legacyDerived.has(code))) return { state: 'unsupported' as const };
 			const selected = await tx.permissionOperation.findMany({
 				where: { operation: { in: codes }, deletedAt: null, permission: { deletedAt: null } },

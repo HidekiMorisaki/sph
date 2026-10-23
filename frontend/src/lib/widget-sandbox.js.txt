@@ -1,0 +1,72 @@
+// SPH SDK v1. Only this trusted renderer touches the isolated document.
+function sandboxMain() {
+ const scriptNonce=document.currentScript.nonce;
+ const root=document.getElementById('root');let worker,port,context,started=false,count=0,windowAt=Date.now();
+ // Preserve input modality when an expanded view opens outside this iframe.
+ let inputMethod='keyboard';
+ document.addEventListener('pointerdown',()=>inputMethod='pointer',true);
+ document.addEventListener('keydown',()=>inputMethod='keyboard',true);
+ const send=m=>port?.postMessage(m), fail=reason=>{worker?.terminate();worker=null;send({type:'error',message:String(reason).slice(0,300)});};
+ const tags=new Set('div span p strong small em b i h2 h3 h4 section article header footer label input textarea select option button output ul ol li br pre code table thead tbody tr th td svg g path circle line rect text defs linearGradient radialGradient filter feDropShadow stop polygon polyline ellipse title'.toLowerCase().split(' '));
+ const attrs=new Set('id class title role tabindex aria-label aria-live aria-pressed aria-describedby aria-hidden type value name min max step maxlength placeholder rows checked disabled selected for viewbox d x y x1 x2 y1 y2 cx cy r rx ry width height fill stroke stroke-width stroke-linecap stroke-linejoin transform opacity offset stop-color points text-anchor font-size dx dy stddeviation flood-color flood-opacity filter'.split(' '));
+ function safeHtml(html){
+  if(typeof html!=='string'||html.length>65536)throw Error('HTML limit');
+  const parsed=document.createElement('template');parsed.innerHTML=html;let nodes=0;
+  function copy(node,depth=0){if(++nodes>2000||depth>40)throw Error('DOM limit');if(node.nodeType===3)return document.createTextNode(node.textContent);if(node.nodeType!==1)return document.createTextNode('');
+   const tag=node.localName;if(!tags.has(tag.toLowerCase()))throw Error('Unsupported HTML element: '+tag);
+   const el=node.namespaceURI==='http://www.w3.org/2000/svg'?document.createElementNS(node.namespaceURI,tag):document.createElement(tag);
+   for(const a of node.attributes){const name=a.name.toLowerCase();if(!attrs.has(name)&&!/^data-[a-z0-9-]+$/.test(name))throw Error('Unsupported HTML attribute: '+name);if((name==='fill'||name==='stroke')&&/url\(/i.test(a.value)&&!/^url\(#[a-zA-Z0-9_-]+\)$/.test(a.value))throw Error('External SVG reference');el.setAttribute(a.name,a.value);}
+   if(tag==='input'&&!['text','number','checkbox','date','range','button'].includes(el.getAttribute('type')||'text'))throw Error('Unsupported input');
+   for(const child of node.childNodes)el.append(copy(child,depth+1));return el;
+  }
+  const fragment=document.createDocumentFragment();for(const child of parsed.content.childNodes)fragment.append(copy(child));return fragment;
+ }
+ const element=id=>{if(typeof id!=='string'||id.length>100)throw Error('Invalid element');const el=document.getElementById(id);if(!el||!root.contains(el))throw Error('Unknown element: '+id);return el;};
+ function patch(updates){if(!Array.isArray(updates)||updates.length>256)throw Error('Update limit');for(const u of updates){const el=element(u.id);if(u.text!==undefined){if(typeof u.text!=='string'||u.text.length>16000)throw Error('Text limit');el.textContent=u.text;}if(u.value!==undefined){if(!['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||typeof u.value!=='string'||u.value.length>16000)throw Error('Invalid input value');el.value=u.value;}if(u.attribute){if(!['class','disabled','aria-label','aria-pressed','transform','d','checked'].includes(u.attribute)||String(u.value??u.attributeValue).length>16000)throw Error('Invalid attribute');if(u.attributeValue===null)el.removeAttribute(u.attribute);else el.setAttribute(u.attribute,String(u.attributeValue));}}}
+ function workerBootstrap(){
+  const post=self.postMessage.bind(self),listeners=new Map(),pending=new Map();let sequence=0,ready;
+  const request=(method,args)=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});post({type:'request',id,method,args});});
+  self.sph=Object.freeze({ready:fn=>{ready=fn;},ui:Object.freeze({measure:id=>request('ui.measure',[id]),html:html=>post({type:'html',html}),patch:updates=>post({type:'patch',updates}),on:(id,event,fn,keys=[])=>{listeners.set(id+':'+event,fn);post({type:'listen',id,event,keys});}}),records:Object.freeze(Object.fromEntries(['list','get','create','update','delete'].map(method=>[method,(...args)=>request('records.'+method,args)]))),expand:html=>post({type:'expand',html}),context:()=>request('context',[])});
+  self.addEventListener('message',async e=>{const m=e.data;try{if(m.type==='ping')post({type:'pong'});else if(m.type==='init'){await ready?.(m.context);post({type:'ready'});}else if(m.type==='context')listeners.get('$context:change')?.(m.context);else if(m.type==='event')await listeners.get(m.id+':'+m.event)?.(m);else if(m.type==='response'){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve(m.data);}}}catch(error){post({type:'error',message:String(error?.message||error)});}});
+  self.addEventListener('unhandledrejection',e=>post({type:'error',message:String(e.reason?.message||e.reason)}));
+ }
+ function theme(c){root.dataset.layout=c.verticalAlign??'start';root.dataset.compact=String(!!c.compact);const scale=Math.max(.25,Math.min(2,Number(c.scale)||1));root.style.setProperty('--widget-available-height',Math.max(80,Number(c.height)||240)+'px');root.style.setProperty('--widget-compact-body-font',(16/scale)+'px');root.style.setProperty('--widget-compact-support-font',(14/scale)+'px');root.style.setProperty('--widget-compact-result-font',(18/scale)+'px');root.style.transform='scale('+scale+')';root.style.transformOrigin='top left';root.style.width=(100/scale)+'%';root.style.height=c.verticalAlign==='stretch'?Math.max(0,Number(c.height)||0)+'px':'';root.style.minHeight=c.verticalAlign==='center'?Math.max(0,Number(c.height)||0)+'px':'';root.style.display=c.verticalAlign==='center'?'grid':'flow-root';root.style.alignContent=c.verticalAlign==='center'?'center':'';const dark=c.theme==='dark';for(const key of ['--bg','--action-primary-background','--action-primary-background-hover','--action-primary-button-border','--action-primary-text'])document.documentElement.style.removeProperty(key);const vars={'--text':dark?'#e4e9f2':'#172334','--surface':dark?'#182331':'#ffffff','--surface-secondary':dark?'#233144':'#f5f7fa','--border':dark?'#354254':'#dce2eb','--primary':dark?'#8db8f1':'#245a92','--primary-bg':dark?'#223c59':'#edf5ff','--muted':dark?'#a1afc1':'#67778d','--danger':dark?'#ff9a9a':'#b42332'};for(const [key,value] of Object.entries(vars))document.documentElement.style.setProperty(key,value);if(c.theme===c.hostTheme&&c.tokens)for(const key of ['--text','--surface','--surface-secondary','--border','--muted','--danger','--bg','--action-primary-background','--action-primary-background-hover','--action-primary-button-border','--action-primary-text'])if(typeof c.tokens[key]==='string'&&c.tokens[key])document.documentElement.style.setProperty(key,c.tokens[key]);document.documentElement.style.colorScheme=dark?'dark':'light';}
+ const registrations=new Map();
+ for(const event of ['click','input','change','keydown'])root.addEventListener(event,e=>{
+  if(event==='keydown'&&(e.ctrlKey||e.metaKey||e.altKey||(['Enter',' '].includes(e.key)&&e.target.closest?.('[data-copy]'))))return;
+  const candidates=e.composedPath().filter(el=>el instanceof Element&&root.contains(el));
+  for(const el of candidates){const options=registrations.get(el.id+':'+event);if(!options)continue;if(event==='keydown'&&options.length&&!options.includes(e.key))continue;if(event==='keydown'&&options.includes(e.key))e.preventDefault();worker?.postMessage({type:'event',id:el.id,event,value:typeof el.value==='string'?el.value:'',checked:!!el.checked,key:e.key??'',repeat:!!e.repeat});break;}
+ });
+ // Clipboard is a trusted, user-triggered host action, never a worker permission.
+ root.addEventListener('click',e=>{const el=e.target.closest?.('[data-copy]');if(el&&e.isTrusted){const value=element(el.dataset.copy).textContent;send({type:'copy',value});}});
+ window.addEventListener('message',e=>{if(started||e.source!==parent||e.data?.type!=='sph-connect'||e.ports.length!==1)return;started=true;port=e.ports[0];port.onmessage=e=>{const m=e.data;try{
+  if(m.type==='boot'){
+   context=m.context;theme(context);root.replaceChildren(safeHtml(m.runtime.html));document.getElementById('custom-css').textContent=m.runtime.css;
+   const blob=new Blob(['('+workerBootstrap.toString()+')();\n'+m.runtime.javascript],{type:'text/javascript'}),url=URL.createObjectURL(blob);worker=new Worker(url);URL.revokeObjectURL(url);
+   worker.onerror=e=>fail(String(e.message||'JavaScript error')+' ('+e.lineno+':'+e.colno+')');worker.onmessage=e=>{try{const m=e.data;if(new TextEncoder().encode(JSON.stringify(m)).length>131072)throw Error('Message limit');if(Date.now()-windowAt>1000){windowAt=Date.now();count=0;}if(++count>200)throw Error('Message rate limit');if(m.type==='pong'){last=performance.now();return;}if(m.type==='ready'){last=performance.now();send(m);}else if(m.type==='html')root.replaceChildren(safeHtml(m.html));else if(m.type==='patch')patch(m.updates);else if(m.type==='listen'){if(!['click','input','change','keydown'].includes(m.event)||typeof m.id!=='string'||!Array.isArray(m.keys)||m.keys.length>40||!m.keys.every(k=>typeof k==='string'&&k.length<=30))throw Error('Invalid event');registrations.set(m.id+':'+m.event,m.keys);}else if(m.type==='request'&&m.method==='ui.measure'){const el=element(m.args?.[0]);worker.postMessage({type:'response',id:m.id,data:{clientWidth:el.clientWidth,clientHeight:el.clientHeight,scrollWidth:el.scrollWidth,scrollHeight:el.scrollHeight}});}else if(m.type==='expand'){if(m.html!==undefined&&typeof m.html!=='string')throw Error('Invalid expanded view');send({type:'expand',html:m.html??root.innerHTML,inputMethod});}else if(['request','error'].includes(m.type))send(m);else throw Error('Unknown message');}catch(error){fail(error.message);}};
+   worker.postMessage({type:'init',context});
+  }else if(m.type==='context'){context=m.context;theme(context);worker?.postMessage(m);}else if(m.type==='copy-result'){let notice=document.getElementById('sph-copy-feedback');if(!notice){notice=document.createElement('small');notice.id='sph-copy-feedback';notice.setAttribute('role','status');root.append(notice);}notice.textContent=context.language==='ja'?(m.ok?'コピーしました。':'コピーできませんでした。数値を選択してコピーしてください。'):(m.ok?'Copied.':'Could not copy. Select the value and copy it manually.');}else if(m.type==='response')worker?.postMessage(m);else if(m.type==='stop')fail('Stopped');
+ }catch(error){fail(error.message);}};port.start();send({type:'connected'});});
+ // Worker watchdog: measure only time when the host is able to run.
+ let last=performance.now(),lastTick=last,suspended=false;
+ function resetWatchdog(){last=lastTick=performance.now();if(worker&&!document.hidden&&!suspended)worker.postMessage({type:'ping'});}
+ document.addEventListener('visibilitychange',resetWatchdog);
+ document.addEventListener('freeze',()=>{suspended=true;resetWatchdog();});
+ document.addEventListener('resume',()=>{suspended=false;resetWatchdog();});
+ window.addEventListener('pageshow',resetWatchdog);
+ setInterval(()=>{
+  const now=performance.now(),gap=now-lastTick;lastTick=now;
+  if(!worker)return;
+  if(document.hidden||suspended){last=now;return;}
+  // A delayed host timer is not evidence of an unresponsive worker. Start a
+  // fresh response window without restarting the worker or losing its state.
+  if(gap>2500||gap<0){last=now;worker.postMessage({type:'ping'});return;}
+  if(now-last>5000){fail('Widget stopped responding');return;}
+  worker.postMessage({type:'ping'});
+ },1000);
+ // End worker watchdog.
+ parent.postMessage({type:'sph-frame-ready',nonce:scriptNonce},'*');
+ const observer=new ResizeObserver(()=>send({type:'height',height:Math.min(context?.expanded?200000:4000,Math.max(80,root.getBoundingClientRect().height))}));observer.observe(root);
+}
+
+sandboxMain();

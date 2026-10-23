@@ -6,13 +6,15 @@ export type AnalyticsData = {
 	fromYear: number;
 	period: { fromMonth: string; toMonth: string; startDate: string; endDate: string } | null;
 	demographicTotal: number;
-	summary: { headcount: number; hires: number; departures: number; turnoverRate: number | null };
+	summary: { headcount: number; hires: number; departures: number; turnoverRate: number | null; averageTenureMonths: number | null };
+	tenure: { asOf: string; total: number; groups: { key: string; count: number }[] };
 	ageGroups: { key: string; count: number }[];
 	genders: { key: string; count: number }[];
 	annual: { year: number; startDate: string; endDate: string; startingHeadcount: number; headcount: number; averageAge: number | null; averageAgeCount: number; hires: number; departures: number; turnoverRate: number | null }[];
 };
 
-type AnalyticsText = Omit<typeof localeMessages.en.analytics, 'ageLabels' | 'genderLabels'> & {
+type AnalyticsText = Omit<typeof localeMessages.en.analytics, 'ageLabels' | 'genderLabels' | 'tenureLabels'> & {
+	tenureLabels: Record<string, string>;
 	ageLabels: Record<string, string>;
 	genderLabels: Record<string, string>;
 };

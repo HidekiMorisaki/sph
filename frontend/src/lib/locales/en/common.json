@@ -59,5 +59,14 @@
 	"actionsFor": "Actions for {1}",
 	"usedOne": "Used by {1} record",
 	"usedMany": "Used by {1} records",
-	"byActor": "by {1}"
+	"byActor": "by {1}",
+	"displaySettings": "Display settings",
+	"sortBy": "Sort by",
+	"ascending": "Ascending",
+	"descending": "Descending",
+	"filters": "Filters",
+	"appliedConditions": "Applied: {1} conditions",
+	"sortDirection": "Sort direction",
+	"moveUp": "Move up",
+	"moveDown": "Move down"
 }

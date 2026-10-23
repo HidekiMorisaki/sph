@@ -152,5 +152,8 @@
 		"codeConflict": "この管理コードはすでに使用されています。",
 		"ipConflict": "このIPアドレスは選択した部屋ですでに使用されています。",
 		"serialConflict": "このシリアル番号は選択したメーカーですでに使用されています。"
-	}
+	},
+	"summaryFilter": "未割当（廃棄済み除外）",
+	"clearSummaryFilter": "集計条件を解除",
+	"allBranches": "すべての拠点"
 }

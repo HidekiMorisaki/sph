@@ -1,0 +1,93 @@
+{
+  "id": "sph.personal_note",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "メモ",
+    "en": "Note"
+  },
+  "description": {
+    "ja": "本人専用のプレーンテキストメモです。設定画面で最大5,000文字を入力して保存します。長文は詳細画面で確認できます。HTMLやスクリプトは実行しません。",
+    "en": "A private plain-text note. Edit and save up to 5,000 characters in settings. Open details to read longer notes. HTML and scripts are never executed."
+  },
+  "sizes": [
+    "2x2",
+    "1x2"
+  ],
+  "sizeLayouts": {
+    "2x2": {
+      "rows": 2,
+      "columns": 2
+    },
+    "1x2": {
+      "rows": 1,
+      "columns": 2
+    }
+  },
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  },
+  "storage": {
+    "fields": {
+      "note": {
+        "type": "text",
+        "label": {
+          "ja": "本文",
+          "en": "Note"
+        },
+        "default": "",
+        "maxLength": 5000
+      }
+    },
+    "titleField": "note",
+    "listFields": [
+      "note"
+    ],
+    "operations": {
+      "create": false,
+      "update": true,
+      "delete": false
+    },
+    "maxRecords": 1,
+    "initialRecords": [
+      {
+        "recordKey": "default",
+        "values": {
+          "note": ""
+        }
+      }
+    ]
+  },
+  "configuration": {
+    "fields": {
+      "title": {
+        "type": "string",
+        "label": {
+          "ja": "タイトル（任意）",
+          "en": "Title (optional)"
+        },
+        "default": "",
+        "maxLength": 40
+      }
+    },
+    "titleField": "title",
+    "listFields": [
+      "title"
+    ],
+    "operations": {
+      "create": false,
+      "update": false,
+      "delete": false
+    }
+  }
+}

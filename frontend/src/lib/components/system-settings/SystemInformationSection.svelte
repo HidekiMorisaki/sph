@@ -21,10 +21,10 @@
 		return segments;
 	}
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
-	type ChangeGroup = 'newFeatures' | 'improvements' | 'bugFixes';
-	const changeGroupNames: ChangeGroup[] = ['newFeatures', 'improvements', 'bugFixes'];
+	type ChangeGroup = 'newFeatures' | 'smartphoneImprovements' | 'improvements' | 'bugFixes';
+	const changeGroupNames: ChangeGroup[] = ['newFeatures', 'smartphoneImprovements', 'improvements', 'bugFixes'];
 	function changeGroupLabel(group: ChangeGroup) {
-		return group === 'newFeatures' ? text.revisionNewFeatures : group === 'improvements' ? text.revisionImprovements : text.revisionBugFixes;
+		return group === 'newFeatures' ? text.revisionNewFeatures : group === 'smartphoneImprovements' ? text.revisionSmartphoneImprovements : group === 'improvements' ? text.revisionImprovements : text.revisionBugFixes;
 	}
 
 	type SystemInformation = {
@@ -32,7 +32,7 @@
 		version: string;
 		noticeIds: string[];
 		repositoryUrl: string | null;
-		revisionHistory: Array<{ version: string; releasedAt: string | null; changeIds?: string[]; changeGroups?: Record<ChangeGroup, string[]> }>;
+		revisionHistory: Array<{ version: string; releasedAt: string | null; changeIds?: string[]; changeGroups?: Partial<Record<ChangeGroup, string[]>> }>;
 	};
 	type AvailableUpdate = { version: string; url: string };
 	type ReleaseCheck = { releaseStatus: 'latest' | 'update_available' | 'unavailable'; availableUpdate: AvailableUpdate | null };
@@ -110,7 +110,7 @@
 									<svg class="revision-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l10-7z" /></svg>
 								</summary>
 								{#if revision.changeGroups}
-									<div class="revision-groups">{#each changeGroupNames as group}{@const changes = revision.changeGroups[group]}{#if changes.length}<section class="revision-group" aria-labelledby={`revision-${revision.version}-${group}`}><h3 id={`revision-${revision.version}-${group}`}>{changeGroupLabel(group)}</h3><ul>{#each changes as change}<li>{@render revisionText(change)}</li>{/each}</ul></section>{/if}{/each}</div>
+									<div class="revision-groups">{#each changeGroupNames as group}{@const changes = revision.changeGroups[group] ?? []}{#if changes.length}<section class="revision-group" aria-labelledby={`revision-${revision.version}-${group}`}><h3 id={`revision-${revision.version}-${group}`}>{changeGroupLabel(group)}</h3><ul>{#each changes as change}<li>{@render revisionText(change)}</li>{/each}</ul></section>{/if}{/each}</div>
 								{:else}<ul>{#each revision.changeIds ?? [] as change}<li>{@render revisionText(change)}</li>{/each}</ul>{/if}
 							</details>
 						{/each}
@@ -137,4 +137,5 @@
 	@container system-information (max-width:720px){.information-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 	@container system-information (max-width:480px){.information-grid{grid-template-columns:minmax(0,1fr)}}
 	@container system-information (max-width:420px){.revision-heading{grid-template-columns:minmax(0,1fr) 24px;gap:5px 12px}.revision-heading time{grid-column:1;grid-row:2}.revision-toggle-icon{grid-column:2;grid-row:1 / span 2}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.information-body{padding:12px}.information-grid{grid-template-columns:minmax(0,1fr)}.revision-heading{min-height:44px}.revision-history li{overflow-wrap:anywhere}}
 </style>

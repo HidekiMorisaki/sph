@@ -10,6 +10,7 @@ export type SearchGroup = { kind: 'group'; mode: 'all' | 'any'; context?: string
 export type SearchNode = SearchRule | SearchGroup;
 export type SearchDefinition = { schemaVersion: 1; keyword: string; conditions: SearchGroup; sortBy: string; sortOrder: 'asc' | 'desc'; limit: number; options: Record<string, string | boolean> };
 export const employeeSorts = ['id','employee','employeeCode','firstName','lastName','age','lengthOfService','department','group','teams','position','employmentType','branch','roles','hiredAt','createdAt','updatedAt'] as const;
+export const assetSorts = ['id','assetTag','type','manufacturer','modelNumber','serialNumber','branch','room','storage','user','status','ramGb','purchasedOn','disposalOn','createdAt','updatedAt'] as const;
 export const bookSorts = ['name','author','isbn','createdAt'] as const;
 export function invalidSearch(field = 'definition'): never { return throwApiError(422,'INVALID_SEARCH_CONDITION','One or more search conditions are invalid.',[{field,reason:'INVALID_VALUE'}]); }
 export function searchObject(value: unknown): Record<string, unknown> { if(!value||typeof value!=='object'||Array.isArray(value))invalidSearch(); return value as Record<string,unknown>; }
@@ -76,14 +77,14 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
 export function parseSearchDefinition(value: unknown,target: SearchTarget,user: AuthenticatedUser): SearchDefinition {
  const body=searchObject(value);keys(body,['schemaVersion','keyword','conditions','sortBy','sortOrder','limit','options']);
  if(body.schemaVersion!==1||typeof body.keyword!=='string'||body.keyword.length>500)invalidSearch('keyword');
- const sorts: readonly string[]=target==='employees'?employeeSorts:bookSorts;
+ const sorts: readonly string[]=target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
  if(typeof body.sortBy!=='string'||!sorts.includes(body.sortBy)||!['asc','desc'].includes(String(body.sortOrder)))invalidSearch('sort');
  if(body.sortBy==='teams')operationScope(user,'teams.read');
  if(typeof body.limit!=='number'||!Number.isInteger(body.limit)||body.limit<1||body.limit>500)invalidSearch('limit');
  const options=searchObject(body.options??{});
- keys(options,target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:['purchaseRequests']);
+ keys(options,target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
  for(const [key,val] of Object.entries(options)){
-  if(['includeRetired','includeDeleted','purchaseRequests'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
+  if(['includeRetired','includeDeleted','purchaseRequests','unassigned'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
   else if(typeof val!=='string'||val.length>1000)invalidSearch(key);
  }
  if(options.skillIds)operationScope(user,'skills.read');

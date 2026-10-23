@@ -9,3 +9,5 @@ api/scripts/generated-book-sources/
 .runtime/
 
 .vite/
+
+.sph-preflight-*/

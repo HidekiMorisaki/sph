@@ -17,6 +17,8 @@ export function employeeSaveError(code: string | undefined, status: number, lang
 		VALIDATION_ERROR: text.errors.validation,
 		EMPLOYEE_FIELD_CONFLICT: text.errors.conflict,
 		ROLE_ASSIGNMENT_FORBIDDEN: text.roleForbidden,
+		SYSTEM_ADMINISTRATOR_PROTECTED: language === 'ja' ? 'この社員を管理できるのはシステム管理者だけです。' : 'Only a system administrator can manage this employee.',
+		CONCURRENT_CHANGE: language === 'ja' ? '情報が変更されました。再読み込みしてからやり直してください。' : 'The data changed. Reload and try again.',
 		LAST_SYSTEM_ADMINISTRATOR: text.lastAdministrator,
 		HTTPS_REQUIRED: text.errors.httpsRequired,
 		INVALID_REQUEST: text.errors.invalidRequest

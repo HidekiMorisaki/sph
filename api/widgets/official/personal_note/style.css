@@ -1,0 +1,16 @@
+*{box-sizing:border-box}
+button,input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}
+button{min-height:44px;padding:6px 10px;font-size:24px;line-height:1.25;cursor:pointer}
+button:hover{background:var(--surface-secondary)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+.tool{padding:2px;display:grid;gap:6px;min-width:0;container-type:inline-size}
+.primary{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary))}
+.primary:hover{background:var(--action-primary-background-hover,var(--surface-secondary))}
+.hidden{display:none}
+.summary,.full{font-size:26px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;min-width:0}
+.note-layout{height:320px;grid-template-rows:minmax(0,1fr)}
+#root[data-layout="stretch"]>.note-layout{height:100%}
+.note-layout.truncated{grid-template-rows:minmax(0,1fr) auto}
+.summary{min-height:0;overflow:hidden}
+.empty{display:flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:16px;border:1px dashed var(--border);border-radius:6px;color:var(--muted);font-size:22px;line-height:1.5;text-align:center;overflow-wrap:anywhere}

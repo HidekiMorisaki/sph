@@ -37,7 +37,7 @@
 	type ChartState = { result: AnalyticsData | null; loading: boolean };
 	const requests = analyticsRequestGate();
 	const newChart = (): ChartState => ({ result: null, loading: false });
-	let charts = $state<Record<ChartKey, ChartState>>({ age: newChart(), gender: newChart(), trend: newChart(), turnover: newChart() });
+	let charts = $state<Record<ChartKey, ChartState>>({ age: newChart(), gender: newChart(), trend: newChart(), turnover: newChart(), tenure: newChart() });
 	let updating = $derived(loading || pdfBusy || Object.values(charts).some((chart) => chart.loading));
 	let pdfReady = $derived(Boolean(data && !updating && !error && !periodError && analyticsChartKeys.every((key) => {
 		const result = charts[key].result;
@@ -52,6 +52,7 @@
 	const rate = (value: number | null) => value === null ? text.unavailable : percentages.format(value / 100);
 	const age = (value: number | null) => value === null ? text.unavailable : `${ages.format(value)} ${text.averageAgeUnit}`;
 	let referenceAverageAge = $derived(data?.annual.at(-1)?.averageAge ?? null);
+	let referenceAverageTenure = $derived(data?.summary.averageTenureMonths ?? null);
 	let slices = $derived(charts.gender.result ? genderPieSlices(charts.gender.result.genders.filter((group) => group.key !== 'other'), charts.gender.result.demographicTotal) : []);
 	let visibleSlices = $derived(slices.filter((slice) => slice.count > 0));
 	let selectedPie = $state<number | null>(null);
@@ -230,6 +231,7 @@
 				{ label: text.hires, value: count(data.summary.hires), unit: text.peopleUnit, note: text.ytd },
 				{ label: text.departures, value: count(data.summary.departures), unit: text.peopleUnit, note: text.ytd },
 				{ label: text.referenceAverageAge, value: referenceAverageAge === null ? text.unavailable : ages.format(referenceAverageAge), unit: referenceAverageAge === null ? '' : text.averageAgeUnit, note: text.referenceAverageAgeNote },
+				{ label: text.averageTenure, value: referenceAverageTenure === null ? '—' : ages.format(referenceAverageTenure / 12), unit: referenceAverageTenure === null ? '' : text.averageAgeUnit, note: text.averageTenureNote },
 				{ label: text.turnover, value: data.summary.turnoverRate === null ? text.unavailable : rate(data.summary.turnoverRate).replace(/\s*%$/, ''), unit: data.summary.turnoverRate === null ? '' : '%', note: text.ytd }
 			] as metric}
 				<section class="metric" title={metric.label === text.turnover ? text.summaryFormula : undefined}><h2>{metric.label}</h2><strong>{metric.value}{#if metric.unit}<span class="metric-unit">{metric.unit}</span>{/if}</strong><p>{metric.note}</p></section>
@@ -292,6 +294,16 @@
 					{:else}<p class="empty">{text.empty}</p>{/if}
 				{/if}
 			</section>
+			<section class="panel tenure-panel" aria-busy={charts.tenure.loading}>
+				<header class="panel-header"><h2>{text.tenure}</h2></header>
+				<p>{text.tenureNote}</p>
+				{@render chartStatus('tenure')}
+				{#if charts.tenure.result}
+					{#if charts.tenure.result.tenure.total}
+						<div class="chart-visual"><AnalyticsChart title={text.tenure} type="bar" axisLabel={text.employees} formatTick={count} showValues minPointWidth={150} points={charts.tenure.result.tenure.groups.map((group) => ({ label: text.tenureLabels[group.key], value: group.count, formatted: count(group.count) }))} /></div>
+					{:else}<p class="empty">{text.empty}</p>{/if}
+				{/if}
+			</section>
 		</div>
 	{/if}
 </AssetManagementShell>
@@ -306,7 +318,7 @@
 
 	.analytics-context{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 24px;min-width:0}
 	.limitation{margin:0;min-width:0;color:var(--muted);font-size:var(--font-size-support);overflow-wrap:anywhere;flex:1 1 420px}
-	.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:20px 0}
+	.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:20px 0}
 	.metric,.panel{min-width:0;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
 	.metric h2{margin:0 0 10px;font-size:var(--font-size-section);font-weight:500;color:var(--muted)}
 	.metric strong{font-size:30px;line-height:1.3;overflow-wrap:anywhere}
@@ -315,6 +327,7 @@
 	.metric p{margin-bottom:0}.charts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px}
 	.panel h2{margin:0;font-size:var(--font-size-section);font-weight:600}
 	.turnover-panel,.combined-panel{grid-column:span 3}
+	.tenure-panel{grid-column:1 / -1}
 	.gender-panel,.age-panel{grid-column:span 2}
 	.combined-panel,.age-panel{display:flex;flex-direction:column}
 	.chart-visual{margin-top:auto;min-width:0}
@@ -339,4 +352,5 @@
 	@media(max-width:1000px){.charts{grid-template-columns:minmax(0,1fr)}.combined-panel,.age-panel{align-self:start}.chart-visual{margin-top:0}}
 	@media(max-width:700px){.reference-controls,.shared-period-controls,.pdf-download{width:100%}}
 	@media(max-width:500px){.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.reference-controls,.shared-period-controls,.pdf-download{width:100%}.analysis-controls button,.analysis-controls :global(.date-trigger),.reference-controls :global(button),.shared-period-controls :global(button){min-height:44px}.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
 </style>

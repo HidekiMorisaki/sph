@@ -55,7 +55,7 @@ export const employeeSafeSelect = {
 	},
 	roleGrants: {
 		where: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } },
-		select: { role: { select: { id: true, name: true, defaultKey: true } } }
+		select: { scopeType: true, role: { select: { id: true, name: true, defaultKey: true, permissions: { where: { deletedAt: null, scopeType: 'global', permission: { deletedAt: null } }, select: { permission: { select: { operations: { where: { operation: 'system.manage', deletedAt: null }, select: { id: true } } } } } } } } }
 	}
 } satisfies Prisma.EmployeeSelect;
 
@@ -92,6 +92,6 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 		employmentStatus,
 		canIssueInvitation: accountStatus === 'unprovisioned' && employmentStatus === 'current',
 		...employeeDerivedValues(employee, referenceDate),
-		roles: roleGrants.map(({ role }) => ({ id: role.id, name: role.name, isGeneralUser: role.defaultKey === 'general_user' })).sort((left, right) => left.name.localeCompare(right.name, 'en'))
+		roles: roleGrants.map(({ role, scopeType }) => ({ id: role.id, name: role.name, isSystemManagement: roleGrants.length === 1 && scopeType === 'global' && role.permissions.some(entry => entry.permission.operations.length > 0), isGeneralUser: role.defaultKey === 'general_user' })).sort((left, right) => left.name.localeCompare(right.name, 'en'))
 	};
 }

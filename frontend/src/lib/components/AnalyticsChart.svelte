@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { niceAxis } from '$lib/chartAxis';
-	let { title, type, points, axisLabel, formatTick, showValues = false }: {
+	let { title, type, points, axisLabel, formatTick, showValues = false, minPointWidth = 58 }: {
 		title: string; type: 'bar' | 'line';
 		points: { label: string; value: number | null; formatted: string }[]; axisLabel: string; formatTick: (value: number) => string;
 		showValues?: boolean;
+		minPointWidth?: number;
 	} = $props();
 	let axis = $derived(niceAxis(points.map((point) => point.value ?? 0)));
 	let ceiling = $derived(axis.maximum);
 	let chartWidth = $state(600);
-	let svgWidth = $derived(Math.max(chartWidth, points.length * 58 + 70));
+	let svgWidth = $derived(Math.max(chartWidth, points.length * minPointWidth + 70));
 	const left = 48, top = 36, height = 196;
 	let width = $derived(Math.max(100, svgWidth - 70));
 	let spacing = $derived(width / Math.max(1, points.length));

@@ -1,6 +1,8 @@
 import type { SearchField } from './search';
 
 const examples: Record<string, [string, string]> = {
+	assetNotes: ['予備機', 'Spare device'],
+	assetKeyword:['ラップトップ','Laptop'],assetFilterName:['未割当のラップトップ','Unassigned laptops'],assetTag:['PC-001','PC-001'],modelNumber:['ThinkPad','ThinkPad'],serialNumber:['SN001','SN001'],hostname:['office-pc','office-pc'],assigneeName:['山田','Smith'],assigneeCode:['EMP001','EMP001'],
 	employeeCode: ['EMP001', 'EMP001'], lastName: ['山田', 'Smith'], firstName: ['太郎', 'Alex'],
 	middleName: ['マイケル', 'James'], nameKana: ['ヤマダ タロウ', 'Yamada Taro'],
 	postalCode: ['100-0001', '100-0001'], prefecture: ['東京都', 'Tokyo'], city: ['千代田区', 'Chiyoda'],

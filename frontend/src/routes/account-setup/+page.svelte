@@ -63,5 +63,6 @@
 	h1,p{margin:0}h1{font-size:24px}.setup-card>p{color:var(--muted);font-size:var(--font-size-body);line-height:1.5}
 	form{display:grid;gap:15px}label{display:grid;gap:6px;font-size:var(--font-size-support);font-weight:600}input{width:100%;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:400}
 	button,a{display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:9px 14px;border-radius:4px;font-size:var(--font-size-body);font-weight:600;text-decoration:none}
-	button{background:#337ab7;color:#fff;border:1px solid #286090}button:disabled{opacity:.6;cursor:wait}a{width:max-content;background:#337ab7;color:#fff}
+	button{background:var(--action-primary-background);color:var(--action-primary-text);border:1px solid var(--action-primary-button-border)}button:disabled{opacity:.6;cursor:wait}a{width:max-content;background:var(--action-primary-background);color:var(--action-primary-text)}
+button:hover:not(:disabled),a:hover{background:var(--action-primary-background-hover)}
 </style>

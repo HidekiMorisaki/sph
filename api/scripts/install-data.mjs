@@ -13,10 +13,12 @@ const branchScopedCodes = new Set([
  'rooms.create', 'rooms.update', 'rooms.delete', 'storage.create', 'storage.update', 'storage.delete',
  'assets.create', 'assets.update', 'assets.delete', 'assets.assign', 'assets.return',
  'assets.credentials.view', 'assets.credentials.update', 'assets.credentials.access',
+ 'books.manage', 'books.copies.create', 'books.copies.update', 'books.copies.delete', 'books.loans.create', 'books.loans.return', 'books.purchases.manage',
  'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 const roleCodes = role => [...new Set([...role.permissionCodes, ...granularOperations.filter(operation =>
- (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && ['branches.update', 'branches.delete'].includes(operation.code))) &&
+ (role.key !== 'branch_administrator' || operation.code !== 'books.covers.update') &&
+ (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && operation.code === 'branches.update')) &&
  (Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some(code => role.permissionCodes.includes(code))
 ).map(operation => operation.code)])];
 const employmentKeys = ['Regular','Contract','Part Time','Temporary'];
@@ -60,8 +62,20 @@ export async function initializeRequiredData(client, catalog, input) {
 }
 
 export async function assertSampleDatabaseEmpty(client) {
+
+ // m0032 installs only the reviewed official catalogue before initial setup.
+ // Treat precisely that immutable seed as infrastructure, never user content.
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/seed-catalogue.json', import.meta.url), 'utf8')).widgets;
+ const source = await client.query("SELECT id FROM widget_sources WHERE source_key='sph-official' AND url='bundled:sph' AND deleted_at IS NULL");
+ if (source.rowCount !== 1 || (await client.query('SELECT count(*)::int AS count FROM widget_sources')).rows[0].count !== 1) throw new Error('Unexpected widget sources before sample installation.');
+ if ((await client.query('SELECT count(*)::int AS count FROM widget_releases')).rows[0].count !== bundled.length || (await client.query('SELECT count(*)::int AS count FROM widget_approvals')).rows[0].count !== bundled.length) throw new Error('Unexpected widget releases before sample installation.');
+ for (const definition of bundled) {
+  const row = await client.query('SELECT r.id FROM widget_releases r JOIN widget_approvals a ON a.release_id=r.id WHERE r.source_id=$1 AND r.definition=$2::jsonb AND r.deleted_at IS NULL AND a.deleted_at IS NULL AND a.allowed=$3', [source.rows[0].id, JSON.stringify(definition), ['sph.book_notices','sph.book_loans','sph.account'].includes(definition.id)]);
+  if (row.rowCount !== 1) throw new Error('Modified widget seed before sample installation.');
+ }
  const tables = (await client.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> '_prisma_migrations' ORDER BY tablename")).rows;
  for (const {tablename} of tables) {
+  if (['widget_sources','widget_releases','widget_approvals'].includes(tablename)) continue;
   if (!/^[a-z_]+$/.test(tablename) || (await client.query(`SELECT EXISTS(SELECT 1 FROM ${tablename}) AS populated`)).rows[0].populated) {
    throw new Error('Samples require an empty database before initial configuration, including logically deleted rows.');
   }

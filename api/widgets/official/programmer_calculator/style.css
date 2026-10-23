@@ -1,0 +1,52 @@
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:0;max-width:100%}
+button{cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+button:disabled{opacity:.35;cursor:default}
+.tool{display:grid;gap:8px;min-width:0;padding:2px}
+#calculator,#programmer{height:auto;container-type:inline-size}
+#root[data-layout="stretch"]>#calculator,#root[data-layout="stretch"]>#programmer{height:100%}
+.expression{min-height:26px;font-size:clamp(20px,4cqi,26px);line-height:1.3;color:var(--muted);text-align:right;overflow-wrap:anywhere}
+.copy{padding:0;border:0;background:transparent;text-align:right;cursor:copy;width:100%;min-height:0}
+.result{display:block;min-width:0;max-width:100%;font-size:clamp(48px,10cqi,72px);font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.result-long{font-size:clamp(22px,4.5cqi,40px)}
+.error{font-size:20px;line-height:1.35;color:var(--danger);overflow-wrap:anywhere}
+.error:empty{display:none}
+.keys,.six{display:grid;gap:6px;min-width:0;min-height:0;grid-auto-rows:minmax(44px,1fr)}
+.keys{grid-template-columns:repeat(4,minmax(0,1fr))}
+.six{grid-template-columns:repeat(6,minmax(0,1fr))}
+.keys button,.six button{min-height:44px;padding:4px;white-space:nowrap;font-size:clamp(28px,6cqi,40px);font-weight:500;line-height:1.1}
+.key-number{background:color-mix(in srgb,var(--surface) 94%,var(--text));font-weight:600!important}
+.key-function,.key-bit{background:color-mix(in srgb,var(--surface) 87%,var(--text))}
+.key-operator{background:color-mix(in srgb,#d89326 19%,var(--surface));color:light-dark(#704514,#ffda9b);border-color:color-mix(in srgb,#d89326 48%,var(--border))}
+.key-clear{background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:light-dark(#9f1d2b,#ffb4b4);border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}
+.keys button:hover:not(:disabled),.six button:hover:not(:disabled){box-shadow:inset 0 0 0 100vmax color-mix(in srgb,var(--text) 8%,transparent)}
+.primary,.bases [aria-pressed="true"]{background:var(--action-primary-background,var(--primary-bg));color:var(--action-primary-text,var(--primary));border-color:var(--action-primary-button-border,var(--primary));font-weight:600}
+.primary:hover:not(:disabled),.bases [aria-pressed="true"]:hover:not(:disabled){background:var(--action-primary-background-hover,var(--surface-secondary));filter:none}
+#programmer{grid-template-rows:auto auto auto auto auto auto minmax(88px,2fr) minmax(244px,5fr)}
+.bases{grid-row:1;grid-template-columns:repeat(4,minmax(0,1fr))}
+.bases button{font-size:clamp(20px,4cqi,26px);background:var(--surface-secondary)}
+.word{grid-row:2;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:20px;line-height:1.3}
+.word label{display:flex;gap:6px;align-items:center}
+.word select{min-height:44px;padding:4px;font-size:20px}
+.word input{width:22px;height:22px;accent-color:var(--primary)}
+.conversions{grid-row:3;display:grid;gap:3px}
+.conversions>div{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline}
+.conversions small{font-size:18px;color:var(--muted)}
+.conversions output{font-size:clamp(20px,3cqi,26px);line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#expression{grid-row:4}#copy{grid-row:5}#error{grid-row:6}.bit-keys{grid-row:7}.keys{grid-row:8}
+.bit-keys button{font-size:clamp(16px,3.7cqi,28px)}
+.bases [aria-pressed="true"]{background:var(--action-primary-background,var(--primary-bg))}
+#programmer.short{gap:4px;grid-template-rows:auto auto auto auto auto auto minmax(68px,2fr) minmax(176px,5fr)}
+.short .keys,.short .six{gap:4px;grid-auto-rows:minmax(32px,1fr)}
+.short .keys button,.short .six button{min-height:32px;padding:2px;font-size:clamp(24px,4cqi,30px)}
+.short .bases button{font-size:18px}
+.short .bit-keys button{font-size:clamp(16px,3cqi,22px)}
+.short .word{font-size:18px;gap:8px}
+.short .word select{min-height:32px;font-size:18px;padding:2px}
+.short .conversions{gap:2px}
+.short .conversions small{font-size:16px}
+.short .conversions output{font-size:18px;line-height:1.2}
+.short .expression{min-height:20px;font-size:20px}
+.short .result{font-size:clamp(36px,7cqi,48px)}
+.short .result-long{font-size:clamp(20px,4cqi,28px)}

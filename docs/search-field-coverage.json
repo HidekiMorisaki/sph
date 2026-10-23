@@ -25,7 +25,6 @@
     "bookReservations": "reservations (active, owner only)",
     "bookLoans": "loans (unreturned, owner or authorized branch)",
     "bookLoansManaged": "exclude: actor-only loan management",
-    "widgets": "widgets (owner only)",
     "masterChangeHistory": "exclude: actor-only history",
     "softwareChangesRecorded": "exclude: actor-only history",
     "roleGrants": "roles (global / own_branch only)",
@@ -39,6 +38,8 @@
     "employmentType": "employmentType",
     "branch": "branch",
     "workCalendar": "calendar / calendarDays",
+    "widgetDrafts": "exclude: private SDK source drafts",
+    "widgetLayout": "exclude: private SDK layout infrastructure",
     "savedSearchFilters": "exclude: search infrastructure"
   },
   "fields": [
@@ -6784,8 +6785,12 @@
       "classification": "exclude: actor-only loan management"
     },
     {
-      "source": "Employee.widgets",
-      "classification": "widgets (owner only)"
+      "source": "Employee.widgetDrafts",
+      "classification": "exclude: private SDK source drafts"
+    },
+    {
+      "source": "Employee.widgetLayout",
+      "classification": "exclude: private SDK layout infrastructure"
     },
     {
       "source": "Employee.masterChangeHistory",
@@ -8154,158 +8159,6 @@
     },
     {
       "source": "EmployeeTeam.team",
-      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
-    },
-    {
-      "source": "EmployeeWidget.id",
-      "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
-    },
-    {
-      "source": "EmployeeWidget.employeeId",
-      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
-    },
-    {
-      "source": "EmployeeWidget.code",
-      "search": [
-        {
-          "context": "widgets",
-          "field": "code",
-          "label": {
-            "en": "Code",
-            "ja": "種類"
-          },
-          "type": "string",
-          "maxLength": 50,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "contains",
-            "notContains"
-          ],
-          "operation": "employees.read",
-          "scope": "owner",
-          "current": "widget.employee_id=employee.id AND widget.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "EmployeeWidget.sortOrder",
-      "search": [
-        {
-          "context": "widgets",
-          "field": "sortOrder",
-          "label": {
-            "en": "Sort Order",
-            "ja": "表示順"
-          },
-          "type": "number",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between"
-          ],
-          "operation": "employees.read",
-          "scope": "owner",
-          "current": "widget.employee_id=employee.id AND widget.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "EmployeeWidget.enabled",
-      "search": [
-        {
-          "context": "widgets",
-          "field": "enabled",
-          "label": {
-            "en": "Enabled",
-            "ja": "有効"
-          },
-          "type": "boolean",
-          "maxLength": 500,
-          "operators": [
-            "eq"
-          ],
-          "operation": "employees.read",
-          "scope": "owner",
-          "current": "widget.employee_id=employee.id AND widget.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "EmployeeWidget.createdAt",
-      "search": [
-        {
-          "context": "widgets",
-          "field": "createdAt",
-          "label": {
-            "en": "Created At",
-            "ja": "作成日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "employees.read",
-          "scope": "owner",
-          "current": "widget.employee_id=employee.id AND widget.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "EmployeeWidget.updatedAt",
-      "search": [
-        {
-          "context": "widgets",
-          "field": "updatedAt",
-          "label": {
-            "en": "Updated At",
-            "ja": "更新日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "employees.read",
-          "scope": "owner",
-          "current": "widget.employee_id=employee.id AND widget.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "EmployeeWidget.deletedAt",
-      "classification": "Deleted records are excluded from detailed conditions."
-    },
-    {
-      "source": "EmployeeWidget.employee",
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {

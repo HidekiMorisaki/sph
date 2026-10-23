@@ -1,4 +1,5 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit';
+import { isHttpError, json } from '@sveltejs/kit';
 
 import { failure } from '$lib/server/api/response';
 import { authenticateRequest } from '$lib/server/auth/request';
@@ -11,7 +12,7 @@ export const init = () => { startSystemMetrics(); };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-export const handle: Handle = async ({ event, resolve }) => {
+const handleRequest: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/v1/') && !SAFE_METHODS.has(event.request.method)) {
 		const origin = event.request.headers.get('origin');
 		if (origin !== event.url.origin) {
@@ -60,6 +61,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return failure(response.status, code, message);
 	}
 	return response;
+};
+
+export const handle: Handle = async context => {
+	if (!context.event.url.pathname.startsWith('/v1/')) return handleRequest(context);
+	let response: Response;
+	try { response = await handleRequest(context); }
+	catch (error) {
+		if (isHttpError(error)) {
+			const body = error.body as { status?: string; responseCode?: number };
+			response = body.status === 'error' && body.responseCode === error.status
+				? json(error.body, { status: error.status })
+				: failure(error.status, 'INVALID_REQUEST', 'The request could not be completed.');
+		} else response = failure(500, 'INTERNAL_ERROR', 'The request could not be completed.');
+	}
+	const headers = new Headers(response.headers);
+	headers.set('cache-control', 'private, no-store');
+	return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 };
 
 export const handleError: HandleServerError = ({ status }) => {

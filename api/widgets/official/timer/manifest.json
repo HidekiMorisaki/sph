@@ -1,0 +1,35 @@
+{
+  "id": "sph.timer",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "タイマー",
+    "en": "Timer"
+  },
+  "description": {
+    "ja": "開始・一時停止・再開・リセットができるカウントダウンタイマーです。終了は画面表示で通知します。計測はこのページ内のみで、再読込するとリセットされます。",
+    "en": "A countdown timer with start, pause, resume and reset. Completion is indicated on screen. Timing is local to this page and resets on reload."
+  },
+  "sizes": [
+    "1x2"
+  ],
+  "sizeLayouts": {
+    "1x2": {
+      "rows": 1,
+      "columns": 2
+    }
+  },
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  }
+}

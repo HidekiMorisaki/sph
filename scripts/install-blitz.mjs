@@ -309,6 +309,9 @@ async function main() {
     await client.call('env_set', { app, name: 'ORIGIN', value: origin }, true);
     // Session-aware SSR must reach /v1 through the blitz.cloud route; the Compose service name is not reachable here.
     await client.call('env_set', { app, name: 'API_INTERNAL_ORIGIN', value: origin }, true);
+    // The API is reachable only through the platform's trusted ingress.
+    await client.call('env_set', { app, name: 'ADDRESS_HEADER', value: 'X-Forwarded-For' }, true);
+    await client.call('env_set', { app, name: 'XFF_DEPTH', value: '1' }, true);
     const settings = await client.call('env_list', { app });
     if (!settings.includes('IT_ASSET_CREDENTIAL_ENCRYPTION_KEY')) {
       await client.call('env_set', { app, name: 'IT_ASSET_CREDENTIAL_ENCRYPTION_KEY',

@@ -1,0 +1,17 @@
+{
+  "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/Variable/TTF/Subset/NotoSansJP-VF.ttf",
+  "sourceSha256": "f4b373b226668ee33a6e54b02823dcd2d1209f17159f777421ae8c2275160369",
+  "distributedFile": "NotoSansJP-Regular.ttf",
+  "sha256": "639f327a8d9eac9bdc463ba39288a1cea5d38cf8a208c61a7c5cb669f14213b5",
+  "modified": true,
+  "modification": "Instantiated at weight 400; existing static font retained without further modification.",
+  "copyright": "© 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.",
+  "names": {
+    "0": "© 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.",
+    "1": "Noto Sans JP",
+    "4": "Noto Sans JP",
+    "6": "NotoSansJP-Thin"
+  },
+  "license": "OFL.txt",
+  "copyrightNotice": "COPYRIGHT.txt"
+}

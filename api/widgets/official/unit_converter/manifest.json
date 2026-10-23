@@ -1,0 +1,35 @@
+{
+  "id": "sph.unit_converter",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "単位変換",
+    "en": "Unit converter"
+  },
+  "description": {
+    "ja": "長さ・面積・重さ・体積・温度・時間・データ容量を変換します。SI接頭辞は1000、KiBなどの2進接頭辞は1024を基準にします。値は保存されません。",
+    "en": "Convert length, area, mass, volume, temperature, time and data size. SI prefixes use 1000; binary prefixes such as KiB use 1024. Values are not saved."
+  },
+  "sizes": [
+    "1x2"
+  ],
+  "sizeLayouts": {
+    "1x2": {
+      "rows": 1,
+      "columns": 2
+    }
+  },
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  }
+}

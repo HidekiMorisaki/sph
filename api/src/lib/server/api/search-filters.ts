@@ -11,7 +11,7 @@ import { failure, success, throwApiError } from './response';
 
 type Event={locals:{user:AuthenticatedUser|null};request:Request;url:URL;params:Record<string,string|undefined>};
 const selection={id:true,target:true,name:true,definition:true,schemaVersion:true,revision:true,createdAt:true,updatedAt:true} as const;
-function targetOf(value:unknown):SearchTarget {if(value!=='employees'&&value!=='books')invalidSearch('target');return value;}
+function targetOf(value:unknown):SearchTarget {if(value!=='employees'&&value!=='books'&&value!=='assets')invalidSearch('target');return value;}
 function filterName(value:unknown){if(typeof value!=='string'||!value.trim()||value.trim().length>100)invalidSearch('name');const name=value.trim();return {name};}
 export async function savedFilters({locals,request,url,params}:Event) {
  const method=request.method;

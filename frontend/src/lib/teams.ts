@@ -1,4 +1,4 @@
-export type Team = { id: number; name: string; description: string | null; createdAt: string; updatedAt: string; memberCount?: number };
+export type Team = { allowedOperations?: { delete: boolean }; id: number; name: string; description: string | null; createdAt: string; updatedAt: string; memberCount?: number };
 
 export async function loadTeamOptions(): Promise<Team[]> {
  const teams: Team[] = [];

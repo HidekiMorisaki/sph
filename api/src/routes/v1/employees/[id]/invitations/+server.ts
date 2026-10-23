@@ -1,3 +1,5 @@
+import { employeeReferenceDate } from '$lib/server/api/employee-derived';
+import { lockSystemAdministrators, protectSystemAdministrator } from '$lib/server/api/system-administrator-protection';
 import { dev } from '$app/environment';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { parseId } from '$lib/server/api/database';
@@ -12,12 +14,14 @@ export async function POST({ params, locals, request, url }: import('./$types').
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async tx => {
+		await lockSystemAdministrators(tx);
+		await protectSystemAdministrator(tx, actor, id);
 		const locked = await tx.$queryRaw<Array<{ id: number }>>`SELECT id FROM employees WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`;
 		if (!locked.length) return { status: 'not_found' as const };
 		const employee = await tx.employee.findFirst({ where: {
 			id, deletedAt: null, accountStatus: 'unprovisioned',
 			...(branchId === null ? {} : { branchId }),
-			OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }],
+			OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }],
 			roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null, ...(branchId === null ? {} : { defaultKey: 'general_user' }) } } }
 		}, select: { email: true } });
 		if (!employee) return { status: 'unavailable' as const };

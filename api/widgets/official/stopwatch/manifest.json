@@ -1,0 +1,35 @@
+{
+  "id": "sph.stopwatch",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "ストップウォッチ",
+    "en": "Stopwatch"
+  },
+  "description": {
+    "ja": "開始・一時停止・再開・リセットと最大100件のラップ計測ができます。ラップがカードに収まらない場合は全文画面で確認できます。計測とラップは再読込するとリセットされます。",
+    "en": "A stopwatch with start, pause, resume, reset and up to 100 laps. Open the full list when laps do not fit the card. Timing and laps reset on reload."
+  },
+  "sizes": [
+    "2x2"
+  ],
+  "sizeLayouts": {
+    "2x2": {
+      "rows": 2,
+      "columns": 2
+    }
+  },
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  }
+}

@@ -5,7 +5,8 @@
 	let tooltip: HTMLSpanElement;
 	let hovered = false, focused = false;
 	let left = $state(0), top = $state(0);
-	const tooltipId = $derived(`book-purchase-tooltip-${titleId}`);
+	const instanceId = $props.id();
+	const tooltipId = $derived(`book-purchase-tooltip-${titleId}-${instanceId}`);
 	function hideTooltip() { if (tooltip?.matches(':popover-open')) tooltip.hidePopover(); }
 	function showTooltip() {
 		if (!tooltip || !button) return;

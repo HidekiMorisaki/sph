@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
  import { onMount, tick, type Snippet } from 'svelte';
  import { beforeNavigate } from '$app/navigation';
  import { localization } from '$lib/localization';
+ import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
  import { emptyGroup, ruleCount, searchMessages, type SearchState, type SearchTarget, type SearchContext, type SearchGroup, type SavedFilter, type SearchDefinition } from '$lib/search';
  import SearchFields from './SearchFields.svelte';
  import { searchConfigurations, type SearchConfiguration } from '$lib/search-configurations';
@@ -24,6 +26,11 @@
  const tabs:SearchTab[]=['simple','advanced','saved'];
  let activeTab=$state<SearchTab>('simple');
  let collapsed=$state(false);
+ let compactMode=$state(false);let mobileExpanded=$state(false);
+ let bodyCollapsed=$derived(compactMode?!mobileExpanded:collapsed);
+ let common=$derived(localeMessages[$localization.displayLanguage].common);
+ let appliedCount=$derived((searchState.definition.keyword?1:0)+ruleCount(searchState.definition.conditions)+Object.entries(searchState.definition.options).filter(([key,value])=>!['skillMode','minProficiency'].includes(key)&&value!==false&&value!=='').length);
+ onMount(()=>{const query=matchMedia(COMPACT_CONTENT_QUERY);compactMode=query.matches;const update=()=>compactMode=query.matches;query.addEventListener('change',update);return()=>query.removeEventListener('change',update);});
  let definitionsReady=$state(false);let filterOperations=$state<string[]>([]);
  let saved=$state<SavedFilter[]>([]);let selectedId=$state('');let selected=$derived(saved.find(item=>String(item.id)===selectedId));
  let busy=$state(false);let message=$state('');let messageError=$state(false);let saveCompleted=$state(false);
@@ -61,8 +68,8 @@
  async function mutate(path:string,method:string,body?:unknown){const response=await fetch(path,{method,...(body===undefined?{}:{headers:{'content-type':'application/json'},body:JSON.stringify(body)})});const payload=await response.json();if(!response.ok)throw Error(payload.error?.code==='FILTER_LIMIT_REACHED'?t.filterLimitReached:response.status===409?t.conflict:response.status===422?t.invalid:t.failed);return payload.data;}
  async function save(){
   if(!canSave||busy||saveCompleted||!name.trim())return;
-  const current=selected;busy=true;message='';
-  try{const item=saveMode==='update'&&current?await mutate(`/v1/search-filters/${current.id}`,'PATCH',{name:name.trim(),definition:searchState.definition,revision:current.revision}):await mutate('/v1/search-filters','POST',{target,name:name.trim(),definition:searchState.definition});
+  const current=selected;const definition={...searchState.definition,...(compactMode?{limit:20}:{})};busy=true;message='';
+  try{const item=saveMode==='update'&&current?await mutate(`/v1/search-filters/${current.id}`,'PATCH',{name:name.trim(),definition,revision:current.revision}):await mutate('/v1/search-filters','POST',{target,name:name.trim(),definition});
    await loadFilters();selectedId=String(item.id);message=t.savedOk;messageError=false;saveMode=filterOperations.includes('update')?'update':'new';name=item.name;saveCompleted=true;
   }catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;if(dialog){await tick();dialogElement?.querySelector<HTMLElement>(saveCompleted?'.app-modal-close':'input')?.focus();}}
  }
@@ -74,7 +81,7 @@
  function setCollapsed(value:boolean){clearNotice();collapsed=value;if(userId!==null)try{localStorage.setItem(`${target}-search-collapsed:${userId}`,String(value));}catch{ /* Storage is optional. */ }}
  function showSelectedTab(){void tick().then(()=>{const node=document.getElementById(`${id}-${activeTab}-tab`);const strip=node?.parentElement;if(node&&strip){const button=node.getBoundingClientRect(),bounds=strip.getBoundingClientRect();if(button.left<bounds.left)strip.scrollLeft-=bounds.left-button.left;else if(button.right>bounds.right)strip.scrollLeft+=button.right-bounds.right;}});}
  function chooseTab(tab:SearchTab) {
-  clearNotice();activeTab=tab;if(collapsed)setCollapsed(false);showSelectedTab();
+  clearNotice();activeTab=tab;if(compactMode)mobileExpanded=true;else if(collapsed)setCollapsed(false);showSelectedTab();
   if(userId!==null)try{localStorage.setItem(`${target}-search-tab:${userId}`,tab);}catch{ /* Storage is optional. */ }
  }
  function tabKeydown(event:KeyboardEvent) {
@@ -90,7 +97,7 @@
 
 {#snippet quickControls()}
  <div class="search-simple shared-search-simple">
-  <div class="keyword-control"><span aria-hidden="true">{t.keyword}</span><SearchInput label={t.keyword} value={keyword} placeholder={searchInputExample({code:configuration.keywordExample,type:'string'},$localization.displayLanguage)} onValueChange={value=>keyword=value}/></div>
+  {#if !compactMode}<div class="keyword-control"><span aria-hidden="true">{t.keyword}</span><SearchInput label={t.keyword} value={keyword} placeholder={searchInputExample({code:configuration.keywordExample,type:'string'},$localization.displayLanguage)} onValueChange={value=>keyword=value}/></div>{/if}
   {#if filters}<div class="search-filters">{@render filters()}</div>{/if}
  </div>
 
@@ -114,13 +121,15 @@
  {/each}
 {/snippet}
 
-<form class="search-panel search-form" aria-label={t.search} aria-busy={searchState.loading||busy||!definitionsReady||dirty} onsubmit={event=>event.preventDefault()}>
+<form class="search-panel search-form" class:mobile-expanded={mobileExpanded} aria-label={t.search} aria-busy={searchState.loading||busy||!definitionsReady||dirty} onsubmit={event=>event.preventDefault()}>
+ {#if compactMode}<div class="mobile-search-bar"><SearchInput label={t.keyword} value={keyword} placeholder={searchInputExample({code:configuration.keywordExample,type:'string'},$localization.displayLanguage)} onValueChange={value=>keyword=value}/><button type="button" aria-expanded={mobileExpanded} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>mobileExpanded=!mobileExpanded}>{common.filters}</button></div>{/if}
+ {#if appliedCount}<p class="mobile-search-summary" role="status">{formatLocaleTemplate(common.appliedConditions,appliedCount)}</p>{/if}
   <header class="search-header"><div class="search-tabs" role="tablist" aria-label={t.search}>
    {#each tabs as tab}
     <button type="button" role="tab" id={`${id}-${tab}-tab`} aria-selected={activeTab===tab} aria-controls={`${id}-${tab}-panel`} tabindex={activeTab===tab?0:-1} onclick={()=>chooseTab(tab)} onkeydown={tabKeydown}>{tab==='simple'?t.simple:tab==='advanced'?t.advanced:t.saved}</button>
    {/each}
-  </div><button class="search-collapse" type="button" aria-label={collapsed?t.expandSearch:t.collapseSearch} aria-expanded={!collapsed} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>setCollapsed(!collapsed)}><svg viewBox="0 0 24 24" aria-hidden="true" class:expanded={!collapsed}><path d="m6 9 6 6 6-6"/></svg></button></header>
- <div id={`${id}-search-body`} class="search-body" hidden={collapsed}>
+  </div><button class="search-collapse" type="button" aria-label={bodyCollapsed?t.expandSearch:t.collapseSearch} aria-expanded={!bodyCollapsed} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>{if(compactMode)mobileExpanded=!mobileExpanded;else setCollapsed(!collapsed);}}><svg viewBox="0 0 24 24" aria-hidden="true" class:expanded={!bodyCollapsed}><path d="m6 9 6 6 6-6"/></svg></button></header>
+ <div id={`${id}-search-body`} class="search-body" hidden={bodyCollapsed}>
  {#if message&&!dialog}<StatusNotice {message} tone={messageError?'error':'success'} onDismiss={()=>message=''}/>{/if}
  <div id={`${id}-simple-panel`} role="tabpanel" aria-labelledby={`${id}-simple-tab`} hidden={activeTab!=='simple'}>
  {#if activeTab==='simple'}{@render quickControls()}{/if}
@@ -132,7 +141,7 @@
   {#if filterOperations.includes('read')}<div class="saved-list"><div class="filter-cards" role="list" aria-label={t.manage}>{@render filterCards()}</div></div>{/if}
  </div>
  </div>
- <footer id={`${id}-search-footer`} class="search-footer" hidden={collapsed}>{#if filterOperations.includes('create')||filterOperations.includes('update')}<button class="app-primary-action save-filter" type="button" disabled={!canSave||busy} onclick={event=>void openDialog('save',event)}>{t.save}</button>{/if}<button class="clear-search" type="button" disabled={busy} onclick={clear}>{t.clear}</button></footer>
+ <footer id={`${id}-search-footer`} class="search-footer" hidden={bodyCollapsed}>{#if filterOperations.includes('create')||filterOperations.includes('update')}<button class="app-primary-action save-filter" type="button" disabled={!canSave||busy} onclick={event=>void openDialog('save',event)}>{t.save}</button>{/if}<button class="clear-search" type="button" disabled={busy} onclick={clear}>{t.clear}</button></footer>
 </form>
 
 {#if dialog}<ModalBackdrop><dialog bind:this={dialogElement} open class="app-modal app-modal--compact search-dialog search-form" aria-modal="true" aria-labelledby={`${id}-dialog-title`} oncancel={event=>{event.preventDefault();closeDialog();}} onkeydown={keydown}>
@@ -149,10 +158,24 @@
 <style>
  .filter-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));grid-auto-rows:1fr;align-content:start;gap:12px;padding:3px}.filter-card{display:flex;flex-direction:column;min-width:0;align-self:stretch;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--text) 4%,var(--surface))}.filter-card.selected{border-color:var(--action-primary);background:color-mix(in srgb,var(--action-primary) 6%,var(--surface))}.filter-card-heading{display:flex;flex:1;align-items:flex-start;min-width:0}.filter-card-name{display:flex;align-items:flex-start;flex:1;min-width:0;align-self:stretch;min-height:52px;padding:12px;background:transparent!important;color:var(--text-secondary);border:0;border-radius:5px;text-align:left;overflow-wrap:anywhere;font-size:var(--font-size-body);font-weight:400}.filter-card-name:hover:not(:disabled){background:var(--surface-hover,var(--surface-secondary))!important}.filter-card-name:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.filter-card-actions{flex:none;padding:8px 8px 8px 0}.filter-card-actions :global(button+button){margin-left:0}.filter-card-editor{display:grid;gap:12px;padding:0 12px 12px}.filter-card-edit-actions{display:flex;flex-wrap:wrap;gap:8px}.filter-card-edit-actions button+button{margin-left:0}.empty-filters{grid-column:1/-1;margin:0;color:var(--muted);font-size:var(--font-size-support)}
  .search-simple.shared-search-simple{flex-direction:row;align-items:flex-start}.shared-search-simple .keyword-control{flex:0 1 220px;width:220px;max-width:100%;min-width:0}.shared-search-simple .search-filters,.shared-search-simple :global(.employee-workforce-filters){display:contents}
- .search-footer{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px -16px -16px;padding:12px 16px;border-top:1px solid var(--border)}.search-footer button+button{margin-left:0}@media(max-width:700px){.search-footer{margin:12px -12px -12px;padding:12px}}
+ .search-footer{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px -16px -16px;padding:12px 16px;border-top:1px solid var(--border)}.search-footer button+button{margin-left:0}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.search-footer{margin:12px -12px -12px;padding:12px}}
  .search-header{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:12px;margin:-16px -16px 16px;padding:12px 16px 0;border-bottom:1px solid var(--border)}.search-tabs{display:flex;flex:1;min-width:0;gap:8px;max-width:100%;overflow-x:auto}.search-tabs button{flex:none;white-space:nowrap}.search-tabs button{border:0;border-radius:0;border-bottom:2px solid transparent;padding:10px 12px;background:transparent;color:var(--muted)}.search-tabs button[aria-selected="true"]{border-bottom-color:var(--action-primary);color:var(--text);font-weight:600}.search-tabs button:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}[hidden]{display:none!important}
  .search-collapse{display:grid;place-items:center;flex:none;width:32px;padding:5px;margin-bottom:10px}.search-collapse svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}.search-collapse svg.expanded{transform:rotate(180deg)}
  .saved-list{margin-top:12px}.saved-panel .saved-list{margin-top:0}
 
- .search-panel{flex:none;min-width:0;margin-bottom:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);color:var(--text)}.search-simple{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px}.keyword-control{display:grid;align-content:start;gap:6px;font-size:var(--font-size-support);color:var(--text)}.search-filters{flex:1;min-width:0}button{min-height:32px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}button:disabled{opacity:.5;cursor:default}.search-dialog{max-width:560px}.name-field{display:grid;gap:6px;margin:12px 0;font-size:var(--font-size-support)}@media(max-width:700px){.search-header{margin:-12px -12px 12px;padding:12px 12px 0}.search-panel{padding:12px}.search-simple{flex-direction:column;align-items:stretch}.search-filters{width:100%}}
+ .search-panel{flex:none;min-width:0;margin-bottom:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);color:var(--text)}.search-simple{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px}.keyword-control{display:grid;align-content:start;gap:6px;font-size:var(--font-size-support);color:var(--text)}.search-filters{flex:1;min-width:0}button{min-height:32px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}button:disabled{opacity:.5;cursor:default}.search-dialog{max-width:560px}.name-field{display:grid;gap:6px;margin:12px 0;font-size:var(--font-size-support)}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.search-header{margin:-12px -12px 12px;padding:12px 12px 0}.search-panel{padding:12px}.search-simple{flex-direction:column;align-items:stretch}.search-filters{width:100%}}
+
+ .mobile-search-bar,.mobile-search-summary{display:none}
+ @media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){
+  .mobile-search-bar{display:flex;align-items:center;gap:8px}.mobile-search-bar :global(.search-box){min-width:0;flex:1;width:auto}.mobile-search-bar :global(input){height:44px}.mobile-search-bar>button{flex:none;min-height:44px;font-size:var(--font-size-support)}
+  .mobile-search-summary{display:block;margin:6px 0 0;font-size:var(--font-size-support);color:var(--muted)}
+  .search-panel:not(.mobile-expanded) .search-header{display:none}
+  .mobile-expanded .search-header{margin:12px -12px 12px;padding:0 12px}
+  .search-panel .search-collapse{display:none}
+  .search-panel .shared-search-simple .keyword-control{display:none}
+  .search-tabs button{min-height:44px;padding:8px}
+  .search-simple.shared-search-simple{flex-direction:column;align-items:stretch}.search-simple.shared-search-simple .search-filters{display:block}
+  .search-panel{margin-bottom:12px}
+ }
+
 </style>

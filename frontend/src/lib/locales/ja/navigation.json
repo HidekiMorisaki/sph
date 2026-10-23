@@ -9,6 +9,7 @@
 		"otherSystems": "他のシステム"
 	},
 	"items": {
+		"assetOverview": "資産状況",
 		"employeeAnalytics": "従業員分析",
 		"financialTrends": "経営状況",
 		"myPage": "マイページ",
@@ -51,6 +52,7 @@
 	"expand": "サイドバーを展開",
 	"collapse": "サイドバーを縮小",
 	"breadcrumb": "パンくずリスト",
+	"switchTheme": "テーマ切替",
 	"darkMode": "ダークモードに切り替える",
 	"lightMode": "ライトモードに切り替える"
 }

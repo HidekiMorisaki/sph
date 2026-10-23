@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "widgets": [
+    {
+      "id": "example.sum",
+      "provider": "Example",
+      "author": "H.Morisaki",
+      "version": "1.0.0",
+      "schemaVersion": 2,
+      "name": {
+        "ja": "足し算サンプル",
+        "en": "Addition example"
+      },
+      "sizes": [
+        "2x2"
+      ],
+      "sizeLayouts": {
+        "2x2": {
+          "rows": 2,
+          "columns": 2
+        }
+      },
+      "capabilities": [],
+      "settings": {},
+      "view": [
+        {
+          "type": "runtime"
+        }
+      ],
+      "license": {
+        "name": "MIT",
+        "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+      },
+      "runtime": {
+        "sdkVersion": 1,
+        "html": "<div id=\"app\"><label>A<input id=\"a\" type=\"number\" value=\"2\"></label><label>B<input id=\"b\" type=\"number\" value=\"3\"></label><button id=\"sum\">＋</button><output id=\"result\">5</output></div>",
+        "css": "label{display:block;margin:12px 0}input,button{min-height:44px;font:inherit}output{display:block;font-size:32px;margin:16px 0}",
+        "javascript": "sph.ready(() => { let a=2,b=3; sph.ui.on('a','input',e=>a=Number(e.value)); sph.ui.on('b','input',e=>b=Number(e.value)); sph.ui.on('sum','click',()=>sph.ui.patch([{id:'result',text:String(a+b)}])); });"
+      }
+    }
+  ]
+}

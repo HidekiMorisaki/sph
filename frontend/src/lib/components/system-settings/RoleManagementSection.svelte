@@ -20,7 +20,7 @@
 
 	type PermissionScope = { code: string; scopeType: 'global' | 'own_branch' };
 	type Role = { id: number; name: string; notes: string | null; createdAt: string; updatedAt: string; usageCount: number; permissionCodes: string[]; permissionScopes: PermissionScope[]; editablePermissionScopes: PermissionScope[]; defaultPermissionCodes?: string[] | null; isSystemManagement: boolean; isBranchAdministrator: boolean };
-	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean };
+	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean; derived?: boolean; dependencies?: Record<'global' | 'own_branch', PermissionScope[]> };
 	type RoleField = 'name';
 
 	let { onNotice = (_messages: string[]) => undefined }: { onNotice?: (messages: string[]) => void } = $props();
@@ -43,12 +43,25 @@
 	let selectedCodes = $state<string[]>([]);
 	let scopeByCode = $state<Record<string, 'global' | 'own_branch'>>({});
 	let selectedScopes = $derived(selectedCodes.map((code) => ({ code, scopeType: scopeByCode[code] ?? 'global' })).sort((a, b) => a.code.localeCompare(b.code)));
+	let effectiveScopes = $derived.by(() => {
+  const result: Record<string, 'global' | 'own_branch'> = {};
+  const pending: PermissionScope[] = [...selectedScopes];
+  while (pending.length) {
+   const entry = pending.shift()!;
+   if (result[entry.code] === 'global' || result[entry.code] === entry.scopeType) continue;
+   result[entry.code] = entry.scopeType;
+   pending.push(...(permissions.find(p => p.code === entry.code)?.dependencies?.[entry.scopeType] ?? []));
+  }
+  return result;
+ });
+ let dependencyCodes = $derived(new Set(selectedScopes.flatMap(entry => permissions.find(p => p.code === entry.code)?.dependencies?.[entry.scopeType].map(d => d.code) ?? [])));
 	let permissionError = $state('');
 	let deleteError = $state('');
 	let removing = $state(false);
 	let hasUnsavedChanges = $derived((Boolean(selected) || isAdding) && initialSnapshot !== '' && formSnapshot({ name, notes }) !== initialSnapshot);
 	let permissionsChanged = $derived((Boolean(selected) || isAdding) && JSON.stringify(selectedScopes) !== JSON.stringify([...(selected?.editablePermissionScopes ?? [])].sort((a, b) => a.code.localeCompare(b.code))));
-	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify((selected?.defaultPermissionCodes ?? []).filter((code) => permissions.some((permission) => permission.code === code)).map((code) => ({ code, scopeType: 'global' })).sort((a, b) => a.code.localeCompare(b.code))));
+	let defaultEditablePermissionCodes = $derived((selected?.defaultPermissionCodes ?? []).filter((code) => permissions.some((permission) => permission.code === code && !permission.derived)));
+	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify(defaultEditablePermissionCodes.map((code) => ({ code, scopeType: 'global' })).sort((a, b) => a.code.localeCompare(b.code))));
 	let permissionLabels = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManage,
 		'employees.read': text.permissionEmployeeRead, 'employees.manage': text.permissionEmployeeManage,
@@ -61,7 +74,7 @@
 		'software.keys.read': text.permissionSoftwareKeyRead, 'software.keys.write': text.permissionSoftwareKeyWrite,
 		'roles.read': text.permissionRoleRead
 	});
-	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, other: text.permissionOther });
+	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, books: $localization.displayLanguage === 'ja' ? '書籍' : 'Books', other: text.permissionOther });
 	let permissionDescriptions = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManageHelp,
 		'employees.read': text.permissionEmployeeReadHelp, 'employees.manage': text.permissionEmployeeManageHelp,
@@ -82,7 +95,7 @@
 		'software.read': 'software', 'software.manage': 'software', 'software.keys.read': 'software', 'software.keys.write': 'software',
 		'roles.read': 'system', 'system.manage': 'system'
 	};
-	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'software', 'system', 'other'];
+	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system', 'other'];
 	const knownPermissionCodes = Object.keys(permissionCategoryByCode);
 	function permissionCategory(code: string): string {
 		const fromCatalog = permissions.find((permission) => permission.code === code)?.category;
@@ -249,38 +262,18 @@
 	}
 
 	function togglePermission(code: string, scopeType: 'global' | 'own_branch', checked: boolean) {
-		const prerequisites: Record<string, string[]> = {
-			'employees.read': [], 'roles.read': [], 'masters.read': [], 'assets.read': [], 'software.read': [], 'calendars.read': []
-		};
-		for (const permission of permissions) {
-			if (permission.code.startsWith('teams.') && permission.code !== 'teams.read') prerequisites[permission.code] = permission.code.startsWith('teams.members.') ? ['teams.read', 'employees.read'] : ['teams.read'];
-			else if (permission.code.startsWith('employees.') && permission.code !== 'employees.read') prerequisites[permission.code] = ['employees.read'];
-			else if (scopeType === 'own_branch' && /^(rooms|storage|financial)\./.test(permission.code)) prerequisites[permission.code] = ['branches.manage', 'masters.read'];
-			else if (/^(masters|branches|rooms|storage|financial)\./.test(permission.code) && permission.code !== 'masters.read') prerequisites[permission.code] = ['masters.read'];
-			else if (permission.code.startsWith('assets.') && permission.code !== 'assets.read') prerequisites[permission.code] = ['assets.read'];
-			else if (permission.code.startsWith('software.') && permission.code !== 'software.read') prerequisites[permission.code] = ['software.read'];
-			else if (permission.code.startsWith('calendars.') && permission.code !== 'calendars.read') prerequisites[permission.code] = ['calendars.read'];
-		}
-		if (!checked && (scopeType === 'own_branch' || !permissions.find((permission) => permission.code === code)?.allowOwnBranch)) {
-			selectedCodes = selectedCodes.filter((item) => item !== code && !(prerequisites[item] ?? []).includes(code));
-		} else {
-			selectedCodes = [...new Set([...selectedCodes, code, ...(prerequisites[code] ?? [])])];
-			const nextScopes = { ...scopeByCode, [code]: checked ? scopeType : 'own_branch', ...Object.fromEntries((prerequisites[code] ?? []).map((prerequisite) => [prerequisite, checked && scopeType === 'global' ? 'global' : scopeByCode[prerequisite] ?? 'own_branch'])) };
-			if (!checked && scopeType === 'global') {
-				for (const dependent of selectedCodes.filter((item) => (prerequisites[item] ?? []).includes(code) && nextScopes[item] === 'global')) {
-					if (permissions.find((permission) => permission.code === dependent)?.allowOwnBranch) nextScopes[dependent] = 'own_branch';
-					else selectedCodes = selectedCodes.filter((item) => item !== dependent);
-				}
-			}
-			if (selectedCodes.includes('teams.read')) nextScopes['teams.read'] = 'global';
-			scopeByCode = nextScopes;
-		}
+		if (checked) {
+   selectedCodes = [...new Set([...selectedCodes, code])];
+   scopeByCode = { ...scopeByCode, [code]: scopeType };
+  } else if (scopeType === 'global' && permissions.find(permission => permission.code === code)?.allowOwnBranch) {
+   scopeByCode = { ...scopeByCode, [code]: 'own_branch' };
+  } else selectedCodes = selectedCodes.filter(selected => selected !== code);
 		permissionError = '';
 	}
 
 	function resetPermissionsToDefault() {
 		if (!selected?.defaultPermissionCodes || saving) return;
-		selectedCodes = selected.defaultPermissionCodes.filter((code) => permissions.some((permission) => permission.code === code));
+		selectedCodes = [...defaultEditablePermissionCodes];
 		scopeByCode = Object.fromEntries(selectedCodes.map((code) => [code, 'global']));
 		permissionError = '';
 	}
@@ -341,13 +334,13 @@
 							{#if selected?.defaultPermissionCodes}<button class="permission-reset-button" type="button" disabled={saving || atDefaultPermissions} onclick={resetPermissionsToDefault}>{text.resetPermissionsToDefault}</button>{/if}
 						{/snippet}
 						<div class="permission-section wide">
-		{#each ['employees', 'masters', 'calendars', 'assets', 'software', 'system'] as category}
+		{#each ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system'] as category}
 							{#if permissions.some((permission) => permission.category === category)}
 								<fieldset><legend>{categoryLabels[category]}</legend><div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead><tbody>
 									{#each permissions.filter((permission) => permission.category === category) as permission}
-										{@const globalEnabled = scopeByCode[permission.code] === 'global' && selectedCodes.includes(permission.code)}
-										{@const ownEnabled = selectedCodes.includes(permission.code)}
-										<tr><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
+										{@const globalEnabled = effectiveScopes[permission.code] === 'global'}
+										{@const ownEnabled = Boolean(effectiveScopes[permission.code])}
+										<tr data-permission-code={permission.code}><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))}<small>{$localization.displayLanguage === 'ja' ? '必要な補助権限（自動付与）' : 'Required permission (automatic)'}</small>{/if}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code)) || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
 									{/each}
 								</tbody></table></div></fieldset>
 							{/if}
@@ -375,5 +368,5 @@
 	.role-permission-table :global(.app-status-switch__knob){top:3px;left:3px}
 	.role-permission-table :global(.app-status-switch.is-on .app-status-switch__knob){left:auto;right:3px}
 	.role-permission-table--scoped thead th:nth-child(n+2){width:104px;text-align:center}
-	@media(max-width:700px){.role-permission-table{min-width:380px}.role-permission-table thead th:last-child,.role-permission-table td{width:100px}.role-permission-table th,.role-permission-table td{padding:9px 6px}.role-permission-table--scoped thead th:nth-child(n+2){width:100px}}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.role-permission-table{min-width:380px}.role-permission-table thead th:last-child,.role-permission-table td{width:100px}.role-permission-table th,.role-permission-table td{padding:9px 6px}.role-permission-table--scoped thead th:nth-child(n+2){width:100px}}
 </style>

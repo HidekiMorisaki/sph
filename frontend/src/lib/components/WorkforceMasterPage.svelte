@@ -31,9 +31,18 @@
  async function remove(){if(!selected)return;busy=true;try{const response=await fetch('/v1/'+kind+'/'+selected.id,{method:'DELETE'});if(!response.ok){const payload=await response.json().catch(()=>null);detailError=payload?.error?.code==='RESOURCE_IN_USE'?(kind==='clients'?text.clientInUse:text.inUse):text.failed;deleting=false;return;}deleting=false;close();message=text.removed;await list?.refresh();}catch{detailError=text.failed;deleting=false;}finally{busy=false;}}
 </script>
 {#snippet listActions()}{#if allowed('create')}<AddButton iconOnly label={text.add+' · '+text[kind]} onclick={event=>{formFocus=event.currentTarget as HTMLElement;editing=null;formOpen=true;}}/>{/if}{/snippet}
+{#snippet mobileSkill(item:WorkforceMaster)}
+ <div class="mobile-skill">
+  <strong>{item.name}</strong>
+  {#if kind==='skills' && item.category}<span class="mobile-skill-category">{item.category}</span>{/if}
+  {#if kind==='clients'}<span class="mobile-skill-category">{item.companyName || '-'}</span><span class="mobile-skill-category">{item.contactName || '-'} · {item.contactEmail || '-'}</span>{/if}
+  {#if kind==='projects'}<span class="mobile-skill-category">{item.client?.name || '-'}</span><span class="mobile-skill-category">{formatDate(item.contractStartsOn,$localization) || '-'} – {formatDate(item.contractEndsOn,$localization) || '-'}</span>{/if}
+  {#if kind==='skills' && item.description}<p class="mobile-skill-description">{item.description}</p>{/if}
+ </div>
+{/snippet}
 <AssetManagementShell title={text[kind]}><ViewportListPage><MasterPageHeader title={text[kind]}/>
  {#if message}<StatusNotice message={message} tone={message===text.failed?'error':'success'} onDismiss={()=>message=''}/>{/if}
- <MasterList bind:this={list} endpoint={'/v1/'+kind} title={text[kind]} listHeading={text[kind]} headerActions={listActions} initialSortBy="name" minTableWidth={620} canDetail onDetail={(item,trigger)=>void open(item as WorkforceMaster,trigger)} columns={[
+ <MasterList bind:this={list} mobileItem={mobileSkill} endpoint={'/v1/'+kind} title={text[kind]} listHeading={text[kind]} headerActions={listActions} initialSortBy="name" minTableWidth={620} canDetail onDetail={(item,trigger)=>void open(item as WorkforceMaster,trigger)} columns={[
   {key:'name',label:text.name,width:30,value:(item:WorkforceMaster)=>item.name},
   ...(kind==='skills'?[{key:'category',label:text.category,width:25,value:(item:WorkforceMaster)=>item.category}]:[]),
   ...(kind==='clients'?[{key:'companyName',label:text.companyName,width:30,value:(item:WorkforceMaster)=>item.companyName},{key:'contactName',label:text.contactName,width:20,value:(item:WorkforceMaster)=>item.contactName},{key:'contactEmail',label:text.contactEmail,width:20,value:(item:WorkforceMaster)=>item.contactEmail}]:kind==='projects'?[{key:'clientName',label:text.clientId,width:30,sortable:false,value:(item:WorkforceMaster)=>item.client?.name},{key:'contractStartsOn',label:text.contractStartsOn,width:20,value:(item:WorkforceMaster)=>formatDate(item.contractStartsOn,$localization)},{key:'contractEndsOn',label:text.contractEndsOn,width:20,value:(item:WorkforceMaster)=>formatDate(item.contractEndsOn,$localization)}]:[{key:'description',label:text.description,width:45,value:(item:WorkforceMaster)=>item.description}])
@@ -61,3 +70,10 @@
  </DetailModal></div>{/if}
 {#if formOpen}<WorkforceMasterForm {kind} item={editing} returnFocus={formFocus} onClose={()=>formOpen=false} onSaved={saved}/>{/if}
 {#if deleting}<DetailModal title={text.deleteTitle} titleId="workforce-master-delete-title" closeLabel={common.cancel} returnFocus={deleteFocus} onClose={()=>{if(!busy)deleting=false;}}><p>{text.deleteHelp}</p>{#snippet actions()}<button class="secondary" disabled={busy} onclick={()=>deleting=false}>{common.cancel}</button><button class="app-danger-action" disabled={busy} onclick={()=>void remove()}>{common.delete}</button>{/snippet}</DetailModal>{/if}
+
+<style>
+ .mobile-skill{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+ .mobile-skill strong{font-weight:600;color:var(--text)}
+ .mobile-skill-category{color:var(--muted);font-size:var(--font-size-support)}
+ .mobile-skill-description{display:-webkit-box;margin:0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;color:var(--text-secondary);font-size:var(--font-size-support);white-space:pre-line}
+</style>

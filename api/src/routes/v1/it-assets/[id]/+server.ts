@@ -1,7 +1,7 @@
 import { writeAuditLog } from '$lib/server/api/admin';
 import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
-import { applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '$lib/server/api/it-asset-credentials';
+import { authorizeCredentialChange, applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '$lib/server/api/it-asset-credentials';
 import { parseId } from '$lib/server/api/database';
 import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
 import { reserveManagementCode, resolveManagementCode } from '$lib/server/api/it-asset-management-code';
@@ -29,6 +29,7 @@ export async function PATCH({ params, locals, request }: import('./$types').Requ
 			const existing = await tx.itAsset.findFirst({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) }, select: { id: true, typeId: true, assetTag: true } });
 			if (!existing) return null;
 			if (branchId !== null && (!await tx.storage.count({ where: { id: data.storageId, branchId, deletedAt: null } }) || typeof parsed.assigneeId === 'number' && !await tx.employee.count({ where: { id: parsed.assigneeId, branchId, deletedAt: null } }))) return null;
+			if (Object.keys(credentialInput.changes).length || (await tx.itAsset.findUnique({ where: { id }, select: { storageId: true } }))?.storageId !== data.storageId && await tx.itAssetCredential.count({ where: { assetId: id, deletedAt: null } })) await authorizeCredentialChange(tx, actor, id, data.storageId);
 			const before = await readAssetFields(tx, id);
 			const details = await itAssetReferenceErrors(tx, data);
 			if (details.length) throw new ItAssetValidationError(details);

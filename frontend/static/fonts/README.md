@@ -7,3 +7,8 @@ Source: https://github.com/notofonts/noto-cjk/blob/main/Sans/Variable/TTF/Subset
 The downloaded source SHA-256 was `f4b373b226668ee33a6e54b02823dcd2d1209f17159f777421ae8c2275160369`.
 
 The font was instantiated at weight 400 using fontTools 4.66.1, keeping all Unicode-mapped glyphs. The static TrueType version supports jsPDF font embedding without depending on installed fonts or third-party font services at runtime. Font embedding is used for English and Japanese PDF reports.
+
+The original copyright and reserved-name notice is preserved inside the font
+name table and repeated in `COPYRIGHT.txt`. The reserved name is `Source`; the
+distributed family is `Noto Sans JP`. `source.json` records source and distributed
+font hashes and the existing weight-400 transformation.

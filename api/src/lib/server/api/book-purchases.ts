@@ -1,3 +1,5 @@
+import { requireBranchAccess, requireScopedOperationApi } from './branch-access';
+import { hasOwnBranchPermissionOperation } from '$lib/server/auth/permissions';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { requireOperationApi, writeAuditLog } from './admin';
@@ -7,16 +9,16 @@ import { throwApiError } from './response';
 export const openPurchaseStatuses = ['pending', 'approved', 'ordered'];
 export const purchaseActor = (user: AuthenticatedUser | null, operation: string) => {
  const actor = requireOperationApi(user, 'books.read');
- return requireOperationApi(actor, operation);
+ return operation === 'books.purchases.manage' ? requireScopedOperationApi(actor, operation).actor : requireOperationApi(actor, operation);
 };
 
 export async function managedPurchaseBranches(tx: Prisma.TransactionClient, actor: AuthenticatedUser) {
- if (!actor.permissionOperations.includes('books.purchases.manage')) return [];
- return (await tx.branch.findMany({ where: { deletedAt: null, OR: [{ managerEmployeeId: actor.id }, { deputyManagerEmployeeId: actor.id }] }, select: { id: true } })).map(branch => branch.id);
+ if (!actor.permissionOperations.includes('books.purchases.manage') && !hasOwnBranchPermissionOperation(actor, 'books.purchases.manage')) return [];
+ return (await tx.branch.findMany({ where: { deletedAt: null, ...(actor.permissionOperations.includes('books.purchases.manage') ? {} : { id: actor.branchId }), OR: [{ managerEmployeeId: actor.id }, { deputyManagerEmployeeId: actor.id }] }, select: { id: true } })).map(branch => branch.id);
 }
 
 export async function requirePurchaseManager(tx: Prisma.TransactionClient, actor: AuthenticatedUser, branchId: number) {
- requireOperationApi(actor, 'books.purchases.manage');
+ requireBranchAccess(actor, 'books.purchases.manage', branchId);
  // Lock responsibility and recheck it for the entire write transaction.
  const branches = await tx.$queryRaw<Array<{ id: number }>>`SELECT id FROM branches WHERE id=${branchId} AND deleted_at IS NULL AND (manager_employee_id=${actor.id} OR deputy_manager_employee_id=${actor.id}) FOR SHARE`;
  if (!branches.length) throwApiError(403, 'PURCHASE_MANAGER_REQUIRED', 'The branch principal or deputy is required.');

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 type ChangeGroups = {
 	newFeatures: string[];
+	smartphoneImprovements?: string[];
 	improvements: string[];
 	bugFixes: string[];
 };
@@ -43,7 +44,7 @@ function validMessageIds(value: unknown, allowEmpty = true): value is string[] {
 	return Array.isArray(value) && (allowEmpty || value.length > 0) && value.every((id) => typeof id === 'string' && /^[a-z][a-z0-9_]*$/.test(id)) && new Set(value).size === value.length;
 }
 
-const changeGroupNames = ['newFeatures', 'improvements', 'bugFixes'] as const;
+const changeGroupNames = ['newFeatures', 'smartphoneImprovements', 'improvements', 'bugFixes'] as const;
 
 function usesChangeGroups(version: string): boolean {
 	const [major, minor] = version.split('.').map(Number);
@@ -53,8 +54,8 @@ function usesChangeGroups(version: string): boolean {
 function validChangeGroups(value: unknown): value is ChangeGroups {
 	if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
 	const groups = value as Record<string, unknown>;
-	if (Object.keys(groups).length !== changeGroupNames.length || changeGroupNames.some((name) => !validMessageIds(groups[name]))) return false;
-	const ids = changeGroupNames.flatMap((name) => groups[name] as string[]);
+	if (Object.keys(groups).some(name => !changeGroupNames.includes(name as typeof changeGroupNames[number])) || changeGroupNames.some(name => !(name === 'smartphoneImprovements' && !Object.hasOwn(groups, name)) && !validMessageIds(groups[name]))) return false;
+	const ids = changeGroupNames.flatMap((name) => (groups[name] ?? []) as string[]);
 	return ids.length > 0 && new Set(ids).size === ids.length;
 }
 
@@ -84,7 +85,7 @@ export function parseReleaseMetadata(value: unknown): ReleaseMetadata {
 			version: entry.version,
 			releasedAt: entry.releasedAt,
 			...(entry.changeGroups
-				? { changeGroups: Object.fromEntries(changeGroupNames.map((name) => [name, [...entry.changeGroups![name]]])) as ChangeGroups }
+				? { changeGroups: Object.fromEntries(changeGroupNames.filter(name => Object.hasOwn(entry.changeGroups!, name)).map((name) => [name, [...entry.changeGroups![name]!]])) as ChangeGroups }
 				: { changeIds: [...entry.changeIds!] })
 		}))
 	};

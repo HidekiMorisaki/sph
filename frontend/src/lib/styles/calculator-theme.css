@@ -1,0 +1,9 @@
+:root{
+ --calculator-key-bg:color-mix(in srgb,var(--surface) 96%,var(--text));
+ --calculator-digit-bg:color-mix(in srgb,var(--surface) 70%,var(--bg));
+ --calculator-key-hover:color-mix(in srgb,var(--text) 16%,var(--surface));
+ --calculator-accent-bg:var(--action-primary-background);
+ --calculator-accent-hover:var(--action-primary-background-hover);
+ --calculator-accent-border:var(--action-primary-button-border);
+ --calculator-accent-text:var(--action-primary-text);
+}

@@ -10,6 +10,15 @@ Package: https://www.npmjs.com/package/pngjs/v/7.0.0
 Recheck the package license, included materials, and notices when updating it or
 changing the distributed image.
 
+## ISBN camera scanning
+
+The frontend includes the unchanged Quagga2 1.12.1 browser bundle and all of its
+applicable MIT license texts and copyright notices in
+`frontend/static/vendor/quagga2-1.12.1/`. The bundled modules and source hashes,
+redistribution handling and browser verification are documented in
+[ISBN camera scanning](../ISBN_Scanner.md). Review the actual browser bundle
+and its embedded code whenever updating it.
+
 ## JPEG decoding
 
 The API uses `jpeg-js` 0.4.4 to convert openBD JPEG covers to PNG, preserving

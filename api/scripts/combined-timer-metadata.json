@@ -1,0 +1,10 @@
+{
+  "name": {
+    "ja": "タイマー／ストップウォッチ",
+    "en": "Timer / Stopwatch"
+  },
+  "description": {
+    "ja": "カウントダウンとストップウォッチ。開始・一時停止・リセット、ラップ計測に対応します。計測はこのページ内のみで、再読込するとリセットされます。終了は画面表示で通知します。",
+    "en": "Countdown and stopwatch with start, pause, reset and laps. Timing is local to this page and resets on reload. Completion is indicated on screen."
+  }
+}

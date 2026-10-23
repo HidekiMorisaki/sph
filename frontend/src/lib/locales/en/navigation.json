@@ -9,6 +9,7 @@
 		"otherSystems": "OTHER SYSTEMS"
 	},
 	"items": {
+		"assetOverview": "Asset Overview",
 		"employeeAnalytics": "Employee analytics",
 		"financialTrends": "Business performance",
 		"myPage": "My Page",
@@ -51,6 +52,7 @@
 	"expand": "Expand sidebar",
 	"collapse": "Collapse sidebar",
 	"breadcrumb": "Breadcrumb",
+	"switchTheme": "Switch theme",
 	"darkMode": "Switch to dark mode",
 	"lightMode": "Switch to light mode"
 }

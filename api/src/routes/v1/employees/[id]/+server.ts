@@ -1,8 +1,9 @@
+import { isSystemAdministratorEmployee, lockSystemAdministrators, protectSystemAdministrator, preserveSystemAdministrator } from '$lib/server/api/system-administrator-protection';
 import { isHttpError } from '@sveltejs/kit';
 import { syncEmployeeTeams } from '$lib/server/api/teams';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
+import { hasScopedPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import { parseId } from '$lib/server/api/database';
 import { parseEmployeeInput } from '$lib/server/api/employee-input';
 import { employeeConflictResponse } from '$lib/server/api/employee-errors';
@@ -21,7 +22,9 @@ export async function GET({ params, locals }: import('./$types').RequestEvent) {
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const item = await getPrisma().employee.findFirst({ where: { id, deletedAt: null, ...(branchId === null ? {} : { branchId }) }, select: employeeSafeSelect });
 	if (!item) return failure(404, 'NOT_FOUND', 'Not found.');
-	const response = success(employeeOutput(item, undefined, viewer.permissionOperations.includes('teams.read')));
+	const protectedTarget = await isSystemAdministratorEmployee(getPrisma(), id) && !viewer.permissionOperations.includes('system.manage');
+	const allowedOperations = { update: !protectedTarget && hasScopedPermissionOperation(viewer, 'employees.update', item.branchId) && hasScopedPermissionOperation(viewer, 'employees.manage', item.branchId), delete: !protectedTarget && hasScopedPermissionOperation(viewer, 'employees.delete', item.branchId) && hasScopedPermissionOperation(viewer, 'employees.manage', item.branchId), invite: !protectedTarget && hasScopedPermissionOperation(viewer, 'employees.invite', item.branchId) && hasScopedPermissionOperation(viewer, 'employees.manage', item.branchId) };
+	const response = success({ ...employeeOutput(item, undefined, viewer.permissionOperations.includes('teams.read')), allowedOperations });
 	response.headers.set('Cache-Control', 'no-store');
 	return response;
 }
@@ -37,6 +40,8 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 	if (writerBranchId !== null && input.employee.branchId !== writerBranchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {
+			await lockSystemAdministrators(tx);
+			await protectSystemAdministrator(tx, actor, id);
 			const referenceErrors = await employeeReferenceErrors(tx, { ...input.employee, departmentIds: input.departmentIds, primaryDepartmentId: input.primaryDepartmentId, positionIds: input.positionIds });
 			if (referenceErrors.length) return { status: 'invalid_reference' as const, errors: referenceErrors };
 			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { email: true } });
@@ -51,6 +56,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 			}
 			if (roleResult !== 'updated') return { status: roleResult };
 			await syncEmployeeTeams(tx, actor, id, input.teamIds);
+			if (input.employee.retiredAt) await preserveSystemAdministrator(tx, id, input.employee.retiredAt > new Date() ? input.employee.retiredAt : new Date());
 			await tx.employee.update({ where: { id }, data: input.employee });
 			await syncEmployeeDepartments(tx, id, input.departmentIds, input.primaryDepartmentId);
 			await syncEmployeePositions(tx, id, input.positionIds, input.primaryPositionId);
@@ -74,14 +80,12 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
 	const { actor, branchId: writerBranchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeManagement); const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
+	try {
 	const result = await getPrisma().$transaction(async (tx) => {
 		if (!await tx.employee.count({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) } })) return 'not_found';
-		const targetIsSystemAdmin = await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } } } });
-		if (writerBranchId !== null && targetIsSystemAdmin) return 'system_role_forbidden';
-		if (targetIsSystemAdmin) {
-			const otherSystemAdmins = await tx.employeeRole.count({ where: { employeeId: { not: id }, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } }, employee: { accountStatus: 'active', deletedAt: null } } });
-			if (!otherSystemAdmins) return 'last_admin';
-		}
+		await lockSystemAdministrators(tx);
+		await protectSystemAdministrator(tx, actor, id);
+		await preserveSystemAdministrator(tx, id);
 		const references = await Promise.all([
 			tx.itAssetAssignment.count({ where: { employeeId: id, returnedAt: null, deletedAt: null } }),
 			tx.branch.count({ where: { deletedAt: null, OR: [{ managerEmployeeId: id }, { deputyManagerEmployeeId: id }] } })
@@ -108,7 +112,11 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 	}, { isolationLevel: 'Serializable' });
 	if (result === 'referenced') return failure(409, 'RESOURCE_IN_USE', 'The employee has an active assignment.');
 	if (result === 'branch_responsibility') return failure(409, 'RESOURCE_IN_USE', 'The employee is assigned as a branch manager or deputy manager.');
-	if (result === 'last_admin') return failure(409, 'LAST_SYSTEM_ADMINISTRATOR', 'The last system administrator cannot be deleted.');
-	if (result === 'system_role_forbidden') return failure(403, 'ROLE_ASSIGNMENT_FORBIDDEN', 'System administrator accounts cannot be changed by a branch administrator.');
 	return result === 'deleted' ? success({ id, deleted: true }) : failure(404, 'NOT_FOUND', 'Not found.');
+	} catch (error) {
+		if (isHttpError(error)) throw error;
+		const conflict = employeeConflictResponse(error);
+		if (conflict) return conflict;
+		throw error;
+	}
 }

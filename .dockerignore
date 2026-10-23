@@ -15,3 +15,5 @@ db
 **/build
 api/scripts/generated-book-sources
 **/npm-debug.log
+
+.sph-preflight-*/

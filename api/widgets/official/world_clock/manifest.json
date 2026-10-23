@@ -1,0 +1,115 @@
+{
+  "id": "sph.world_clock",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "世界時計",
+    "en": "World clock"
+  },
+  "sizes": [
+    "1x2",
+    "1x4",
+    "1x6"
+  ],
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  },
+  "sizeLayouts": {
+    "1x2": {
+      "rows": 1,
+      "columns": 2
+    },
+    "1x4": {
+      "rows": 1,
+      "columns": 4
+    },
+    "1x6": {
+      "rows": 1,
+      "columns": 6
+    }
+  },
+  "storage": {
+    "fields": {
+      "timeZones": {
+        "type": "stringArray",
+        "label": {
+          "ja": "タイムゾーン",
+          "en": "Time zones"
+        },
+        "default": [
+          "Asia/Tokyo"
+        ],
+        "maxLength": 64,
+        "required": true,
+        "format": "timeZone"
+      }
+    },
+    "titleField": "timeZones",
+    "listFields": [
+      "timeZones"
+    ],
+    "operations": {
+      "create": false,
+      "update": true,
+      "delete": false
+    },
+    "maxRecords": 1,
+    "initialRecords": [
+      {
+        "recordKey": "default",
+        "values": {
+          "timeZones": [
+            "Asia/Tokyo"
+          ]
+        }
+      }
+    ]
+  },
+  "configuration": {
+    "fields": {
+      "clockDesign": {
+        "type": "select",
+        "label": {
+          "ja": "時計デザイン",
+          "en": "Clock design"
+        },
+        "default": "digital",
+        "options": [
+          {
+            "value": "digital",
+            "label": {
+              "ja": "デジタル",
+              "en": "Digital"
+            }
+          },
+          {
+            "value": "analog",
+            "label": {
+              "ja": "アナログ",
+              "en": "Analog"
+            }
+          }
+        ]
+      }
+    },
+    "titleField": "clockDesign",
+    "listFields": [
+      "clockDesign"
+    ],
+    "operations": {
+      "create": false,
+      "update": false,
+      "delete": false
+    }
+  }
+}

@@ -1,4 +1,6 @@
 <script lang="ts">
+ import WidgetEditor from '$lib/components/widgets/WidgetEditor.svelte';
+ import WidgetSettingsSection from "$lib/components/widgets/WidgetSettingsSection.svelte";
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -10,6 +12,7 @@
 	import FormSection from '$lib/components/FormSection.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import PageTabs from '$lib/components/PageTabs.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
@@ -37,7 +40,9 @@
 	let pageErrorDismissed = $state(false);
 	let notices = $state<string[]>([]);
 	let noticeIsError = $state(false);
-	let activeSection = $state<SystemSettingsSection>('roles');
+	let activeSection = $state('roles');
+	let editorOpened = $state(false);
+	$effect(() => { if (activeSection === 'widget-development') editorOpened = true; });
 	let list = $state<MasterList>();
 	let mode = $state<ModalMode>(null);
 	let selected = $state<ExternalLink | null>(null);
@@ -52,8 +57,6 @@
 	let returnToDetail = $state(false);
 	let initialSnapshot = $state('');
 	let confirmingDiscard = $state(false);
-	let scrollFrame: number | null = null;
-	let navigationLockUntil = 0;
 	let hasDraftChanges = $derived(initialSnapshot !== '' && formSnapshot(form) !== initialSnapshot);
 	let hasUnsavedChanges = $derived(mode === 'edit' && hasDraftChanges);
 
@@ -61,31 +64,6 @@
 		{ key: 'name', label: text.name, width: 90, value: (item: ExternalLink) => item.name }
 	]);
 
-	function updateActiveSection() {
-		scrollFrame = null;
-		if (window.performance.now() < navigationLockUntil) return;
-		const marker = 104;
-		let next: SystemSettingsSection = systemSettingsSections[0];
-		for (const section of systemSettingsSections) {
-			const element = document.getElementById(section);
-			if (element && element.getBoundingClientRect().top <= marker) next = section;
-		}
-		activeSection = next;
-	}
-	function scheduleActiveSectionUpdate() { if (scrollFrame === null) scrollFrame = window.requestAnimationFrame(updateActiveSection); }
-	function selectSection(event: MouseEvent, section: SystemSettingsSection) {
-		event.preventDefault(); activeSection = section; navigationLockUntil = window.performance.now() + 1200;
-		document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	}
-	async function initializeSectionNavigation() {
-		await tick();
-		const hashSection = window.location.hash.slice(1);
-		if (systemSettingsSections.includes(hashSection as SystemSettingsSection)) {
-			activeSection = hashSection as SystemSettingsSection;
-			document.getElementById(activeSection)?.scrollIntoView({ block: 'start' });
-			window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-		} else updateActiveSection();
-	}
 	async function initialize() {
 		try {
 			if (window.location.hash === '#system-information') { window.location.replace('/system-information'); return; }
@@ -95,7 +73,7 @@
 			const user = (await apiData<{ user: { capabilities: { canManageSystemSettings: boolean } } }>(response)).user;
 			accessDenied = !user.capabilities.canManageSystemSettings;
 		} catch { loadError = text.loadFailed; }
-		finally { loading = false; if (!accessDenied && !loadError) await initializeSectionNavigation(); }
+		finally { loading = false; }
 	}
 
 	function openModal(next: Exclude<ModalMode, null>, item: ExternalLink | null = null, trigger: HTMLElement | null = null) {
@@ -187,10 +165,7 @@
 	}
 
 	onMount(() => {
-		window.addEventListener('scroll', scheduleActiveSectionUpdate, { passive: true });
-		window.addEventListener('resize', scheduleActiveSectionUpdate);
 		void initialize();
-		return () => { window.removeEventListener('scroll', scheduleActiveSectionUpdate); window.removeEventListener('resize', scheduleActiveSectionUpdate); if (scrollFrame !== null) window.cancelAnimationFrame(scrollFrame); };
 	});
 </script>
 
@@ -207,13 +182,15 @@
 		{:else}
 			{#each notices as message, index}<StatusNotice {message} tone={noticeIsError ? 'error' : 'success'} onDismiss={() => notices = notices.filter((_, noticeIndex) => noticeIndex !== index)} />{/each}
 			<div class="settings-layout">
-				<nav class="settings-nav" aria-label={text.sections}><a class:active={activeSection === 'roles'} href="#roles" aria-current={activeSection === 'roles' ? 'location' : undefined} onclick={(event) => selectSection(event, 'roles')}>{text.roles}</a><a class:active={activeSection === 'external-links'} href="#external-links" aria-current={activeSection === 'external-links' ? 'location' : undefined} onclick={(event) => selectSection(event, 'external-links')}>{text.links}</a><a class:active={activeSection === 'financial-period'} href="#financial-period" aria-current={activeSection === 'financial-period' ? 'location' : undefined} onclick={(event) => selectSection(event, 'financial-period')}>{localeMessages[$localization.displayLanguage].financial.periodSettings}</a></nav>
+				<PageTabs bind:active={activeSection} label={text.sections} idPrefix="system-setting" panelPrefix="" storageKey="system-settings-tab" tabs={[{id:'widgets',label:$localization.displayLanguage==='ja'?'ウィジェット':'Widgets'},{id:'widget-development',label:$localization.displayLanguage==='ja'?'ウィジェット開発':'Widget development'},{id:'roles',label:text.roles},{id:'external-links',label:text.links},{id:'financial-period',label:localeMessages[$localization.displayLanguage].financial.periodSettings}]} />
 				<div class="settings-content">
-					<section id="roles" class="settings-card" aria-label={text.roleSettings}><RoleManagementSection onNotice={(messages) => { notices = messages; noticeIsError = false; }} /></section>
-					<section id="external-links" class="settings-card" aria-label={text.linkSettings}>
+ <div id="widgets" class="settings-card" role="tabpanel" aria-labelledby="system-setting-widgets-tab" hidden={activeSection !== 'widgets'} tabindex="0"><WidgetSettingsSection /></div>
+					<div id="widget-development" class="settings-card" role="tabpanel" aria-labelledby="system-setting-widget-development-tab" hidden={activeSection !== 'widget-development'} tabindex="0">{#if editorOpened}<WidgetEditor />{/if}</div>
+					<div id="roles" class="settings-card" role="tabpanel" aria-labelledby="system-setting-roles-tab" hidden={activeSection !== 'roles'} tabindex="0"><RoleManagementSection onNotice={(messages) => { notices = messages; noticeIsError = false; }} /></div>
+					<div id="external-links" class="settings-card" role="tabpanel" aria-labelledby="system-setting-external-links-tab" hidden={activeSection !== 'external-links'} tabindex="0">
 						<MasterList bind:this={list} endpoint="/v1/external-links" title={text.links} listHeading={text.links} description={text.linksDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/external-links" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => { noticeIsError = true; notices = [reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed]; }} onReordered={() => { void loadExternalLinks(true); }} onDetail={(item, trigger) => openModal('detail', item as ExternalLink, trigger)} emptyLabel={text.noLinks} />
-					</section>
-					<section id="financial-period" class="settings-card" aria-label={localeMessages[$localization.displayLanguage].financial.periodSettings}><FinancialPeriodSettingsSection /></section>
+					</div>
+					<div id="financial-period" class="settings-card" role="tabpanel" aria-labelledby="system-setting-financial-period-tab" hidden={activeSection !== 'financial-period'} tabindex="0"><FinancialPeriodSettingsSection /></div>
 				</div>
 			</div>
 		{/if}
@@ -247,7 +224,12 @@
 {/if}
 
 <style>
-	.settings-page{width:100%}.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}.settings-nav{position:sticky;top:72px;z-index:2;display:flex;align-self:start;flex-direction:column;gap:1px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);isolation:isolate}.settings-nav a{display:flex;align-items:center;min-height:32px;padding:7px 10px;color:var(--text-secondary);border-radius:4px;font-size:var(--font-size-body);font-weight:500;text-decoration:none;transition:background 120ms,color 120ms}.settings-nav a:focus-visible{background:var(--surface-secondary);color:var(--text)}.settings-nav a:hover:not(.active){background:var(--surface-hover,var(--surface-secondary));color:var(--text)}.settings-nav a:focus-visible{outline:2px solid #1abb9c;outline-offset:1px}.settings-nav a.active{background:rgba(51,122,183,.14);color:var(--action-primary)}.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;isolation:isolate}.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}.settings-card :global(.master-list){max-height:none}.settings-card :global(.master-header){flex-wrap:wrap}.settings-card :global(th),.settings-card :global(td){padding-right:6px;padding-left:6px;overflow-wrap:anywhere}.settings-card :global(td:first-child){padding-left:10px}.settings-card :global(.actions-cell){padding-right:6px;padding-left:2px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
-	@media(max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav a{justify-content:center;text-align:center}}
-	@media(max-width:700px){.settings-layout{gap:16px}.settings-nav{grid-template-columns:1fr}.settings-nav a{justify-content:flex-start;text-align:left}.wide{grid-column:auto}}
+	/* Let settings dialogs rise above the fixed shell while retaining table isolation at rest. */
+	.settings-content:has(:global(.app-modal-backdrop)){isolation:auto}
+
+	.settings-page{width:100%}.settings-layout{min-width:0}.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:16px;isolation:isolate}.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}.settings-card :global(.master-list){max-height:none}.settings-card :global(.master-header){flex-wrap:wrap}.settings-card :global(th),.settings-card :global(td){padding-right:6px;padding-left:6px;overflow-wrap:anywhere}.settings-card :global(td:first-child){padding-left:10px}.settings-card :global(.actions-cell){padding-right:6px;padding-left:2px}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}
+	@media(max-width:900px){.settings-layout{min-width:0}}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.settings-layout{min-width:0}.wide{grid-column:auto}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.settings-layout{min-width:0}}
+[role='tabpanel']:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 </style>

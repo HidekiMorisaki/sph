@@ -3,6 +3,7 @@ import { error as httpError, json } from '@sveltejs/kit';
 export type ApiErrorDetail = {
 	field?: string;
 	reason: string;
+	retryAfterSeconds?: number;
 };
 
 export function throwApiError(
@@ -27,7 +28,7 @@ export function success<T>(data: T, responseCode = 200, meta?: Record<string, un
 			data,
 			...(meta ? { meta } : {})
 		},
-		{ status: responseCode }
+		{ status: responseCode, headers: { 'cache-control': 'private, no-store' } }
 	);
 }
 
@@ -43,6 +44,6 @@ export function failure(
 			responseCode,
 			error: { code, message, details }
 		},
-		{ status: responseCode }
+		{ status: responseCode, headers: { 'cache-control': 'private, no-store' } }
 	);
 }

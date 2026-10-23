@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { COMPACT_NAVIGATION_QUERY } from '$lib/responsive-layout';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount } from 'svelte';
 	import { productName } from '$lib/brand';
@@ -10,7 +11,7 @@
 	import { icons, menuIcon, groupIcon, localizedMenus, type Item, type MenuGroup } from './sidebarNavigation';
 	import { sidebarGroupExpanded, type SidebarGroupState, type SidebarGroupId } from '$lib/sidebar-groups';
 
-	let { collapsed, user, currentPath = '', onLogout, groupExpansion = {}, onToggleGroup }: { collapsed: boolean; user: SessionUser | null; currentPath?: string; onLogout: () => void | Promise<void>; groupExpansion?: SidebarGroupState; onToggleGroup?: (id: string) => void } = $props();
+	let { forceExpanded = false, collapsed, user, currentPath = '', onLogout, groupExpansion = {}, onToggleGroup }: { forceExpanded?: boolean; collapsed: boolean; user: SessionUser | null; currentPath?: string; onLogout: () => void | Promise<void>; groupExpansion?: SidebarGroupState; onToggleGroup?: (id: string) => void } = $props();
 	const id = $props.id();
 	const groupOpen = (groupId: string) => sidebarGroupExpanded(groupExpansion, groupId as SidebarGroupId);
 	let animatedGroup = $state('');
@@ -25,12 +26,14 @@
 	}
 	let navigationText = $derived(localeMessages[$localization.displayLanguage].navigation);
 	let canManageMasters = $derived(Boolean(user?.capabilities.canManageMasters || user?.capabilities.canManageBranches));
-	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'general'
+	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'dashboard'
+		? { ...group, items: group.items.filter(item => item.id !== 'assetOverview' || user?.capabilities.canReadAssets) }
+		: group.id === 'general'
 		? { ...group, items: group.items.filter((item) => (item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) && (item.id !== 'teams' || user?.capabilities.canReadTeams) && (item.id !== 'skills' || user?.capabilities.canReadSkills) && (item.id !== 'clients' || user?.capabilities.canReadClients) && (item.id !== 'projects' || user?.capabilities.canReadProjects)) }
 		: group.id === 'assets'
 			? { ...group, items: group.items.filter((item) => item.id !== 'softwareLicenses' || user?.capabilities.canReadSoftware) }
 		: group.id === 'siteManagement' && !user?.capabilities.canManageSystemSettings
-			? { ...group, items: group.items.filter((item) => item.id === 'businessOverview' && user?.capabilities.canManageBranches) }
+			? { ...group, items: group.items.filter((item) => item.id === 'businessOverview' && (user?.capabilities.canManageBranches || user?.capabilities.canReadFinancialInformation)) }
 			: group).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length
 		? [{ id: 'otherSystems', label: navigationText.groups.otherSystems, items: $externalLinks.map((link): Item => ({ id: `external-${link.id}`, text: link.name, icon: 'external', href: link.url, external: true })) }, group]
 		: [group]));
@@ -100,9 +103,9 @@
 		railLabel = '';
 	});
 	onMount(() => {
-		const query = matchMedia('(max-width: 760px)');
-		compact = query.matches;
-		const update = () => { compact = query.matches; railFlyout = ''; railLabel = ''; };
+		const query = matchMedia(COMPACT_NAVIGATION_QUERY);
+		compact = query.matches && !forceExpanded;
+		const update = () => { compact = query.matches && !forceExpanded; railFlyout = ''; railLabel = ''; };
 		const closeMenusOutside = (event: MouseEvent) => {
 			if (event.target instanceof Node && !sidebarUser?.contains(event.target)) userMenuOpen = false;
 			if (!(event.target instanceof Element) || !event.target.closest('.rail-flyout,.nav-toggle')) railFlyout = '';
@@ -118,11 +121,11 @@
 	});
 </script>
 
-<aside class="app-sidebar" class:collapsed aria-label={navigationText.primaryNavigation}>
+<aside class="app-sidebar" class:force-expanded={forceExpanded} class:collapsed aria-label={navigationText.primaryNavigation}>
 	<a class="brand" href="/" aria-label={productName}><img class="brand-icon" src={favicon} alt="" width="28" height="28" /><strong>{productName}</strong></a>
 	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each user ? sidebarMenus : [] as group (group.id)}
-			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings || group.id === 'siteManagement' && user?.capabilities.canManageBranches)}
+			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings || group.id === 'siteManagement' && (user?.capabilities.canManageBranches || user?.capabilities.canReadFinancialInformation))}
 			<div class="nav-group" data-group-id={group.id} class:group-open={groupOpen(group.id)} class:group-animate={animatedGroup === group.id}>
 				<button class="nav-label group-toggle" type="button" aria-label={group.label} aria-expanded={groupOpen(group.id)} aria-controls={`${id}-group-${group.id}`} onmouseenter={event => showRailLabel(group.label,event)} onmouseleave={() => hideRailLabel(group.label)} onfocus={event => showRailLabel(group.label,event)} onblur={() => hideRailLabel(group.label)} onclick={() => toggleGroup(group.id)}><span class="group-icon" aria-hidden="true">{@html groupIcon(group.id)}</span><span class="group-title">{group.label}</span><svg class="group-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6" /></svg></button>
 				<div class="group-content" id={`${id}-group-${group.id}`} inert={!groupOpen(group.id)} aria-hidden={!groupOpen(group.id)}><div class="group-items">
@@ -188,15 +191,15 @@
 	aside.collapsed .nav-link{justify-content:center;gap:0;padding:8px}
 	aside.collapsed .account-trigger{justify-content:center;padding:8px}
 	aside.collapsed .user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
-	@media(max-width:760px){
-		aside{width:64px;overflow:visible}
-		.brand strong,.group-title,.nav-text,.badge,.nav-chev,.nav-sub,.sidebar-user-info,.more-icon{display:none}
-		.group-icon{display:grid}.group-toggle{justify-content:center;padding:8px}.group-chevron{position:absolute;right:1px;bottom:5px;width:10px;height:10px}
-		.nav-link{justify-content:center;padding:10px}
-		.sidebar-nav{overflow-y:auto}
-		.rail-flyout{display:grid}
-		.account-trigger{justify-content:center;padding:8px}
-		.user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
+	@media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){
+		aside:not(.force-expanded){width:64px;overflow:visible}
+		aside:not(.force-expanded) .brand strong,aside:not(.force-expanded) .group-title,aside:not(.force-expanded) .nav-text,aside:not(.force-expanded) .badge,aside:not(.force-expanded) .nav-chev,aside:not(.force-expanded) .nav-sub,aside:not(.force-expanded) .sidebar-user-info,aside:not(.force-expanded) .more-icon{display:none}
+		aside:not(.force-expanded) .group-icon{display:grid}aside:not(.force-expanded) .group-toggle{justify-content:center;padding:8px}aside:not(.force-expanded) .group-chevron{position:absolute;right:1px;bottom:5px;width:10px;height:10px}
+		aside:not(.force-expanded) .nav-link{justify-content:center;padding:10px}
+		aside:not(.force-expanded) .sidebar-nav{overflow-y:auto}
+		aside:not(.force-expanded) .rail-flyout{display:grid}
+		aside:not(.force-expanded) .account-trigger{justify-content:center;padding:8px}
+		aside:not(.force-expanded) .user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
 	}
 	aside button.nav-link,aside button.account-trigger{background:transparent}
 	aside button.nav-link:hover,aside button.account-trigger:hover{background:#ffffff0c}

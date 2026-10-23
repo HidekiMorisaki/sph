@@ -1,4 +1,10 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
+	import SearchPanel from '$lib/components/SearchPanel.svelte';
+	import { initialSearch, type SearchContext } from '$lib/search';
+	import { page } from '$app/state';
+	import { replaceState, afterNavigate } from '$app/navigation';
 	import { localizeAssetReason, assetErrorMessage } from '$lib/asset-errors';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
@@ -73,12 +79,24 @@
 
 	let assetList = $state<MasterList>();
 	let types = $state<Named[]>([]);
-	let typeSelection = $state<string[]>([allTypesValue]);
-	let typeFilterReady = $state(false);
-	let typeFilterError = $state(false);
-	let typeFilterErrorDismissed = $state(false);
-	let currentUserId = $state<number | null>(null);
-	let assetQueryParams = $derived.by((): Record<string, string> => typeSelection.includes(allTypesValue) ? {} : { typeIds: typeSelection.join(',') });
+	let searchState = $state(initialSearch('assets'));
+    let assetOptions = $state<Record<string,string|boolean>>({});
+    let typeSelection = $derived(typeof assetOptions.typeIds === 'string' ? assetOptions.typeIds.split(',') : [allTypesValue]);
+    let typeFilterReady = $state(false);
+    let typeFilterError = $state(false);
+    let typeFilterErrorDismissed = $state(false);
+    let currentUserId = $state<number | null>(null);
+    let summaryOrigin = false;
+    function restoreAssetOptions(options: Record<string,string|boolean>) {
+        assetOptions = {...options};
+        const url = new URL(page.url);
+        for (const key of ['unassigned','branchId','typeIds']) {
+            url.searchParams.delete(key);
+            const value=options[key];
+            if(value!==undefined && value!==false && value!=='')url.searchParams.set(key,String(value));
+        }
+        replaceState(url,page.state);
+    }
 	let manufacturers = $state<Named[]>([]);
 	let cpus = $state<Named[]>([]);
 	let systems = $state<OperatingSystem[]>([]);
@@ -157,16 +175,36 @@
 		canManageAssets = capabilities.canManageAssets;
 		canReadAssetCredentials = capabilities.canReadAssetCredentials;
 		canWriteAssetCredentials = capabilities.canWriteAssetCredentials;
-		try { types = await allPages<Named>('it-asset-types'); }
-		catch { typeFilterError = true; return; }
-		const storageKey = `it-assets-type-filter:${user.id}`;
-		let saved: unknown = null;
-		try { saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null'); } catch { /* Use all types when storage is unavailable. */ }
-		const available = new Set(types.map((item) => String(item.id)));
-		const selected = Array.isArray(saved) ? [...new Set(saved.filter((value): value is string => typeof value === 'string' && available.has(value)))] : [];
-		typeSelection = selected.length ? selected : [allTypesValue];
-		try { localStorage.setItem(storageKey, JSON.stringify(selected)); } catch { /* The filter still works for this visit. */ }
-		typeFilterReady = true;
+        let contexts: SearchContext[];
+        try {
+            const response=await fetch('/v1/it-asset-search-fields');
+            if(!response.ok)throw Error();
+            contexts=(await apiData<SearchContext[]>(response));
+        }catch{typeFilterError=true;return;}
+        const fields=contexts.find(context=>context.code==='asset')!.fields;
+        types=(fields.find(field=>field.code==='type')?.options??[]).map(item=>({id:Number(item.value),name:item.label}));
+        branches=(fields.find(field=>field.code==='branch')?.options??[]).map(item=>({id:Number(item.value),name:item.label})) as Branch[];
+        const storageKey=`it-assets-type-filter:${user.id}`;
+        let saved:unknown=null;
+        try{saved=JSON.parse(localStorage.getItem(storageKey)??'null');}catch{/* Storage is optional. */}
+        const available=new Set(types.map(item=>String(item.id)));
+        const selected=Array.isArray(saved)?saved.filter((value):value is string=>typeof value==='string'&&available.has(value)):[];
+        summaryOrigin=['unassigned','branchId','typeIds'].some(key=>page.url.searchParams.has(key));
+        const options:Record<string,string|boolean>={};
+        if(summaryOrigin){
+            for(const key of ['branchId','typeIds']){const value=page.url.searchParams.get(key);if(value!==null)options[key]=value;}
+            const unassigned=page.url.searchParams.get('unassigned');
+            if(unassigned!==null){
+                if(!['true','false'].includes(unassigned)){typeFilterError=true;return;}
+                options.unassigned=unassigned==='true';
+            }
+        }else if(selected.length)options.typeIds=selected.join(',');
+        assetOptions=options;
+        searchState={...initialSearch('assets'),definition:{...initialSearch('assets').definition,options}};
+        typeFilterReady=true;
+        if(!canManageAssets)return;
+        // Editing uses the existing richer master metadata.
+        types=await allPages<Named>('it-asset-types');
 		const names = ['manufacturers', 'cpu-types', 'operating-systems', 'it-asset-statuses'];
 		const responses = await Promise.all(names.map(endpoint));
 		if (responses.some((response) => !response.ok)) { messageTone = 'error'; message = text.loadFailed; return; }
@@ -179,14 +217,22 @@
 			if (response.ok) employees = await apiData<Assignee[]>(response);
 		}
 	}
-	function chooseTypes(values: string[]) {
-		if (types.length === 1) return;
-		const selected = values.includes(allTypesValue) && !typeSelection.includes(allTypesValue) ? [] : values.filter((value) => value !== allTypesValue);
-		typeSelection = selected.length ? selected : [allTypesValue];
-		if (currentUserId !== null) {
-			try { localStorage.setItem(`it-assets-type-filter:${currentUserId}`, JSON.stringify(typeSelection.filter((value) => value !== allTypesValue))); } catch { /* The filter still works for this visit. */ }
-		}
-	}
+    afterNavigate(({from,to})=>{
+        if(from?.url.pathname==='/it-assets'&&to?.url.pathname==='/it-assets'&&from.url.search!==to.url.search){
+            typeFilterReady=false;
+            void load().catch(()=>{messageTone='error';message=text.loadFailed;});
+        }
+    });
+    function chooseTypes(values:string[]){
+        if(types.length===1)return;
+        const selected=values.includes(allTypesValue)&&!typeSelection.includes(allTypesValue)?[]:values.filter(value=>value!==allTypesValue);
+        const options={...assetOptions};
+        if(selected.length)options.typeIds=selected.join(',');else delete options.typeIds;
+        restoreAssetOptions(options);
+        if(currentUserId!==null&&!summaryOrigin)try{localStorage.setItem(`it-assets-type-filter:${currentUserId}`,JSON.stringify(selected));}catch{/* Storage is optional. */}
+    }
+    function chooseSearchBranch(value:string){const options={...assetOptions};if(value)options.branchId=value;else delete options.branchId;restoreAssetOptions(options);}
+    function chooseUnassigned(value:boolean){const options={...assetOptions};if(value)options.unassigned=true;else delete options.unassigned;restoreAssetOptions(options);}
 
 	function focusForm() {
 		void tick().then(() => {
@@ -558,16 +604,17 @@
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
 {#snippet assigneeCell(item: Asset)}{#if item.assignments[0]}<button class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(item.assignments[0].employee.id, event.currentTarget)}>{assigneeName(item.assignments[0])}</button>{/if}{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
-{#snippet pageActions()}{#if canManageAssets}<AddButton label={text.add} onclick={create} />{/if}{/snippet}
-{#snippet typeFilter()}<div class="asset-type-filter"><span>{text.typeFilter}</span>{#if types.length === 1}<SearchSelect label={text.typeFilter} field="assetTypeFilter" value={String(types[0].id)} options={[{ value: String(types[0].id), label: types[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.typeFilter} field="assetTypeFilter" values={typeSelection} options={[{ value: allTypesValue, label: text.allTypes }, ...types.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={chooseTypes} />{/if}</div>{/snippet}
+{#snippet mobileAsset(item: Asset)}<div class="mobile-asset"><strong>{item.assetTag}</strong><span>{item.type.name} · {item.status.name}</span><span>{item.manufacturer?.name ?? ''} {item.modelNumber ?? ''}</span><span>{item.storage.room.branch.name} / {item.storage.room.name} / {item.storage.name}</span>{#if item.assignments[0]}{@render assigneeCell(item)}{:else}<span>{text.unassigned}</span>{/if}</div>{/snippet}
+{#snippet pageActions()}{#if allowedOperation('assets.create')}<AddButton label={text.add} onclick={create} />{/if}{/snippet}
+{#snippet typeFilter()}<div class="asset-search-quick"><div class="asset-type-filter"><span>{text.typeFilter}</span>{#if types.length === 1}<SearchSelect label={text.typeFilter} field="assetTypeFilter" value={String(types[0].id)} options={[{ value: String(types[0].id), label: types[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.typeFilter} field="assetTypeFilter" values={typeSelection} options={[{ value: allTypesValue, label: text.allTypes }, ...types.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={chooseTypes} />{/if}</div><SearchSelect label={text.branch} field="assetSearchBranch" value={String(assetOptions.branchId??'')} options={[{value:'',label:text.allBranches},...branches.map(item=>({value:String(item.id),label:item.name}))]} onSelect={chooseSearchBranch}/><label class="asset-unassigned"><input type="checkbox" checked={assetOptions.unassigned===true} onchange={event=>chooseUnassigned(event.currentTarget.checked)}/>{text.summaryFilter}</label></div>{/snippet}
 
 <AssetManagementShell title={text.title}>
-	<ViewportListPage>
+ <ViewportListPage>
 	<MasterPageHeader title={text.title} />
 	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
 	{#if employeeDetailError && !detailAsset}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
 	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<button type="button" class="type-filter-retry" onclick={() => void load()}>{text.retryTypeFilter}</button>{/if}
-	{#if typeFilterReady}<MasterList bind:this={assetList} endpoint="/v1/it-assets" searchParam="q" queryParams={assetQueryParams} title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} headerActions={pageActions} toolbarFilters={typeFilter} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
+	{#if typeFilterReady}<SearchPanel target="assets" userId={currentUserId} bind:searchState draftOptions={assetOptions} onRestoreOptions={restoreAssetOptions} filters={typeFilter}/><MasterList mobileItem={mobileAsset} bind:searchState bind:this={assetList} endpoint="/v1/it-asset-searches" title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} headerActions={pageActions} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
 		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
 		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },
@@ -608,7 +655,7 @@
 						<label>{text.loginUsername}<input name="loginUsername" bind:value={form.loginUsername} maxlength="255" autocomplete="off" disabled={!canManageAssets}/></label>
 						<label>{text.managementConsoleUsername}<input name="managementConsoleUsername" bind:value={form.managementConsoleUsername} maxlength="255" autocomplete="off" disabled={!canManageAssets}/></label>
 						<label class="wide">{text.managementConsoleUrl}<input name="managementConsoleUrl" value={form.managementConsoleUrl} oninput={(event) => updateField('managementConsoleUrl', event.currentTarget.value)} maxlength="2048" type="url" placeholder="https://console.example.local/" disabled={!canManageAssets} class:invalid={Boolean(fieldErrors.managementConsoleUrl)} aria-invalid={Boolean(fieldErrors.managementConsoleUrl)} aria-describedby={fieldErrors.managementConsoleUrl ? 'managementConsoleUrl-error' : undefined}/>{#if fieldErrors.managementConsoleUrl}<span id="managementConsoleUrl-error" class="field-error" role="alert">{fieldErrors.managementConsoleUrl}</span>{/if}</label>
-						{#if canWriteAssetCredentials}
+						{#if canWriteAssetCredentials && allowedOperation('assets.credentials.update', editing?.storage.branchId) && allowedOperation(editing ? 'assets.update' : 'assets.create', editing?.storage.branchId)}
 							<div class="credential-field"><label>{text.adminPassword}<input name="adminPassword" value={credentialPasswords.admin} oninput={(event) => updateCredentialPassword('admin', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.admin.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.admin} aria-invalid={Boolean(fieldErrors.adminPassword)} aria-describedby={fieldErrors.adminPassword ? 'adminPassword-error' : undefined}/>{#if fieldErrors.adminPassword}<span id="adminPassword-error" class="field-error" role="alert">{fieldErrors.adminPassword}</span>{/if}</label>{#if editing && credentialStatus.admin.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.admin}/> {text.clearPassword}</label>{/if}</div>
 							<div class="credential-field"><label>{text.loginPassword}<input name="loginPassword" value={credentialPasswords.login} oninput={(event) => updateCredentialPassword('login', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.login.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.login} aria-invalid={Boolean(fieldErrors.loginPassword)} aria-describedby={fieldErrors.loginPassword ? 'loginPassword-error' : undefined}/>{#if fieldErrors.loginPassword}<span id="loginPassword-error" class="field-error" role="alert">{fieldErrors.loginPassword}</span>{/if}</label>{#if editing && credentialStatus.login.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.login}/> {text.clearPassword}</label>{/if}</div>
 							<div class="credential-field"><label>{text.consolePassword}<input name="management_consolePassword" value={credentialPasswords.management_console} oninput={(event) => updateCredentialPassword('management_console', event.currentTarget.value)} type="password" maxlength="1024" autocomplete="new-password" placeholder={credentialStatus.management_console.configured ? text.keepPassword : text.notConfigured} disabled={credentialClears.management_console} aria-invalid={Boolean(fieldErrors.management_consolePassword)} aria-describedby={fieldErrors.management_consolePassword ? 'management_consolePassword-error' : undefined}/>{#if fieldErrors.management_consolePassword}<span id="management_consolePassword-error" class="field-error" role="alert">{fieldErrors.management_consolePassword}</span>{/if}</label>{#if editing && credentialStatus.management_console.configured}<label class="clear-credential"><input type="checkbox" bind:checked={credentialClears.management_console}/> {text.clearPassword}</label>{/if}</div>
@@ -640,7 +687,7 @@
 	{#if detailAsset}
 		<div hidden={Boolean(detailEmployee || revealType)} inert={Boolean(detailEmployee || revealType)}>
 		<DetailModal title={text.detail} titleId="asset-detail-title" closeLabel={text.closeDetail} returnFocus={detailReturnFocus} onClose={closeDetail}>
-			{#snippet headerActions()}{#if canManageAssets}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={() => { const item = detailAsset!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); }} onDelete={() => void remove(detailAsset!)} />{/if}{/snippet}
+			{#snippet headerActions()}{#if canManageAssets}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('assets.update', detailAsset?.storage.branchId) ? () => { const item = detailAsset!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('assets.delete', detailAsset?.storage.branchId) ? () => void remove(detailAsset!) : undefined} />{/if}{/snippet}
 			{#if employeeDetailError}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
 			<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid">
 						{@render detailField(text.assetTag, detailAsset.assetTag)}
@@ -707,6 +754,9 @@
 </AssetManagementShell>
 
 <style>
+ .asset-search-quick .asset-type-filter{flex-direction:column;align-items:stretch;gap:6px}
+ .asset-search-quick{display:flex;flex-wrap:wrap;align-items:end;gap:12px;min-width:0}.asset-search-quick :global(.form-select-field){width:208px;max-width:100%}.asset-unassigned{display:flex;align-items:center;gap:8px;min-height:44px;font-size:var(--font-size-support);color:var(--text-secondary)}.asset-unassigned input{width:16px;height:16px;accent-color:var(--action-primary)}
+.mobile-asset{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}.mobile-asset>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-asset :global(button){align-self:flex-start;min-height:44px}
 	.asset-type-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:220px}.asset-type-filter :global(.form-multi-select-field>span),.asset-type-filter :global(.form-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.asset-type-filter :global(.form-multi-select-trigger),.asset-type-filter :global(.form-select-trigger){height:32px}.type-filter-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
 	.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:var(--font-size-support)}
 	.asset-employee-link{border:0;padding:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;text-decoration:underline;cursor:pointer}.asset-employee-link:disabled{opacity:.6;cursor:wait}.asset-employee-link:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}

@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { COMPACT_NAVIGATION_QUERY } from '$lib/responsive-layout';
 	import favicon from '$lib/assets/favicon.svg';
-	import { onMount, setContext, untrack } from 'svelte';
+	import { onMount, setContext, untrack, tick } from 'svelte';
 	import { afterNavigate, beforeNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { readSessionUser } from '$lib/client-session';
 	import { safeLoginDestination } from '$lib/login-redirect';
 	import { clearAvatar, loadAvatarFor } from '$lib/avatar';
-	import type { SessionUser } from '$lib/auth';
+	import { canOperate, type SessionUser } from '$lib/auth';
 	import { isSidebarGroupId, readSidebarGroups, saveSidebarGroups, sidebarGroupExpanded, type SidebarGroupState } from '$lib/sidebar-groups';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import AppSidebar from '$lib/components/AppSidebar.svelte';
@@ -20,6 +21,7 @@
 	// Initialize before child rendering; later changes use the applied client store.
 	setContext(LOCALIZATION_CONTEXT, untrack(() => initializeLocalization(data.initialLocalization)));
 	let user = $state<SessionUser | null>(null);
+	setContext('operation-allowed', (code: string, branchId?: number) => canOperate(user, code, branchId));
 	let sidebarGroups = $state<SidebarGroupState>({});
 	let sidebarOwner: number | null = null;
 	function setSidebarUser(current: SessionUser | null) {
@@ -37,6 +39,11 @@
 		saveSidebarGroups(user.id, sidebarGroups);
 	}
 	let collapsed = $state(false);
+ let mobileMenu = $state<HTMLDialogElement>();
+ let mobileMenuOpen=$state(false);
+ async function closeMobileMenu(){mobileMenu?.close();mobileMenuOpen=false;await tick();document.querySelector<HTMLButtonElement>('.app-header .menu')?.focus({preventScroll:true});}
+ function mobileMenuClick(event:MouseEvent){if(event.target instanceof Element && event.target.closest('a[href]'))void closeMobileMenu();}
+ onMount(()=>{const media=matchMedia(COMPACT_NAVIGATION_QUERY);const changed=()=>{document.documentElement.dataset.compactNavigation=String(media.matches);if(!media.matches){mobileMenu?.close();mobileMenuOpen=false;}};changed();media.addEventListener('change',changed);return()=>{media.removeEventListener('change',changed);delete document.documentElement.dataset.compactNavigation;};});
 	let title = $state('');
 	let sessionRevision = 0;
 	let loggingOut = false;
@@ -46,7 +53,8 @@
 	let navigationDestination: URL | null = null;
 	let showShell = $derived(page.url.pathname !== '/account-setup' && (page.url.pathname !== '/' || user !== null));
 	setContext('asset-shell-title', (value: string) => { title = value; });
-	function toggleSidebar() {
+	async function toggleSidebar() {
+  if(matchMedia(COMPACT_NAVIGATION_QUERY).matches){mobileMenuOpen=true;await tick();mobileMenu?.showModal();return;}
 		collapsed = !collapsed;
 		try { localStorage.setItem('asset-sidebar-collapsed', String(collapsed)); } catch { /* Width can change without persistence. */ }
 		document.documentElement.dataset.assetSidebarCollapsed = String(collapsed);
@@ -142,7 +150,11 @@
 </svelte:head>
 
 <div class:shell={showShell} class:collapsed>
-	{#if showShell}<AppSidebar {collapsed} {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={logout} />{/if}
+	{#if showShell}<div class="desktop-navigation"><AppSidebar {collapsed} {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={logout} /></div>
+ {#if mobileMenuOpen}<dialog bind:this={mobileMenu} class="mobile-navigation" aria-label={localeMessages[$localization.displayLanguage].navigation.primaryNavigation} onclick={event=>{if(event.target===mobileMenu)void closeMobileMenu();else mobileMenuClick(event);}} onkeydown={event=>{if(event.key==='Escape'){event.preventDefault();void closeMobileMenu();}}} oncancel={event=>{event.preventDefault();void closeMobileMenu();}}>
+ <button type="button" class="mobile-menu-close" aria-label={localeMessages[$localization.displayLanguage].common.close} onclick={()=>void closeMobileMenu()}>×</button>
+ <AppSidebar collapsed={false} forceExpanded {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={()=>{mobileMenu?.close();mobileMenuOpen=false;void logout();}} />
+ </dialog>{/if}{/if}
 	<div class:workspace={showShell}>
 		{#if showShell}<AppHeader {collapsed} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
 		<div class:app-main={showShell}>{#if logoutError}<StatusNotice message={localeMessages[$localization.displayLanguage].navigation.logoutFailed} tone="error" onDismiss={() => logoutError = false} />{/if}{#if overdueNotice}<StatusNotice message={overdueNotice} tone="warning" onDismiss={() => overdueNotice = ''} />{/if}{@render children()}</div>
@@ -150,9 +162,12 @@
 </div>
 
 <style>
+	:global(body:has(.mobile-navigation[open])){overflow:hidden}
 	.shell{min-height:100vh;background:var(--bg);color:var(--text)}
 	.workspace{width:calc(100% - 252px);min-height:100vh;margin-left:252px;transition:margin-left .22s}
 	.app-main{min-width:0;padding:88px 28px 36px}
 	.collapsed .workspace{width:calc(100% - 64px);margin-left:64px}
-	@media(max-width:760px){.workspace{width:calc(100% - 64px);margin-left:64px}.app-main{padding:78px 16px 24px}}
+	.mobile-navigation{position:fixed;inset:0 auto 0 0;width:min(300px,90vw);height:100dvh;max-height:100dvh;max-width:90vw;margin:0;padding:0;border:0;background:var(--surface);color:var(--text);overflow:visible}.mobile-navigation::backdrop{background:rgba(0,0,0,.5)}.mobile-navigation :global(.app-sidebar){position:absolute;width:100%;height:100%;min-height:0}.mobile-menu-close{position:absolute;z-index:101;right:8px;top:8px;min-width:44px;min-height:44px;padding:0;background:transparent!important;color:#fff;font-size:26px}.mobile-navigation :global(.brand){padding-right:54px}
+ @media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.desktop-navigation{display:none}.shell .workspace{width:100%;margin-left:0}.app-main{padding:72px 12px 20px}}
+
 </style>

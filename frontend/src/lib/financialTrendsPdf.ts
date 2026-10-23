@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import { jsPDF } from '../../vendor/jspdf/index.js';
 import { productName } from '$lib/brand';
 import { niceAxis } from '$lib/chartAxis';
 import { financialTrendSegmentValue, financialTrendSeries, type FinancialTrend, type FinancialTrendsResponse } from '$lib/financialTrendsData';

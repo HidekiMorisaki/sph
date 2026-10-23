@@ -1,3 +1,4 @@
+import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
 import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
 import { parseId } from '$lib/server/api/database';
 import { parseTeam, teamReader, teamSelect, teamConflictResponse } from '$lib/server/api/teams';
@@ -7,10 +8,13 @@ import { getPrisma } from '$lib/server/prisma';
 import { Prisma } from '$lib/server/generated/prisma/client';
 
 export async function GET({ locals, params }: import('./$types').RequestEvent) {
- teamReader(locals.user);
+ const actor = teamReader(locals.user);
  const id = parseId(params.id);
  const item = id ? await getPrisma().team.findFirst({ where: { id, deletedAt: null }, select: teamSelect }) : null;
- return item ? success(item) : failure(404, 'NOT_FOUND', 'Not found.');
+ if (!item) return failure(404, 'NOT_FOUND', 'Not found.');
+ const members = await getPrisma().employeeTeam.findMany({ where: { teamId: item.id, deletedAt: null, employee: { deletedAt: null } }, select: { employee: { select: { branchId: true } } } });
+ const canDelete = actor.permissionOperations.includes('teams.delete') && members.every(({ employee }) => hasScopedPermissionOperation(actor, 'teams.members.remove', employee.branchId) && hasScopedPermissionOperation(actor, 'employees.read', employee.branchId));
+ return success({ ...item, allowedOperations: { delete: canDelete } });
 }
 
 export async function PATCH({ locals, params, request }: import('./$types').RequestEvent) {
@@ -44,7 +48,8 @@ export async function DELETE({ locals, params }: import('./$types').RequestEvent
   await getPrisma().$transaction(async tx => {
    const before = await tx.team.findFirst({ where: { id, deletedAt: null }, select: teamSelect });
    if (!before) throwApiError(404, 'NOT_FOUND', 'Not found.');
-   const members = await tx.employeeTeam.findMany({ where: { teamId: id, deletedAt: null, employee: { deletedAt: null } }, select: { employeeId: true } });
+   const members = await tx.employeeTeam.findMany({ where: { teamId: id, deletedAt: null, employee: { deletedAt: null } }, select: { employeeId: true, employee: { select: { branchId: true } } } });
+   if (members.some(({ employee }) => !hasScopedPermissionOperation(actor, 'teams.members.remove', employee.branchId) || !hasScopedPermissionOperation(actor, 'employees.read', employee.branchId))) throwApiError(403, 'BRANCH_ACCESS_DENIED', 'Permission to remove every team member is required.');
    for (const { employeeId } of members) {
     const employeeBefore = await readEmployeeFields(tx, employeeId);
     await tx.employeeTeam.updateMany({ where: { teamId: id, employeeId, deletedAt: null }, data: { deletedAt: new Date() } });

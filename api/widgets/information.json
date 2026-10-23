@@ -1,0 +1,6 @@
+{
+  "sph.world_clock@1.0.0": {
+    "ja": "選択したタイムゾーンの現地時刻と日付を表示します。デジタル時計とアナログ時計を選べます。都市数に上限はなく、カード内に収まらない都市は左右のボタンで切り替えられます。設定から都市と表示サイズを変更できます。",
+    "en": "Shows the local time and date in your selected time zones, using digital or analog clocks. There is no city-count limit; use the left and right buttons to see cities that do not fit in the card. Change cities and display size in settings."
+  }
+}

@@ -1,4 +1,5 @@
 import { throwApiError } from './response';
+import { wholeCalendarMonths } from './employee-derived';
 
 type AnalyticsEmployee = {
 	birthDate: string | null;
@@ -47,6 +48,12 @@ export function employeeAnalytics(employees: AnalyticsEmployee[], referenceDate:
 	const demographics = period ? employees.filter((employee) => employee.hiredAt <= period.endDate &&
 		(!employee.retiredAt || (employee.retiredAt > period.startDate && employee.retiredAt > employee.hiredAt))) : active;
 	const ageDate = period?.endDate ?? referenceDate;
+	const tenureMonths = (employee: AnalyticsEmployee, date: string) => wholeCalendarMonths(new Date(`${employee.hiredAt}T00:00:00Z`), new Date(`${date}T00:00:00Z`));
+	const tenureKeys = ['under1', '1to3', '3to5', '5to10', '10to20', '20plus'] as const;
+	const tenureLimits = [12, 36, 60, 120, 240, Infinity];
+	const tenureActive = employees.filter((employee) => activeAt(employee, ageDate));
+	const tenureCounts = tenureKeys.map(() => 0);
+	for (const employee of tenureActive) tenureCounts[tenureLimits.findIndex((limit) => tenureMonths(employee, ageDate) < limit)]++;
 	const ageKeys = ['under20', '20s', '30s', '40s', '50s', '60plus', 'unknown'] as const;
 	const ageCounts = new Map<string, number>(ageKeys.map((key) => [key, 0]));
 	const genderKeys = ['female', 'male', 'unspecified', 'other'] as const;
@@ -94,7 +101,9 @@ export function employeeAnalytics(employees: AnalyticsEmployee[], referenceDate:
 	const currentYear = annualValues(year, `${String(year).padStart(4, '0')}-01-01`, referenceDate);
 	return {
 		referenceDate, fromYear, period: period ?? null, demographicTotal: demographics.length,
-		summary: { headcount: active.length, hires: currentYear.hires, departures: currentYear.departures, turnoverRate: currentYear.turnoverRate },
+		summary: { headcount: active.length, hires: currentYear.hires, departures: currentYear.departures, turnoverRate: currentYear.turnoverRate,
+			averageTenureMonths: active.length ? active.reduce((sum, employee) => sum + tenureMonths(employee, referenceDate), 0) / active.length : null },
+		tenure: { asOf: ageDate, total: tenureActive.length, groups: tenureKeys.map((key, index) => ({ key, count: tenureCounts[index] })) },
 		ageGroups: ageKeys.map((key) => ({ key, count: ageCounts.get(key)! })),
 		genders: genderKeys.map((key) => ({ key, count: genderCounts.get(key)! })),
 		annual

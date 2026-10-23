@@ -1,10 +1,11 @@
+import { assetSearchContexts } from './asset-search-registry';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { requiredBranchScope } from './branch-access';
 import { throwApiError } from './response';
 import { bookRentableSql } from './book-availability';
 
-export type SearchTarget = 'employees' | 'books';
+export type SearchTarget = 'employees' | 'books' | 'assets';
 export type SearchField = { code: string; label: { en: string; ja: string }; type: 'string' | 'number' | 'date' | 'datetime' | 'boolean' | 'choice'; maxLength: number; choices?: string[]; expression: string; source: string; operation?: string; private?: boolean; reference?: {table:string;key:string;name:string;branch?:string} };
 export type SearchContext = { code: string; label: { en: string; ja: string }; category: string; from: string; link: string; operation?: string; branch?: string; private?: boolean; policy?: 'loans' | 'reservations' | 'purchases'; fields: SearchField[] };
 const snake = (value: string) => value.replace(/[A-Z]/g, char => '_' + char.toLowerCase()).replace(/([a-z])(\d)/g,'$1_$2');
@@ -71,8 +72,7 @@ export const employeeSearchContexts: SearchContext[] = [
  context('loans','現在の書籍貸出','books','book_loans loan JOIN book_copies copy ON copy.id=loan.copy_id AND copy.deleted_at IS NULL JOIN book_titles title ON title.id=copy.title_id AND title.deleted_at IS NULL'+copyJoin,'loan.employee_id=employee.id AND loan.deleted_at IS NULL AND loan.returned_on IS NULL',[...fields('BookLoan','loan','loanCode|貸出番号|string|40;loanedOn|貸出日|date;dueOn|返却期限|date'+timestamps),...prefix(titleFields,'title','書誌'),...prefix(copyFields,'copy','現物'),...storageFields],{operation:'books.read',policy:'loans',branch:'location.branch_id'}),
  context('reservations','有効な書籍予約','books','book_reservations reservation JOIN book_titles title ON title.id=reservation.title_id AND title.deleted_at IS NULL JOIN branches branch ON branch.id=reservation.branch_id AND branch.deleted_at IS NULL',"reservation.employee_id=employee.id AND reservation.deleted_at IS NULL AND reservation.status IN ('waiting','held')",[...reservationFields,...prefix(titleFields,'title','書誌'),...prefix(branchFields('branch'),'branch','拠点')],{operation:'books.read',policy:'reservations'}),
  context('purchases','未完了の書籍購入依頼','books','book_purchase_requests purchase JOIN book_titles title ON title.id=purchase.title_id AND title.deleted_at IS NULL'+purchaseJoin,"purchase.employee_id=employee.id AND purchase.deleted_at IS NULL AND purchase.status IN ('pending','approved','ordered')",[...purchaseFields,...prefix(titleFields,'title','書誌'),...prefix(branchFields('purchase_branch'),'branch','拠点')],{operation:'books.purchases.read',policy:'purchases'}),
- context('settings','個人設定（本人）','other','employee_settings settings','settings.employee_id=employee.id AND settings.deleted_at IS NULL',fields('EmployeeSettings','settings','timeZone|タイムゾーン|string|64;displayLanguage|表示言語|choice|64|ja,en;displayCurrency|表示通貨|choice|3|JPY,USD'+timestamps),{private:true}),
- context('widgets','ウィジェット（本人）','other','employee_widgets widget','widget.employee_id=employee.id AND widget.deleted_at IS NULL',fields('EmployeeWidget','widget','code|種類|string|50;sortOrder|表示順|number;enabled|有効|boolean'+timestamps),{private:true})
+ context('settings','個人設定（本人）','other','employee_settings settings','settings.employee_id=employee.id AND settings.deleted_at IS NULL',fields('EmployeeSettings','settings','timeZone|タイムゾーン|string|64;displayLanguage|表示言語|choice|64|ja,en;displayCurrency|表示通貨|choice|3|JPY,USD'+timestamps),{private:true})
 ];
 
 export const bookSearchContexts: SearchContext[] = [
@@ -120,7 +120,7 @@ const refs:Record<string,[string,string,string,string,string?]>={
 };
 for(const ctx of employeeSearchContexts){const ref=refs[ctx.code];if(!ref)continue;const [table,alias,key,name]=ref;virtual(ctx,'selection','選択','choice',`${alias}.${key}::text`);ctx.fields.at(-1)!.reference={table,key,name};}
 
-export const contextsFor = (target: SearchTarget) => target === 'employees' ? employeeSearchContexts : bookSearchContexts;
+export const contextsFor = (target: SearchTarget) => target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
 export function operationScope(user: AuthenticatedUser, operation: string) {
  // Related read operations must not inherit the saved-filter mutation operation.
  return requiredBranchScope({...user,activeOperation:undefined},operation);
@@ -146,7 +146,7 @@ export function contextScope(context: SearchContext, user: AuthenticatedUser, ta
   else constraints.push(Prisma.sql`${borrower}=${user.id}`);
  }
  if (context.policy==='reservations') constraints.push(Prisma.sql`reservation.employee_id=${user.id}`);
- if (context.policy==='purchases') constraints.push(Prisma.sql`(purchase.employee_id=${user.id} OR (${user.permissionOperations.includes('books.purchases.manage')} AND (purchase_branch.manager_employee_id=${user.id} OR purchase_branch.deputy_manager_employee_id=${user.id})))`);
+ if (context.policy==='purchases') constraints.push(Prisma.sql`(purchase.employee_id=${user.id} OR ((${user.permissionOperations.includes('books.purchases.manage')} OR (${user.ownBranchPermissionOperations.includes('books.purchases.manage')} AND purchase_branch.id=${user.branchId})) AND (purchase_branch.manager_employee_id=${user.id} OR purchase_branch.deputy_manager_employee_id=${user.id})))`);
  return constraints.length ? Prisma.sql`(${Prisma.join(constraints,' AND ')})` : Prisma.sql`true`;
 }
 

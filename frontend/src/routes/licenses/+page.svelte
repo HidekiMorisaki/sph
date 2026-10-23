@@ -1,4 +1,7 @@
 <script lang="ts">
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
+ import "$lib/styles/mobile-records.css";
 	import '$lib/styles/table-scroll.css';
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
@@ -6,6 +9,7 @@
 	import { localization, formatEmployeeName } from '$lib/localization';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
+	import PageTabs from '$lib/components/PageTabs.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
@@ -42,6 +46,7 @@
 	const blankRelease = () => ({ releasedOn: today(), releaseReason: '', deactivatedOn: '' });
 
 	let productList = $state<MasterList>();
+	let activeTab = $state('contracts');
 	let contractList = $state<MasterList>();
 	let productChoices = $state<Product[]>([]);
 	let selected = $state<Contract | null>(null);
@@ -342,26 +347,31 @@
 
 <svelte:window onkeydown={editorKeydown} />
 
+{#snippet mobileProduct(item: Product)}<div class="mobile-software"><strong>{item.name}</strong><span>{item.manufacturer}</span><span>{item.edition ?? ''} {item.version ?? ''}</span></div>{/snippet}
+{#snippet mobileContract(item: Contract)}<div class="mobile-software"><strong>{item.product.name}</strong><span>{item.reference} · {typeLabel(item.licenseType)}</span><span>{text.allocated}: {item.metrics.allocated} · {text.remaining}: {count(item.metrics.remaining)}</span><span>{text.renewal}: {renewal(item.metrics)}</span><span class="status" data-status={item.metrics.status}>{statusLabel(item.metrics.status)}</span></div>{/snippet}
+
 <AssetManagementShell title={text.title}>
 <div class="software-page">
 	<MasterPageHeader title={text.title} />
 	{#if error && !editor && !activeDetail}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
 	{#if notice && !editor && !activeDetail}<StatusNotice message={notice} tone="success" onDismiss={() => notice = ''} />{/if}
 	{#if loading}<LoadingSpinner label={text.loading} />{:else}
+		<PageTabs bind:active={activeTab} label={text.title} idPrefix="software" storageKey="software-tab" tabs={[{id:'alerts',label:text.renewalAlerts,count:alerts.length},{id:'contracts',label:text.contracts},{id:'products',label:text.products}]} />
+		<div id="software-alerts" role="tabpanel" aria-labelledby="software-alerts-tab" hidden={activeTab !== 'alerts'} tabindex="0">
 		<section class="software-card" aria-labelledby="renewal-title">
-			<h2 id="renewal-title">{text.renewalAlerts}</h2><p class="help">{text.renewalAlertDescription}</p>
-			{#if alerts.length === 0}<p class="empty">{text.noAlerts}</p>{:else}<ul class="alert-list">{#each alerts as item}<li><button type="button" onclick={() => void loadDetail(item.id)}>{item.product.name} · {item.reference}</button><span class:overdue={item.metrics.daysToRenewal !== null && item.metrics.daysToRenewal < 0}>{renewal(item.metrics)}</span></li>{/each}</ul>{/if}
-		</section>
-		{#snippet productActions()}{#if canManage}<AddButton label={text.addProduct} onclick={() => openProduct()} />{/if}{/snippet}
-		<MasterList bind:this={productList} endpoint="/v1/software-products" searchParam="q" title={text.products} listHeading={text.products} description="" initialSortBy="name" pageSizeStorageKey="software-products-page-size" sortStorageKey="software-products-sort" minTableWidth={650} canDetail actionLabel={(item) => (item as Product).name} headerActions={productActions} loadingLabel={text.loading} emptyLabel={text.noProducts} columns={[
+			<h2 id="renewal-title">{text.renewalAlerts} ({alerts.length})</h2><div id="renewal-content"><p class="help">{text.renewalAlertDescription}</p>
+			{#if alerts.length === 0}<p class="empty">{text.noAlerts}</p>{:else}<ul class="alert-list">{#each alerts as item}<li><button type="button" onclick={(event) => void loadDetail(item.id, true, event.currentTarget)}>{item.product.name} · {item.reference}</button><span class:overdue={item.metrics.daysToRenewal !== null && item.metrics.daysToRenewal < 0}>{renewal(item.metrics)}</span></li>{/each}</ul>{/if}
+		</div></section></div>
+		{#snippet productActions()}{#if allowedOperation('software.products.create')}<AddButton label={text.addProduct} onclick={() => openProduct()} />{/if}{/snippet}
+		<div id="software-products" class="software-list-panel" role="tabpanel" aria-labelledby="software-products-tab" hidden={activeTab !== 'products'} tabindex="0"><MasterList mobileItem={mobileProduct} bind:this={productList} endpoint="/v1/software-products" searchParam="q" title={text.products} listHeading={text.products} description="" initialSortBy="name" pageSizeStorageKey="software-products-page-size" sortStorageKey="software-products-sort" minTableWidth={650} canDetail actionLabel={(item) => (item as Product).name} headerActions={productActions} loadingLabel={text.loading} emptyLabel={text.noProducts} columns={[
 			{ key: 'name', label: text.name, width: 28, value: (item) => (item as Product).name },
 			{ key: 'manufacturer', label: text.manufacturer, width: 27, value: (item) => (item as Product).manufacturer },
 			{ key: 'edition', label: text.edition, width: 19, sortable: false, value: (item) => (item as Product).edition },
 			{ key: 'version', label: text.version, width: 19, sortable: false, value: (item) => (item as Product).version }
-		]} onDetail={(item, trigger) => void loadProductDetail(item as Product, trigger ?? undefined)} />
+		]} onDetail={(item, trigger) => void loadProductDetail(item as Product, trigger ?? undefined)} /></div>
 		{#if selectedProduct && activeDetail === 'product' && !editor}
 			<DetailModal title={selectedProduct.name} titleId="product-detail-title" closeLabel={text.close} returnFocus={detailReturnFocus} compact onClose={closeDetail}>
-				{#snippet headerActions()}<DetailActionButtons editLabel={text.editProduct} deleteLabel={common.delete} onEdit={canManage ? () => openProduct(selectedProduct) : undefined} onDelete={canDeleteProducts ? () => void removeProduct(selectedProduct!) : undefined} />{/snippet}
+				{#snippet headerActions()}<DetailActionButtons editLabel={text.editProduct} deleteLabel={common.delete} onEdit={allowedOperation('software.products.update') ? () => openProduct(selectedProduct) : undefined} onDelete={canDeleteProducts ? () => void removeProduct(selectedProduct!) : undefined} />{/snippet}
 				{@render detailMessages()}
 				<section class="app-detail-section"><h3>{common.basicInformation}</h3><dl class="app-detail-grid">
 					<div><dt>{text.manufacturer}</dt><dd>{selectedProduct.manufacturer}</dd></div>
@@ -373,9 +383,9 @@
 				<ChangeHistorySection entries={productHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} />
 			</DetailModal>
 		{/if}
-		{#snippet contractActions()}{#if canManage}<AddButton label={text.addContract} onclick={() => openContract()} disabled={productChoices.length === 0} />{/if}{/snippet}
+		{#snippet contractActions()}{#if allowedOperation('software.contracts.create')}<AddButton label={text.addContract} onclick={() => openContract()} disabled={productChoices.length === 0} />{/if}{/snippet}
 		{#snippet contractStatusCell(item: Contract)}<span class="status" data-status={item.metrics.status}>{statusLabel(item.metrics.status)}</span>{/snippet}
-		<MasterList bind:this={contractList} endpoint="/v1/software-contracts" searchParam="q" title={text.contracts} listHeading={text.contracts} description="" initialSortBy="reference" pageSizeStorageKey="software-contracts-page-size" sortStorageKey="software-contracts-sort" minTableWidth={900} canDetail actionLabel={(item) => `${(item as Contract).product.name} · ${(item as Contract).reference}`} headerActions={contractActions} loadingLabel={text.loading} emptyLabel={text.noContracts} columns={[
+		<div id="software-contracts" class="software-list-panel" role="tabpanel" aria-labelledby="software-contracts-tab" hidden={activeTab !== 'contracts'} tabindex="0"><MasterList mobileItem={mobileContract} bind:this={contractList} endpoint="/v1/software-contracts" searchParam="q" title={text.contracts} listHeading={text.contracts} description="" initialSortBy="reference" pageSizeStorageKey="software-contracts-page-size" sortStorageKey="software-contracts-sort" minTableWidth={900} canDetail actionLabel={(item) => `${(item as Contract).product.name} · ${(item as Contract).reference}`} headerActions={contractActions} loadingLabel={text.loading} emptyLabel={text.noContracts} columns={[
 			{ key: 'product', label: text.product, width: 16, sortable: false, value: (item) => (item as Contract).product.name },
 			{ key: 'reference', label: text.reference, width: 19, value: (item) => (item as Contract).reference },
 			{ key: 'licenseType', label: text.licenseType, width: 13, sortable: false, value: (item) => typeLabel((item as Contract).licenseType) },
@@ -383,10 +393,10 @@
 			{ key: 'remaining', label: text.remaining, width: 10, sortable: false, value: (item) => count((item as Contract).metrics.remaining) },
 			{ key: 'renewsOn', label: text.renewal, width: 14, value: (item) => renewal((item as Contract).metrics) },
 			{ key: 'status', label: text.complianceStatus, width: 13, sortable: false, cell: contractStatusCell }
-		]} onDetail={(item, trigger) => void loadDetail(item.id, true, trigger ?? undefined)} />
+		]} onDetail={(item, trigger) => void loadDetail(item.id, true, trigger ?? undefined)} /></div>
 		{#if selected && activeDetail === 'contract' && !editor}
 			<DetailModal title={`${selected.product.name} · ${selected.reference}`} titleId="detail-title" closeLabel={text.close} returnFocus={detailReturnFocus} initialFocusSelector={restoreDetailEditFocus && canManage ? '.detail-header-edit' : '.app-modal-close'} onClose={closeDetail}>
-				{#snippet headerActions()}<DetailActionButtons editLabel={text.editContract} deleteLabel={common.delete} onEdit={canManage ? () => openContract(selected) : undefined} onDelete={canDeleteContracts ? () => void removeContract(selected!) : undefined} />{/snippet}
+				{#snippet headerActions()}<DetailActionButtons editLabel={text.editContract} deleteLabel={common.delete} onEdit={allowedOperation('software.contracts.update') ? () => openContract(selected) : undefined} onDelete={canDeleteContracts ? () => void removeContract(selected!) : undefined} />{/snippet}
 				{@render detailMessages()}
 				<section class="app-detail-section">
 					<h3>{text.complianceStatus}</h3>
@@ -430,12 +440,12 @@
 					</dl>
 				</section>
 				<section class="app-detail-section"><h3>{text.additionalInfo}</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div></dl></section>
-				<section class="app-detail-section"><div class="section-heading"><h3>{text.recordedUse}</h3>{#if canManage && selected.licenseType !== 'concurrent'}<AddButton label={text.assign} onclick={openAssignment} />{/if}</div>
-					<div class="table-wrap app-table-scroll app-table-scroll--bounded"><table><thead><tr><th>{text.target}</th><th>{text.assignedOn}</th><th>{text.plannedReleaseOn}</th><th>{text.releasedOn}</th><th></th></tr></thead><tbody>{#each assignments as item}<tr><td>{targetName(item)}</td><td>{date(item.assignedOn)}</td><td>{date(item.plannedReleaseOn)}</td><td>{date(item.releasedOn)}</td><td>{#if canManage && !item.releasedOn}<button type="button" class="text-button" onclick={() => openRelease(item)}>{text.release}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noAssignments}</td></tr>{/each}</tbody></table></div>
+				<section class="app-detail-section"><div class="section-heading"><h3>{text.recordedUse}</h3>{#if allowedOperation('software.assignments.create') && selected.licenseType !== 'concurrent'}<AddButton label={text.assign} onclick={openAssignment} />{/if}</div>
+					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.target}</th><th>{text.assignedOn}</th><th>{text.plannedReleaseOn}</th><th>{text.releasedOn}</th><th></th></tr></thead><tbody>{#each assignments as item}<tr><td data-label={text.target}>{targetName(item)}</td><td data-label={text.assignedOn}>{date(item.assignedOn)}</td><td data-label={text.plannedReleaseOn}>{date(item.plannedReleaseOn)}</td><td data-label={text.releasedOn}>{date(item.releasedOn)}</td><td>{#if allowedOperation('software.assignments.release') && !item.releasedOn}<button type="button" class="text-button" onclick={() => openRelease(item)}>{text.release}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noAssignments}</td></tr>{/each}</tbody></table></div>
 				</section>
 				{#if selected.licenseType !== 'concurrent'}<div class="app-detail-section">{#key selected.id}<SoftwareInstallationsSection contractId={selected.id} capabilities={usageCapabilities} onChanged={async () => { if (selected) await Promise.all([loadDetail(selected.id, false), contractList?.refresh()]); }} />{/key}</div>{/if}
-				<section class="app-detail-section"><div class="section-heading"><h3>{text.key}</h3>{#if canWriteKeys}<AddButton label={text.addKey} onclick={() => openKey()} />{/if}</div>
-					<div class="table-wrap app-table-scroll app-table-scroll--bounded"><table><thead><tr><th>{text.keyLabel}</th><th>{text.key}</th><th>{text.activationLimit}</th><th>{text.keyExpiresOn}</th><th></th></tr></thead><tbody>{#each keys as item}<tr><td>{item.label ?? ''}</td><td>•••• {item.lastFour}</td><td>{count(item.activationLimit)}</td><td>{date(item.expiresOn)}</td><td>{#if canWriteKeys}<button type="button" class="text-button" onclick={() => openKey(item)}>{text.editKey}</button>{/if}{#if canReadKeys}<button type="button" class="text-button" onclick={() => { clearReveal(); revealKeyId = item.id; }}>{text.reveal}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noKeys}</td></tr>{/each}</tbody></table></div>
+				<section class="app-detail-section"><div class="section-heading"><h3>{text.key}</h3>{#if canWriteKeys && allowedOperation('software.keys.create')}<AddButton label={text.addKey} onclick={() => openKey()} />{/if}</div>
+					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.keyLabel}</th><th>{text.key}</th><th>{text.activationLimit}</th><th>{text.keyExpiresOn}</th><th></th></tr></thead><tbody>{#each keys as item}<tr><td data-label={text.keyLabel}>{item.label ?? ''}</td><td data-label={text.key}>•••• {item.lastFour}</td><td data-label={text.activationLimit}>{count(item.activationLimit)}</td><td data-label={text.keyExpiresOn}>{date(item.expiresOn)}</td><td>{#if canWriteKeys && allowedOperation('software.keys.update')}<button type="button" class="text-button" onclick={() => openKey(item)}>{text.editKey}</button>{/if}{#if canReadKeys && allowedOperation('software.keys.reveal')}<button type="button" class="text-button" onclick={() => { clearReveal(); revealKeyId = item.id; }}>{text.reveal}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noKeys}</td></tr>{/each}</tbody></table></div>
 					{#if revealKeyId !== null}<div class="reveal-panel"><h3>{text.reveal}</h3><p>{text.keyWarning}</p><form onsubmit={(event) => { event.preventDefault(); void reveal(revealKeyId!); }}><label><span>{text.currentPassword} <span class="required" aria-hidden="true">*</span></span><input type="password" bind:value={currentPassword} autocomplete="current-password" placeholder={text.currentPasswordPlaceholder} required /></label><button type="submit" class="app-primary-action">{text.reveal}</button><button type="button" class="secondary" onclick={clearReveal}>{text.close}</button></form>{#if revealError}<p role="alert">{revealError}</p>{/if}{#if revealedKey}<output>{revealedKey}</output>{/if}</div>{/if}
 				</section>
 				<ChangeHistorySection entries={contractHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} dateFields={['startsOn', 'endsOn', 'renewsOn', 'assignedOn', 'releasedOn', 'deactivatedOn', 'expiresOn']} />
@@ -518,9 +528,14 @@
 </AssetManagementShell>
 
 <style>
+ .software-list-panel,#renewal-title{scroll-margin-top:72px}.mobile-software{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}.mobile-software>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-software .status{align-self:flex-start}
+
 	.reveal-panel input::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .reveal-panel input::placeholder{color:#5a6473}
 	.software-page{min-width:0;color:var(--text)}.software-page :global(.master-list){margin-bottom:20px}.software-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:20px}.software-card h2{font-size:var(--font-size-section);margin:0}.section-heading h3{font-size:var(--font-size-subsection);margin:0}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.reveal-panel input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 9px;min-height:38px}.reveal-panel input:focus{outline:2px solid var(--action-primary)}.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);font-size:var(--font-size-body);vertical-align:top}th{font-size:var(--font-size-support);color:var(--muted);background:var(--surface-secondary)}td{overflow-wrap:anywhere}.text-button{border:0;background:none;color:var(--action-primary);text-decoration:underline;cursor:pointer;margin-right:10px;font:inherit}button:disabled{opacity:.5;cursor:not-allowed}.help,.empty{color:var(--muted);font-size:var(--font-size-support)}.alert-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;list-style:none;padding:0;margin:14px 0 0}.alert-list li{display:flex;min-width:0;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--border-light);border-radius:4px;background:var(--surface-secondary)}.alert-list button{min-width:0;padding:0;border:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;overflow-wrap:anywhere;cursor:pointer}.alert-list button:hover{text-decoration:underline}.alert-list button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}.alert-list li>span{flex:none;font-size:var(--font-size-support)}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric-grid>div{background:var(--surface-secondary);border:1px solid var(--border);border-radius:6px;padding:12px}.observation-metrics{margin-top:10px}.app-detail-section .section-heading{margin-bottom:14px}.app-detail-section .status{margin:0 0 14px}.metric-grid span{display:block;color:var(--muted);font-size:var(--font-size-support)}.metric-grid strong{display:block;margin-top:4px;font-size:var(--font-size-body)}.status{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--surface-secondary);border:1px solid var(--border);font-size:var(--font-size-support)}.status[data-status="overallocated"],.status[data-status="expired"]{color:var(--danger)}.reveal-panel{border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:16px}.reveal-panel form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.reveal-panel label{display:flex;flex-direction:column;gap:5px}.app-modal-form .checkbox{display:flex;align-items:center;flex-direction:row;gap:8px}.app-modal-form .checkbox input{width:auto;height:auto}.app-modal-form .wide{grid-column:1/-1}.reveal-panel output{display:block;padding:12px;margin-top:12px;overflow-wrap:anywhere;background:var(--surface-secondary);border:1px solid var(--border)}@media(max-width:900px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:1000px){.alert-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.software-card{padding:16px}.alert-list{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-heading{align-items:flex-start;flex-wrap:wrap}}
 	.overdue{color:var(--danger)!important}
 	.app-modal-form .required,.reveal-panel .required{color:var(--danger)}
 	.currency-field{min-width:0}.legacy-currency{display:block;margin-top:6px;color:var(--danger);font-size:var(--font-size-support)}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.software-card{padding:12px}.alert-list{grid-template-columns:1fr}.alert-list button{min-height:44px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+[role='tabpanel']:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 </style>

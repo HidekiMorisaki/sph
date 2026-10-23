@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, type Snippet } from 'svelte';
 	import ModalBackdrop from './ModalBackdrop.svelte';
+	import ModalHeader from './ModalHeader.svelte';
 	import { rememberDetailReturn, takeDetailReturn, forgetDetailReturn } from '$lib/detail-modal-return';
 
 	let {
@@ -10,7 +11,9 @@
 		closeLabel,
 		returnFocus = null,
 		initialFocusSelector = '.app-modal-close',
+		initialFocusFromPointer = false,
 		compact = false,
+		compactHeader = false,
 		dialogClass = '',
 		headerActions,
 		actions,
@@ -23,7 +26,9 @@
 		closeLabel: string;
 		returnFocus?: HTMLElement | null;
 		initialFocusSelector?: string;
+		initialFocusFromPointer?: boolean;
 		compact?: boolean;
+		compactHeader?: boolean;
 		dialogClass?: string;
 		headerActions?: Snippet;
 		actions?: Snippet;
@@ -32,6 +37,7 @@
 	} = $props();
 
 	let dialogElement = $state<HTMLDialogElement>();
+	let keyboardUsed = $state(false);
 
 	function close() {
 		const target = returnFocus;
@@ -51,6 +57,7 @@
 		if (event.defaultPrevented || !dialogElement) return;
 		const openDialogs = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')];
 		if (openDialogs.at(-1) !== dialogElement) return;
+		keyboardUsed = true;
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			close();
@@ -86,7 +93,10 @@
 
 <svelte:window onkeydown={handleKeydown} />
 <ModalBackdrop>
-	<dialog bind:this={dialogElement} class={`app-modal app-detail-modal ${dialogClass}`} class:app-modal--compact={compact} open aria-modal="true" aria-labelledby={titleId}>
+	<dialog bind:this={dialogElement} class={`app-modal app-detail-modal ${dialogClass}`} class:app-modal--pointer-focus={initialFocusFromPointer && !keyboardUsed} class:app-modal--compact={compact} class:app-modal--compact-header={compactHeader} open aria-modal="true" aria-labelledby={titleId}>
+		{#if !pretitle && !headerActions}
+			<ModalHeader {title} {titleId} {closeLabel} onClose={close} />
+		{:else}
 		<header>
 			<div>
 				{#if pretitle}<p class="app-detail-pretitle">{pretitle}</p>{/if}
@@ -96,11 +106,14 @@
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 			</button></div>
 		</header>
+		{/if}
 		<div class="app-detail-body">{@render children()}</div>
 		{#if actions}<footer class="app-modal-footer app-detail-actions">{@render actions()}</footer>{/if}
 	</dialog>
 </ModalBackdrop>
 
 <style>
+	/* Pointer input inside a sandboxed iframe does not update host focus modality. */
+	.app-modal--pointer-focus :global(.app-modal-close:focus-visible){outline:none!important}
 	.app-detail-header-actions{display:flex;align-items:center;gap:4px;flex:none}
 </style>

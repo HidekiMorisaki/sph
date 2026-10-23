@@ -1,0 +1,50 @@
+{
+  "id": "sph.programmer_calculator",
+  "provider": "SPH Official",
+  "author": "H.Morisaki",
+  "version": "1.0.0",
+  "schemaVersion": 2,
+  "name": {
+    "ja": "電卓（プログラマー）",
+    "en": "Calculator (Programmer)"
+  },
+  "description": {
+    "ja": "HEX・DEC・OCT・BINの相互変換、8・16・32・64ビット、符号付き／符号なしの整数演算に対応します。四則演算、剰余、AND・OR・XOR・NOT、左右シフトを入力順に実行します。桁あふれは選択幅の下位ビットに折り返し、右シフトはゼロ埋めです。シフト数は0以上、ビット幅未満とします。割り算は小数部を切り捨て（0方向）、剰余は左の値の符号に従います。ビット幅や符号モードの変更は計算途中をクリアします。ビット幅を広げる際、符号付きの負数は符号拡張します。計算内容はブラウザー内だけで処理し、再読み込みでリセットします。",
+    "en": "Converts between HEX, DEC, OCT and BIN, with 8-, 16-, 32- and 64-bit signed or unsigned integer arithmetic. Supports entry-order arithmetic, remainder, AND, OR, XOR, NOT and shifts. Overflow wraps to the selected word width; right shift fills with zeroes. Shift counts must be at least zero and less than the word width. Division truncates toward zero; remainder follows the left operand sign. Changing word width or signed mode clears pending operations. Widening signed negative values sign-extends them. Calculations stay in browser memory and reset on reload."
+  },
+  "sizes": [
+    "3x2",
+    "3x3",
+    "3x4",
+    "2x2"
+  ],
+  "capabilities": [],
+  "settings": {},
+  "view": [
+    {
+      "type": "runtime"
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/HidekiMorisaki/sph/blob/main/LICENSE"
+  },
+  "sizeLayouts": {
+    "3x2": {
+      "rows": 3,
+      "columns": 2
+    },
+    "3x3": {
+      "rows": 3,
+      "columns": 3
+    },
+    "3x4": {
+      "rows": 3,
+      "columns": 4
+    },
+    "2x2": {
+      "rows": 2,
+      "columns": 2
+    }
+  }
+}

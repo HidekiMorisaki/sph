@@ -9,8 +9,9 @@ export function localizedMenus(language: DisplayLanguage): MenuGroup[] {
 	const text = localeMessages[language].navigation;
 	return [
 		{ id: 'dashboard', label: text.groups.dashboard, items: [
-			{ id: 'employeeAnalytics', text: text.items.employeeAnalytics, icon: 'employeeAnalytics', href: '/' },
-			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'trending_up', href: '/financial-trends' }
+			{ id: 'employeeAnalytics', text: text.items.employeeAnalytics, icon: 'employeeAnalytics', href: '/employee-analytics' },
+			{ id: 'financialTrends', text: text.items.financialTrends, icon: 'trending_up', href: '/financial-trends' },
+			{ id: 'assetOverview', text: text.items.assetOverview, icon: 'itAssets', href: '/asset-overview' }
 		] },
 		{ id: 'general', label: text.groups.general, items: [
 			{ id: 'workCalendars', text: text.items.workCalendars, icon: 'calendar', href: '/work-calendars' },
@@ -44,6 +45,7 @@ export const menus = localizedMenus('en');
 
 export function breadcrumbsForPath(path: string, title: string, language: DisplayLanguage = 'en'): Breadcrumb[] {
 	const breadcrumbs: Breadcrumb[] = [{ label: localeMessages[language].navigation.home, ...(path === '/' ? {} : { href: '/' }) }];
+	if (path === '/widget-editor') return [...breadcrumbs,{label:language==='ja'?'ウィジェット開発':'Widget development'}];
 	if (path === '/my-page') return [...breadcrumbs, { label: localeMessages[language].navigation.items.myPage }];
 	for (const group of localizedMenus(language)) {
 		for (const item of group.items) {

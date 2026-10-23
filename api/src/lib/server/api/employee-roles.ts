@@ -1,19 +1,10 @@
+import { lockSystemAdministrators, preserveSystemAdministrator } from './system-administrator-protection';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { getPrisma } from '$lib/server/prisma';
 
 export type RoleSyncResult = 'updated' | 'roles_not_found' | 'system_role_forbidden' | 'last_system_administrator';
-
-const systemPermissionRelation = {
-	some: {
-		deletedAt: null,
-		permission: {
-			deletedAt: null,
-			operations: { some: { operation: permissionOperations.systemManagement, deletedAt: null } }
-		}
-	}
-} as const;
 
 type RoleWithPermissions = {
 	id: number;
@@ -64,6 +55,7 @@ export async function syncGlobalRoleGrants(
 	roleIds: number[]
 ): Promise<RoleSyncResult> {
 	if (roleIds.length !== 1) return 'roles_not_found';
+	await lockSystemAdministrators(tx);
 	await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId} FOR UPDATE`;
 	if (!await lockRequestedRoles(tx, roleIds)) return 'roles_not_found';
 	const [roles, currentGrants] = await Promise.all([
@@ -80,18 +72,7 @@ export async function syncGlobalRoleGrants(
 	if (!hasPermissionOperation(actor, permissionOperations.systemManagement) &&
 		currentGrants.some((grant) => grant.role.defaultKey === 'branch_administrator') !== roles.some((role) => role.defaultKey === 'branch_administrator')) return 'system_role_forbidden';
 
-	if (currentHasSystemRole && !requestedHasSystemRole) {
-		const otherSystemAdministrators = await tx.employeeRole.count({
-			where: {
-				employeeId: { not: employeeId },
-				deletedAt: null,
-				scopeType: 'global',
-				role: { deletedAt: null, permissions: systemPermissionRelation },
-				employee: { accountStatus: 'active', deletedAt: null }
-			}
-		});
-		if (!otherSystemAdministrators) return 'last_system_administrator';
-	}
+	if (currentHasSystemRole && !requestedHasSystemRole) await preserveSystemAdministrator(tx, employeeId);
 
 	await tx.employeeRole.updateMany({
 		where: { employeeId, deletedAt: null, OR: [

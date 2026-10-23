@@ -1,8 +1,8 @@
 # Advanced search and personal saved filters
 
-The employee and book catalogs have a search area above the data card. The existing
+The employee, book and IT asset catalogs have a search area above the data card. The existing
 registration actions, columns, sort controls, page sizes, and pagination remain in
-the data card. Other lists retain their existing search behavior.
+the data card. Other lists retain their existing search behavior. IT asset specifics are documented in [IT asset search](IT_Asset_Search.md).
 
 ## Using the search area
 
@@ -12,10 +12,10 @@ creates filters using the current ID-based format from the start. Legacy
 explicit team-code predicates require replacement with name-based team selection;
 they are rejected rather than silently changing their meaning.
 
-Employees and books automatically update the list when keywords, individual fields, condition
+Employees, books and IT assets automatically update the list when keywords, individual fields, condition
 expressions or quick filters change. Changes are debounced by 250ms; a new search
 resets pagination and supersedes older requests. There is no Search button or applied-condition summary.
-Both pages have a search-card header with **Simple search**, **Advanced search**, and
+These pages have a search-card header with **Simple search**, **Advanced search**, and
 **Saved filters** tabs, in that order. The initial tab is Simple search. Tab changes
 are saved separately per target and employee ID in
 the current browser and restored on return or reload; unavailable browser storage

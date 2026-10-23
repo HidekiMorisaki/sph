@@ -1,0 +1,147 @@
+{
+  "entries": [
+    {
+      "package": "@esbuild/win32-x64@0.28.2",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryArchive": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.2.tgz",
+      "integrity": "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g==",
+      "source": "https://raw.githubusercontent.com/evanw/esbuild/609683d892977362a0f99026cb74b96263d728a9/LICENSE.md",
+      "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681",
+      "appliesTo": [
+        {
+          "package": "@esbuild/win32-x64@0.28.2",
+          "registryArchive": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.2.tgz",
+          "integrity": "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="
+        }
+      ]
+    },
+    {
+      "package": "@polka/url@1.0.0-next.29",
+      "gitHead": "02cbdb529ddca0a9f3d225e2abb2931924219cc3",
+      "registryArchive": "https://registry.npmjs.org/@polka/url/-/url-1.0.0-next.29.tgz",
+      "integrity": "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==",
+      "source": "https://raw.githubusercontent.com/lukeed/polka/02cbdb529ddca0a9f3d225e2abb2931924219cc3/license",
+      "sha256": "ba573393f24555ac0528612ad39665fab5bdcc80330a61096024bbf5f736526d",
+      "appliesTo": [
+        {
+          "package": "@polka/url@1.0.0-next.29",
+          "registryArchive": "https://registry.npmjs.org/@polka/url/-/url-1.0.0-next.29.tgz",
+          "integrity": "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="
+        }
+      ]
+    },
+    {
+      "package": "@radix-ui/react-compose-refs@1.1.2",
+      "gitHead": "fcef0668a5c827e5a4baac405474d75680f9a4eb",
+      "registryArchive": "https://registry.npmjs.org/@radix-ui/react-compose-refs/-/react-compose-refs-1.1.2.tgz",
+      "integrity": "sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==",
+      "source": "https://raw.githubusercontent.com/radix-ui/primitives/fcef0668a5c827e5a4baac405474d75680f9a4eb/LICENSE",
+      "sha256": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138",
+      "appliesTo": [
+        {
+          "package": "@radix-ui/react-compose-refs@1.1.2",
+          "registryArchive": "https://registry.npmjs.org/@radix-ui/react-compose-refs/-/react-compose-refs-1.1.2.tgz",
+          "integrity": "sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg=="
+        },
+        {
+          "package": "@radix-ui/react-use-layout-effect@1.1.1",
+          "registryArchive": "https://registry.npmjs.org/@radix-ui/react-use-layout-effect/-/react-use-layout-effect-1.1.1.tgz",
+          "integrity": "sha512-RbJRS4UWQFkzHTTwVymMTUv8EqYhOp8dOOviLj2ugtTiXRaRQS7GLGxZTLL1jWhMeoSCf5zmcZkqTl9IiYfXcQ=="
+        }
+      ]
+    },
+    {
+      "package": "@rollup/rollup-win32-x64-gnu@4.60.1",
+      "gitHead": "ae871d762f6bbeb4320d28fe179211168f27a434",
+      "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.60.1.tgz",
+      "integrity": "sha512-k+600V9Zl1CM7eZxJgMyTUzmrmhB/0XZnF4pRypKAlAgxmedUA+1v9R+XOFv56W4SlHEzfeMtzujLJD22Uz5zg==",
+      "source": "https://raw.githubusercontent.com/rollup/rollup/ae871d762f6bbeb4320d28fe179211168f27a434/LICENSE.md",
+      "sha256": "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8",
+      "appliesTo": [
+        {
+          "package": "@rollup/rollup-win32-x64-gnu@4.60.1",
+          "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.60.1.tgz",
+          "integrity": "sha512-k+600V9Zl1CM7eZxJgMyTUzmrmhB/0XZnF4pRypKAlAgxmedUA+1v9R+XOFv56W4SlHEzfeMtzujLJD22Uz5zg=="
+        },
+        {
+          "package": "@rollup/rollup-win32-x64-msvc@4.60.1",
+          "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.60.1.tgz",
+          "integrity": "sha512-lWMnixq/QzxyhTV6NjQJ4SFo1J6PvOX8vUx5Wb4bBPsEb+8xZ89Bz6kOXpfXj9ak9AHTQVQzlgzBEc1SyM27xQ=="
+        }
+      ]
+    },
+    {
+      "package": "@rollup/rollup-win32-x64-gnu@4.63.4",
+      "gitHead": "ba78d5752a1e1ff4ff4af3a8bffab7691d822f7d",
+      "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.63.4.tgz",
+      "integrity": "sha512-blj9z5qx/Pv4WU0W1NMFDB97e0JH5ed+aZGywW8WCvp/NhWX/4PFAq5uu6Q0AebNn+Vo6KzUYDT++JzTT5ojlQ==",
+      "source": "https://raw.githubusercontent.com/rollup/rollup/ba78d5752a1e1ff4ff4af3a8bffab7691d822f7d/LICENSE.md",
+      "sha256": "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8",
+      "appliesTo": [
+        {
+          "package": "@rollup/rollup-win32-x64-gnu@4.63.4",
+          "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.63.4.tgz",
+          "integrity": "sha512-blj9z5qx/Pv4WU0W1NMFDB97e0JH5ed+aZGywW8WCvp/NhWX/4PFAq5uu6Q0AebNn+Vo6KzUYDT++JzTT5ojlQ=="
+        },
+        {
+          "package": "@rollup/rollup-win32-x64-msvc@4.63.4",
+          "registryArchive": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.63.4.tgz",
+          "integrity": "sha512-Erx822VRBwLa124shbj+wNXe//BOgMEctDV0m1aqTQdNO1S69DgNUCFKC1RCeZfixs1J31l6igk1ziyXErbigQ=="
+        }
+      ]
+    },
+    {
+      "package": "postgres@3.4.7",
+      "gitHead": "9b92b65da6a5121545581a6dd5de859c2a70177f",
+      "registryArchive": "https://registry.npmjs.org/postgres/-/postgres-3.4.7.tgz",
+      "integrity": "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==",
+      "source": "https://raw.githubusercontent.com/porsager/postgres/9b92b65da6a5121545581a6dd5de859c2a70177f/UNLICENSE",
+      "sha256": "b5065838cbac452dfc855ba6e6e031481ad2c68406f70d21ead9321374653e6c",
+      "appliesTo": [
+        {
+          "package": "postgres@3.4.7",
+          "registryArchive": "https://registry.npmjs.org/postgres/-/postgres-3.4.7.tgz",
+          "integrity": "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw=="
+        }
+      ]
+    },
+    {
+      "package": "remeda@2.33.4",
+      "gitHead": "f9e681a707fd8cac00c43c10591c44e17f577610",
+      "registryArchive": "https://registry.npmjs.org/remeda/-/remeda-2.33.4.tgz",
+      "integrity": "sha512-ygHswjlc/opg2VrtiYvUOPLjxjtdKvjGz1/plDhkG66hjNjFr1xmfrs2ClNFo/E6TyUFiwYNh53bKV26oBoMGQ==",
+      "source": "https://raw.githubusercontent.com/remeda/remeda/f9e681a707fd8cac00c43c10591c44e17f577610/LICENSE",
+      "sha256": "acf30083045d768ce20640237313ee31a45d548d66ef76df5bb5fb0745479535",
+      "appliesTo": [
+        {
+          "package": "remeda@2.33.4",
+          "registryArchive": "https://registry.npmjs.org/remeda/-/remeda-2.33.4.tgz",
+          "integrity": "sha512-ygHswjlc/opg2VrtiYvUOPLjxjtdKvjGz1/plDhkG66hjNjFr1xmfrs2ClNFo/E6TyUFiwYNh53bKV26oBoMGQ=="
+        }
+      ]
+    },
+    {
+      "package": "sirv@3.0.2",
+      "gitHead": "1135207e92c40354543cbd15c763c7a61d79d432",
+      "registryArchive": "https://registry.npmjs.org/sirv/-/sirv-3.0.2.tgz",
+      "integrity": "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==",
+      "source": "https://raw.githubusercontent.com/lukeed/sirv/1135207e92c40354543cbd15c763c7a61d79d432/license",
+      "sha256": "ba573393f24555ac0528612ad39665fab5bdcc80330a61096024bbf5f736526d",
+      "appliesTo": [
+        {
+          "package": "sirv@3.0.2",
+          "registryArchive": "https://registry.npmjs.org/sirv/-/sirv-3.0.2.tgz",
+          "integrity": "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g=="
+        }
+      ]
+    }
+  ],
+  "noticeSha256": "9fb3b8a5696d7e78bbe90126cc52191974797a6c972a79928b56991b85498e72",
+  "unresolvedCandidates": [
+    "@prisma/dev@0.24.17",
+    "is-reference@1.2.1",
+    "is-reference@3.0.3",
+    "locate-character@3.0.0"
+  ],
+  "scope": "Candidates without original license text must not be redistributed in a binary or dependency archive without further review. Source-only Git distribution does not contain node_modules or generated build output."
+}

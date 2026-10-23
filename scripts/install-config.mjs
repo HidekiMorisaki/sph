@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
+import { displayText, displayPrompt } from './install-display.mjs';
 import { gatewaySettings } from './gateway-config.mjs';
 
 const initialDefaults = JSON.parse(readFileSync(new URL('install-defaults.json', import.meta.url), 'utf8'));
@@ -49,22 +50,22 @@ export function envValue(value) {
 	return /^[A-Za-z0-9_-]+$/.test(value) ? value : `'${value.replaceAll("'", "\\'")}'`;
 }
 
-export async function configuration(language, ask, say, hostDetails = {}) {
+export async function configuration(language, ask, say, hostDetails = {}, presentation = {}) {
 	if (!Object.hasOwn(initialDefaults, language)) throw new Error('Unsupported language.');
 	const defaults = initialDefaults[language];
 	const hostDefaults = hostUrlDefaults(hostDetails);
 	const text = installerText(language);
 	const input = async (key, fallback, valid) => {
 		while (true) {
-			const answer = (await ask(text('prompt.default', text(key), fallback))).trim() || fallback;
+			const answer = (await ask(displayPrompt(text, text(key), fallback, presentation.color))).trim() || fallback;
 			if (!/[\x00-\x1f\x7f]/.test(answer) && valid(answer)) return answer;
-			say(text('input.invalid'));
+			say(text('input.invalid'), 'warning');
 		}
 	};
 	const limited = maximum => value => value.length > 0 && value.length <= maximum;
 	const select = async (key, options) => {
-		say(text('prompt.selection', text(key)));
-		options.forEach((option, index) => say(text('prompt.option', index + 1, text(option.label))));
+		say(text('prompt.selection', text(key)), 'question');
+		options.forEach((option, index) => say(text('prompt.option', index + 1, text(option.label)), 'option'));
 		const answer = await input('input.selectNumber', '1', value => /^[1-9]\d*$/.test(value) && Number(value) <= options.length);
 		return options[Number(answer) - 1].value;
 	};
@@ -94,15 +95,15 @@ export async function configuration(language, ask, say, hostDetails = {}) {
 		values.HTTP_PORT = await input('connection.port', '80', value => /^\d{1,5}$/.test(value) && Number(value) >= 1 && Number(value) <= 65535);
 		let address = hostDefaults.addresses[0];
 		if (hostDefaults.addresses.length > 1) {
-			say(text('prompt.selection', text('connection.ipAddress')));
-			hostDefaults.addresses.forEach((candidate, index) => say(text('prompt.option', index + 1, candidate)));
+			say(text('prompt.selection', text('connection.ipAddress')), 'question');
+			hostDefaults.addresses.forEach((candidate, index) => say(text('prompt.option', index + 1, candidate), 'option'));
 			while (true) {
-				const answer = (await ask(text('prompt.selection', text('input.selectNumber')))).trim();
+				const answer = (await ask(displayText(text('prompt.selection', text('input.selectNumber')), 'question', presentation.color))).trim();
 				if (/^[1-9]\d*$/.test(answer) && Number(answer) <= hostDefaults.addresses.length) {
 					address = hostDefaults.addresses[Number(answer) - 1];
 					break;
 				}
-				say(text('input.invalid'));
+				say(text('input.invalid'), 'warning');
 			}
 		}
 		const suggested = address ? `http://${address}${values.HTTP_PORT === '80' ? '' : ':' + values.HTTP_PORT}` : '';
@@ -126,22 +127,26 @@ export async function configuration(language, ask, say, hostDetails = {}) {
 			values.ACME_EMAIL = await input('connection.acmeEmail', '', value => {
 				try { gatewaySettings('public', values.APP_ORIGIN, value); return true; } catch { return false; }
 			});
-			if ((await ask(text('connection.acmeAgreement'))).trim() !== 'YES') throw new Error('error.acmeDeclined');
+			if ((await ask(displayText(text('connection.acmeAgreement'), 'question', presentation.color))).trim() !== 'YES') throw new Error('error.acmeDeclined');
 		} else say(text('connection.internalTrustNotice'));
 	}
 	values.CORS_ALLOWED_ORIGINS = values.APP_ORIGIN;
 	values.INITIAL_ADMIN_USERNAME = await input('account.username', 'admin', limited(64));
 	say(text('password.notice'));
 	while (true) {
-		const password = await ask(text('password.prompt'), true);
-		if (!strongPassword(password)) { say(text('password.invalid')); continue; }
-		if (password !== await ask(text('password.confirm'), true)) { say(text('password.mismatch')); continue; }
+		const password = await ask(displayText(text('password.prompt'), 'question', presentation.color), true);
+		if (!strongPassword(password)) { say(text('password.invalid'), 'warning'); continue; }
+		if (password !== await ask(displayText(text('password.confirm'), 'question', presentation.color), true)) { say(text('password.mismatch'), 'warning'); continue; }
 		values.INITIAL_ADMIN_PASSWORD = password;
 		break;
 	}
 	say(text('profile.notice'));
-	values.INITIAL_ADMIN_FIRST_NAME = await input('profile.firstName', defaults.firstName, limited(128));
-	values.INITIAL_ADMIN_LAST_NAME = await input('profile.lastName', defaults.lastName, limited(128));
+	const nameFields = [
+		{ key: 'INITIAL_ADMIN_FIRST_NAME', label: 'profile.firstName', fallback: defaults.firstName },
+		{ key: 'INITIAL_ADMIN_LAST_NAME', label: 'profile.lastName', fallback: defaults.lastName }
+	];
+	if (language === 'ja') nameFields.reverse();
+	for (const field of nameFields) values[field.key] = await input(field.label, field.fallback, limited(128));
 	values.INITIAL_ADMIN_BIRTH_DATE = await input('profile.birthDate', '1990-01-01', validDate);
 	values.INITIAL_ADMIN_GENDER = await select('profile.gender', [
 		{ value: 'unspecified', label: 'gender.unspecified' },
@@ -173,8 +178,7 @@ async function main() {
 	if (!Object.hasOwn(initialDefaults, language)) throw new Error();
 	if (existsSync('.env')) throw new Error('error.existingConfiguration');
 	if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('error.terminal');
-	const color = !Object.hasOwn(process.env, 'NO_COLOR') && process.env.TERM !== 'dumb';
-	const accent = value => color ? `\x1b[36m${value}\x1b[0m` : value;
+	const color = process.stdout.isTTY && !Object.hasOwn(process.env, 'NO_COLOR') && process.env.TERM !== 'dumb';
 	let hidden = false;
 	const output = new Writable({ write(chunk, encoding, callback) { if (!hidden) process.stdout.write(chunk); callback(); } });
 	output.isTTY = process.stdout.isTTY;
@@ -184,29 +188,29 @@ async function main() {
 	terminal.on('SIGINT', () => { terminal.close(); process.stdout.write(text('cancelled')); process.exit(130); });
 	try {
 		const values = await configuration(language, async (prompt, secret = false) => {
-			if (secret) process.stdout.write(accent(prompt));
+			if (secret) process.stdout.write(prompt);
 			hidden = secret;
-			try { return await terminal.question(secret ? '' : accent(prompt)); }
+			try { return await terminal.question(secret ? '' : prompt); }
 			finally { hidden = false; if (secret) process.stdout.write('\n'); }
-		}, message => process.stdout.write(accent(message) + '\n'), {
+		}, (message, role = 'message') => process.stdout.write(displayText(message, role, color) + '\n'), {
 			ipv4Addresses: process.env.SPH_INSTALL_HOST_IPV4,
 			hostname: process.env.SPH_INSTALL_HOSTNAME
-		});
+		}, { color });
 		process.umask(0o077);
 		try {
 			writeFileSync('.env', Object.entries(values).map(([key, value]) => `${key}=${envValue(value)}`).join('\n') + '\n', { flag: 'wx', mode: 0o600 });
 		} catch (error) {
 			throw new Error(error.code === 'EEXIST' ? 'error.existingConfiguration' : 'error.saveConfiguration');
 		}
-		process.stdout.write(text('configuration.saved'));
-	} finally { terminal.close(); }
+		process.stdout.write(displayText(text('configuration.saved'), 'success', color));
+	} finally { terminal.close(); if (color) process.stdout.write('\x1b[0m'); }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	main().catch(error => {
 		// Native Docker stderr is suppressed by the launcher. Show only allowlisted messages on stdout.
 		const key = ['error.existingConfiguration', 'error.terminal', 'error.saveConfiguration', 'error.acmeDeclined'].includes(error.message) ? error.message : 'configuration.failed';
-		try { console.log(installerText(process.argv[2])(key)); }
+		try { console.log(displayText(installerText(process.argv[2])(key), 'error', process.stdout.isTTY && !Object.hasOwn(process.env, 'NO_COLOR') && process.env.TERM !== 'dumb')); }
 		catch { console.log('Installer language files are missing or invalid. Extract the complete release again before running the installer.'); }
 		process.exitCode = 1;
 	});

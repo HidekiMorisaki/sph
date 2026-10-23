@@ -1,0 +1,6 @@
+/* Physical card text sizes stay independent of the shared cell scale on phones. */
+#root[data-compact="true"]{font-size:var(--widget-compact-body-font)}
+#root[data-compact="true"] :is(p,pre,output,strong,span,button,input,select,textarea,li,td,th,h2,h3,h4,a){font-size:var(--widget-compact-body-font);line-height:1.4}
+#root[data-compact="true"] :is(label,small,.expression,.city,.empty,.error){font-size:var(--widget-compact-support-font);line-height:1.4}
+#root[data-compact="true"] :is(.time,.clock,.result){font-size:var(--widget-compact-result-font);line-height:1.25}
+#root[data-compact="true"] .analog-clock{width:min(192px,calc(var(--widget-available-height) - 2.8 * var(--widget-compact-support-font) - 8px))}

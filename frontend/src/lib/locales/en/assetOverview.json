@@ -1,0 +1,16 @@
+{
+	"title": "Asset Overview",
+	"unassigned": "Unassigned IT assets",
+	"assets": "assets",
+	"types": "By asset type",
+	"branches": "By branch",
+	"allBranches": "All branches",
+	"ownBranch": "Own branch only",
+	"definition": "Assets without an active assignment. Deleted assets and assets disposed of on or before today (Japan time) are excluded. Counts reflect current records; select a count to view the matching assets.",
+	"empty": "No matching assets.",
+	"openList": "View matching assets",
+	"loading": "Loading…",
+	"loadFailed": "Unable to load the asset summary.",
+	"forbidden": "You do not have permission to view this summary.",
+	"retry": "Retry"
+}

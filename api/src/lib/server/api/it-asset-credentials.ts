@@ -3,6 +3,19 @@ import { env } from '$env/dynamic/private';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { ApiErrorDetail } from './response';
 import { writeAuditLog } from './admin';
+import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { requiredBranchScope } from './branch-access';
+import { throwApiError } from './response';
+
+export async function authorizeCredentialChange(tx: Prisma.TransactionClient, actor: AuthenticatedUser, assetId: number | null, storageId?: number) {
+	const operations = [actor.activeOperation === 'assets.create' ? 'assets.create' : 'assets.update', 'assets.manage', 'assets.read', 'assets.credentials.update', 'assets.credentials.write'];
+	const scoped = operations.map(code => requiredBranchScope(actor, code)).some(scope => scope !== null);
+	if (assetId !== null) {
+		await tx.$queryRaw`SELECT id FROM it_assets WHERE id = ${assetId} AND deleted_at IS NULL FOR UPDATE`;
+		if (!await tx.itAsset.count({ where: { id: assetId, deletedAt: null, ...(scoped ? { storage: { branchId: actor.branchId } } : {}) } })) throwApiError(404, 'NOT_FOUND', 'Not found.');
+	}
+	if (storageId !== undefined && scoped && !await tx.storage.count({ where: { id: storageId, branchId: actor.branchId, deletedAt: null } })) throwApiError(403, 'BRANCH_ACCESS_DENIED', 'Credential access to the destination branch is required.');
+}
 
 export const ASSET_CREDENTIAL_TYPES = ['admin', 'login', 'management_console'] as const;
 export type AssetCredentialType = (typeof ASSET_CREDENTIAL_TYPES)[number];

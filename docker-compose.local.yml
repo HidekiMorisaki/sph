@@ -67,6 +67,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       IT_ASSET_CREDENTIAL_ENCRYPTION_KEY: ${IT_ASSET_CREDENTIAL_ENCRYPTION_KEY}
       SPH_SYSTEM_METRICS: docker
+      # Only gateway is published. Caddy replaces untrusted forwarding headers.
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
       ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
     expose:
       - "3000"
@@ -78,7 +81,7 @@ services:
       migration:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/v1/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/v1/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -101,6 +104,9 @@ services:
       - "3000"
     networks:
       - app-network
+    depends_on:
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 10s
@@ -111,8 +117,8 @@ services:
 
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: gateway/Dockerfile
     pull_policy: build
     container_name: sph-gateway
     restart: unless-stopped

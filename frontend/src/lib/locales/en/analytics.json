@@ -1,4 +1,9 @@
 {
+	"averageTenure": "Average tenure",
+	"averageTenureNote": "Mean completed months of service for employees active on the reference date, expressed in years.",
+	"tenure": "Employees by tenure",
+	"tenureNote": "Employees active at the end of the selected period, grouped by tenure on that date. The retirement date is excluded from employment.",
+	"tenureLabels": { "under1": "Under 1 year", "1to3": "1 to under 3 years", "3to5": "3 to under 5 years", "5to10": "5 to under 10 years", "10to20": "10 to under 20 years", "20plus": "20 years or more" },
 	"title": "Employee analytics",
 	"description": "Employee demographics and workforce trends",
 	"headcount": "Employees at reference date",

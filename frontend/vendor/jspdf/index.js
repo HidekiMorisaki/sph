@@ -1,0 +1,11 @@
+export { jsPDF } from "./jspdf.js";
+import "./modules/filters.js";
+import "./modules/vfs.js";
+import "./modules/ttfsupport.js";
+import "./modules/utf8.js";
+import "./modules/standard_fonts_metrics.js";
+import "./modules/split_text_to_size.js";
+import "./modules/annotations.js";
+import "./modules/setlanguage.js";
+import "./libs/ttffont.js";
+import "./libs/bidiEngine.js";

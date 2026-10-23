@@ -59,5 +59,14 @@
 	"actionsFor": "{1}の操作",
 	"usedOne": "{1}件のデータで使用中",
 	"usedMany": "{1}件のデータで使用中",
-	"byActor": "変更者：{1}"
+	"byActor": "変更者：{1}",
+	"displaySettings": "表示設定",
+	"sortBy": "並び順",
+	"ascending": "昇順",
+	"descending": "降順",
+	"filters": "絞り込み",
+	"appliedConditions": "適用中：{1}条件",
+	"sortDirection": "昇順・降順",
+	"moveUp": "上へ移動",
+	"moveDown": "下へ移動"
 }
