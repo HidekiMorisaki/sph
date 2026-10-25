@@ -47,7 +47,7 @@ SME Portal Hub ( 略称：SPH ) は、中小企業が社内向けのポータル
 ### 1. 事前準備
 
 インストールするには Git、Docker、Docker Compose が必要です。事前にインストールして正常に動作することを確認してください。
-ローカル限定インストールでは既定でホストのポート`3000`を使用します（インストーラーで変更可能）。HTTPS インストールでは`80`と`443`、社内 HTTP では選択した Web ポートを使用します。PostgreSQL はホストのループバック用ポート`5432`で待ち受けます。必要なポートが空いていることを確認してください。
+ローカル限定インストールでは既定でホストのポート `3000` を使用します（インストーラーで変更可能）。HTTPS インストールでは `80` と `443`、社内 HTTP では選択した Web ポートを使用します。PostgreSQL はホストのループバック用ポート `5432` で待ち受けます。必要なポートが空いていることを確認してください。
 
 ### 2. ダウンロード
 
@@ -58,10 +58,10 @@ cd sph
 
 ### 3. インストーラーの実行
 
-| プラットフォーム | ダウンロードしたフォルダーでの実行方法                                   |
-| ---------------- | ------------------------------------------------------------------------ |
-| Windows          | `install.bat`をダブルクリック、または PowerShell で`.\install.ps1`を実行 |
-| macOS / Linux    | ターミナルで`bash ./install.sh`を実行                                    |
+| プラットフォーム | ダウンロードしたフォルダーでの実行方法                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| Windows          | `install.bat` をダブルクリック、または PowerShell で `.\install.ps1` を実行 |
+| macOS / Linux    | ターミナルで `bash ./install.sh` を実行                                     |
 
 インストーラーは英語と日本語に対応しています。表示言語を選択した後は、対話形式でインストールを行います。画面の案内に従ってインストールを行ってください。インストーラーがシステムをビルドして起動し、URL とログイン方法を表示します。
 
@@ -116,30 +116,23 @@ cd sph
 
 ### インストーラーが停止した場合
 
-インストーラーは新規インストール専用です。既存の`.env`ファイル、SPH のコンテナー、または`sph-db-data`ボリュームがある場合は、それらを置き換えずに停止します。インストール済みの環境では、通常の起動・更新・復旧手順を使用してください。
+インストーラーは新規インストール専用です。既存の `.env` ファイル、SPH のコンテナー、または `sph-db-data` ボリュームがある場合は、それらを置き換えずに停止します。インストール済みの環境では、通常の起動・更新・復旧手順を使用してください。
 
 インストールに失敗した場合は、停止した工程、失敗した操作または検出した状態、次に確認する事項を表示します。Docker の出力には認証情報が含まれる可能性があるため、そのまま表示することはありません。詳細な原因が不明な場合は、その旨を明示します。表示する確認事項は、原因を断定したものではありません。
 
-新規インストールが`.env`の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data`ボリュームを保持してください。事前条件や起動時の問題を解消してから、製品リポジトリのルートで`docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300`を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に`node scripts/install-maintenance.mjs gateway-config`で再生成します。社内限定方式では`docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env`は安全に保管し、データベースとは別にバックアップしてください。
+新規インストールが `.env` の保存後に失敗した場合は、そのファイル、`.runtime/gateway/Caddyfile`、データベース保存領域、`gateway_data` ボリュームを保持してください。事前条件や起動時の問題を解消してから、リポジトリのルートで `docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` を実行し、後述のサービス状態を確認してください。Caddyfile がない場合は、先に `node scripts/install-maintenance.mjs gateway-config` で再生成します。社内限定方式では `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt` で公開 CA ルートを再出力します。設定ファイルも SPH の保存領域も作成されていない場合は、インストーラーを再実行します。暗号化済みデータに対して、暗号化キーを新しく生成して置き換えないでください。`.env` は安全に保管し、データベースとは別にバックアップしてください。
 
-起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env`から`INITIAL_ADMIN_*`の行だけを削除します。`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`で`db`と`api`を再作成し、`docker compose -f docker-compose.local.yml rm -f migration`で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean`が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
+起動を復旧した後は、初期設定用の認証情報の除去も完了させてください。データベースのパスワードと暗号化キーを保持したまま、`.env` から `INITIAL_ADMIN_*` の行だけを削除します。`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api` で `db` と `api` を再作成し、`docker compose -f docker-compose.local.yml rm -f migration` で完了した migration コンテナーを削除してから、後述のアプリケーションの応答を確認してください。`.env.install-clean` が残っている場合は、復旧が完了するまで保護し、完了後にこの一時ファイルを安全に削除してください。認証情報が含まれる可能性があります。
 
 ### インストール結果の確認
 
-ローカルの起動順は、DBの準備完了 → migration成功 → APIの準備完了 →
-フロントエンド → gatewayです。`GET /v1/health`はAPIプロセスと設定を、
-`GET /v1/readiness`はDB接続・認証用スキーマ・セッション書き込み権限・未完了の
-migrationも確認します。準備完了APIはキャッシュせず、詳細を含まない200/503のJSONを返します。
+ローカルの起動順は、DB の準備完了 → migration 成功 → API の準備完了 → フロントエンド → gateway です。`GET /v1/health` は API プロセスと設定を、`GET /v1/readiness` は DB 接続・認証用スキーマ・セッション書き込み権限・未完了の migration も確認します。
+準備完了 API はキャッシュせず、詳細を含まない 200/503 の JSON を返します。
 
-製品版フロントエンドは、`API_INTERNAL_ORIGIN`の`/v1/readiness`で準備完了を
-確認してから待ち受けを始めます。両Dockerイメージと`npm start`に適用されるため、
-Compose以外ではサーバー専用のAPI接続先を設定してください。migrationは独立ジョブのままです。
-ログイン画面も公開経路の`/v1/readiness`とセッションを確認してからフォームを表示します。
-確認中は起動中の案内、30秒経過後は利用できない旨を表示し、自動的に再確認します。
+フロントエンドは、`API_INTERNAL_ORIGIN` の `/v1/readiness` で準備完了を確認してから待ち受けを始めます。両 Docker イメージと `npm start` に適用されるため、Compose 以外ではサーバー専用の API 接続先を設定してください。migration は独立ジョブのままです。
+ログイン画面も公開経路の `/v1/readiness` とセッションを確認してからフォームを表示します。確認中は起動中の案内、30秒経過後は利用できない旨を表示し、自動的に再確認します。
 ログイン時に依存サービスが利用できなくなった場合も待機表示へ戻り、認証情報を自動再送しません。
-各サービスを別々に配備する場合は、同じ公開オリジンの`/v1/*`をAPIへ転送し、
-migration成功後にAPIを公開してください。
-
+各サービスを別々に配備する場合は、同じ公開オリジンの `/v1/*` を API へ転送し、migration 成功後に API を公開してください。
 
 一度だけ実行される migration コンテナーも含め、すべてのコンテナーを表示します。
 
@@ -149,8 +142,8 @@ docker compose -f docker-compose.local.yml ps -a
 
 次の状態になっていることを確認してください。
 
-- `db`、`api`、`frontend`、`gateway`が稼働している。
-- 一度だけ実行される`migration`コンテナーが存在する場合は、終了コード`0`で終了している。
+- `db`、`api`、`frontend`、`gateway` が稼働している。
+- 一度だけ実行される `migration` コンテナーが存在する場合は、終了コード `0` で終了している。
 
 起動処理がまだ続いている場合やサービスが失敗した場合は、ログを確認します。
 
@@ -171,7 +164,7 @@ Windows の PowerShell では、次のコマンドを使用できます。
 Invoke-RestMethod http://localhost:3000/v1/health
 ```
 
-成功した場合は、`equipment-api`サービスが正常であることを示す応答が返ります。HTTPS 方式では、設定した`https://`のアプリ URL で確認してください。社内限定方式では、確認端末で`.runtime/ca/root.crt`を信頼してから確認します。
+成功した場合は、`equipment-api` サービスが正常であることを示す応答が返ります。HTTPS 方式では、設定した `https://` のアプリ URL で確認してください。社内限定方式では、確認端末で `.runtime/ca/root.crt` を信頼してから確認します。
 
 ### Web ページが開かない場合
 
@@ -192,9 +185,9 @@ docker compose -f docker-compose.local.yml logs gateway frontend api
 docker compose -f docker-compose.local.yml logs migration
 ```
 
-よくある原因には、`INITIAL_ADMIN_*`の値の不足・不正、強度要件を満たさない初期パスワード、初期マスターデータと一致しない雇用形態名や拠点名があります。
+よくある原因には、`INITIAL_ADMIN_*` の値の不足・不正、強度要件を満たさない初期パスワード、初期マスターデータと一致しない雇用形態名や拠点名があります。
 
-`.env`を修正してから、次のコマンドを再実行してください。
+`.env` を修正してから、次のコマンドを再実行してください。
 
 ```bash
 docker compose -f docker-compose.local.yml up -d --build
@@ -202,11 +195,12 @@ docker compose -f docker-compose.local.yml up -d --build
 
 ### ポートが既に使用されている場合
 
-ローカル方式では既定で gateway をホストのループバック用ポート`3000`に、HTTPS 方式では`80`と`443`に、社内 HTTP 方式ではサーバーのプライベート IPv4 アドレス上の選択したポートに公開します。PostgreSQL はホストのループバック用ポート`5432`だけに公開します。必要なポートを空けてください。既存のローカル環境でポートを変更する場合は、`.env`の`HTTP_PORT`、`GATEWAY_HTTP_PUBLISH`、`APP_ORIGIN`、`CORS_ALLOWED_ORIGINS`を一緒に変更し、上記の手順で gateway 設定を再生成します。
+ローカル方式では既定で gateway をホストのループバック用ポート `3000` に、HTTPS 方式では `80` と `443` に、社内 HTTP 方式ではサーバーのプライベート IPv4 アドレス上の選択したポートに公開します。PostgreSQL はホストのループバック用ポート `5432` だけに公開します。
+必要なポートを空けてください。既存のローカル環境でポートを変更する場合は、`.env` の `HTTP_PORT`、`GATEWAY_HTTP_PUBLISH`、`APP_ORIGIN`、`CORS_ALLOWED_ORIGINS` を一緒に変更し、上記の手順で gateway 設定を再生成します。
 
 ### バインドマウントが機能しない場合
 
-Docker の環境によっては、リムーバブルドライブ上のプロジェクトを正常にバインドマウントできないことがあります。リポジトリを`C:\projects\sph`などの内蔵ドライブへ移動し、システムを再度起動してください。
+Docker の環境によっては、リムーバブルドライブ上のプロジェクトを正常にバインドマウントできないことがあります。リポジトリを `C:\projects\sph` などの内蔵ドライブへ移動し、システムを再度起動してください。
 
 <a id="starting-and-stopping-the-system"></a>
 
@@ -242,7 +236,7 @@ docker compose -f docker-compose.local.yml down
 docker compose -f docker-compose.local.yml up -d
 ```
 
-データベースのデータは、名前付き Docker ボリューム`sph-db-data`に保存され、`docker compose -f docker-compose.local.yml down`を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes`オプションを追加しないでください。
+データベースのデータは、名前付き Docker ボリューム `sph-db-data` に保存され、`docker compose -f docker-compose.local.yml down` を実行しても保持されます。データの永久削除を意図し、適切なバックアップがある場合を除き、`--volumes` オプションを追加しないでください。
 
 <a id="upgrading-to-the-latest-version"></a>
 

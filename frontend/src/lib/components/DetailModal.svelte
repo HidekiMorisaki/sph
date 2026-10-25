@@ -85,6 +85,7 @@
 
 	onMount(() => void tick().then(() => {
 		const state = takeDetailReturn(returnFocus, titleId);
+		if (state?.tab) dialogElement?.dispatchEvent(new CustomEvent('detail-return', { detail: state }));
 		const body = dialogElement?.querySelector<HTMLElement>('.app-detail-body');
 		if (state && body) { body.scrollTop = state.scrollTop; body.scrollLeft = state.scrollLeft; }
 		(dialogElement?.querySelector<HTMLElement>(state?.selector ?? initialFocusSelector))?.focus({ preventScroll: Boolean(state) });

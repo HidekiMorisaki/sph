@@ -1,4 +1,7 @@
 {
+	"masterManagementTab": "Master management",
+	"financialTab": "Financial information",
+	"financialPeriodTab": "Year settings",
 	"title": "System settings",
 	"description": "Manage system-wide configuration available to your organization.",
 	"loading": "Loading system settings…",

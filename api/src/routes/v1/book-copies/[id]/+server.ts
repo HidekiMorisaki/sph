@@ -1,4 +1,5 @@
 import { writeAuditLog } from '$lib/server/api/admin';
+import { purchaseMoney } from '$lib/server/api/purchase-money';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { businessDate, hasSpareAvailableCopy, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
 import { BookInputError, bookErrorResponse, dateField, objectBody, optionalText, positiveId, recordBookChange } from '$lib/server/api/books';
@@ -12,7 +13,7 @@ export async function GET({ locals, params }: import('./$types').RequestEvent) {
 	requireScopedOperationApi(locals.user, permissionOperations.bookRead);
 	const id = pathId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Book copy not found.');
-	const item = await getPrisma().bookCopy.findFirst({ where: { id, deletedAt: null, title: { deletedAt: null } }, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, status: true, notes: true, title: { select: { id: true, name: true, author: true, publisher: true, edition: true, isbn: true } }, storage: { select: { id: true, name: true, branchId: true, room: { select: { name: true, branch: { select: { name: true } } } } } } } });
+	const item = await getPrisma().bookCopy.findFirst({ where: { id, deletedAt: null, title: { deletedAt: null } }, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, purchaseAmount: true, purchaseCurrency: true, status: true, notes: true, title: { select: { id: true, name: true, author: true, publisher: true, edition: true, isbn: true } }, storage: { select: { id: true, name: true, branchId: true, room: { select: { name: true, branch: { select: { name: true } } } } } } } });
 	return item ? success(item) : failure(404, 'NOT_FOUND', 'Book copy not found.');
 }
 
@@ -22,10 +23,11 @@ export async function PATCH({ locals, params, request }: import('./$types').Requ
 	if (!id) return failure(404, 'NOT_FOUND', 'Book copy not found.');
 	try {
 		const body = objectBody(await request.json().catch(() => null));
-		if (!['storageId', 'status', 'purchasedOn', 'notes'].some(key => key in body)) throw new BookInputError([{ reason: 'EMPTY_UPDATE' }]);
+		const money = purchaseMoney(body);
 		const status = body.status;
 		if (status !== undefined && status !== 'available' && status !== 'unavailable') throw new BookInputError([{ field: 'status', reason: 'INVALID_VALUE' }]);
 		const data = {
+			purchaseAmount: money.amount, purchaseCurrency: money.currency,
 			...('storageId' in body ? { storageId: positiveId(body.storageId, 'storageId') } : {}),
 			...('status' in body ? { status: status as string } : {}),
 			...('purchasedOn' in body ? { purchasedOn: dateField(body.purchasedOn, 'purchasedOn') } : {}),
@@ -48,10 +50,10 @@ export async function PATCH({ locals, params, request }: import('./$types').Requ
 			}
 			if ((status === 'unavailable' || (data.storageId && data.storageId !== previous.storageId)) && await tx.bookLoan.count({ where: { copyId: id, returnedOn: null, deletedAt: null } })) return { kind: 'in_use' } as const;
 			if (previous.status === 'available' && (status === 'unavailable' || nextBranchId !== previous.storage.branchId) && !await hasSpareAvailableCopy(tx, previous.titleId, previous.storage.branchId)) return { kind: 'reserved' } as const;
-			const updated = await tx.bookCopy.update({ where: { id }, data, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, status: true, notes: true } });
+			const updated = await tx.bookCopy.update({ where: { id }, data, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, purchaseAmount: true, purchaseCurrency: true, status: true, notes: true } });
 			await reconcileBookQueue(tx, previous.titleId, previous.storage.branchId, businessDate());
 			if (nextBranchId !== previous.storage.branchId) await reconcileBookQueue(tx, previous.titleId, nextBranchId, businessDate());
-			await recordBookChange(tx, actor.id, 'book_copy', id, 'update', { before: { storageId: previous.storageId, status: previous.status }, after: data });
+			await recordBookChange(tx, actor.id, 'book_copy', id, 'update', { before: { storageId: previous.storageId, status: previous.status, purchaseAmount: previous.purchaseAmount?.toString() ?? null, purchaseCurrency: previous.purchaseCurrency }, after: data });
 			await writeAuditLog(tx, actor.id, 'update', 'book_copy', id);
 			return { kind: 'updated', item: updated } as const;
 		});

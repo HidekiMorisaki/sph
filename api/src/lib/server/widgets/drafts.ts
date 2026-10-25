@@ -1,10 +1,10 @@
 import {getPrisma} from '$lib/server/prisma';
 import {Prisma} from '$lib/server/generated/prisma/client';
-import {requireOperationApi,writeAuditLog} from '$lib/server/api/admin';
+import {requireOperationApi,requireSystemAdminApi,writeAuditLog} from '$lib/server/api/admin';
 import {throwApiError} from '$lib/server/api/response';
 import type {AuthenticatedUser} from '$lib/server/auth/types';
 export function draftActor(user:AuthenticatedUser|null,op:'read'|'create'|'update'|'delete'){
- requireOperationApi(user,'widgets.read');return requireOperationApi(user,`widgets.drafts.${op}`);
+ requireSystemAdminApi(user);requireOperationApi(user,'widgets.read');return requireOperationApi(user,`widgets.drafts.${op}`);
 }
 export async function draftBody(request:Request){
  const reader=request.body?.getReader();if(!reader)throwApiError(400,'INVALID_DRAFT','Draft is required.');let length=0;const chunks:Uint8Array[]=[];

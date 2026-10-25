@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { requireLocationManagementApi } from '$lib/server/api/branch-access';
 import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
@@ -17,6 +18,7 @@ function input(value: unknown): { name: string; notes: string | null; branchId: 
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const { actor, branchId } = requireLocationManagementApi(locals.user); const id = parseId(params.id); const data = input(await request.json().catch(() => null));
 	if (!id || !data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (branchId !== null && data.branchId !== branchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
@@ -33,6 +35,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const { actor, branchId } = requireLocationManagementApi(locals.user); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
 	const result = await getPrisma().$transaction(async (tx) => {
 		if (!await tx.storage.count({ where: { id, deletedAt: null, ...(branchId === null ? {} : { branchId }) } })) return 'not_found';

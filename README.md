@@ -111,48 +111,23 @@ Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUB
 
 ### The installer stopped
 
-The installer is for new installations only. Existing `.env` files, SPH containers,
-or the `sph-db-data` volume cause it to stop without replacing them. For an existing
-installation, use the normal start, update, or recovery procedures.
+The installer is for new installations only. Existing `.env` files, SPH containers, or the `sph-db-data` volume cause it to stop without replacing them. For an existing installation, use the normal start, update, or recovery procedures.
 
-Installation failures report the stopped stage, the failed
-operation or detected condition, and the next checks to make. Docker's raw output
-is suppressed because it can contain credentials. When the underlying cause is
-unknown, the message says so; suggested checks are not a diagnosis.
+Installation failures report the stopped stage, the failed operation or detected condition, and the next checks to make. Docker's raw output is suppressed because it can contain credentials. When the underlying cause is unknown, the message says so; suggested checks are not a diagnosis.
 
-If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run
-`docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` from the product repository
-root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was
-created, rerun the installer. Never generate a replacement encryption key for
-encrypted data. Keep `.env` protected and back it up separately from the database.
+If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run `docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` from the repository root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was created, rerun the installer. Never generate a replacement encryption key for encrypted data. Keep `.env` protected and back it up separately from the database.
 
-After recovering startup, finish the removal of initial setup credentials. Remove
-only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and
-encryption key. Recreate `db` and `api` with
-`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
-then remove the completed migration container with `docker compose -f docker-compose.local.yml rm -f migration`
-and verify the application responses below. If `.env.install-clean` remains,
-keep it protected until recovery is complete, then securely remove this temporary
-file. It may contain credentials.
+After recovering startup, finish the removal of initial setup credentials. Remove only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and encryption key. Recreate `db` and `api` with `docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`, then remove the completed migration container with `docker compose -f docker-compose.local.yml rm -f migration` and verify the application responses below. If `.env.install-clean` remains, keep it protected until recovery is complete, then securely remove this temporary file. It may contain credentials.
 
 ### Verify the installation
 
-The local startup order is database readiness → successful migration → API
-readiness → frontend → gateway. `GET /v1/health` checks the API process and
-configuration; `GET /v1/readiness` additionally checks the database, authentication
-schema, session write permissions and unfinished migrations. Readiness returns
-only a generic 200/503 JSON result, with caching disabled.
+The local startup order is database readiness → successful migration → API readiness → frontend → gateway. `GET /v1/health` checks the API process and configuration; `GET /v1/readiness` additionally checks the database, authentication schema, session write permissions and unfinished migrations.
+Readiness returns only a generic 200/503 JSON result, with caching disabled.
 
-The production frontend waits for `/v1/readiness` at `API_INTERNAL_ORIGIN` before
-listening. This applies to both Docker images and `npm start`; set that server-only
-origin when running outside Compose. Migration remains a separate job. The sign-in
-page also checks readiness through the public `/v1/readiness` route and validates
-the session before showing the form. It displays a startup message, switches to an
-unavailable message after 30 seconds, and retries automatically. A dependency
-failure during sign-in returns to this waiting state without replaying credentials.
-If services are hosted separately, route `/v1/*` to the API on the same public
-origin and run migrations successfully before releasing the API.
-
+The frontend waits for `/v1/readiness` at `API_INTERNAL_ORIGIN` before listening. This applies to both Docker images and `npm start`; set that server-only origin when running outside Compose. Migration remains a separate job.
+The sign-in page also checks readiness through the public `/v1/readiness` route and validates the session before showing the form. It displays a startup message, switches to an unavailable message after 30 seconds, and retries automatically.
+A dependency failure during sign-in returns to this waiting state without replaying credentials.
+If services are hosted separately, route `/v1/*` to the API on the same public origin and run migrations successfully before releasing the API.
 
 Show all containers, including the one-time migration container:
 
@@ -184,8 +159,7 @@ Windows PowerShell users can run:
 Invoke-RestMethod http://localhost:3000/v1/health
 ```
 
-A successful response reports that the `equipment-api` service is healthy.
-For HTTPS modes, use the configured `https://` application URL instead. In internal mode, first trust `.runtime/ca/root.crt` on the checking device.
+A successful response reports that the `equipment-api` service is healthy. For HTTPS modes, use the configured `https://` application URL instead. In internal mode, first trust `.runtime/ca/root.crt` on the checking device.
 
 ### The web page does not open
 
@@ -216,7 +190,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 ### A port is already in use
 
-Local mode binds the gateway to host loopback port `3000` by default; HTTPS modes bind ports `80` and `443`; internal HTTP binds the selected port on the server's private IPv4 address. PostgreSQL binds only to host loopback port `5432`. Free the required ports before installation. For an existing local installation, change `HTTP_PORT`, `GATEWAY_HTTP_PUBLISH`, `APP_ORIGIN`, and `CORS_ALLOWED_ORIGINS` together, then regenerate the gateway configuration as described above.
+Local mode binds the gateway to host loopback port `3000` by default; HTTPS modes bind ports `80` and `443`; internal HTTP binds the selected port on the server's private IPv4 address. PostgreSQL binds only to host loopback port `5432`.
+Free the required ports before installation. For an existing local installation, change `HTTP_PORT`, `GATEWAY_HTTP_PUBLISH`, `APP_ORIGIN`, and `CORS_ALLOWED_ORIGINS` together, then regenerate the gateway configuration as described above.
 
 ### Bind mounts do not work
 

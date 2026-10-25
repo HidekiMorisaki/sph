@@ -5,7 +5,7 @@
 	import { productName } from '$lib/brand';
 	import favicon from '$lib/assets/favicon.svg';
 	import { avatarImage } from '$lib/avatar';
-	import { roleNames, type SessionUser } from '$lib/auth';
+	import { canOperate, roleNames, type SessionUser } from '$lib/auth';
 	import { clearExternalLinks, externalLinks, loadExternalLinks } from '$lib/externalLinks';
 	import { formatEmployeeName, localization } from '$lib/localization';
 	import { icons, menuIcon, groupIcon, localizedMenus, type Item, type MenuGroup } from './sidebarNavigation';
@@ -25,15 +25,12 @@
 		groupAnimationTimer = setTimeout(() => animatedGroup = '', 220);
 	}
 	let navigationText = $derived(localeMessages[$localization.displayLanguage].navigation);
-	let canManageMasters = $derived(Boolean(user?.capabilities.canManageMasters || user?.capabilities.canManageBranches));
 	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'dashboard'
 		? { ...group, items: group.items.filter(item => item.id !== 'assetOverview' || user?.capabilities.canReadAssets) }
 		: group.id === 'general'
-		? { ...group, items: group.items.filter((item) => (item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) && (item.id !== 'teams' || user?.capabilities.canReadTeams) && (item.id !== 'skills' || user?.capabilities.canReadSkills) && (item.id !== 'clients' || user?.capabilities.canReadClients) && (item.id !== 'projects' || user?.capabilities.canReadProjects)) }
+		? { ...group, items: group.items.filter((item) => (item.id !== 'schedule' || canOperate(user,'schedule.read')) && (item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) && (item.id !== 'teams' || user?.capabilities.canReadTeams) && (item.id !== 'skills' || user?.capabilities.canReadSkills) && (item.id !== 'clients' || user?.capabilities.canReadClients) && (item.id !== 'projects' || user?.capabilities.canReadProjects)) }
 		: group.id === 'assets'
 			? { ...group, items: group.items.filter((item) => item.id !== 'softwareLicenses' || user?.capabilities.canReadSoftware) }
-		: group.id === 'siteManagement' && !user?.capabilities.canManageSystemSettings
-			? { ...group, items: group.items.filter((item) => item.id === 'businessOverview' && (user?.capabilities.canManageBranches || user?.capabilities.canReadFinancialInformation)) }
 			: group).flatMap((group) => group.id === 'siteManagement' && $externalLinks.length
 		? [{ id: 'otherSystems', label: navigationText.groups.otherSystems, items: $externalLinks.map((link): Item => ({ id: `external-${link.id}`, text: link.name, icon: 'external', href: link.url, external: true })) }, group]
 		: [group]));
@@ -125,7 +122,7 @@
 	<a class="brand" href="/" aria-label={productName}><img class="brand-icon" src={favicon} alt="" width="28" height="28" /><strong>{productName}</strong></a>
 	<nav class="sidebar-nav" onscroll={() => { railFlyout = ''; railLabel = ''; }}>
 		{#each user ? sidebarMenus : [] as group (group.id)}
-			{#if (!group.managerOnly || canManageMasters) && (!group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings || group.id === 'siteManagement' && (user?.capabilities.canManageBranches || user?.capabilities.canReadFinancialInformation))}
+			{#if !group.systemAdministratorOnly || user?.capabilities.canManageSystemSettings}
 			<div class="nav-group" data-group-id={group.id} class:group-open={groupOpen(group.id)} class:group-animate={animatedGroup === group.id}>
 				<button class="nav-label group-toggle" type="button" aria-label={group.label} aria-expanded={groupOpen(group.id)} aria-controls={`${id}-group-${group.id}`} onmouseenter={event => showRailLabel(group.label,event)} onmouseleave={() => hideRailLabel(group.label)} onfocus={event => showRailLabel(group.label,event)} onblur={() => hideRailLabel(group.label)} onclick={() => toggleGroup(group.id)}><span class="group-icon" aria-hidden="true">{@html groupIcon(group.id)}</span><span class="group-title">{group.label}</span><svg class="group-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6" /></svg></button>
 				<div class="group-content" id={`${id}-group-${group.id}`} inert={!groupOpen(group.id)} aria-hidden={!groupOpen(group.id)}><div class="group-items">

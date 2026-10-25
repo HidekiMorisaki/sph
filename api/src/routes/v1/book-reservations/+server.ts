@@ -1,4 +1,5 @@
 import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
+import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
 import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
 import { BookInputError, bookErrorResponse, nextBookCode, objectBody, positiveId, recordBookChange } from '$lib/server/api/books';
 import { listMeta, parseListQuery } from '$lib/server/api/query';
@@ -24,6 +25,7 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 		const titleId = positiveId(body.titleId, 'titleId');
 		const branchId = positiveId(body.branchId, 'branchId');
 		const item = await getPrisma().$transaction(async tx => {
+			await lockEmployeeAllocation(tx,actor.id);
 			await lockBookQueue(tx, titleId);
 			if (!await tx.bookTitle.count({ where: { id: titleId, deletedAt: null } })) throw new BookInputError([{ field: 'titleId', reason: 'NOT_FOUND' }]);
 			if (!await tx.branch.count({ where: { id: branchId, deletedAt: null } })) throw new BookInputError([{ field: 'branchId', reason: 'NOT_FOUND' }]);

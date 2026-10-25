@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { referenceBranchScope, requireLocationManagementApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -38,6 +39,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 }
 
 export async function POST({ request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const { actor, branchId } = requireLocationManagementApi(locals.user); const value = input(await request.json().catch(() => null));
 	if (!value) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (branchId !== null && value.branchId !== branchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');

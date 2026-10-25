@@ -52,7 +52,7 @@
  <div hidden={editing || deleting} inert={editing || deleting}>
   <TeamDetailModal {team} {user} returnFocus={origin} titleId={`${modalId}-team-detail-title`} onClose={close} onEdit={trigger => { actionFocus = trigger; editing = true; }} onDelete={trigger => { actionFocus = trigger; failed = false; deleting = true; }} {onChanged} />
  </div>
- {#if editing}<TeamFormModal {team} returnFocus={actionFocus} onClose={() => editing = false} onSaved={saved => { team = saved; onChanged(); }} />{/if}
+ {#if editing}<div hidden={deleting} inert={deleting}><TeamFormModal {user} onDelete={trigger=>{actionFocus=trigger;failed=false;deleting=true;}} {team} returnFocus={actionFocus} onClose={() => editing = false} onSaved={saved => { team = saved; onChanged(); }} /></div>{/if}
  {#if deleting}<DetailModal title={text.deleteTitle} titleId={`${modalId}-team-delete-title`} closeLabel={common.cancel} returnFocus={actionFocus} onClose={() => { if (!busy) deleting = false; }}>
   <p>{text.deleteHelp}</p>
   {#if failed}<StatusNotice message={text.failed} tone="error" onDismiss={() => failed = false} />{/if}

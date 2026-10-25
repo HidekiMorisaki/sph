@@ -1,3 +1,4 @@
+import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -25,6 +26,7 @@ export async function PATCH({ params, locals, request }: import('./$types').Requ
 	if (!data || credentialInput.details.length) return failure(400, 'VALIDATION_ERROR', 'Invalid IT asset input.', [...parsed.details, ...credentialInput.details]);
 	try {
 		const item = await getPrisma().$transaction(async tx => {
+			if(typeof parsed.assigneeId === 'number') await lockEmployeeAllocation(tx,parsed.assigneeId);
 			await tx.$queryRaw`SELECT id FROM it_assets WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`;
 			const existing = await tx.itAsset.findFirst({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) }, select: { id: true, typeId: true, assetTag: true } });
 			if (!existing) return null;

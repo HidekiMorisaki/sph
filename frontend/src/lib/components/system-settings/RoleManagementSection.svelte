@@ -1,4 +1,6 @@
 <script lang="ts">
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import { forgetDetailReturn } from '$lib/detail-modal-return';
 	import '$lib/styles/table-scroll.css';
 	import { tick } from 'svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -20,7 +22,7 @@
 
 	type PermissionScope = { code: string; scopeType: 'global' | 'own_branch' };
 	type Role = { id: number; name: string; notes: string | null; createdAt: string; updatedAt: string; usageCount: number; permissionCodes: string[]; permissionScopes: PermissionScope[]; editablePermissionScopes: PermissionScope[]; defaultPermissionCodes?: string[] | null; isSystemManagement: boolean; isBranchAdministrator: boolean };
-	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean; derived?: boolean; dependencies?: Record<'global' | 'own_branch', PermissionScope[]> };
+	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean; branchAdministratorOnly?: boolean; branchAdministratorAllowed?: boolean; derived?: boolean; dependencies?: Record<'global' | 'own_branch', PermissionScope[]> };
 	type RoleField = 'name';
 
 	let { onNotice = (_messages: string[]) => undefined }: { onNotice?: (messages: string[]) => void } = $props();
@@ -40,6 +42,7 @@
 	let confirmingDiscard = $state(false);
 	let reorderError = $state('');
 	let permissions = $state<Permission[]>([]);
+	let editingPermissions = $derived(permissions.filter(permission => selected?.isBranchAdministrator ? permission.branchAdministratorAllowed : !permission.branchAdministratorOnly));
 	let selectedCodes = $state<string[]>([]);
 	let scopeByCode = $state<Record<string, 'global' | 'own_branch'>>({});
 	let selectedScopes = $derived(selectedCodes.map((code) => ({ code, scopeType: scopeByCode[code] ?? 'global' })).sort((a, b) => a.code.localeCompare(b.code)));
@@ -60,8 +63,9 @@
 	let removing = $state(false);
 	let hasUnsavedChanges = $derived((Boolean(selected) || isAdding) && initialSnapshot !== '' && formSnapshot({ name, notes }) !== initialSnapshot);
 	let permissionsChanged = $derived((Boolean(selected) || isAdding) && JSON.stringify(selectedScopes) !== JSON.stringify([...(selected?.editablePermissionScopes ?? [])].sort((a, b) => a.code.localeCompare(b.code))));
-	let defaultEditablePermissionCodes = $derived((selected?.defaultPermissionCodes ?? []).filter((code) => permissions.some((permission) => permission.code === code && !permission.derived)));
-	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify(defaultEditablePermissionCodes.map((code) => ({ code, scopeType: 'global' })).sort((a, b) => a.code.localeCompare(b.code))));
+	let defaultEditablePermissionCodes = $derived((selected?.defaultPermissionCodes ?? []).filter((code) => editingPermissions.some((permission) => permission.code === code && !permission.derived)));
+	const defaultScope = (code: string): 'global' | 'own_branch' => selected?.isBranchAdministrator && permissions.find(permission => permission.code === code)?.allowOwnBranch ? 'own_branch' : 'global';
+	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify(defaultEditablePermissionCodes.map((code) => ({ code, scopeType: defaultScope(code) })).sort((a, b) => a.code.localeCompare(b.code))));
 	let permissionLabels = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManage,
 		'employees.read': text.permissionEmployeeRead, 'employees.manage': text.permissionEmployeeManage,
@@ -74,7 +78,7 @@
 		'software.keys.read': text.permissionSoftwareKeyRead, 'software.keys.write': text.permissionSoftwareKeyWrite,
 		'roles.read': text.permissionRoleRead
 	});
-	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, books: $localization.displayLanguage === 'ja' ? '書籍' : 'Books', other: text.permissionOther });
+	let categoryLabels = $derived<Record<string, string>>({ schedule:$localization.displayLanguage==='ja'?'スケジュール':'Schedule',notifications:$localization.displayLanguage==='ja'?'通知':'Notifications',employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, books: $localization.displayLanguage === 'ja' ? '書籍' : 'Books', other: text.permissionOther });
 	let permissionDescriptions = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManageHelp,
 		'employees.read': text.permissionEmployeeReadHelp, 'employees.manage': text.permissionEmployeeManageHelp,
@@ -95,7 +99,7 @@
 		'software.read': 'software', 'software.manage': 'software', 'software.keys.read': 'software', 'software.keys.write': 'software',
 		'roles.read': 'system', 'system.manage': 'system'
 	};
-	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system', 'other'];
+	const detailCategories = ['employees', 'masters', 'calendars', 'schedule', 'notifications', 'assets', 'software', 'books', 'system', 'other'];
 	const knownPermissionCodes = Object.keys(permissionCategoryByCode);
 	function permissionCategory(code: string): string {
 		const fromCatalog = permissions.find((permission) => permission.code === code)?.category;
@@ -129,7 +133,7 @@
 	]);
 
 	function openEdit(item: Role, trigger: HTMLElement | null) {
-		if (item.isSystemManagement || item.isBranchAdministrator) return;
+		if (item.isSystemManagement) return;
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 		selected = item;
 		isAdding = false;
@@ -200,7 +204,7 @@
 	}
 
 	async function save() {
-		if ((!selected && !isAdding) || selected?.isSystemManagement || selected?.isBranchAdministrator || (!isAdding && !hasUnsavedChanges && !permissionsChanged) || !validate()) return;
+		if ((!selected && !isAdding) || selected?.isSystemManagement || (!isAdding && !hasUnsavedChanges && !permissionsChanged) || !validate()) return;
 		saving = true;
 		formError = '';
 		const creating = isAdding;
@@ -242,7 +246,7 @@
 	}
 
 	async function remove(item: Role) {
-		if (removing || item.isSystemManagement || item.isBranchAdministrator || !confirm(formatLocaleTemplate(text.deleteConfirm, item.name))) return;
+		if (removing || item.isSystemManagement || !confirm(formatLocaleTemplate(text.deleteConfirm, item.name))) return;
 		removing = true;
 		deleteError = '';
 		if (detailRole?.id === item.id) detailRole = null;
@@ -255,7 +259,7 @@
 					: systemSettingError(payload?.error?.code, response.status, text, 'role', text.roleDeleteFailed);
 				return;
 			}
-			onNotice([text.roleDeleted]);
+			selected = null; isAdding = false; detailBeforeEdit = null; onNotice([text.roleDeleted]);
 			await list?.refresh();
 		} catch { deleteError = text.roleDeleteFailed; }
 		finally { removing = false; }
@@ -274,7 +278,7 @@
 	function resetPermissionsToDefault() {
 		if (!selected?.defaultPermissionCodes || saving) return;
 		selectedCodes = [...defaultEditablePermissionCodes];
-		scopeByCode = Object.fromEntries(selectedCodes.map((code) => [code, 'global']));
+		scopeByCode = Object.fromEntries(selectedCodes.map((code) => [code, defaultScope(code)]));
 		permissionError = '';
 	}
 
@@ -296,10 +300,10 @@
 
 {#if reorderError}<StatusNotice message={reorderError} tone="error" onDismiss={() => reorderError = ''} />{/if}
 {#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={() => deleteError = ''} />{/if}
-<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} emptyLabel={text.noRoles} />
+<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { forgetDetailReturn(trigger, 'role-detail-title'); detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} emptyLabel={text.noRoles} />
 
-{#if detailRole}<MasterRecordDetailModal title={`${text.roles} ${common.detail}`} titleId="role-detail-title" sectionTitle={common.basicInformation} closeLabel={common.close} {returnFocus} endpoint="/v1/roles" itemId={detailRole.id} fields={[{ key: 'name', label: text.name, value: detailRole.name }, { key: 'notes', label: text.notes, value: detailRole.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailRole = null}>
-	{#snippet headerActions()}{#if detailRole && !detailRole.isSystemManagement && !detailRole.isBranchAdministrator}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => { const item = detailRole!; const row = returnFocus; detailBeforeEdit = item; detailRole = null; openEdit(item, row); }} onDelete={() => void remove(detailRole!)} />{/if}{/snippet}
+{#if detailRole}<MasterRecordDetailModal tabbed detailsLabel={text.permissionHeading} title={`${text.roles} ${common.detail}`} titleId="role-detail-title" sectionTitle={common.basicInformation} closeLabel={common.close} {returnFocus} endpoint="/v1/roles" itemId={detailRole.id} fields={[{ key: 'name', label: text.name, value: detailRole.name }, { key: 'notes', label: text.notes, value: detailRole.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailRole = null}>
+	{#snippet headerActions()}{#if detailRole && !detailRole.isSystemManagement}<DetailActionButtons editing={false} editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => { const item = detailRole!; const row = returnFocus; detailBeforeEdit = item; detailRole = null; openEdit(item, row); }} onDelete={() => void remove(detailRole!)} />{/if}{/snippet}
 	{#snippet details()}
 		<section class="app-detail-section"><h3>{text.permissionHeading}</h3><p class="role-permission-description">{text.permissionAssignedDescription}</p>
 			<div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead>
@@ -323,24 +327,26 @@
 		<dialog bind:this={dialogElement} class="role-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="role-dialog-title">
 			<header><h2 id="role-dialog-title">{isAdding ? text.addRole : text.editRole}</h2><button class="app-modal-close" type="button" aria-label={text.closeRoleDialog} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
 			<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-				<div class="app-modal-form-body role-form-body">
+				<div class="app-modal-form-body role-form-body">{#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={()=>deleteError=''} />{/if}<FormTabs label={text.roles} kind="role">
 					{#if formError}<StatusNotice title={text.roleSaveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
-					<FormSection title={text.roleInformation} framed columns={2}>
+					<div data-form-panel="basic">
+<FormSection title={text.roleInformation} framed columns={2}>
 						<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" value={name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'role-name-error' : undefined} oninput={(event) => updateName(event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="role-name-error" role="alert">{errors.name}</span>{/if}</label>
 						<label class="wide"><span>{text.notes}</span><textarea name="notes" bind:value={notes} maxlength="5000"></textarea></label>
 					</FormSection>
-					<FormSection title={text.permissionHeading} framed columns={2}>
+</div><div data-form-panel="permissions">
+<FormSection title={text.permissionHeading} framed columns={2}>
 						{#snippet action()}
 							{#if selected?.defaultPermissionCodes}<button class="permission-reset-button" type="button" disabled={saving || atDefaultPermissions} onclick={resetPermissionsToDefault}>{text.resetPermissionsToDefault}</button>{/if}
 						{/snippet}
 						<div class="permission-section wide">
-		{#each ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system'] as category}
-							{#if permissions.some((permission) => permission.category === category)}
+		{#each ['employees', 'masters', 'calendars', 'schedule', 'notifications', 'assets', 'software', 'books', 'system'] as category}
+							{#if editingPermissions.some((permission) => permission.category === category)}
 								<fieldset><legend>{categoryLabels[category]}</legend><div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead><tbody>
-									{#each permissions.filter((permission) => permission.category === category) as permission}
+									{#each editingPermissions.filter((permission) => permission.category === category) as permission}
 										{@const globalEnabled = effectiveScopes[permission.code] === 'global'}
 										{@const ownEnabled = Boolean(effectiveScopes[permission.code])}
-										<tr data-permission-code={permission.code}><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))}<small>{$localization.displayLanguage === 'ja' ? '必要な補助権限（自動付与）' : 'Required permission (automatic)'}</small>{/if}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code)) || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
+										<tr data-permission-code={permission.code}><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))}<small>{$localization.displayLanguage === 'ja' ? '必要な補助権限（自動付与）' : 'Required permission (automatic)'}</small>{/if}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || Boolean(selected?.isBranchAdministrator && permission.allowOwnBranch) || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code)) || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
 									{/each}
 								</tbody></table></div></fieldset>
 							{/if}
@@ -348,8 +354,8 @@
 						{#if permissionError}<StatusNotice message={permissionError} tone="error" onDismiss={() => permissionError = ''} />{/if}
 						</div>
 					</FormSection>
-				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (!isAdding && !hasUnsavedChanges && !permissionsChanged)}>{saving ? common.saving : isAdding ? text.createRole : common.saveChanges}</button></footer>
+</div></FormTabs></div>
+				<footer class="app-modal-footer">{#if selected && !selected.isSystemManagement}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(selected!)}>{common.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (!isAdding && !hasUnsavedChanges && !permissionsChanged)}>{saving ? common.saving : isAdding ? text.createRole : common.saveChanges}</button></footer>
 			</form>
 		</dialog>
 	</ModalBackdrop>

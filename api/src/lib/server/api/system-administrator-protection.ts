@@ -26,7 +26,7 @@ export async function preserveSystemAdministrator(tx: Prisma.TransactionClient, 
 	if (!await isSystemAdministratorEmployee(tx, employeeId)) return;
 	if (!await tx.employee.count({ where: { id: employeeId, accountStatus: 'active', deletedAt: null, OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }] } })) return;
 	// Keeping only administrators with scheduled departures would create a later gap.
-	const candidates = await tx.employee.findMany({ where: { id: { not: employeeId }, accountStatus: 'active', deletedAt: null, retiredAt: null, roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, scopeType: 'global', permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } } } } }, select: { id: true } });
+	const candidates = await tx.employee.findMany({ where: { id: { not: employeeId }, accountStatus: 'active', deletedAt: null, retiredAt: null, deletionScheduledOn: null, roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, scopeType: 'global', permission: { deletedAt: null, operations: { some: { operation: 'system.manage', deletedAt: null } } } } } } } } }, select: { id: true } });
 	for (const candidate of candidates) if (await isSystemAdministratorEmployee(tx, candidate.id)) return;
 	throwApiError(409, 'LAST_SYSTEM_ADMINISTRATOR', 'At least one active system administrator must remain after this change.');
 }

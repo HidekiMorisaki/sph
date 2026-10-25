@@ -40,7 +40,9 @@
     "workCalendar": "calendar / calendarDays",
     "widgetDrafts": "exclude: private SDK source drafts",
     "widgetLayout": "exclude: private SDK layout infrastructure",
-    "savedSearchFilters": "exclude: search infrastructure"
+    "savedSearchFilters": "exclude: search infrastructure",
+    "requestedDeletions": "exclude: actor-only scheduled deletion requests",
+    "deletionRequestedBy": "exclude: scheduled deletion requester metadata"
   },
   "fields": [
     {
@@ -118,6 +120,14 @@
           "current": "loan.employee_id=employee.id AND loan.deleted_at IS NULL AND loan.returned_on IS NULL"
         }
       ]
+    },
+    {
+      "source": "BookCopy.purchaseAmount",
+      "classification": "Per-copy purchase registration/detail data; monetary search is outside this feature."
+    },
+    {
+      "source": "BookCopy.purchaseCurrency",
+      "classification": "Per-copy purchase registration/detail data; monetary search is outside this feature."
     },
     {
       "source": "BookCopy.status",
@@ -6559,6 +6569,26 @@
       ]
     },
     {
+      "source": "Employee.deletionScheduledOn",
+      "classification": "Employee departure scheduling metadata; no detailed search field is exposed."
+    },
+    {
+      "source": "Employee.deletionRequestedById",
+      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
+    },
+    {
+      "source": "Employee.assetReturnCompletedAt",
+      "classification": "Internal departure allocation guard; no detailed search field is exposed."
+    },
+    {
+      "source": "Employee.deletionRequestedBy",
+      "classification": "exclude: scheduled deletion requester metadata"
+    },
+    {
+      "source": "Employee.requestedDeletions",
+      "classification": "exclude: actor-only scheduled deletion requests"
+    },
+    {
       "source": "Employee.notes",
       "search": [
         {
@@ -8650,6 +8680,14 @@
           "current": "assignment.employee_id=employee.id AND assignment.deleted_at IS NULL AND assignment.returned_at IS NULL"
         }
       ]
+    },
+    {
+      "source": "ItAsset.purchaseAmount",
+      "classification": "Purchase registration/detail data; monetary search is outside this feature."
+    },
+    {
+      "source": "ItAsset.purchaseCurrency",
+      "classification": "Purchase registration/detail data; monetary search is outside this feature."
     },
     {
       "source": "ItAsset.disposalOn",

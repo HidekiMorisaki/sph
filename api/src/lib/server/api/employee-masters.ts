@@ -101,7 +101,8 @@ async function validateBranchEmployees(tx: Prisma.TransactionClient, data: Emplo
 	if (managerEmployeeId && deputyManagerEmployeeId === managerEmployeeId) throw new BranchEmployeeReferenceError('deputyManagerEmployeeId');
 	const ids = [managerEmployeeId, deputyManagerEmployeeId].filter((id): id is number => id !== null);
 	if (!ids.length) return;
-	const employees = await tx.employee.findMany({ where: { id: { in: ids }, deletedAt: null }, select: { id: true } });
+	for(const employeeId of [...ids].sort((a,b)=>a-b))await tx.$queryRaw`SELECT id FROM employees WHERE id=${employeeId} FOR UPDATE`;
+	const employees = await tx.employee.findMany({ where: { id: { in: ids }, deletedAt: null, deletionScheduledOn: null, assetReturnCompletedAt: null }, select: { id: true } });
 	if (employees.length !== ids.length) {
 		const found = new Set(employees.map((employee) => employee.id));
 		throw new BranchEmployeeReferenceError(managerEmployeeId && !found.has(managerEmployeeId) ? 'managerEmployeeId' : 'deputyManagerEmployeeId');

@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { referenceBranchScope, requireLocationManagementApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -29,6 +30,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	return success(data, 200, listMeta(query, data.length, total));
 }
 export async function POST({ locals, request }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const { actor, branchId } = requireLocationManagementApi(locals.user); const data = input(await request.json().catch(() => null)); if (!data) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	if (branchId !== null && data.branchId !== branchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try { const item = await getPrisma().$transaction(async tx => { if (!await tx.branch.count({ where: { id: data.branchId, deletedAt: null } })) throw new Error(); const created = await tx.room.create({ data }); await writeAuditLog(tx, actor.id, 'create', 'room', created.id); await recordMasterChange(tx, 'room', created.id, actor.id, 'create', null, await readMasterSnapshot(tx, 'room', created.id)); return created; }); return success(item, 201); } catch (error) { const field=duplicateField(error);return field?failure(409,'DUPLICATE_VALUE','This value already exists.',[{field,reason:'DUPLICATE_VALUE'}]):failure(400, 'INVALID_REQUEST', 'Invalid request.'); }

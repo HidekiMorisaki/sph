@@ -1,4 +1,5 @@
 import { receivePurchaseCopies } from '$lib/server/api/book-purchases';
+import { purchaseMoney } from '$lib/server/api/purchase-money';
 import { writeAuditLog, requireOperationApi } from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
@@ -9,7 +10,7 @@ import { permissionOperations } from '$lib/server/auth/permissions';
 import { hasOwnBranchPermissionOperation, hasPermissionOperation } from '$lib/server/auth/permissions';
 import { getPrisma } from '$lib/server/prisma';
 
-type CopyInput = { storageId: number; status: 'available' | 'unavailable'; notes: string | null; copyCode: string | null };
+type CopyInput = { storageId: number; status: 'available' | 'unavailable'; notes: string | null; copyCode: string | null; purchaseAmount: string; purchaseCurrency: string };
 
 function parseCopies(body: Record<string, unknown>) {
 	const titleId = positiveId(body.titleId, 'titleId');
@@ -17,13 +18,14 @@ function parseCopies(body: Record<string, unknown>) {
 	if (!Array.isArray(body.copies) || body.copies.length < 1 || body.copies.length > 100) throw new BookInputError([{ field: 'copies', reason: 'COUNT_OUT_OF_RANGE' }]);
 	const copies: CopyInput[] = body.copies.map((raw, index) => {
 		const row = objectBody(raw);
+		const money = purchaseMoney(row, 'purchaseAmount', 'purchaseCurrency', `copies[${index}].`);
 		const storageId = positiveId(row.storageId, `copies[${index}].storageId`);
 		const status = row.status ?? 'available';
 		if (status !== 'available' && status !== 'unavailable') throw new BookInputError([{ field: `copies[${index}].status`, reason: 'INVALID_VALUE' }]);
 		const notes = optionalText(row.notes, `copies[${index}].notes`, 5000);
 		const copyCode = optionalText(row.copyCode, `copies[${index}].copyCode`, 40);
 		if (copyCode && !/^[\p{L}\p{N}][\p{L}\p{N}_.-]*$/u.test(copyCode)) throw new BookInputError([{ field: `copies[${index}].copyCode`, reason: 'INVALID_CODE' }]);
-		return { storageId, status, notes, copyCode };
+		return { storageId, status, notes, copyCode, purchaseAmount: money.amount, purchaseCurrency: money.currency };
 	});
 	const seen = new Set<string>();
 	for (let index = 0; index < copies.length; index++) {
@@ -43,7 +45,7 @@ export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	if (titleId !== null && !Number.isSafeInteger(titleId)) return failure(422, 'INVALID_TITLE_ID', 'titleId is too large.');
 	const where = { deletedAt: null, title: { deletedAt: null }, ...(titleId ? { titleId } : {}) };
 	const [items, total] = await Promise.all([
-		getPrisma().bookCopy.findMany({ where, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, status: true, notes: true, title: { select: { name: true, author: true, isbn: true } }, storage: { select: { name: true, branchId: true, room: { select: { name: true, branch: { select: { name: true } } } } } }, loans: { where: { returnedOn: null, deletedAt: null }, take: 1, select: { id: true, employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } }, dueOn: true } } }, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'asc' }], skip: query.offset, take: query.limit }),
+		getPrisma().bookCopy.findMany({ where, select: { id: true, copyCode: true, titleId: true, storageId: true, purchasedOn: true, purchaseAmount: true, purchaseCurrency: true, status: true, notes: true, title: { select: { name: true, author: true, isbn: true } }, storage: { select: { name: true, branchId: true, room: { select: { name: true, branch: { select: { name: true } } } } } }, loans: { where: { returnedOn: null, deletedAt: null }, take: 1, select: { id: true, employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } }, dueOn: true } } }, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'asc' }], skip: query.offset, take: query.limit }),
 		getPrisma().bookCopy.count({ where })
 	]);
 	const globalManager = hasPermissionOperation(actor, permissionOperations.bookManage);
@@ -86,10 +88,10 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 			const result = [];
 			for (const row of parsed.copies) {
 				const copyCode = row.copyCode ?? await nextBookCode(tx, 'book_copy_code_seq', 'BK');
-				const copy = await tx.bookCopy.create({ data: { titleId: parsed.titleId, storageId: row.storageId, purchasedOn: parsed.purchasedOn, status: row.status, notes: row.notes, copyCode, batchId: batch.id } });
-				await recordBookChange(tx, actor.id, 'book_copy', copy.id, 'create', { titleId: copy.titleId, copyCode, storageId: copy.storageId });
+				const copy = await tx.bookCopy.create({ data: { titleId: parsed.titleId, storageId: row.storageId, purchasedOn: parsed.purchasedOn, purchaseAmount: row.purchaseAmount, purchaseCurrency: row.purchaseCurrency, status: row.status, notes: row.notes, copyCode, batchId: batch.id } });
+				await recordBookChange(tx, actor.id, 'book_copy', copy.id, 'create', { titleId: copy.titleId, copyCode, storageId: copy.storageId, purchaseAmount: copy.purchaseAmount?.toString(), purchaseCurrency: copy.purchaseCurrency });
 				await writeAuditLog(tx, actor.id, 'create', 'book_copy', copy.id);
-				result.push({ id: copy.id, copyCode, storageId: copy.storageId });
+				result.push({ id: copy.id, copyCode, storageId: copy.storageId, purchaseAmount: copy.purchaseAmount?.toString(), purchaseCurrency: copy.purchaseCurrency });
 			}
 			if (parsed.purchaseOrderId) await receivePurchaseCopies(tx, actor, parsed.purchaseOrderId, parsed.titleId, result, storage);
 			await tx.bookCopyBatch.update({ where: { id: batch.id }, data: { result } });

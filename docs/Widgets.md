@@ -1,6 +1,6 @@
 # My Page widgets
 
-SDK v2 is the current authoring format. Users can create HTML/CSS/JavaScript widgets in `/widget-editor`, save private drafts, export HTTPS catalogues and request administrator approval. All seven official widgets use the same sandbox/Worker SDK. See [Widget SDK](Widget_SDK.md) for the current format and developer workflow. Legacy declarative text/list/clock/records definitions remain supported; the former built-in calculator/timer/note view types are retired.
+SDK v2 is the current authoring format. System administrators can create HTML/CSS/JavaScript widgets in Development → Widgets (`/widget-editor`), save private drafts, export HTTPS catalogues and request administrator approval. All seven official widgets use the same sandbox/Worker SDK. See [Widget SDK](Widget_SDK.md) for the current format and developer workflow. Legacy declarative text/list/clock/records definitions remain supported; the former built-in calculator/timer/note view types are retired.
 
 The sections below retain historical v1 UI and maintenance details; do not apply their old catalogue/checksum tools to SDK v2 definitions.
 

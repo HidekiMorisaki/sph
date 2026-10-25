@@ -1,0 +1,27 @@
+<script lang="ts">
+ import { onMount,untrack } from 'svelte';
+ import { DateTime } from 'luxon';
+ import { Calendar,type EventInput } from '@fullcalendar/core';
+ import dayGridPlugin from '@fullcalendar/daygrid';
+ import timeGridPlugin from '@fullcalendar/timegrid';
+ import interactionPlugin from '@fullcalendar/interaction';
+ import luxonPlugin from '@fullcalendar/luxon3';
+ import ja from '@fullcalendar/core/locales/ja';
+ import { localization } from '$lib/localization';
+ import type { ScheduleItem,CalendarChoice } from '$lib/schedule';
+ import { scheduleText } from '$lib/schedule-text';
+ let {view,date,firstDay,items,calendars,context=[],editable,creatable,onOpen,onCreate,onMove,onResize=onMove}:{view:'day'|'week'|'month';date:string;firstDay:number;items:ScheduleItem[];calendars:CalendarChoice[];context?:{date:string;kind:string;title:string}[];editable:boolean;creatable:boolean;onOpen:(item:ScheduleItem)=>void;onCreate:(start:string,end:string,allDay:boolean)=>void;onMove:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void;onResize?:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void}=$props();
+ let host:HTMLDivElement;let calendar=$state.raw<Calendar>();
+ const views={day:'timeGridDay',week:'timeGridWeek',month:'dayGridMonth'};
+ let text=$derived(scheduleText[$localization.displayLanguage]);
+ function events():EventInput[] {return [...context.map(d=>({id:`context:${d.date}:${d.kind}`,start:d.date,end:DateTime.fromISO(d.date).plus({days:1}).toISODate()!,title:d.title,allDay:true,interactive:false,display:"background",color:d.kind==='working_day'?'#0f766e':'#b45309',editable:false})),...items.map(item=>({id:item.key,title:item.title??text.busy,start:item.start,end:item.end,allDay:item.allDay,editable:editable&&!!item.canEdit,color:calendars.find(c=>item.calendarKeys?.includes(c.key))?.color??'#2563eb',extendedProps:{item},classNames:item.canceled?['canceled']:[]}))];}
+ onMount(()=>{
+  const instance=new Calendar(host,{plugins:[dayGridPlugin,timeGridPlugin,interactionPlugin,luxonPlugin],locales:[ja],locale:$localization.displayLanguage,timeZone:$localization.timeZone,initialView:views[view],initialDate:date,firstDay,headerToolbar:false,height:Math.max(450,window.innerHeight-210),slotMinTime:'00:00:00',slotMaxTime:'24:00:00',scrollTime:'08:00:00',nowIndicator:true,selectable:creatable,selectMirror:true,dayMaxEvents:3,eventDisplay:'block',events:events(),eventTimeFormat:{hour:'2-digit',minute:'2-digit',hour12:false},eventClick:info=>{const item=info.event.extendedProps.item;if(item)onOpen(item);},select:info=>{onCreate(info.startStr,info.endStr,info.allDay);instance.unselect();},eventDrop:info=>{const item=info.event.extendedProps.item;const start=info.event.startStr,end=info.event.endStr;info.revert();onMove(item,start,end,info.event.allDay);},eventResize:info=>{const item=info.event.extendedProps.item;const start=info.event.startStr,end=info.event.endStr;info.revert();onResize(item,start,end,info.event.allDay);}});
+  calendar=instance;instance.render();const resize=()=>instance.setOption('height',Math.max(450,window.innerHeight-210));window.addEventListener('resize',resize);return ()=>{window.removeEventListener('resize',resize);instance.destroy();calendar=undefined;};
+ });
+ $effect(()=>{const c=calendar;if(!c)return;const language=$localization.displayLanguage,tz=$localization.timeZone,v=views[view],d=date,day=firstDay,data=events(),canCreate=creatable;untrack(()=>{c.batchRendering(()=>{c.setOption('locale',language);c.setOption('timeZone',tz);c.setOption('firstDay',day);c.setOption('selectable',canCreate);if(c.view.type!==v)c.changeView(v,d);else c.gotoDate(d);c.removeAllEventSources();c.addEventSource(data);});});});
+</script>
+<div class="schedule-board" bind:this={host}></div>
+<style>
+ .schedule-board{min-width:0;--fc-border-color:var(--border);--fc-page-bg-color:var(--surface);--fc-neutral-bg-color:var(--surface-secondary);--fc-neutral-text-color:var(--muted);--fc-today-bg-color:color-mix(in srgb,var(--action-primary) 8%,transparent);--fc-list-event-hover-bg-color:var(--surface-hover);font-size:var(--font-size-support)}.schedule-board :global(.fc){color:var(--text)}.schedule-board :global(.fc table){box-shadow:none;border-radius:0}.schedule-board :global(.fc th),.schedule-board :global(.fc td){padding:0;text-transform:none}.schedule-board :global(.fc a){text-decoration:none}.schedule-board :global(.fc .fc-col-header-cell-cushion){padding:10px 4px;font-weight:500}.schedule-board :global(.fc-event){cursor:pointer}.schedule-board :global(.fc-timegrid-slot){height:24px}.schedule-board :global(.fc-timegrid-axis-cushion),.schedule-board :global(.fc-timegrid-slot-label-cushion){font-size:12px}.schedule-board :global(.fc-daygrid-day-top){padding:4px}.schedule-board :global(.fc-popover){background:var(--surface);border:1px solid var(--border)}.schedule-board :global(.fc-popover-header){background:var(--surface-secondary)}.schedule-board :global(.fc-scrollgrid){border-radius:4px}.schedule-board :global(.fc-daygrid-event){white-space:normal}.schedule-board :global(.fc-timegrid-event .fc-event-main){padding:2px 4px}
+</style>

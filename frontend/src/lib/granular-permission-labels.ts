@@ -1,4 +1,5 @@
 const resources: Record<string, [string, string]> = {
+ schedule:['スケジュール','Schedules'],notifications:['通知','Notifications'],
  widgets: ['ウィジェット', 'Widgets'],
  clients: ['取引先', 'Clients'],
  search_filters: ['個人用保存フィルター', 'Personal saved filters'],
@@ -11,6 +12,7 @@ const resources: Record<string, [string, string]> = {
 };
 
 const nouns: Record<string, [string, string]> = {
+ preferences:['予定表の表示設定','calendar preferences'],
  drafts:['開発用下書き','development drafts'],
  records: ['保存データ', 'saved records'],
  layout: ['ウィジェット配置', 'widget layout'],
@@ -21,6 +23,7 @@ const nouns: Record<string, [string, string]> = {
 };
 
 const actions: Record<string, [string, string]> = {
+ reserve:['予約','reserve'],respond:['出欠回答','respond'],
 	add: ['追加', 'add'], remove: ['所属解除', 'remove'],
 	manage: ['管理', 'manage'], cancel: ['取消', 'cancel'], create: ['追加', 'create'], update: ['変更', 'update'], delete: ['削除', 'delete'],
 	reorder: ['並べ替え', 'reorder'], assign: ['割当', 'assign'], return: ['返却', 'return'],

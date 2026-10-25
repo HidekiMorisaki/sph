@@ -1,9 +1,11 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireOperationApi } from '$lib/server/api/admin';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { failure, success } from '$lib/server/api/response';
 import { isItAssetOrderResource, parseItAssetOrder, reorderItAssetMasters, ItAssetOrderConflictError } from '$lib/server/api/it-asset-order';
 
 export async function PUT({ params, request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const actor = requireOperationApi(locals.user, permissionOperations.masterManagement);
 	if (!isItAssetOrderResource(params.resource)) return failure(404, 'NOT_FOUND', 'Not found.');
 	const input = parseItAssetOrder(await request.json().catch(() => null));

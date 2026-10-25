@@ -26,6 +26,7 @@ function input(value: unknown, expectedMonths: string[], currency: Currency): Su
 }
 
 export async function GET({ locals, params }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const branchId = Number(params.branchId);
 	const year = parseYear(params.year);
 	if (!Number.isSafeInteger(branchId) || branchId < 1 || year === null) return failure(422, 'INVALID_PERIOD', 'Invalid branch or year.');
@@ -47,6 +48,7 @@ export async function GET({ locals, params }: import('./$types').RequestEvent) {
 }
 
 export async function PUT({ locals, params, request }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const branchId = Number(params.branchId);
 	const year = parseYear(params.year);
 	if (!Number.isSafeInteger(branchId) || branchId < 1 || year === null) return failure(422, 'INVALID_PERIOD', 'Invalid branch or year.');

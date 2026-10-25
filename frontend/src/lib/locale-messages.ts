@@ -40,14 +40,11 @@ export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/teams') return ['teams', 'employees', 'workforce'];
 	if (path === '/employees') return ['employees', 'employeeForm', 'teams', 'workforce'];
 	if (path === '/work-calendars') return ['workCalendars'];
-	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial', 'employees', 'teams', 'workforce'];
+	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial', 'masters', 'employees', 'teams', 'workforce'];
 	if (path === '/system-information') return ['systemSettings', 'systemReleases'];
-	if (path === '/financial-information') return ['systemSettings', 'financial'];
 	if (path === '/asset-overview') return ['assetOverview'];
 	if (path === '/financial-trends') return ['financialTrends'];
 	if (path === '/personal-settings') return ['settings'];
-	if (path === '/locations') return ['masters', 'employees', 'teams', 'workforce'];
-	if (path === '/employee-masters' || path === '/it-asset-masters') return ['masters'];
 	if (path === '/it-assets') return ['assets', 'employees', 'teams', 'workforce'];
 	if (path === '/licenses') return ['software'];
 	return [];

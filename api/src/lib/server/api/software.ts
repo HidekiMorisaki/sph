@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import { throwApiError } from './response';
 import { writeAuditLog } from './admin';
+import { purchaseMoney } from './purchase-money';
 
 export type Body = Record<string, unknown>;
 export function bodyObject(value: unknown): Body {
@@ -56,10 +57,7 @@ export function contractInput(body: Body) {
 	const renewsOn = dateInput(body.renewsOn, 'renewsOn', true);
 	if ((endsOn && endsOn < startsOn) || (renewsOn && renewsOn < startsOn)) throwApiError(422, 'INVALID_DATE_RANGE', 'Contract dates are inconsistent.');
 	if (body.autoRenew !== undefined && typeof body.autoRenew !== 'boolean') throwApiError(422, 'INVALID_FIELD', 'Invalid autoRenew.');
-	const amount = body.amount === undefined || body.amount === null || body.amount === '' ? null : typeof body.amount === 'string' && /^\d{1,14}(?:\.\d{1,2})?$/.test(body.amount) ? body.amount : throwApiError(422, 'INVALID_FIELD', 'Invalid amount.');
-	const currency = optionalText(body.currency, 'currency', 3);
-	if (currency && !/^[A-Z]{3}$/.test(currency)) throwApiError(422, 'INVALID_FIELD', 'Invalid currency.');
-	if ((amount === null) !== (currency === null)) throwApiError(422, 'INVALID_FIELD', 'Amount and currency must be entered together.');
+	const { amount, currency } = purchaseMoney(body, 'amount', 'currency');
 	const usersPerLicense = positiveInteger(body.usersPerLicense, 'usersPerLicense', true);
 	const devicesPerUser = positiveInteger(body.devicesPerUser, 'devicesPerUser', true);
 	const usersPerDevice = positiveInteger(body.usersPerDevice, 'usersPerDevice', true);

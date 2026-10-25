@@ -12,6 +12,46 @@
   ],
   "entries": [
     {
+      "package": "node_modules/@fullcalendar/core",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/core/-/core-6.1.22.tgz",
+      "integrity": "sha512-ju5PJUE++zr8XXCGtlXlrodF6doUy9BDfzx+VmE0B+XDBM2A5cUi/aU3M1ANfw/StmKhwqew7Ps7bXMiv/JREg==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/daygrid",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/daygrid/-/daygrid-6.1.22.tgz",
+      "integrity": "sha512-cpom5+bAvsGG5nX+snsCtpMIyyhAr+QlseD9mhz5Vq7rMBTzx43mSkz6IBvQ3vz5h2idbDmT1cggEn/dzZwt9Q==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/interaction",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/interaction/-/interaction-6.1.22.tgz",
+      "integrity": "sha512-r8Njw8aPNFGRwDjVAh9NTh3ZJib5tcUoLi/BM4uYJt5Cs9tDiirmImaqxhx56hclVFX7ktd5CdaMX0+ArSbm5A==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/luxon3",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/luxon3/-/luxon3-6.1.22.tgz",
+      "integrity": "sha512-or43T5SQAzb3d8U6Th6Q3vclas8rGEYSsJsUohC+jySJyJuqCLcqgW+NnbrSYIYXx3MUUk32h8au+BEjfjuo1A==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/timegrid",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/timegrid/-/timegrid-6.1.22.tgz",
+      "integrity": "sha512-gNMtkXrkfN3iszXty+pYbJwGxcozL0xBVKYmEd1lm0DMEbrffpVJyV+vifmtl/eIbWCNRWrMWUtGLbYy/ukykA==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
       "package": "node_modules/@jridgewell/gen-mapping",
       "version": "0.3.13",
       "source": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
@@ -152,6 +192,14 @@
       "version": "1.0.8",
       "source": "https://registry.npmjs.org/@types/estree/-/estree-1.0.8.tgz",
       "integrity": "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==",
+      "file": "LICENSE",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "package": "node_modules/@types/luxon",
+      "version": "3.7.1",
+      "source": "https://registry.npmjs.org/@types/luxon/-/luxon-3.7.1.tgz",
+      "integrity": "sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==",
       "file": "LICENSE",
       "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
     },
@@ -340,6 +388,14 @@
       "sha256": "306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae"
     },
     {
+      "package": "node_modules/luxon",
+      "version": "3.7.2",
+      "source": "https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz",
+      "integrity": "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==",
+      "file": "LICENSE.md",
+      "sha256": "6cb2f2bf697ee9c6fa9eb8f227c63ee6e7a3cba42d4717f14c745ef9b6cbc006"
+    },
+    {
       "package": "node_modules/magic-string",
       "version": "0.30.21",
       "source": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
@@ -410,6 +466,14 @@
       "integrity": "sha512-zkd+e9S1AQHhmaBKye9zlFHWjOwVgqXl1q3ECYy8561K7qxR2cREf/STLskulBFd78k6AOFeA+ff1TtEzk9bAA==",
       "file": "LICENSE",
       "sha256": "5be1f3465bba68a626777f984878814aaf35e7ef8e9fd314d469bcf887050fb8"
+    },
+    {
+      "package": "node_modules/preact",
+      "version": "10.12.1",
+      "source": "https://registry.npmjs.org/preact/-/preact-10.12.1.tgz",
+      "integrity": "sha512-l8386ixSsBdbreOAkqtrwqHwdvR35ID8c3rKPa8lCWuO86dBi32QWHV4vfsZK1utLLFMvw+Z5Ad4XLkZzchscg==",
+      "file": "LICENSE",
+      "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
     },
     {
       "package": "node_modules/readdirp",

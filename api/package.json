@@ -19,6 +19,7 @@
 		"@sveltejs/adapter-node": "^5.3.2",
 		"@sveltejs/kit": "^2.50.2",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
+		"@types/luxon": "3.7.1",
 		"prisma": "^7.10.1",
 		"svelte": "^5.57.2",
 		"svelte-check": "^4.4.2",
@@ -29,8 +30,10 @@
 		"@prisma/adapter-pg": "^7.10.1",
 		"@prisma/client": "^7.10.1",
 		"jpeg-js": "0.4.4",
+		"luxon": "3.7.2",
 		"pg": "^8.23.1",
-		"pngjs": "7.0.0"
+		"pngjs": "7.0.0",
+		"rrule": "2.8.1"
 	},
 	"overrides": {
 		"deepmerge-ts": "8.0.2",

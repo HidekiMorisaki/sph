@@ -10,7 +10,7 @@ import { throwApiError } from '$lib/server/api/response';
 
 import type { AuthenticatedSession, AuthenticatedUser } from './types';
 import { DEFAULT_DISPLAY_CURRENCY, DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayCurrency, isDisplayLanguage, isTimeZone } from './localization';
-import { hasPermissionOperation, ownBranchOperations, permissionOperations } from './permissions';
+import { branchGlobalOperations, hasPermissionOperation, ownBranchOperations, permissionOperations } from './permissions';
 
 const scrypt = promisify(scryptCallback);
 
@@ -75,7 +75,7 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	}
 
 	const record = await getPrisma().session.findFirst({
-		where: { tokenHash: hashToken(token), deletedAt: null, employee: { deletedAt: null, accountStatus: 'active', OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }] } },
+		where: { tokenHash: hashToken(token), deletedAt: null, employee: { deletedAt: null, accountStatus: 'active', AND: [{ OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }] }, { OR: [{ deletionScheduledOn: null }, { deletionScheduledOn: { gt: employeeReferenceDate() } }] }] } },
 		select: {
 			id: true,
 			expiresAt: true,
@@ -116,13 +116,12 @@ export async function validateSessionToken(token: string | undefined): Promise<S
 	// These approved operations have no branch scope. Saved filters remain owner-only
 	// in their service; target-resource reads still use their existing scope checks.
 	// Every operation requires an active global DB permission grant.
-	const globalTeamOperations = new Set(['books.read', 'books.titles.create', 'books.purchases.read', 'books.purchases.create', 'books.purchases.cancel', 'books.reservations.create', 'books.reservations.cancel', 'widgets.drafts.read','widgets.drafts.create','widgets.drafts.update','widgets.drafts.delete','widgets.read', 'widgets.layout.update', 'widgets.records.create', 'widgets.records.update', 'widgets.records.delete', 'search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'projects.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
 	for (const grant of grants.filter(grant => grant.scopeType === 'own_branch' && grant.role.defaultKey === 'branch_administrator')) {
 		for (const entry of grant.role.permissions.filter(entry => entry.scopeType === 'global')) {
-			for (const { operation } of entry.permission.operations) if (globalTeamOperations.has(operation) && !grantedOperations.includes(operation)) grantedOperations.push(operation);
+			for (const { operation } of entry.permission.operations) if (branchGlobalOperations.has(operation) && !grantedOperations.includes(operation)) grantedOperations.push(operation);
 		}
 	}
-	const ownBranchPermissionOperations = [...new Set(grants.flatMap(grant => grant.role.permissions.flatMap(entry => entry.permission.operations.filter(({ operation }) => ownBranchOperations.has(operation) && (entry.scopeType === 'own_branch' || grant.scopeType === 'own_branch' && !globalTeamOperations.has(operation))).map(({ operation }) => operation))))];
+	const ownBranchPermissionOperations = [...new Set(grants.flatMap(grant => grant.role.permissions.flatMap(entry => entry.permission.operations.filter(({ operation }) => ownBranchOperations.has(operation) && (entry.scopeType === 'own_branch' || grant.scopeType === 'own_branch' && !branchGlobalOperations.has(operation))).map(({ operation }) => operation))))];
 	const settings = record.employee.settings?.deletedAt == null ? record.employee.settings : null;
 	const displayLanguage = isDisplayLanguage(settings?.displayLanguage) ? settings.displayLanguage : DEFAULT_DISPLAY_LANGUAGE;
 

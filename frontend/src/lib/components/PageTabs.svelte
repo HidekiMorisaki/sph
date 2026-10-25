@@ -8,7 +8,7 @@
 		label: string;
 		idPrefix: string;
 		panelPrefix?: string;
-		storageKey: string;
+		storageKey?: string;
 	} = $props();
 	let employeeId: number | null = null;
 	let selectedBeforeRestore = false;
@@ -16,7 +16,7 @@
 		document.getElementById(`${idPrefix}-${active}-tab`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 	}
 	function persist() {
-		if (employeeId === null) return;
+		if (!storageKey || employeeId === null) return;
 		try { localStorage.setItem(`${storageKey}:${employeeId}`, active); }
 		catch { /* Tabs remain usable when storage is unavailable. */ }
 	}
@@ -36,6 +36,8 @@
 		element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 	}
 	onMount(() => {
+		// Modal tabs start at their caller's initial tab and keep state in memory.
+		if (!storageKey) return;
 		let disposed = false;
 		const hash = window.location.hash.slice(1);
 		const linkedTab = tabs.find(tab => tab.id === hash || `${idPrefix}-${tab.id}` === hash);

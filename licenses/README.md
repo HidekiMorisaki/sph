@@ -113,3 +113,5 @@ is distinct from copying those packages into a distributed archive. Before
 publishing migration/development/cloud images or an archive containing installed
 dependencies, resolve those candidates and the historical embedded-bundle review.
 Do not replace missing original grants with SPDX labels or guessed copyright text.
+
+The scheduler uses the pinned FullCalendar Standard 6.1.22 plugins (no premium plugins), Luxon 3.7.2, rrule 2.8.1 and their reviewed dependencies. Exact archive sources, integrities and original notices, including python-dateutil and the embedded Closure modulo attribution, are in `api/licenses/scheduler.txt`, `frontend/licenses/scheduler.txt` and the browser copy `frontend/static/licenses/scheduler.txt`. Preserve all of these with corresponding builds.

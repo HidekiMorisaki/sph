@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DragHandleIcon from './DragHandleIcon.svelte';
 	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
 	import type { SearchState } from '$lib/search';
 	import PaginationIcon from '$lib/components/PaginationIcon.svelte';
@@ -76,7 +77,7 @@
 	let controller: AbortController | null = null;
 	let queryParamsReady = false;
 	let queryParamsKey = $derived(JSON.stringify(queryParams));
- let externalSearchVersion=$derived(searchState?.version);
+ let externalSearchVersion=$derived(searchState?.initializing ? undefined : searchState?.version);
 	const sizes = [10, 20, 30, 40, 50];
 	let pageCount = $derived(Math.max(1, Math.ceil(total / effectivePageSize)));
 	let first = $derived(total ? (page - 1) * effectivePageSize + 1 : 0);
@@ -184,6 +185,7 @@
 		finally { reorderSaving = false; }
 	}
 	export async function refresh() {
+		if (searchState?.initializing) { loading = true; return; }
 		controller?.abort();
 		const current = new AbortController(); controller = current;
 		loading = !unpaged || !items.length || loadedEndpoint !== endpoint; error = ''; errorDismissed = false;
@@ -238,7 +240,7 @@
 {#snippet itemRow(item: Row, treeDepth: 0 | 1 | 2)}
 			{@const canOpenDetail = detailAllowed(item)}
 			<tr data-row-id={item.id} class:detail-row={canOpenDetail} class:tree-child={treeDepth > 0} class:tree-grandchild={treeDepth === 2} class:drag-source={draggedId === item.id} class:drop-before={dropTargetId === item.id && !dropAfter} class:drop-after={dropTargetId === item.id && dropAfter} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? formatLocaleTemplate(commonText.viewDetails, itemLabel(item)) : undefined} onclick={(event) => rowClick(event, item)} onkeydown={(event) => rowKeydown(event, item)}>
-				{#each columns as column, index}<td data-label={index > 0 ? column.label : undefined} style:padding-left={index === 0 && treeDepth > 0 ? treeDepth === 2 ? '58px' : '38px' : undefined} style:text-align={column.align}>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if showNameIcon && column.key === 'name'}<span class="name-with-icon">{#if reorderEndpoint && canManage && items.length > 1}<button class="name-reorder-handle" class:dragging={draggedId === item.id} type="button" disabled={reorderSaving} aria-label={`${reorderHint}: ${itemLabel(item)}`} title={reorderHint} onpointerdown={(event) => pointerDown(event, item)} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={pointerCancel} onkeydown={(event) => reorderKeydown(event, item)}><svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg></button>{:else}<svg class="name-hamburger-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>{/if}<span class="name-icon-label">{value}</span>{#if unpaged && reorderEndpoint && canManage && items.length > 1}<span class="mobile-order-actions"><button type="button" disabled={reorderSaving || !neighbor(item,-1)} aria-label={`${commonText.moveUp}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,-1)}>↑</button><button type="button" disabled={reorderSaving || !neighbor(item,1)} aria-label={`${commonText.moveDown}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,1)}>↓</button></span>{/if}{#if typeof item.usageCount === 'number'}<span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span>{/if}</span>{:else if ['name', 'displayName'].includes(column.key) && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}
+				{#each columns as column, index}<td data-label={index > 0 ? column.label : undefined} style:padding-left={index === 0 && treeDepth > 0 ? treeDepth === 2 ? '58px' : '38px' : undefined} style:text-align={column.align}>{#if column.cell}{@render column.cell(item)}{:else}{@const value = column.value?.(item) ?? ''}{#if showNameIcon && column.key === 'name'}<span class="name-with-icon">{#if reorderEndpoint && canManage && items.length > 1}<button class="name-reorder-handle" class:dragging={draggedId === item.id} type="button" disabled={reorderSaving} aria-label={`${reorderHint}: ${itemLabel(item)}`} title={reorderHint} onpointerdown={(event) => pointerDown(event, item)} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={pointerCancel} onkeydown={(event) => reorderKeydown(event, item)}><DragHandleIcon size={16} class="name-reorder-icon" /></button>{:else}<DragHandleIcon size={16} class="name-reorder-icon" />{/if}<span class="name-icon-label">{value}</span>{#if unpaged && reorderEndpoint && canManage && items.length > 1}<span class="mobile-order-actions"><button type="button" disabled={reorderSaving || !neighbor(item,-1)} aria-label={`${commonText.moveUp}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,-1)}>↑</button><button type="button" disabled={reorderSaving || !neighbor(item,1)} aria-label={`${commonText.moveDown}: ${itemLabel(item)}`} onclick={()=>moveNeighbor(item,1)}>↓</button></span>{/if}{#if typeof item.usageCount === 'number'}<span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span>{/if}</span>{:else if ['name', 'displayName'].includes(column.key) && typeof item.usageCount === 'number'}<span class="name-with-usage"><span>{value}</span><span class="usage-badge" aria-label={usageLabelFor(item.usageCount)} title={usageLabelFor(item.usageCount)}>{item.usageCount}</span></span>{:else}{value}{/if}{/if}</td>{/each}
 			</tr>
 {/snippet}
 
@@ -266,7 +268,7 @@
 {#if mobileItem && compactMode}
 <div class="mobile-results" aria-busy={loading}>
  <p class="mobile-result-count" role="status">{formatLocaleTemplate(commonText.showing, first, last, total)}</p>
- {#if loading}<div class="mobile-state"><LoadingSpinner label={loadingLabel ?? commonText.loading} /></div>
+ {#if loading || searchState?.initializing}<div class="mobile-state"><LoadingSpinner label={loadingLabel ?? commonText.loading} /></div>
  {:else if error}<div class="mobile-state">{#if !errorDismissed}<StatusNotice message={commonText[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}</div>
  {:else if !items.length}<p class="mobile-state">{emptyLabel ?? commonText.noItems}</p>
  {:else}<ul class="mobile-items">{#each items as item (item.id)}{@const canOpenDetail = detailAllowed(item)}<li><div class="mobile-row" data-row-id={item.id} role="button" aria-disabled={!canOpenDetail} tabindex={canOpenDetail ? 0 : undefined} aria-label={canOpenDetail ? formatLocaleTemplate(commonText.viewDetails, itemLabel(item)) : undefined} onclick={event => rowClick(event, item)} onkeydown={event => rowKeydown(event, item)}><div class="mobile-item-content">{@render mobileItem(item)}</div>{#if canOpenDetail}<span class="mobile-chevron" aria-hidden="true">›</span>{/if}</div></li>{/each}</ul>{/if}
@@ -277,7 +279,7 @@
 		<colgroup>{#each columns as column}<col style:width={typeof column.width === 'string' ? column.width : `${column.width ?? 100 / columns.length}%`} />{/each}</colgroup>
 		<thead class:sr-only={hideColumnHeaders}><tr>{#each columns as column}<th style:white-space={column.headerNoWrap ? 'nowrap' : undefined} style:text-align={column.align} aria-sort={hideColumnHeaders || column.sortable === false ? undefined : activeSortBy === column.key ? sortOrder === 'asc' ? 'ascending' : 'descending' : 'none'}>{#if hideColumnHeaders || column.sortable === false}<span class="column-label">{column.label}</span>{:else}<button type="button" class="sort-button" onclick={() => changeSort(column.key)}>{column.label}<span class="sort-indicator" class:ascending={activeSortBy === column.key && sortOrder === 'asc'} class:descending={activeSortBy === column.key && sortOrder === 'desc'} aria-hidden="true"></span></button>{/if}</th>{/each}</tr></thead>
 		<tbody>
-			{#if loading}<tr><td class="empty" colspan={columns.length}><LoadingSpinner label={loadingLabel ?? commonText.loading} /></td></tr>
+			{#if loading || searchState?.initializing}<tr><td class="empty" colspan={columns.length}><LoadingSpinner label={loadingLabel ?? commonText.loading} /></td></tr>
 			{:else if error}<tr><td class="empty" colspan={columns.length}>{#if !errorDismissed}<StatusNotice message={commonText[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}</td></tr>
 			{:else if !items.length}<tr><td class="empty" colspan={columns.length}>{emptyLabel ?? commonText.noItems}</td></tr>
 			{:else if treeParent}
@@ -346,7 +348,7 @@
 	tbody tr.detail-row:focus-visible{position:relative;z-index:1;outline:2px solid #1abb9c;outline-offset:-2px}
 	tbody tr:last-child td{border-bottom:0}
 	.name-with-usage{display:flex;min-width:0;align-items:center;gap:7px}.name-with-usage>span:first-child{min-width:0;overflow-wrap:anywhere}.usage-badge{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:24px;min-height:24px;padding:2px 6px;background:rgba(51,122,183,.12);color:#337ab7;border:1px solid rgba(51,122,183,.28);border-radius:999px;font-size:var(--font-size-support);font-weight:700;line-height:1}
-	.name-with-icon{display:flex;min-width:0;align-items:center;gap:9px}.name-hamburger-icon{width:16px;height:16px;flex:none;color:var(--muted)}.name-icon-label{min-width:0;flex:0 1 auto;overflow-wrap:anywhere}
+	.name-with-icon{display:flex;min-width:0;align-items:center;gap:9px}.name-with-icon :global(.name-reorder-icon){color:var(--muted)}.name-icon-label{min-width:0;flex:0 1 auto;overflow-wrap:anywhere}
 	.name-reorder-handle{display:inline-flex;width:28px;height:28px;flex:none;align-items:center;justify-content:center;margin:-4px;padding:0;background:transparent!important;border:0;border-radius:4px;color:var(--muted)!important;touch-action:none;user-select:none}
 	.name-reorder-handle:hover{background:var(--surface-hover,var(--surface-secondary))!important;cursor:grab}
 	.name-reorder-handle.dragging{cursor:grabbing}

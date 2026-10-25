@@ -1,5 +1,12 @@
 <script lang="ts">
+ import PurchaseMoneyFields from "$lib/components/PurchaseMoneyFields.svelte";
+ import { purchaseText as purchaseMoneyText, validPurchaseAmount, displayPurchaseMoney } from "$lib/purchase-money";
+ let moneyText=$derived(purchaseMoneyText[$localization.displayLanguage]);
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import { forgetDetailReturn } from '$lib/detail-modal-return';
  import { operationAccess } from '$lib/operation-access';
+ import { localeMessages } from '$lib/locale-messages';
+ let detailCommon = $derived(localeMessages[$localization.displayLanguage].common);
  const allowedOperation = operationAccess();
  import { initialSearch } from '$lib/search';
  import SearchPanel from '$lib/components/SearchPanel.svelte';
@@ -24,7 +31,7 @@
 	import BookPurchasePanel from '$lib/components/BookPurchasePanel.svelte';
 	import BookPurchaseBadge from '$lib/components/BookPurchaseBadge.svelte';
 	import { bookPurchaseMessages, type PurchaseOrder } from '$lib/book-purchase-messages';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { localization } from '$lib/localization';
 	import { readSessionUser } from '$lib/client-session';
 	import { apiData } from '$lib/api';
@@ -38,6 +45,7 @@
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailTabs from '$lib/components/DetailTabs.svelte';
 	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import BookCover from '$lib/components/BookCover.svelte';
@@ -51,10 +59,10 @@
 	type BookLookupCandidate = { title: string; author: string | null; publisher: string | null; edition: string | null; isbn: string; sourceUrl: string; coverImage: string | null };
 	type BookLookupResult = { candidates: BookLookupCandidate[]; existingTitle: { id: number; name: string } | null };
 	type Storage = { id: number; name: string; branchId: number; room: { name: string; branch: { name: string } } };
-	type Copy = { id: number; copyCode: string; storageId: number; status: string; purchasedOn: string | null; notes: string | null; onLoan: boolean; storage: Storage; loans: Array<{ id: number; dueOn: string; employee: { firstName: string; lastName: string } }> };
+	type Copy = { id: number; copyCode: string; storageId: number; status: string; purchasedOn: string | null; purchaseAmount: string | null; purchaseCurrency: string | null; notes: string | null; onLoan: boolean; storage: Storage; loans: Array<{ id: number; dueOn: string; employee: { firstName: string; lastName: string } }> };
 	type Employee = { id: number; employeeCode: string; firstName: string; lastName: string; branchId: number };
 	type Reservation = { id: number; status: string; title: { id: number }; branch: { name: string } };
-	type CopyRow = { storageId: string; status: 'available' | 'unavailable'; notes: string; copyCode: string };
+	type CopyRow = { purchaseAmount: string; purchaseCurrency: string; moneyTouched: boolean; storageId: string; status: 'available' | 'unavailable'; notes: string; copyCode: string };
 	type ApiError = { error?: { code?: string; message?: string; details?: Array<{ field?: string; reason: string }> } };
 
 	const messages = {
@@ -135,10 +143,11 @@
 	let detailNotice = $state<{ message: string; tone: 'success' | 'error' } | null>(null);
 	let modal = $state<'title' | 'copies' | 'detail' | 'loan' | 'cover' | 'copy_edit' | 'delete_title' | 'delete_copy' | null>(null);
 	let returnToDetail = $state(false);
+	let bookDetailTab = $state('basic');
 	let coverReturnToTitle = $state(false);
 	type ParentModal = {
 		modal: typeof modal; purchaseOverview: boolean; selectedTitle: Title | null; detailTrigger: HTMLElement | null;
-		initialDraft: string; returnToDetail: boolean; returnToPurchaseOverview: boolean; coverReturnToTitle: boolean;
+		initialDraft: string; returnToDetail: boolean; returnToPurchaseOverview: boolean; coverReturnToTitle: boolean; bookDetailTab: string;
 		error: string; fieldErrors: Record<string, string>; detailNotice: typeof detailNotice;
 		focusTag: string; focusText: string; focusLabel: string | null; focusOccurrence: number; scrollTop: number; scrollLeft: number;
 		titleDraft: ReturnType<typeof readTitleDraft> | null;
@@ -150,6 +159,10 @@
 		return { titleForm: { ...titleForm }, editingTitleId, editingSourceProvider, lookupCandidates: [...lookupCandidates], lookupExisting, lookupStatus, lookupSource, lookupErrorCode,
 			purchaseRequested, purchaseQuantity, purchaseReason };
 	}
+ let titleRetained = $derived(modal==='title'||modalParents.some(parent=>parent.modal==='title'));
+ const bookEditorNodes = new Map<string,HTMLDialogElement>();
+ function trackBookEditor(node:HTMLDialogElement,mode:string){bookEditorNodes.set(mode,node);dialogElement=node;return{destroy(){bookEditorNodes.delete(mode);if(dialogElement===node)dialogElement=bookEditorNodes.get(modal??'');}};}
+
 	function rememberParent() {
 		if (!modal && !purchaseOverview) { modalParents = []; return; }
 		const dialog = typeof document === 'undefined' ? null : [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
@@ -157,14 +170,14 @@
 		const focused = dialog?.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
 		const focusTag = focused?.tagName ?? '', focusText = focused?.textContent?.trim() ?? '', focusLabel = focused?.getAttribute('aria-label') ?? null;
 		const matching = dialog ? [...dialog.querySelectorAll(modalFocusSelector)].filter(item => item.tagName === focusTag && item.textContent?.trim() === focusText && item.getAttribute('aria-label') === focusLabel) : [];
-		modalParents.push({ modal, purchaseOverview, selectedTitle, detailTrigger, initialDraft, returnToDetail, returnToPurchaseOverview, coverReturnToTitle,
+		modalParents.push({ modal, purchaseOverview, selectedTitle, detailTrigger, initialDraft, returnToDetail, returnToPurchaseOverview, coverReturnToTitle, bookDetailTab,
 			error, fieldErrors, detailNotice: null, focusTag, focusText, focusLabel, focusOccurrence: matching.indexOf(focused!),
 			scrollTop: body?.scrollTop ?? 0, scrollLeft: body?.scrollLeft ?? 0, titleDraft: modal === 'title' ? readTitleDraft() : null });
 	}
 	function restoreParent() {
 		const parent = modalParents.pop();
 		if (!parent) return false;
-		({ modal, purchaseOverview, selectedTitle, detailTrigger, initialDraft, returnToDetail, returnToPurchaseOverview, coverReturnToTitle, error, fieldErrors, detailNotice } = parent);
+		({ modal, purchaseOverview, selectedTitle, detailTrigger, initialDraft, returnToDetail, returnToPurchaseOverview, coverReturnToTitle, bookDetailTab, error, fieldErrors, detailNotice } = parent);
 		if (parent.titleDraft) ({ titleForm, editingTitleId, editingSourceProvider, lookupCandidates, lookupExisting, lookupStatus, lookupSource, lookupErrorCode,
 			purchaseRequested, purchaseQuantity, purchaseReason } = parent.titleDraft);
 		activeDateField = null; confirmingDiscard = false;
@@ -201,7 +214,7 @@
 		: { search: 'Look up book details', searching: 'Searching…', candidates: 'openBD results', apply: 'Use these details', empty: 'No matching record exists in openBD. Enter the details manually.', failed: 'Book details could not be retrieved from openBD. Enter them manually or try again later.', timeout: 'The openBD request timed out. Try again later or enter the details manually.', limited: 'Too many searches. Wait about one minute before trying again.', invalid: 'Enter a valid 10 or 13 digit ISBN.', existing: 'A book with this ISBN is already registered.', addCopy: 'Add a copy to this book', source: 'Source: openBD', help: 'Review a result before using it. Imported details cannot be edited. You can add notes.', manual: 'Discard result and enter manually', refresh: 'Refresh openBD details', refreshed: 'Book details refreshed from openBD.', readonly: 'Imported details are preserved as supplied. Contact the provider for corrections. Additional notes remain editable.' });
 	let editingTitleId = $state<number | null>(null);
 	let editingCopy = $state<Copy | null>(null);
-	let copyForm = $state({ storageId: '', status: 'available', purchasedOn: '', notes: '' });
+	let copyForm = $state({ storageId: '', status: 'available', purchasedOn: '', purchaseAmount: '', purchaseCurrency: '', notes: '' });
 	let selectedTitleId = $state('');
 	let selectedTitle = $state<Title | null>(null);
 	let detailTrigger = $state<HTMLElement | null>(null);
@@ -220,7 +233,36 @@
 	let quantity = $state(1);
 	let purchasedOn = $state('');
 	let commonStorageId = $state('');
-	let rows = $state<CopyRow[]>([{ storageId: '', status: 'available', notes: '', copyCode: '' }]);
+ let commonPurchaseAmount=$state(''),commonPurchaseCurrency=$state(''),commonMoneyTouched=$state(false),copyPriceTouched=$state(false);
+ type PriceReference = {amount:string|null;currency:string|null;sourceUrl:string|null;basis?:'tax_exclusive_estimate';sourceAmount?:string};
+ let priceSource=$state(''),priceLoading=$state(false),priceReference=$state<PriceReference|null>(null);
+ let priceHint=$derived(priceReference?.basis==='tax_exclusive_estimate'
+  ? moneyText.estimated.replace('{source}',priceReference.sourceAmount??'').replace('{amount}',priceReference.amount??'')
+  : moneyText.automatic);
+ $effect(()=>{
+  const kind=modal==='copies'?'copies':modal==='copy_edit'?'copy_edit':null;
+  const titleId=kind==='copies'?selectedTitleId:kind?String(selectedTitle?.id??''):'';
+  priceSource='';priceReference=null;
+  if(!kind||!titleId){priceLoading=false;return;}
+  const request=new AbortController();priceLoading=true;
+  void(async()=>{try{
+   const response=await fetch(`/v1/book-titles/${titleId}/purchase-price`,{signal:request.signal});
+   if(!response.ok)return;
+   const price=await apiData<PriceReference>(response);
+   if(request.signal.aborted||modal!==kind||(kind==='copies'?selectedTitleId:String(selectedTitle?.id??''))!==titleId||price.amount===null||!validPurchaseAmount(price.amount)||!price.currency||!/^[A-Z]{3}$/.test(price.currency))return;
+   untrack(()=>{
+    if(kind==='copies'&&!commonMoneyTouched){
+     if(commonPurchaseAmount===''&&commonPurchaseCurrency===''){commonPurchaseAmount=price.amount!;commonPurchaseCurrency=price.currency!;}
+     rows=rows.map(row=>!row.moneyTouched&&row.purchaseAmount===''&&row.purchaseCurrency===''?{...row,purchaseAmount:price.amount!,purchaseCurrency:price.currency!}:row);
+    }else if(kind==='copy_edit'&&!copyPriceTouched&&copyForm.purchaseAmount===''&&copyForm.purchaseCurrency===''){
+     copyForm={...copyForm,purchaseAmount:price.amount!,purchaseCurrency:price.currency!};
+    }
+    priceSource=price.sourceUrl??'';priceReference=price;
+   });
+  }catch{/* Price lookup never prevents manual entry. */}finally{if(!request.signal.aborted)priceLoading=false;}})();
+  return()=>request.abort();
+ });
+	let rows = $state<CopyRow[]>([{ storageId: '', status: 'available', notes: '', copyCode: '', purchaseAmount: '', purchaseCurrency: '', moneyTouched: false }]);
 	let pendingPayload = '';
 	let pendingKey = '';
 	let dialogElement = $state<HTMLDialogElement>();
@@ -330,7 +372,7 @@
 		lookupStatus = 'idle';
 		clearField('isbn');
 	}
-	function openCopyEdit(copy: Copy) { openModal('copy_edit'); editingCopy = copy; copyForm = { storageId: String(copy.storageId), status: copy.status, purchasedOn: copy.purchasedOn?.slice(0, 10) ?? '', notes: copy.notes ?? '' }; initialDraft = JSON.stringify(copyForm); error = ''; fieldErrors = {}; }
+	function openCopyEdit(copy: Copy) { copyPriceTouched=false; openModal('copy_edit'); editingCopy = copy; copyForm = { storageId: String(copy.storageId), status: copy.status, purchasedOn: copy.purchasedOn?.slice(0, 10) ?? '', purchaseAmount: copy.purchaseAmount ?? '', purchaseCurrency: copy.purchaseCurrency ?? '', notes: copy.notes ?? '' }; initialDraft = JSON.stringify(copyForm); error = ''; fieldErrors = {}; }
 	function openCopies(title?: Title, order?: PurchaseOrder) {
 		receiptOrderId = order ? String(order.id) : '';
 		if (order) receiptOrders = [order];
@@ -338,13 +380,23 @@
 		selectedTitleId = title ? String(title.id) : '';
 		quantity = order ? order.quantity - order.received : 1;
 		purchasedOn = '';
-		commonStorageId = '';
-		rows = Array.from({ length: quantity }, () => ({ storageId: '', status: 'available' as const, notes: '', copyCode: '' }));
-		initialDraft = JSON.stringify({ selectedTitleId, quantity, purchasedOn, commonStorageId, rows, receiptOrderId });
+		commonStorageId = ''; commonPurchaseAmount='';commonPurchaseCurrency='';commonMoneyTouched=false;
+		rows = Array.from({ length: quantity }, () => ({ storageId: '', status: 'available' as const, notes: '', copyCode: '', purchaseAmount: '', purchaseCurrency: '', moneyTouched: false }));
+		initialDraft = JSON.stringify({ selectedTitleId, quantity, purchasedOn, commonStorageId, commonPurchaseAmount, commonPurchaseCurrency, rows, receiptOrderId });
 		pendingPayload = '';
 		pendingKey = '';
 		error = '';
 		fieldErrors = {};
+	}
+	function changeCopyTitle(value: string) {
+		if (value === selectedTitleId) return;
+		selectedTitleId = value;
+		receiptOrderId = '';
+		// Acquisition prices belong to the selected book; keep the other copy draft fields.
+		commonPurchaseAmount = ''; commonPurchaseCurrency = ''; commonMoneyTouched = false;
+		rows = rows.map(row => ({ ...row, purchaseAmount: '', purchaseCurrency: '', moneyTouched: false }));
+		priceSource = ''; priceReference = null;
+		clearField('titleId');
 	}
 	function receivePurchase(order: PurchaseOrder) {
         const title = titles.find(item => item.id === order.titleId);
@@ -382,9 +434,10 @@
     });
 	function resizeRows() {
 		const count = Math.max(1, Math.min(100, Number.isInteger(quantity) ? quantity : 1));
-		rows = Array.from({ length: count }, (_, index) => rows[index] ?? { storageId: commonStorageId, status: 'available', notes: '', copyCode: '' });
+		rows = Array.from({ length: count }, (_, index) => rows[index] ?? { storageId: commonStorageId, status: 'available', notes: '', copyCode: '', purchaseAmount: commonPurchaseAmount, purchaseCurrency: commonPurchaseCurrency, moneyTouched: false });
 	}
-	function applyStorage() { rows = rows.map(row => ({ ...row, storageId: commonStorageId })); }
+	function applyMoney(){rows=rows.map(row=>({...row,purchaseAmount:commonPurchaseAmount,purchaseCurrency:commonPurchaseCurrency,moneyTouched:true}));}
+ function applyStorage() { rows = rows.map(row => ({ ...row, storageId: commonStorageId })); }
 	function openModal(next: Exclude<typeof modal, 'detail' | null>) {
 		rememberParent();
 		detailNotice = null; notice = '';
@@ -411,7 +464,7 @@
 	function requestClose(escape = false) {
 		if (saving) return;
 		isbnScannerOpen = false;
-		const draft = modal === 'title' ? JSON.stringify({ ...titleForm, purchaseRequested, purchaseQuantity, purchaseReason }) : modal === 'copy_edit' ? JSON.stringify(copyForm) : modal === 'copies' ? JSON.stringify({ selectedTitleId, quantity, purchasedOn, commonStorageId, rows, receiptOrderId }) : '';
+		const draft = modal === 'title' ? JSON.stringify({ ...titleForm, purchaseRequested, purchaseQuantity, purchaseReason }) : modal === 'copy_edit' ? JSON.stringify(copyForm) : modal === 'copies' ? JSON.stringify({ selectedTitleId, quantity, purchasedOn, commonStorageId, commonPurchaseAmount, commonPurchaseCurrency, rows, receiptOrderId }) : '';
 		if (draft && draft !== initialDraft && (escape || editingTitleId !== null && modal === 'title' || modal === 'copy_edit')) confirmingDiscard = true;
 		else close();
 	}
@@ -419,7 +472,10 @@
 		if (modal || purchaseOverview) { notice = ''; detailNotice = { message, tone }; }
 		else { detailNotice = null; notice = message; noticeTone = tone; }
 	}
+	const canEditBookRelations=()=>['books.purchases.create','books.purchases.cancel','books.purchases.manage','books.copies.create','books.copies.update','books.copies.delete','books.reservations.create','books.reservations.cancel','books.loans.create','books.loans.return','books.covers.update'].some(code=>allowedOperation(code));
+
 	async function saveTitle() {
+		if(editingTitleId&&!allowedOperation('books.titles.update'))return;
 		if (isbnScannerOpen) return;
 		if (purchaseRequested && (!purchaseReady || !Number.isInteger(purchaseQuantity) || purchaseQuantity < 1 || purchaseQuantity > 100)) { error = purchaseText.quantityRequired; return; }
 		if (!titleForm.name.trim()) { fieldErrors = { name: sectionText.required }; focusFirstInvalid(); return; }
@@ -471,11 +527,12 @@
 		if (!selectedTitleId) invalid.titleId = sectionText.required;
 		if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) invalid.quantity = sectionText.quantity;
 		rows.forEach((row, index) => { if (!row.storageId) invalid[`copies[${index}].storageId`] = sectionText.required; });
+ rows.forEach((row,index)=>{if(!validPurchaseAmount(row.purchaseAmount))invalid[`copies[${index}].purchaseAmount`]=moneyText.invalidAmount;if(!/^[A-Z]{3}$/.test(row.purchaseCurrency))invalid[`copies[${index}].purchaseCurrency`]=moneyText.invalidCurrency;});
 		if (Object.keys(invalid).length) { fieldErrors = invalid; focusFirstInvalid(); return; }
 		saving = true; error = ''; detailNotice = null; fieldErrors = {};
 		try {
 			if (rows.length !== quantity) { error = t.saveFailed; return; }
-			const body = { titleId: Number(selectedTitleId), purchaseOrderId: receiptOrderId ? Number(receiptOrderId) : null, purchasedOn: purchasedOn || null, copies: rows.map(row => ({ storageId: Number(row.storageId), status: row.status, notes: row.notes || null, copyCode: row.copyCode || null })) };
+			const body = { titleId: Number(selectedTitleId), purchaseOrderId: receiptOrderId ? Number(receiptOrderId) : null, purchasedOn: purchasedOn || null, copies: rows.map(row => ({ storageId: Number(row.storageId), status: row.status, notes: row.notes || null, copyCode: row.copyCode || null, purchaseAmount: row.purchaseAmount, purchaseCurrency: row.purchaseCurrency })) };
 			const payload = JSON.stringify(body);
 			if (payload !== pendingPayload) { pendingPayload = payload; pendingKey = crypto.randomUUID(); }
 			const response = await fetch('/v1/book-copies', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': pendingKey }, body: payload });
@@ -484,12 +541,13 @@
 			if (!restoreParent()) { modal = returnToDetail && selectedTitle ? 'detail' : null; returnToDetail = false; }
 			if (purchaseOverview) purchasePanelRevision++;
 			announce(t.savedCopies);
-			if (modal === 'detail') await refreshDetail();
+			if(selectedTitle&&(modal==='detail'||modal==='title'))await refreshDetail();
 			await titleList?.refresh();
 		} catch { error = modal === 'detail' ? t.loadFailed : t.saveFailed; } finally { saving = false; }
 	}
 	async function showDetail(item: Title, trigger: HTMLElement | null) {
 		rememberParent();
+		bookDetailTab = 'basic';
 		returnToDetail = false;
 		selectedTitle = item;
 		detailNotice = null; notice = '';
@@ -546,7 +604,7 @@
 		try {
 			const response = await fetch('/v1/book-loans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ copyId: loanCopy.id, employeeId: Number(borrowerId), dueOn }) });
 			if (!response.ok) { await showError(response); return; }
-			restoreParent(); modal = 'detail'; await refreshDetail(); announce(c.loanSaved);
+			if(!restoreParent())modal='detail'; await refreshDetail(); announce(c.loanSaved);
 		} catch { error = t.saveFailed; } finally { saving = false; }
 	}
 	async function returnLoan(id: number) {
@@ -559,12 +617,13 @@
 	}
 	async function saveCopyEdit() {
 		if (!editingCopy) return;
+        const moneyErrors:Record<string,string>={};if(!validPurchaseAmount(copyForm.purchaseAmount))moneyErrors.purchaseAmount=moneyText.invalidAmount;if(!/^[A-Z]{3}$/.test(copyForm.purchaseCurrency))moneyErrors.purchaseCurrency=moneyText.invalidCurrency;if(Object.keys(moneyErrors).length){fieldErrors=moneyErrors;focusFirstInvalid();return;}
 		if (!copyForm.storageId) { fieldErrors = { storageId: sectionText.required }; focusFirstInvalid(); return; }
 		saving = true; error = ''; detailNotice = null;
 		try {
-			const response = await fetch(`/v1/book-copies/${editingCopy.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storageId: Number(copyForm.storageId), status: copyForm.status, purchasedOn: copyForm.purchasedOn || null, notes: copyForm.notes || null }) });
+			const response = await fetch(`/v1/book-copies/${editingCopy.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storageId: Number(copyForm.storageId), status: copyForm.status, purchasedOn: copyForm.purchasedOn || null, purchaseAmount: copyForm.purchaseAmount, purchaseCurrency: copyForm.purchaseCurrency, notes: copyForm.notes || null }) });
 			if (!response.ok) { await showError(response); return; }
-			restoreParent(); modal = 'detail'; await refreshDetail(); await titleList?.refresh(); announce(t.savedCopies);
+			if(!restoreParent())modal='detail'; await refreshDetail(); await titleList?.refresh(); announce(t.savedCopies);
 		} catch { error = t.saveFailed; } finally { saving = false; }
 	}
 	async function deleteSelected() {
@@ -577,7 +636,7 @@
 			if (!response.ok) { await showError(response); return; }
 			await titleList?.refresh();
 			if (titleDeletion) { modalParents = []; titles = await allItems<Title>('/v1/book-titles'); selectedTitle = null; modal = null; }
-			else { restoreParent(); modal = 'detail'; await refreshDetail(); }
+			else { if(!restoreParent())modal='detail'; await refreshDetail(); }
 			announce($localization.displayLanguage === 'ja' ? '削除しました。' : 'Deleted.');
 		} catch { error = t.saveFailed; } finally { saving = false; }
 	}
@@ -628,6 +687,144 @@
 		} catch { error = t.saveFailed; } finally { saving = false; }
 	}
 </script>
+{#snippet bookPriceHelp()}
+<p class="field-hint" data-purchase-price-status>{priceLoading?moneyText.loading:priceSource?priceHint:moneyText.missing}{#if priceSource} <a href={priceSource} target="_blank" rel="noopener noreferrer">openBD</a>{/if}</p>
+{/snippet}
+{#snippet receiptOrderHelp()}<p>{purchaseText.receiptHelp}</p>{/snippet}
+{#snippet bookEditor(mode:Exclude<typeof modal,'detail'|null>)}{@const modeTitle=mode==='title'?'book-modal-title':'book-child-modal-title'}
+<ModalBackdrop>
+			<dialog use:trackBookEditor={mode} class="app-modal book-dialog" class:app-modal--compact={mode !== 'copies'} open aria-modal="true" aria-labelledby={modeTitle} onkeydown={handleDialogKeydown}>
+				<header><h2 id={modeTitle}>{mode === 'title' ? editingTitleId ? actionText.editTitle : t.addTitle : mode === 'copies' ? t.addCopies : mode === 'loan' ? c.loan : mode === 'cover' ? coverText.change : mode === 'copy_edit' ? actionText.editCopy : mode === 'delete_title' ? actionText.deleteTitle : mode === 'delete_copy' ? actionText.deleteCopy : t.detail}</h2><button class="app-modal-close" type="button" aria-label={t.close} onclick={() => requestClose()} disabled={saving}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<div class="app-modal-form-body book-dialog-body">
+					{#if detailNotice}<StatusNotice message={detailNotice.message} tone={detailNotice.tone} onDismiss={() => detailNotice = null} />{/if}
+					{#if error}<p class="book-error" role="alert">{error}</p>{/if}
+					{#if mode === 'title'}
+							{#if editingTitleId && selectedTitle}
+								<div class="book-edit-actions">{#if user?.capabilities.canManageBookCovers}<ModalActionButton label={coverText.change} variant="secondary" disabled={saving} onclick={() => openCover(selectedTitle!)} />{/if}{#if editingSourceProvider === 'openbd' && user?.capabilities.canUpdateBookTitles}<ModalActionButton label={lookupText.refresh} variant="secondary" disabled={saving} onclick={() => void refreshSource()} />{/if}</div>
+							{/if}
+						<form id="book-title-form" hidden novalidate onsubmit={(event) => { event.preventDefault(); void saveTitle(); }}></form><div class="app-modal-form book-form">
+							<FormTabs kind="book" label={sectionText.title} formId="book-title-form" formPanels={['basic','purchase']}>
+<div data-form-panel="basic"><fieldset class="editor-fields" disabled={Boolean(editingTitleId)&&!allowedOperation('books.titles.update')}><FormSection title={sectionText.title} framed>
+								{#if sourceLocked}<p class="wide field-hint">{lookupText.readonly}</p>{/if}
+								<div class="book-lookup book-isbn-row" class:book-isbn-edit={editingTitleId !== null}>
+									<label>{t.isbn}<input maxlength="17" placeholder="9784873115658" bind:value={titleForm.isbn} readonly={sourceLocked || isbnScannerOpen} class:invalid={Boolean(fieldErrors.isbn)} aria-invalid={Boolean(fieldErrors.isbn)} aria-describedby={fieldErrors.isbn ? 'book-title-isbn-error' : undefined} oninput={changeLookupIsbn} onkeydown={(event) => { if (!isbnScannerOpen && editingTitleId === null && event.key === 'Enter') { event.preventDefault(); void searchBookLookup(); } }} /></label>
+									<div class="book-isbn-actions">
+										{#if !sourceLocked}<button bind:this={isbnScanTrigger} class="secondary isbn-scan-trigger" type="button" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving} aria-expanded={isbnScannerOpen} onclick={() => isbnScannerOpen = true}>{$localization.displayLanguage === 'ja' ? 'カメラで読み取る' : 'Scan with camera'}</button>{/if}
+										{#if editingTitleId === null}<ModalActionButton label={lookupStatus === 'loading' ? lookupText.searching : lookupText.search} variant="secondary" size="field" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving || sourceLocked} onclick={() => void searchBookLookup()} />{/if}
+									</div>
+									{#if isbnScannerOpen}<IsbnScanner onRead={readIsbn} onClose={closeIsbnScanner} />{/if}
+									{#if fieldErrors.isbn}<small id="book-title-isbn-error" class="field-error" role="alert">{fieldErrors.isbn}</small>{/if}
+									{#if editingTitleId === null}<small class="field-hint">{lookupText.help}</small>
+									{#if lookupStatus === 'empty'}<p role="status">{lookupText.empty}</p>{/if}
+									{#if lookupStatus === 'error'}<p role="alert">{lookupErrorCode === 'BOOK_LOOKUP_TIMEOUT' ? lookupText.timeout : lookupErrorCode === 'BOOK_LOOKUP_RATE_LIMITED' ? lookupText.limited : lookupText.failed}</p>{/if}
+										{#if lookupExisting}<div class="book-lookup-existing"><strong>{lookupText.existing} {lookupExisting.name}</strong><ModalActionButton label={purchaseText.existing} variant="secondary" onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) void showDetail(item, null); }} />{#if user?.capabilities.canManageBooks}<AddButton label={lookupText.addCopy} onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) openCopies(item); }} />{/if}</div>{/if}
+										{#if lookupCandidates.length}<div class="book-lookup-results" aria-label={lookupText.candidates}><h3>{lookupText.candidates}</h3>{#each lookupCandidates as candidate (candidate.isbn)}<div class="book-lookup-result"><BookCover titleId={null} image={candidate.coverImage} /><div class="book-lookup-result-details"><strong>{candidate.title}</strong><span>{candidate.author ?? ''} · {candidate.publisher ?? ''} · {candidate.isbn}</span><ModalActionButton label={lookupText.apply} variant="secondary" onclick={() => applyBookLookup(candidate)} /></div></div>{/each}</div>{/if}
+										{#if lookupSource}<ModalActionButton label={lookupText.manual} variant="secondary" onclick={discardBookLookup} /><p class="book-source">{lookupText.source} <a href={lookupSource.sourceUrl} target="_blank" rel="noopener noreferrer">{lookupSource.sourceUrl}</a></p>{/if}
+									{/if}
+								</div>
+								<label>{t.author}<input maxlength="500" placeholder={t.author} bind:value={titleForm.author} readonly={sourceLocked} /></label>
+								<label>{t.publisher}<input maxlength="255" placeholder={t.publisher} bind:value={titleForm.publisher} readonly={sourceLocked} /></label>
+								<label>{t.edition}<input maxlength="100" placeholder={t.edition} bind:value={titleForm.edition} readonly={sourceLocked} /></label>
+								<label class="wide"><span>{t.name}<span class="required" aria-hidden="true">*</span></span><input required maxlength="500" placeholder={t.name} bind:value={titleForm.name} readonly={sourceLocked} class:invalid={Boolean(fieldErrors.name)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'book-title-name-error' : undefined} oninput={() => clearField('name')} />{#if fieldErrors.name}<small id="book-title-name-error" class="field-error" role="alert">{fieldErrors.name}</small>{/if}</label>
+								</FormSection><FormSection title={supplementalText.label} framed><label class="wide">{supplementalText.label}<textarea maxlength="5000" rows="4" placeholder={supplementalText.placeholder} bind:value={titleForm.notes}></textarea></label>
+							</FormSection>
+							</fieldset></div><div data-form-panel="purchase">{#if editingTitleId && selectedTitle}<p>{detailCommon.relatedSaveNotice}</p>{@render purchase(true)}{:else}{#if !editingTitleId && user?.capabilities.canRequestBookPurchases}<FormSection title={purchaseText.heading} framed><label class="book-purchase-check wide"><input type="checkbox" bind:checked={purchaseRequested} />{purchaseText.request}</label>{#if purchaseRequested}<div class="wide"><BookPurchaseFields titleId={matchedTitle} branchId={user?.branchId} bind:quantity={purchaseQuantity} bind:reason={purchaseReason} bind:ready={purchaseReady} /></div>{/if}</FormSection>{/if}
+						{/if}</div>
+<div data-form-panel="copies">{#if editingTitleId && selectedTitle}<p>{detailCommon.relatedSaveNotice}</p>{@render detailActions()}{@render copies(true)}{:else}<p>{detailCommon.relatedAfterCreate}</p>{/if}</div></FormTabs></div>
+					{:else if mode === 'copies'}
+							<form id="book-copy-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveCopies(); }}>
+								<FormSection title={sectionText.common} framed>
+									<div class="wide"><SearchSelect label={t.existing} field="book-title" value={selectedTitleId} options={titleOptions} required error={fieldErrors.titleId ?? ''} onSelect={changeCopyTitle} /></div>
+									<div class="wide"><SearchSelect label={purchaseText.orders} field="book-receipt-order" value={receiptOrderId} help={receiptOrderHelp} options={[{ value: '', label: purchaseText.noLink }, ...receiptOrders.filter(order => order.status === 'ordered' && order.titleId === Number(selectedTitleId)).map(order => ({ value: String(order.id), label: `${order.branch.name} · ${order.orderCode} · ${order.received}/${order.quantity}` }))]} disabled={saving} error={fieldErrors.purchaseOrderId ?? ''} onSelect={(value) => { receiptOrderId = value; clearField('purchaseOrderId'); }} /></div>
+									<label><span>{t.quantity}<span class="required" aria-hidden="true">*</span></span><input type="number" min="1" max="100" required bind:value={quantity} class:invalid={Boolean(fieldErrors.quantity)} aria-invalid={Boolean(fieldErrors.quantity)} aria-describedby={fieldErrors.quantity ? 'book-quantity-error' : undefined} oninput={event => { quantity=Number(event.currentTarget.value); resizeRows(); clearField('quantity'); }} />{#if fieldErrors.quantity}<small id="book-quantity-error" class="field-error" role="alert">{fieldErrors.quantity}</small>{/if}</label>
+									<DatePicker label={t.purchasedOn} field="book-purchased-on" value={purchasedOn} error={fieldErrors.purchasedOn ?? ''} open={activeDateField === 'purchasedOn'} onToggle={() => activeDateField = activeDateField === 'purchasedOn' ? null : 'purchasedOn'} onSelect={(value) => selectDate('purchasedOn', value)} />
+									<SearchSelect label={t.sharedStorage} field="book-common-storage" value={commonStorageId} options={permittedStorageOptions} onSelect={(value) => { commonStorageId = value; applyStorage(); }} />
+<PurchaseMoneyFields bind:amount={commonPurchaseAmount} bind:currency={commonPurchaseCurrency} prefix="book-common-purchase" help={bookPriceHelp} required={false} disabled={saving} onChange={()=>commonMoneyTouched=true}/><div class="wide book-money-apply"><ModalActionButton label={moneyText.apply} variant="secondary" size="field" disabled={saving||!validPurchaseAmount(commonPurchaseAmount)||!commonPurchaseCurrency} onclick={applyMoney}/></div>
+
+
+								</FormSection>
+								<p class="field-hint">{t.countHelp}</p>
+								<div class="book-rows">{#each rows as row, index}<FormSection title={`${t.row} ${index + 1}`} framed>
+									<SearchSelect label={t.storage} field={`book-storage-${index}`} value={row.storageId} options={permittedStorageOptions} required error={fieldErrors[`copies[${index}].storageId`] ?? ''} onSelect={(value) => { row.storageId = value; clearField(`copies[${index}].storageId`); }} />
+									<SearchSelect label={t.status} field={`book-status-${index}`} value={row.status} options={[{ value: 'available', label: t.available }, { value: 'unavailable', label: t.unavailable }]} searchable={false} onSelect={(value) => row.status = value as CopyRow['status']} />
+									<label>{t.code}<input maxlength="40" placeholder="BK-000001" bind:value={row.copyCode} class:invalid={Boolean(fieldErrors[`copies[${index}].copyCode`])} aria-invalid={Boolean(fieldErrors[`copies[${index}].copyCode`])} aria-describedby={fieldErrors[`copies[${index}].copyCode`] ? `book-code-${index}-error` : undefined} oninput={() => clearField(`copies[${index}].copyCode`)} />{#if fieldErrors[`copies[${index}].copyCode`]}<small id={`book-code-${index}-error`} class="field-error">{fieldErrors[`copies[${index}].copyCode`]}</small>{/if}</label>
+									<PurchaseMoneyFields bind:amount={row.purchaseAmount} bind:currency={row.purchaseCurrency} prefix={`book-purchase-${index}`} help={bookPriceHelp} amountError={fieldErrors[`copies[${index}].purchaseAmount`]} currencyError={fieldErrors[`copies[${index}].purchaseCurrency`]} disabled={saving} onChange={()=>{row.moneyTouched=true;clearField(`copies[${index}].purchaseAmount`);clearField(`copies[${index}].purchaseCurrency`);}}/>
+<label class="wide">{t.notes}<input maxlength="5000" placeholder={t.notes} bind:value={row.notes} /></label>
+								</FormSection>{/each}</div>
+							</form>
+					{:else if mode === 'loan' && loanCopy}
+						<form id="book-loan-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveLoan(); }}><FormSection title={loanCopy.copyCode} framed columns={2}>
+							<SearchSelect label={c.borrower} field="book-borrower" value={borrowerId} options={employees.filter(employee => allowedOperation('books.loans.create', employee.branchId) && (user?.capabilities.canManageBooksGlobally || employee.branchId === loanCopy?.storage.branchId)).map(employee => ({ value: String(employee.id), label: `${employee.lastName} ${employee.firstName} (${employee.employeeCode})` }))} required error={fieldErrors.employeeId ?? ''} onSelect={(value) => { borrowerId = value; clearField('employeeId'); }} />
+							<DatePicker label={c.dueOn} field="book-due-on" value={dueOn} required error={fieldErrors.dueOn ?? ''} open={activeDateField === 'dueOn'} onToggle={() => activeDateField = activeDateField === 'dueOn' ? null : 'dueOn'} onSelect={(value) => selectDate('dueOn', value)} />
+						</FormSection></form>
+					{:else if mode === 'copy_edit' && editingCopy}
+						<form id="book-copy-edit-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveCopyEdit(); }}><FormSection title={editingCopy.copyCode} framed>
+							<SearchSelect label={t.storage} field="book-edit-storage" value={copyForm.storageId} options={permittedStorageOptions} required error={fieldErrors.storageId ?? ''} onSelect={(value) => { copyForm.storageId = value; clearField('storageId'); }} />
+							<SearchSelect label={t.status} field="book-edit-status" value={copyForm.status} options={[{ value: 'available', label: t.available }, { value: 'unavailable', label: t.unavailable }]} searchable={false} onSelect={(value) => copyForm.status = value} />
+							<DatePicker label={t.purchasedOn} field="book-edit-purchased-on" value={copyForm.purchasedOn} error={fieldErrors.purchasedOn ?? ''} open={activeDateField === 'copyPurchasedOn'} onToggle={() => activeDateField = activeDateField === 'copyPurchasedOn' ? null : 'copyPurchasedOn'} onSelect={(value) => selectDate('copyPurchasedOn', value)} />
+							<PurchaseMoneyFields bind:amount={copyForm.purchaseAmount} bind:currency={copyForm.purchaseCurrency} prefix="book-edit-purchase" help={bookPriceHelp} amountError={fieldErrors.purchaseAmount} currencyError={fieldErrors.purchaseCurrency} disabled={saving} onChange={()=>{copyPriceTouched=true;clearField('purchaseAmount');clearField('purchaseCurrency');}}/>
+
+<label class="wide">{t.notes}<input maxlength="5000" bind:value={copyForm.notes} placeholder={t.notes} /></label>
+						</FormSection></form>
+					{:else if mode === 'cover' && coverTitle}
+						<form id="book-cover-form" class="app-modal-form book-form" onsubmit={(event) => { event.preventDefault(); void saveCover(); }}><FormSection title={coverTitle.name} framed columns={2}>
+							<div class="wide book-cover-picker">
+								<span id="book-cover-label" class="book-cover-label">{coverText.image}</span>
+								<input bind:this={coverInput} type="file" accept="image/png" hidden disabled={saving} aria-label={coverText.image} onchange={(event) => { if (event.currentTarget.files?.length) selectCoverFiles(event.currentTarget.files); event.currentTarget.value = ''; }} />
+								<button class="book-cover-dropzone" class:dragging={coverDragging} type="button" disabled={saving} aria-labelledby="book-cover-label book-cover-prompt" aria-describedby="book-cover-help" onclick={() => coverInput?.click()}
+									ondragover={(event) => { event.preventDefault(); if (!saving) { coverDragging = true; if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'; } }}
+									ondragleave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) coverDragging = false; }}
+									ondrop={(event) => { event.preventDefault(); selectCoverFiles(event.dataTransfer?.files ?? null); }}>
+									{#if coverFile}<strong class="book-cover-filename">{coverFile.name}</strong>{/if}
+									<span id="book-cover-prompt">{coverFile ? coverText.replace : coverText.drop}</span>
+								</button>
+								<small id="book-cover-help" class="field-hint">{coverText.imageHelp}</small>
+							</div>
+						</FormSection></form>
+					{:else if mode === 'delete_title' || mode === 'delete_copy'}
+						<p>{actionText.deleteConfirm}</p><p><strong>{mode === 'delete_title' ? selectedTitle?.name : editingCopy?.copyCode}</strong></p>
+					{/if}
+				</div>
+				<footer class="app-modal-footer">{#if mode==='title' && selectedTitle && editingTitleId && allowedOperation('books.titles.delete')}<button type="button" class="app-danger-action editor-delete" disabled={saving} onclick={()=>openModal('delete_title')}>{detailCommon.delete}</button>{/if}
+					<button type="button" class="secondary" onclick={() => requestClose()} disabled={saving}>{t.cancel}</button>
+					{#if mode === 'title'}<button type="submit" form="book-title-form" class="app-primary-action" disabled={(Boolean(editingTitleId)&&!allowedOperation('books.titles.update')) || saving || isbnScannerOpen}>{t.save}</button>
+					{:else if mode === 'copies'}<button type="submit" form="book-copy-form" class="app-primary-action" disabled={saving}>{t.save}</button>
+					{:else if mode === 'loan'}<button type="submit" form="book-loan-form" class="app-primary-action" disabled={saving}>{c.loan}</button>
+					{:else if mode === 'copy_edit'}<button type="submit" form="book-copy-edit-form" class="app-primary-action" disabled={saving}>{t.save}</button>
+					{:else if mode === 'cover'}<button type="submit" form="book-cover-form" class="app-primary-action" disabled={saving}>{t.save}</button>
+					{:else if mode === 'delete_title' || mode === 'delete_copy'}<button type="button" class="app-danger-action" disabled={saving} onclick={() => void deleteSelected()}>{mode === 'delete_title' ? actionText.deleteTitle : actionText.deleteCopy}</button>{/if}
+				</footer>
+			</dialog>
+		</ModalBackdrop>
+{/snippet}
+
+{#snippet copies(editable = false)}{#if selectedTitle}
+<section class="app-detail-section">
+			<h3>{t.copies}: {detailCopies.length}</h3>
+			{#if detailCopies.length}
+				{#if reservations.length}{#each reservations as reservation}<p class="book-reservation-row">{c.reservation}: {reservation.branch.name} · {reservation.status} {#if editable}<button type="button" disabled={saving || !allowedOperation('books.reservations.cancel')} onclick={() => void cancelReservation(reservation.id)}>{c.cancelReservation}</button>{/if}</p>{/each}{:else if editable}<div class="book-reserve"><SearchSelect label={t.branch} field="book-reservation-branch" value={reserveBranchId} options={[...new Map(detailCopies.map(copy => [copy.storage.branchId, { value: String(copy.storage.branchId), label: copy.storage.room.branch.name }])).values()]} onSelect={(value) => reserveBranchId = value} /><button type="button" disabled={saving || !reserveBranchId || !allowedOperation('books.reservations.create')} onclick={() => void reserve()}>{c.reserve}</button></div>{/if}
+				<ul class="book-copy-list">
+					{#each detailCopies as copy}
+						<li class="book-copy-item">
+							<div class="book-copy-meta"><strong>{copy.copyCode}</strong><span>{moneyText.amount}: {displayPurchaseMoney(copy.purchaseAmount,copy.purchaseCurrency,$localization.displayLanguage)}</span><span>{copy.storage.room.branch.name} / {copy.storage.name} · {copy.onLoan ? c.onLoan : copy.status === 'available' ? t.available : t.unavailable}</span>{#if copy.loans[0]}<span>{copy.loans[0].employee.lastName} {copy.loans[0].employee.firstName} · {c.dueOn}: {copy.loans[0].dueOn.slice(0, 10)}</span>{/if}</div>
+							{#if editable && user?.capabilities.canManageBooks && (user.capabilities.canManageBooksGlobally || user.branchId === copy.storage.branchId)}
+								<div class="book-copy-actions">
+									{#if copy.loans[0] && allowedOperation('books.loans.return', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void returnLoan(copy.loans[0].id)}>{c.return}</button>{:else if !copy.onLoan && copy.status === 'available' && allowedOperation('books.loans.create', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void openLoan(copy)}>{c.loan}</button>{/if}
+									{#if allowedOperation('books.copies.update', copy.storage.branchId)}<button type="button" disabled={saving || copy.onLoan} onclick={() => openCopyEdit(copy)}>{actionText.editCopy}</button>{/if}
+									{#if allowedOperation('books.copies.delete', copy.storage.branchId)}<button type="button" class="danger" disabled={saving || copy.onLoan} onclick={() => { editingCopy = copy; openModal('delete_copy'); }}>{actionText.deleteCopy}</button>{/if}
+								</div>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}<p>{t.noCopies}</p>{/if}
+		</section>
+{/if}{/snippet}
+
+{#snippet purchase(editable = false)}{#if selectedTitle}
+<section class="app-detail-section"><h3>{purchaseText.heading}</h3><BookPurchasePanel readOnly={!editable} titleId={selectedTitle.id} branchId={user?.branchId} canRequest={user?.capabilities.canRequestBookPurchases} onChanged={() => void titleList?.refresh()} onReceive={allowedOperation('books.copies.create') ? receivePurchase : undefined} /></section>
+{/if}{/snippet}
+
 
 {#snippet titleCell(item: Title)}<span>{item.name}</span>{#if item.purchaseRequestCount}<BookPurchaseBadge titleId={item.id} count={item.purchaseRequestCount} label={$localization.displayLanguage === 'ja' ? `${purchaseText.badge} ${item.purchaseRequestCount}件` : `${purchaseText.badge} ${item.purchaseRequestCount} ${item.purchaseRequestCount === 1 ? 'request' : 'requests'}`} onOpen={(trigger) => openPurchaseOverview(String(item.id), trigger)} />{/if}{/snippet}
 
@@ -651,14 +848,15 @@
 {/snippet}
 
 {#snippet detailHeaderActions()}
-	{#if selectedTitle && (allowedOperation('books.titles.update') || allowedOperation('books.titles.delete'))}<DetailActionButtons editLabel={actionText.editTitle} deleteLabel={actionText.deleteTitle} disabled={saving} onEdit={allowedOperation('books.titles.update') ? () => openTitle(selectedTitle!) : undefined} onDelete={allowedOperation('books.titles.delete') ? () => openModal('delete_title') : undefined} />{/if}
+	{#if selectedTitle && (allowedOperation('books.titles.update') || allowedOperation('books.titles.delete') || canEditBookRelations())}<DetailActionButtons editing={false} editLabel={actionText.editTitle} deleteLabel={actionText.deleteTitle} disabled={saving} onEdit={allowedOperation('books.titles.update') || allowedOperation('books.titles.delete') || canEditBookRelations() ? () => openTitle(selectedTitle!) : undefined} onDelete={allowedOperation('books.titles.delete') ? () => openModal('delete_title') : undefined} />{/if}
 {/snippet}
 
 {#snippet bookDetail()}
 	{#if detailNotice}<StatusNotice message={detailNotice.message} tone={detailNotice.tone} onDismiss={() => detailNotice = null} />{/if}
 	{#if error}<p class="book-error" role="alert">{error}</p>{/if}
 	{#if selectedTitle}<div class="book-detail">
-		<section class="app-detail-section">
+		{#snippet basic()}{#if selectedTitle}
+<section class="app-detail-section">
 			<h3>{t.bookInformation}</h3>
 			<div class="book-detail-overview">
 				<div class="book-detail-cover"><BookCover titleId={selectedTitle.id} refresh={coverRefresh} large /></div>
@@ -673,27 +871,10 @@
 			</div>
 		</section>
 		{#if selectedTitle.notes}<section class="app-detail-section"><h3>{supplementalText.label}</h3><p class="app-detail-notes book-title-notes">{selectedTitle.notes}</p></section>{/if}
-		<section class="app-detail-section"><h3>{purchaseText.heading}</h3><BookPurchasePanel titleId={selectedTitle.id} branchId={user?.branchId} canRequest={user?.capabilities.canRequestBookPurchases} onChanged={() => void titleList?.refresh()} onReceive={allowedOperation('books.copies.create') ? receivePurchase : undefined} /></section>
-		<section class="app-detail-section">
-			<h3>{t.copies}: {detailCopies.length}</h3>
-			{#if detailCopies.length}
-				{#if reservations.length}{#each reservations as reservation}<p class="book-reservation-row">{c.reservation}: {reservation.branch.name} · {reservation.status} <button type="button" disabled={saving || !allowedOperation('books.reservations.cancel')} onclick={() => void cancelReservation(reservation.id)}>{c.cancelReservation}</button></p>{/each}{:else}<div class="book-reserve"><SearchSelect label={t.branch} field="book-reservation-branch" value={reserveBranchId} options={[...new Map(detailCopies.map(copy => [copy.storage.branchId, { value: String(copy.storage.branchId), label: copy.storage.room.branch.name }])).values()]} onSelect={(value) => reserveBranchId = value} /><button type="button" disabled={saving || !reserveBranchId || !allowedOperation('books.reservations.create')} onclick={() => void reserve()}>{c.reserve}</button></div>{/if}
-				<ul class="book-copy-list">
-					{#each detailCopies as copy}
-						<li class="book-copy-item">
-							<div class="book-copy-meta"><strong>{copy.copyCode}</strong><span>{copy.storage.room.branch.name} / {copy.storage.name} · {copy.onLoan ? c.onLoan : copy.status === 'available' ? t.available : t.unavailable}</span>{#if copy.loans[0]}<span>{copy.loans[0].employee.lastName} {copy.loans[0].employee.firstName} · {c.dueOn}: {copy.loans[0].dueOn.slice(0, 10)}</span>{/if}</div>
-							{#if user?.capabilities.canManageBooks && (user.capabilities.canManageBooksGlobally || user.branchId === copy.storage.branchId)}
-								<div class="book-copy-actions">
-									{#if copy.loans[0] && allowedOperation('books.loans.return', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void returnLoan(copy.loans[0].id)}>{c.return}</button>{:else if !copy.onLoan && copy.status === 'available' && allowedOperation('books.loans.create', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void openLoan(copy)}>{c.loan}</button>{/if}
-									{#if allowedOperation('books.copies.update', copy.storage.branchId)}<button type="button" disabled={saving || copy.onLoan} onclick={() => openCopyEdit(copy)}>{actionText.editCopy}</button>{/if}
-									{#if allowedOperation('books.copies.delete', copy.storage.branchId)}<button type="button" class="danger" disabled={saving || copy.onLoan} onclick={() => { editingCopy = copy; openModal('delete_copy'); }}>{actionText.deleteCopy}</button>{/if}
-								</div>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			{:else}<p>{t.noCopies}</p>{/if}
-		</section>
+{/if}{/snippet}
+
+
+<DetailTabs bind:active={bookDetailTab} kind="book" label={t.detail} tabs={[{id:'basic',label:t.bookInformation,content:basic},{id:'purchase',label:purchaseText.heading,content:purchase},{id:'copies',label:detailCommon.detailCopyLoans,content:copies}]} />
 	</div>{/if}
 {/snippet}
 
@@ -732,119 +913,25 @@
 		{ key: 'author', label: t.author, width: 30, value: (item) => (item as Title).author ?? '' },
 		{ key: 'copyCount', label: t.copies, width: '80px', align: 'center', value: (item) => (item as Title).copyCount, sortable: false },
 		{ key: 'rental', label: t.rental, width: '140px', headerNoWrap: true, align: 'center', value: (item) => (item as Title).rentable ? t.rentable : t.notRentable, sortable: false }
-	]} onDetail={(item, trigger) => void showDetail(item as Title, trigger)} />{/if}
+	]} onDetail={(item, trigger) => { forgetDetailReturn(trigger, 'book-modal-title'); void showDetail(item as Title, trigger); }} />{/if}
 	</ViewportListPage>
 	{#if modal === 'detail' && selectedTitle}
-		<DetailModal title={t.detail} titleId="book-modal-title" closeLabel={t.close} returnFocus={detailTrigger} compact headerActions={detailHeaderActions} actions={user?.capabilities.canManageBooks ? detailActions : undefined} onClose={close}>{@render bookDetail()}</DetailModal>
-	{:else if modal}
-		<ModalBackdrop>
-			<dialog bind:this={dialogElement} class="app-modal book-dialog" class:app-modal--compact={modal !== 'copies'} open aria-modal="true" aria-labelledby="book-modal-title" onkeydown={handleDialogKeydown}>
-				<header><h2 id="book-modal-title">{modal === 'title' ? editingTitleId ? actionText.editTitle : t.addTitle : modal === 'copies' ? t.addCopies : modal === 'loan' ? c.loan : modal === 'cover' ? coverText.change : modal === 'copy_edit' ? actionText.editCopy : modal === 'delete_title' ? actionText.deleteTitle : modal === 'delete_copy' ? actionText.deleteCopy : t.detail}</h2><button class="app-modal-close" type="button" aria-label={t.close} onclick={() => requestClose()} disabled={saving}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
-				<div class="app-modal-form-body book-dialog-body">
-					{#if detailNotice}<StatusNotice message={detailNotice.message} tone={detailNotice.tone} onDismiss={() => detailNotice = null} />{/if}
-					{#if error}<p class="book-error" role="alert">{error}</p>{/if}
-					{#if modal === 'title'}
-							{#if editingTitleId && selectedTitle}
-								<div class="book-edit-actions">{#if user?.capabilities.canManageBookCovers}<ModalActionButton label={coverText.change} variant="secondary" disabled={saving} onclick={() => openCover(selectedTitle!)} />{/if}{#if editingSourceProvider === 'openbd' && user?.capabilities.canUpdateBookTitles}<ModalActionButton label={lookupText.refresh} variant="secondary" disabled={saving} onclick={() => void refreshSource()} />{/if}</div>
-							{/if}
-						<form id="book-title-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveTitle(); }}>
-							<FormSection title={sectionText.title} framed>
-								{#if sourceLocked}<p class="wide field-hint">{lookupText.readonly}</p>{/if}
-								<div class="book-lookup book-isbn-row" class:book-isbn-edit={editingTitleId !== null}>
-									<label>{t.isbn}<input maxlength="17" placeholder="9784873115658" bind:value={titleForm.isbn} readonly={sourceLocked || isbnScannerOpen} class:invalid={Boolean(fieldErrors.isbn)} aria-invalid={Boolean(fieldErrors.isbn)} aria-describedby={fieldErrors.isbn ? 'book-title-isbn-error' : undefined} oninput={changeLookupIsbn} onkeydown={(event) => { if (!isbnScannerOpen && editingTitleId === null && event.key === 'Enter') { event.preventDefault(); void searchBookLookup(); } }} /></label>
-									<div class="book-isbn-actions">
-										{#if !sourceLocked}<button bind:this={isbnScanTrigger} class="secondary isbn-scan-trigger" type="button" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving} aria-expanded={isbnScannerOpen} onclick={() => isbnScannerOpen = true}>{$localization.displayLanguage === 'ja' ? 'カメラで読み取る' : 'Scan with camera'}</button>{/if}
-										{#if editingTitleId === null}<ModalActionButton label={lookupStatus === 'loading' ? lookupText.searching : lookupText.search} variant="secondary" size="field" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving || sourceLocked} onclick={() => void searchBookLookup()} />{/if}
-									</div>
-									{#if isbnScannerOpen}<IsbnScanner onRead={readIsbn} onClose={closeIsbnScanner} />{/if}
-									{#if fieldErrors.isbn}<small id="book-title-isbn-error" class="field-error" role="alert">{fieldErrors.isbn}</small>{/if}
-									{#if editingTitleId === null}<small class="field-hint">{lookupText.help}</small>
-									{#if lookupStatus === 'empty'}<p role="status">{lookupText.empty}</p>{/if}
-									{#if lookupStatus === 'error'}<p role="alert">{lookupErrorCode === 'BOOK_LOOKUP_TIMEOUT' ? lookupText.timeout : lookupErrorCode === 'BOOK_LOOKUP_RATE_LIMITED' ? lookupText.limited : lookupText.failed}</p>{/if}
-										{#if lookupExisting}<div class="book-lookup-existing"><strong>{lookupText.existing} {lookupExisting.name}</strong><ModalActionButton label={purchaseText.existing} variant="secondary" onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) void showDetail(item, null); }} />{#if user?.capabilities.canManageBooks}<AddButton label={lookupText.addCopy} onclick={() => { const item = titles.find(title => title.id === lookupExisting!.id); if (item) openCopies(item); }} />{/if}</div>{/if}
-										{#if lookupCandidates.length}<div class="book-lookup-results" aria-label={lookupText.candidates}><h3>{lookupText.candidates}</h3>{#each lookupCandidates as candidate (candidate.isbn)}<div class="book-lookup-result"><BookCover titleId={null} image={candidate.coverImage} /><div class="book-lookup-result-details"><strong>{candidate.title}</strong><span>{candidate.author ?? ''} · {candidate.publisher ?? ''} · {candidate.isbn}</span><ModalActionButton label={lookupText.apply} variant="secondary" onclick={() => applyBookLookup(candidate)} /></div></div>{/each}</div>{/if}
-										{#if lookupSource}<ModalActionButton label={lookupText.manual} variant="secondary" onclick={discardBookLookup} /><p class="book-source">{lookupText.source} <a href={lookupSource.sourceUrl} target="_blank" rel="noopener noreferrer">{lookupSource.sourceUrl}</a></p>{/if}
-									{/if}
-								</div>
-								<label>{t.author}<input maxlength="500" placeholder={t.author} bind:value={titleForm.author} readonly={sourceLocked} /></label>
-								<label>{t.publisher}<input maxlength="255" placeholder={t.publisher} bind:value={titleForm.publisher} readonly={sourceLocked} /></label>
-								<label>{t.edition}<input maxlength="100" placeholder={t.edition} bind:value={titleForm.edition} readonly={sourceLocked} /></label>
-								<label class="wide"><span>{t.name}<span class="required" aria-hidden="true">*</span></span><input required maxlength="500" placeholder={t.name} bind:value={titleForm.name} readonly={sourceLocked} class:invalid={Boolean(fieldErrors.name)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'book-title-name-error' : undefined} oninput={() => clearField('name')} />{#if fieldErrors.name}<small id="book-title-name-error" class="field-error" role="alert">{fieldErrors.name}</small>{/if}</label>
-								<label class="wide">{supplementalText.label}<textarea maxlength="5000" rows="4" placeholder={supplementalText.placeholder} bind:value={titleForm.notes}></textarea></label>
-							</FormSection>
-							{#if !editingTitleId && user?.capabilities.canRequestBookPurchases}<FormSection title={purchaseText.heading} framed><label class="book-purchase-check wide"><input type="checkbox" bind:checked={purchaseRequested} />{purchaseText.request}</label>{#if purchaseRequested}<div class="wide"><BookPurchaseFields titleId={matchedTitle} branchId={user?.branchId} bind:quantity={purchaseQuantity} bind:reason={purchaseReason} bind:ready={purchaseReady} /></div>{/if}</FormSection>{/if}
-						</form>
-					{:else if modal === 'copies'}
-							<form id="book-copy-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveCopies(); }}>
-								<FormSection title={sectionText.common} framed>
-									<SearchSelect label={t.existing} field="book-title" value={selectedTitleId} options={titleOptions} required error={fieldErrors.titleId ?? ''} onSelect={(value) => { selectedTitleId = value; clearField('titleId'); }} />
-									<div class="wide"><label>{purchaseText.orders}<select bind:value={receiptOrderId}><option value="">{purchaseText.noLink}</option>{#each receiptOrders.filter(order => order.status === 'ordered' && order.titleId === Number(selectedTitleId)) as order}<option value={String(order.id)}>{order.branch.name} · {order.orderCode} · {order.received}/{order.quantity}</option>{/each}</select></label><small class="field-hint">{purchaseText.receiptHelp}</small></div>
-									<label><span>{t.quantity}<span class="required" aria-hidden="true">*</span></span><input type="number" min="1" max="100" required bind:value={quantity} class:invalid={Boolean(fieldErrors.quantity)} aria-invalid={Boolean(fieldErrors.quantity)} aria-describedby={fieldErrors.quantity ? 'book-quantity-error' : undefined} oninput={() => { resizeRows(); clearField('quantity'); }} />{#if fieldErrors.quantity}<small id="book-quantity-error" class="field-error" role="alert">{fieldErrors.quantity}</small>{/if}</label>
-									<DatePicker label={t.purchasedOn} field="book-purchased-on" value={purchasedOn} error={fieldErrors.purchasedOn ?? ''} open={activeDateField === 'purchasedOn'} onToggle={() => activeDateField = activeDateField === 'purchasedOn' ? null : 'purchasedOn'} onSelect={(value) => selectDate('purchasedOn', value)} />
-									<SearchSelect label={t.sharedStorage} field="book-common-storage" value={commonStorageId} options={permittedStorageOptions} onSelect={(value) => { commonStorageId = value; applyStorage(); }} />
-								</FormSection>
-								<p class="field-hint">{t.countHelp}</p>
-								<div class="book-rows">{#each rows as row, index}<FormSection title={`${t.row} ${index + 1}`} framed>
-									<SearchSelect label={t.storage} field={`book-storage-${index}`} value={row.storageId} options={permittedStorageOptions} required error={fieldErrors[`copies[${index}].storageId`] ?? ''} onSelect={(value) => { row.storageId = value; clearField(`copies[${index}].storageId`); }} />
-									<SearchSelect label={t.status} field={`book-status-${index}`} value={row.status} options={[{ value: 'available', label: t.available }, { value: 'unavailable', label: t.unavailable }]} searchable={false} onSelect={(value) => row.status = value as CopyRow['status']} />
-									<label>{t.code}<input maxlength="40" placeholder="BK-000001" bind:value={row.copyCode} class:invalid={Boolean(fieldErrors[`copies[${index}].copyCode`])} aria-invalid={Boolean(fieldErrors[`copies[${index}].copyCode`])} aria-describedby={fieldErrors[`copies[${index}].copyCode`] ? `book-code-${index}-error` : undefined} oninput={() => clearField(`copies[${index}].copyCode`)} />{#if fieldErrors[`copies[${index}].copyCode`]}<small id={`book-code-${index}-error`} class="field-error">{fieldErrors[`copies[${index}].copyCode`]}</small>{/if}</label>
-									<label class="wide">{t.notes}<input maxlength="5000" placeholder={t.notes} bind:value={row.notes} /></label>
-								</FormSection>{/each}</div>
-							</form>
-					{:else if modal === 'loan' && loanCopy}
-						<form id="book-loan-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveLoan(); }}><FormSection title={loanCopy.copyCode} framed columns={2}>
-							<SearchSelect label={c.borrower} field="book-borrower" value={borrowerId} options={employees.filter(employee => allowedOperation('books.loans.create', employee.branchId) && (user?.capabilities.canManageBooksGlobally || employee.branchId === loanCopy?.storage.branchId)).map(employee => ({ value: String(employee.id), label: `${employee.lastName} ${employee.firstName} (${employee.employeeCode})` }))} required error={fieldErrors.employeeId ?? ''} onSelect={(value) => { borrowerId = value; clearField('employeeId'); }} />
-							<DatePicker label={c.dueOn} field="book-due-on" value={dueOn} required error={fieldErrors.dueOn ?? ''} open={activeDateField === 'dueOn'} onToggle={() => activeDateField = activeDateField === 'dueOn' ? null : 'dueOn'} onSelect={(value) => selectDate('dueOn', value)} />
-						</FormSection></form>
-					{:else if modal === 'copy_edit' && editingCopy}
-						<form id="book-copy-edit-form" class="app-modal-form book-form" novalidate onsubmit={(event) => { event.preventDefault(); void saveCopyEdit(); }}><FormSection title={editingCopy.copyCode} framed>
-							<SearchSelect label={t.storage} field="book-edit-storage" value={copyForm.storageId} options={permittedStorageOptions} required error={fieldErrors.storageId ?? ''} onSelect={(value) => { copyForm.storageId = value; clearField('storageId'); }} />
-							<SearchSelect label={t.status} field="book-edit-status" value={copyForm.status} options={[{ value: 'available', label: t.available }, { value: 'unavailable', label: t.unavailable }]} searchable={false} onSelect={(value) => copyForm.status = value} />
-							<DatePicker label={t.purchasedOn} field="book-edit-purchased-on" value={copyForm.purchasedOn} error={fieldErrors.purchasedOn ?? ''} open={activeDateField === 'copyPurchasedOn'} onToggle={() => activeDateField = activeDateField === 'copyPurchasedOn' ? null : 'copyPurchasedOn'} onSelect={(value) => selectDate('copyPurchasedOn', value)} />
-							<label class="wide">{t.notes}<input maxlength="5000" bind:value={copyForm.notes} placeholder={t.notes} /></label>
-						</FormSection></form>
-					{:else if modal === 'cover' && coverTitle}
-						<form id="book-cover-form" class="app-modal-form book-form" onsubmit={(event) => { event.preventDefault(); void saveCover(); }}><FormSection title={coverTitle.name} framed columns={2}>
-							<div class="wide book-cover-picker">
-								<span id="book-cover-label" class="book-cover-label">{coverText.image}</span>
-								<input bind:this={coverInput} type="file" accept="image/png" hidden disabled={saving} aria-label={coverText.image} onchange={(event) => { if (event.currentTarget.files?.length) selectCoverFiles(event.currentTarget.files); event.currentTarget.value = ''; }} />
-								<button class="book-cover-dropzone" class:dragging={coverDragging} type="button" disabled={saving} aria-labelledby="book-cover-label book-cover-prompt" aria-describedby="book-cover-help" onclick={() => coverInput?.click()}
-									ondragover={(event) => { event.preventDefault(); if (!saving) { coverDragging = true; if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'; } }}
-									ondragleave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) coverDragging = false; }}
-									ondrop={(event) => { event.preventDefault(); selectCoverFiles(event.dataTransfer?.files ?? null); }}>
-									{#if coverFile}<strong class="book-cover-filename">{coverFile.name}</strong>{/if}
-									<span id="book-cover-prompt">{coverFile ? coverText.replace : coverText.drop}</span>
-								</button>
-								<small id="book-cover-help" class="field-hint">{coverText.imageHelp}</small>
-							</div>
-						</FormSection></form>
-					{:else if modal === 'delete_title' || modal === 'delete_copy'}
-						<p>{actionText.deleteConfirm}</p><p><strong>{modal === 'delete_title' ? selectedTitle?.name : editingCopy?.copyCode}</strong></p>
-					{/if}
-				</div>
-				<footer class="app-modal-footer">
-					<button type="button" class="secondary" onclick={() => requestClose()} disabled={saving}>{t.cancel}</button>
-					{#if modal === 'title'}<button type="submit" form="book-title-form" class="app-primary-action" disabled={saving || isbnScannerOpen}>{t.save}</button>
-					{:else if modal === 'copies'}<button type="submit" form="book-copy-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if modal === 'loan'}<button type="submit" form="book-loan-form" class="app-primary-action" disabled={saving}>{c.loan}</button>
-					{:else if modal === 'copy_edit'}<button type="submit" form="book-copy-edit-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if modal === 'cover'}<button type="submit" form="book-cover-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if modal === 'delete_title' || modal === 'delete_copy'}<button type="button" class="app-danger-action" disabled={saving} onclick={() => void deleteSelected()}>{modal === 'delete_title' ? actionText.deleteTitle : actionText.deleteCopy}</button>{/if}
-				</footer>
-			</dialog>
-		</ModalBackdrop>
-		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={close} />{/if}
+		<DetailModal title={t.detail} titleId="book-modal-title" closeLabel={t.close} returnFocus={detailTrigger} compact headerActions={detailHeaderActions} onClose={close}>{@render bookDetail()}</DetailModal>
 	{/if}
+ {#if titleRetained}<div hidden={modal!=='title'} inert={modal!=='title'}>{@render bookEditor('title')}</div>{/if}
+ {#if modal && modal!=='detail' && modal!=='title'}{@render bookEditor(modal)}{/if}
+ {#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={close} />{/if}
 </AssetManagementShell>
 
 <style>
+ .editor-fields{display:grid;gap:16px;min-width:0;margin:0;padding:0;border:0}
 	.book-purchase-check,.book-purchase-filter{display:flex;align-items:center;gap:8px}.book-purchase-filter{flex:0 1 auto;align-self:flex-end;min-height:32px;max-width:100%;margin:0;padding:0;color:var(--text-secondary);font-size:var(--font-size-support);cursor:pointer}.book-purchase-check input,.book-purchase-filter input{width:16px;height:16px;flex:none}
 	.book-load-error{padding:24px;border:1px solid var(--border);border-radius:12px;color:var(--text)}
 	.book-dialog{width:min(100%,900px)}
-	.book-dialog.app-modal--compact .book-dialog-body{flex:initial}
 	.book-form{display:grid;flex:none;grid-column:1/-1;gap:16px;min-width:0;overflow:visible;background:transparent}
 	#book-copy-form{padding-bottom:16px}
 	.book-form .wide{grid-column:1/-1}
+	.book-money-apply{min-width:0}.book-money-apply :global(button){max-width:100%;height:auto;min-height:36px;padding-block:8px;white-space:normal;text-align:left;line-height:1.5}
 	.book-rows{display:grid;gap:12px}
 	.book-error{grid-column:1/-1;color:var(--danger)}
 	.book-dialog-body>p{grid-column:1/-1}

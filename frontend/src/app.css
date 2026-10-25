@@ -30,6 +30,6 @@ html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] 
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-link[data-rail-label]::after{position:absolute;left:calc(100% + 12px);top:50%;z-index:110;padding:5px 9px;border-radius:4px;background:#182230;color:#fff;content:attr(data-rail-label);font-size:var(--font-size-support);opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-4px);transition:opacity .12s,transform .12s;white-space:nowrap}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-link[data-rail-label]:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .shell .workspace{width:calc(100% - 64px);margin-left:64px}
+html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .shell>.workspace{width:calc(100% - 64px);margin-left:64px}
 
 }

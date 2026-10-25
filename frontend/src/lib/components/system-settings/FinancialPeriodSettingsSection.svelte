@@ -7,6 +7,7 @@
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
+	let {onSaved}:{onSaved?:()=>void}=$props();
 	type Settings = { basis: 'calendar' | 'fiscal'; fiscalStartMonth: number };
 	let text = $derived(localeMessages[$localization.displayLanguage].financial);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
@@ -62,6 +63,7 @@
 			}
 			const current = await apiData<Settings>(response);
 			settings = { ...current }; savedSettings = { ...current }; notice = text.settingSaved; isError = false;
+			onSaved?.();
 		} catch { notice = text.settingSaveFailed; isError = true; }
 		finally { saving = false; }
 	}

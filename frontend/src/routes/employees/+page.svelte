@@ -1,4 +1,5 @@
 <script lang="ts">
+ import EmployeeDepartureModal from '$lib/components/EmployeeDepartureModal.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
  import { initialSearch } from '$lib/search';
@@ -43,6 +44,8 @@
 	let formMode = $state<'create' | 'admin-edit'>('create');
 	let formReturnFocus = $state<HTMLElement | null>(null);
 	let detailEmployee = $state<Employee | null>(null);
+	let employeeDetailTab = $state('basic');
+	let employeeHistoryTab = $state('employee');
 	let detailBeforeEdit = $state<Employee | null>(null);
 	let detailReturnFocus = $state<HTMLElement | null>(null);
 	let invitationReturnToDetail = $state(false);
@@ -56,6 +59,7 @@
 	let copyMessage = $state<'linkCopied' | 'linkCopyFailed' | ''>('');
 	let invitationWarningDismissed = $state(false);
 	let message = $state<'created' | 'updated' | 'removed' | 'deleteFailed' | 'exportFailed' | ''>('');
+ let deletingEmployee=$state<Employee|null>(null);
 	let masters = $state<Record<string, EmployeeMaster[]>>({});
 	let roles = $state<EmployeeRole[]>([]);
 	let canManageAdministration = $state(false);
@@ -155,10 +159,12 @@
 		}
 	}
 	function create(event: MouseEvent) { if (!canManageEmployees) return; detailBeforeEdit = null; editing = null; formMode = 'create'; formReturnFocus = event.currentTarget as HTMLElement; formOpen = true; }
+	const canEditEmployeeRelations=(item:Employee)=>['employees.skills.create','employees.skills.update','employees.skills.delete','employees.participations.create','employees.participations.update','employees.participations.delete'].some(code=>allowedOperation(code,item.branchId));
+
 	function edit(item: Employee, trigger: HTMLElement | null) {
 		if (item.employmentStatus === 'deleted') return;
-		if (!canManageEmployees && item.id !== currentUserId) return;
-		if (!canManageEmployees) { window.location.assign('/personal-settings#profile'); return; }
+		if (!canManageEmployees && !canEditEmployeeRelations(item) && !allowedOperation('employees.delete',item.branchId) && item.id !== currentUserId) return;
+		if (!canManageEmployees && !canEditEmployeeRelations(item) && !allowedOperation('employees.delete',item.branchId)) { window.location.assign('/personal-settings#profile'); return; }
 		formReturnFocus = trigger;
 		editing = item;
 		formMode = 'admin-edit';
@@ -189,7 +195,7 @@
 		}
 		await employeeList?.refresh();
 	}
-	function showDetail(item: Employee, trigger: HTMLElement | null) { detailEmployee = item; detailReturnFocus = trigger; detailOpen = true; }
+	function showDetail(item: Employee, trigger: HTMLElement | null) { employeeDetailTab = 'basic'; employeeHistoryTab = 'employee'; detailEmployee = item; detailReturnFocus = trigger; detailOpen = true; }
 	function closeDetail() { detailOpen = false; detailEmployee = null; invitationError = ''; }
 	function closeForm() { formOpen = false; if (detailBeforeEdit) { detailEmployee = detailBeforeEdit; detailOpen = true; detailBeforeEdit = null; } }
 	function showInvitation(payload: InvitationPayload, email: string, trigger: HTMLElement | null = null) {
@@ -229,13 +235,10 @@
 	}
 	async function remove(item: Employee) {
 		if (!canManageEmployees || item.employmentStatus === 'deleted') return;
-		if (!confirm(formatLocaleTemplate(text.deleteConfirm, fullName(item)))) return;
-		if (detailEmployee?.id === item.id) closeDetail();
-		const response = await fetch(`/v1/employees/${item.id}`, { method: 'DELETE' });
-		if (!response.ok) { message = 'deleteFailed'; return; }
-		message = 'removed'; await employeeList?.refresh();
+  deletingEmployee=item;
 	}
 	function windowKeydown(event: KeyboardEvent) {
+		if(deletingEmployee)return;
 		if (event.defaultPrevented) return;
 		if (event.key !== 'Escape') return;
 		if (invitation) { event.preventDefault(); closeInvitation(); }
@@ -255,6 +258,7 @@
 </script>
 
 <svelte:window onkeydown={windowKeydown} />
+{#if deletingEmployee}<EmployeeDepartureModal employee={deletingEmployee} mode="delete" onClose={()=>deletingEmployee=null} onComplete={async()=>{formOpen=false;detailBeforeEdit=null;closeDetail();message='updated';await employeeList?.refresh();}}/>{/if}
 {#snippet employeeCell(item: Employee)}<div class="employee-cell"><span class="avatar" aria-hidden="true">{#if item.avatar}<img src={item.avatar} alt="" />{:else}{monogram(item)}{/if}</span><div><div class="employee-name"><strong>{fullName(item)}</strong>{#if item.employmentStatus === 'retired'}<span class="employee-status retired">{text.retired}</span>{:else if item.employmentStatus === 'deleted'}<span class="employee-status deleted">{text.deleted}</span>{/if}</div><small>{item.employeeCode}</small></div></div>{/snippet}
 {#snippet mobileEmployee(item: Employee)}
  <div class="mobile-employee">{@render employeeCell(item)}<p>{[item.departments.map(department => department.name).join('・'), item.branch?.name].filter(Boolean).join(' / ')}</p></div>
@@ -271,14 +275,14 @@
 <div class="employee-branch-filter"><span>{text.teamFilter}</span><SearchMultiSelect label={text.teamFilter} field="employeeTeamFilter" values={teamSelection} options={teamOptions.map(team => ({ value: String(team.id), label: team.name }))} placeholder={text.allTeams} onChange={values => teamSelection = values} /></div><div class="employee-branch-filter"><span>{text.branchFilter}</span>{#if branchOptions.length === 1}<SearchSelect label={text.branchFilter} field="employeeBranchFilter" value={String(branchOptions[0].id)} options={[{ value: String(branchOptions[0].id), label: branchOptions[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.branchFilter} field="employeeBranchFilter" values={branchSelection} placeholderValues={[allBranchesValue]} options={[{ value: allBranchesValue, label: text.allBranches }, ...branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))]} onChange={chooseBranches} />{/if}</div><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div></div>{/snippet}
 {#snippet exportAction()}<div class="employee-list-actions"><CsvExportButton {exporting} disabled={!canManageEmployees || !searchState.success || searchState.loading || searchState.error} onExport={() => void exportCsv()} /></div>{/snippet}
 {#snippet listActions()}{@render exportAction()}{@render pageActions()}{/snippet}
-{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
+{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<button class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation((editing ?? detailEmployee)!)}>{issuingInvitation ? text.generating : text.generateInvitation}</button></div>{/snippet}
 
 <AssetManagementShell title={text.title} active="Employees">
 	<ViewportListPage>
 	<MasterPageHeader title={text.title} />
 	{#if message}<StatusNotice message={text[message]} tone={message === 'created' || message === 'updated' || message === 'removed' ? 'success' : 'error'} onDismiss={() => message = ''} />{/if}
 		{#if branchFilterError}<StatusNotice message={text.branchFilterLoadFailed} tone="error" onDismiss={() => branchFilterError = false} /><button type="button" class="branch-retry" onclick={() => void initialize()}>{text.retryBranchFilter}</button>{/if}
-		{#if branchFilterReady}<SearchPanel target="employees" userId={currentUserId} bind:searchState draftOptions={searchDraftOptions} onRestoreOptions={restoreSearchOptions} filters={branchFilter}/><MasterList mobileItem={mobileEmployee} bind:searchState bind:this={employeeList} endpoint="/v1/employee-searches" title={text.title} listHeading={text.title} description="" initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} actionLabel={(item) => fullName(item as Employee)} headerActions={listActions} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
+		{#if branchFilterReady}<SearchPanel restoreSelectedFilter={!page.state.employeeSearch} target="employees" userId={currentUserId} bind:searchState draftOptions={searchDraftOptions} onRestoreOptions={restoreSearchOptions} filters={branchFilter}/><MasterList mobileItem={mobileEmployee} bind:searchState bind:this={employeeList} endpoint="/v1/employee-searches" title={text.title} listHeading={text.title} description="" initialSortBy="employee" pageSizeStorageKey="employees-page-size" minTableWidth={1120} edgePagination canManage={canManageEmployees} canDetail={true} actionLabel={(item) => fullName(item as Employee)} headerActions={listActions} loadingLabel={text.loading} emptyLabel={commonText.noMatches} columns={[
 		{ key: 'employee', label: text.employee, width: 18, cell: employeeCell, searchKeys: ['name', 'employeeCode', 'employmentStatus'] },
 		{ key: 'teams', label: text.teams, width: 12, value: item => (item as Employee).teamNames, searchKeys: teamsReady ? ['teams'] : [], sortable: teamsReady },
 		{ key: 'lengthOfService', label: text.lengthOfService, width: 12, value: (item) => formatLengthOfService((item as Employee).lengthOfService, $localization), searchKeys: ['lengthOfService'] },
@@ -291,9 +295,9 @@
 		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	</ViewportListPage>
 
-	{#if formOpen}<EmployeeFormModal mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} {canManageTeamMemberships} {teamOptions} {teamsReady} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} />{/if}
+	{#if formOpen}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeFormModal canEditEmployee={!editing || (editing.allowedOperations?.update ?? allowedOperation('employees.update',editing.branchId))} deleteError={message==='deleteFailed'?text.deleteFailed:''} extraActions={editing && (editing.allowedOperations?.invite ?? (allowedOperation('employees.invite', editing.branchId) && (canManageSystemSettings || !editing.roles.some(role => role.isSystemManagement)))) && canInviteEmployees && (canManageSystemSettings || editing.roles.some((role) => role.isGeneralUser)) && editing.canIssueInvitation ? invitationAction : undefined} onDelete={editing && (editing.allowedOperations?.delete ?? allowedOperation('employees.delete', editing.branchId)) && editing.employmentStatus!=='deleted' ? () => void remove(editing!) : undefined} mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} {canManageTeamMemberships} {teamOptions} {teamsReady} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} /></div>{/if}
 
-	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)} inert={Boolean(invitation)}><EmployeeDetailModal employee={detailEmployee} onUpdated={updated => { detailEmployee = updated; void employeeList?.refresh(); }} returnFocus={detailReturnFocus} footer={(detailEmployee.allowedOperations?.invite ?? (allowedOperation('employees.invite', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} onEdit={detailEmployee.employmentStatus !== 'deleted' && ((detailEmployee.allowedOperations?.update ?? (allowedOperation('employees.update', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) || detailEmployee.id === currentUserId) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={(detailEmployee.allowedOperations?.delete ?? (allowedOperation('employees.delete', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
+	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeDetailModal employee={detailEmployee} bind:activeTab={employeeDetailTab} bind:activeHistoryTab={employeeHistoryTab} onUpdated={updated => { detailEmployee = updated; void employeeList?.refresh(); }} returnFocus={detailReturnFocus} onEdit={detailEmployee.employmentStatus !== 'deleted' && ((detailEmployee.allowedOperations?.update ?? (allowedOperation('employees.update', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) || detailEmployee.id === currentUserId || canEditEmployeeRelations(detailEmployee) || (detailEmployee.allowedOperations?.delete ?? allowedOperation('employees.delete',detailEmployee.branchId))) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={(detailEmployee.allowedOperations?.delete ?? (allowedOperation('employees.delete', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
 	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><button class="secondary" type="button" onclick={closeInvitation}>{commonText.close}</button><button class="app-primary-action" type="button" onclick={() => void copyInvitation()}>{text.copyLink}</button></footer></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 

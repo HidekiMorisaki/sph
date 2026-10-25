@@ -13,6 +13,7 @@
  import ViewportListPage from './ViewportListPage.svelte';
  import MasterList from './MasterList.svelte';
  import DetailModal from './DetailModal.svelte';
+ import DetailTabs from '$lib/components/DetailTabs.svelte';
  import DetailActionButtons from './DetailActionButtons.svelte';
  import StatusNotice from './StatusNotice.svelte';
  import WorkforceMasterForm from './WorkforceMasterForm.svelte';
@@ -28,7 +29,7 @@
  async function open(item:WorkforceMaster,trigger:HTMLElement|null){try{const response=await fetch('/v1/'+kind+'/'+item.id);if(!response.ok)throw new Error();selected=await apiData<WorkforceMaster>(response);returnFocus=trigger;detailError='';}catch{message=text.failed;}}
  function close(){selected=null;void tick().then(()=>returnFocus?.focus({preventScroll:true}));}
  async function saved(item:WorkforceMaster){if(editing)selected=item;else message=text.saved;await list?.refresh();}
- async function remove(){if(!selected)return;busy=true;try{const response=await fetch('/v1/'+kind+'/'+selected.id,{method:'DELETE'});if(!response.ok){const payload=await response.json().catch(()=>null);detailError=payload?.error?.code==='RESOURCE_IN_USE'?(kind==='clients'?text.clientInUse:text.inUse):text.failed;deleting=false;return;}deleting=false;close();message=text.removed;await list?.refresh();}catch{detailError=text.failed;deleting=false;}finally{busy=false;}}
+ async function remove(){if(!selected)return;busy=true;try{const response=await fetch('/v1/'+kind+'/'+selected.id,{method:'DELETE'});if(!response.ok){const payload=await response.json().catch(()=>null);detailError=payload?.error?.code==='RESOURCE_IN_USE'?(kind==='clients'?text.clientInUse:text.inUse):text.failed;deleting=false;return;}deleting=false;formOpen=false;editing=null;close();message=text.removed;await list?.refresh();}catch{detailError=text.failed;deleting=false;}finally{busy=false;}}
 </script>
 {#snippet listActions()}{#if allowed('create')}<AddButton iconOnly label={text.add+' · '+text[kind]} onclick={event=>{formFocus=event.currentTarget as HTMLElement;editing=null;formOpen=true;}}/>{/if}{/snippet}
 {#snippet mobileSkill(item:WorkforceMaster)}
@@ -50,25 +51,37 @@
 </ViewportListPage></AssetManagementShell>
 {#if selected}<div hidden={formOpen||deleting} inert={formOpen||deleting}>
  <DetailModal title={text[kind]} titleId="workforce-master-detail-title" compact closeLabel={common.cancel} {returnFocus} onClose={close}>
-  {#snippet headerActions()}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} onEdit={allowed('update')?trigger=>{formFocus=trigger;editing=selected;formOpen=true;}:undefined} onDelete={allowed('delete')?trigger=>{deleteFocus=trigger;deleting=true;}:undefined}/>{/snippet}
+  {#snippet headerActions()}<DetailActionButtons editing={false} editLabel={common.edit} deleteLabel={common.delete} onEdit={allowed('update')||allowed('delete')?trigger=>{formFocus=trigger;editing=selected;formOpen=true;}:undefined} onDelete={allowed('delete')?trigger=>{deleteFocus=trigger;deleting=true;}:undefined}/>{/snippet}
   {#if detailError}<StatusNotice message={detailError} tone="error" onDismiss={()=>detailError=''}/>{/if}
-  <section class="app-detail-section"><h3>{text.information}</h3><dl class="app-detail-grid">
+{#if kind==='clients'}
+ {#snippet clientInformation()}{#if selected}<section class="app-detail-section"><h3>{text.information}</h3><dl class="app-detail-grid">
+  <div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div><dt>{text.companyName}</dt><dd>{selected.companyName??'-'}</dd></div>
+  <div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes??'-'}</dd></div>
+  <div><dt>{common.created}</dt><dd>{formatTimestamp(selected.createdAt,$localization)}</dd></div><div><dt>{common.updated}</dt><dd>{formatTimestamp(selected.updatedAt,$localization)}</dd></div>
+ </dl></section>{/if}{/snippet}
+ {#snippet clientContact()}{#if selected}<section class="app-detail-section"><h3>{common.detailContactInformation}</h3><dl class="app-detail-grid">
+  {#each clientTextFields.filter(field=>field!=='companyName') as field}<div><dt>{field==='prefecture'?address.region:field==='postalCode'?address.postal:text[field]}</dt><dd>{selected[field]??'-'}</dd></div>{/each}
+  <div><dt>{text.countryCode}</dt><dd>{selected.countryCode==='JP'?($localization.displayLanguage==='ja'?'日本':'Japan'):($localization.displayLanguage==='ja'?'米国':'United States')}</dd></div>
+ </dl></section>{/if}{/snippet}
+ {#snippet clientHistory()}{#if selected}{#key selected.updatedAt}<MasterHistorySection collapsible={false} endpoint="/v1/clients" itemId={selected.id} hiddenFields={removedClientFields} fieldLabels={historyLabels} dateFields={['openedOn','closedOn']}/>{/key}{/if}{/snippet}
+ <DetailTabs label={text.clients} kind="client" tabs={[{id:'basic',label:text.information,content:clientInformation},{id:'contact',label:common.detailContactInformation,content:clientContact},{id:'history',label:common.history,content:clientHistory}]} />
+{:else}
+ {#snippet masterInformation()}{#if selected}  <section class="app-detail-section"><h3>{text.information}</h3><dl class="app-detail-grid">
    <div><dt>{text.name}</dt><dd>{selected.name}</dd></div>
    {#if kind==='skills'}<div><dt>{text.category}</dt><dd>{selected.category}</dd></div>{/if}
-   {#if kind!=='clients'}<div class="app-detail-wide"><dt>{text.description}</dt><dd class="app-detail-notes">{selected.description}</dd></div>{/if}
+   <div class="app-detail-wide"><dt>{text.description}</dt><dd class="app-detail-notes">{selected.description}</dd></div>
    {#if kind==='projects'}<div><dt>{text.clientId}</dt><dd>{selected.client?.name??'-'}</dd></div><div><dt>{text.companyName}</dt><dd>{selected.client?.companyName??'-'}</dd></div>
     {#each ['contractStartsOn','contractEndsOn'] as field}<div><dt>{text[field as 'contractStartsOn'|'contractEndsOn']}</dt><dd>{formatDate(selected[field as 'contractStartsOn'|'contractEndsOn'],$localization)||'-'}</dd></div>{/each}
    {/if}
-   {#if kind==='clients'}
-    {#each clientTextFields as field}<div><dt>{field==='prefecture'?address.region:field==='postalCode'?address.postal:text[field]}</dt><dd>{selected[field]??'-'}</dd></div>{/each}
-    <div><dt>{text.countryCode}</dt><dd>{selected.countryCode==='JP'?($localization.displayLanguage==='ja'?'日本':'Japan'):($localization.displayLanguage==='ja'?'米国':'United States')}</dd></div>
-    <div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes??'-'}</dd></div>
-   {/if}
+
    <div><dt>{common.created}</dt><dd>{formatTimestamp(selected.createdAt,$localization)}</dd></div><div><dt>{common.updated}</dt><dd>{formatTimestamp(selected.updatedAt,$localization)}</dd></div>
   </dl></section>
- {#if kind!=='skills'}{#key selected.updatedAt}<MasterHistorySection endpoint={'/v1/'+kind} itemId={selected.id} hiddenFields={kind==='clients'?removedClientFields:[]} fieldLabels={historyLabels} dateFields={['openedOn','closedOn','contractStartsOn','contractEndsOn']}/>{/key}{/if}
+{/if}{/snippet}
+ {#snippet masterHistory()} {#if selected && kind!=='skills'}{#key selected.updatedAt}<MasterHistorySection collapsible={false} endpoint={'/v1/'+kind} itemId={selected.id}  fieldLabels={historyLabels} dateFields={['openedOn','closedOn','contractStartsOn','contractEndsOn']}/>{/key}{/if}{/snippet}
+ {#if kind==='projects'}<DetailTabs label={text.projects} tabs={[{id:'basic',label:text.information,content:masterInformation},{id:'history',label:common.history,content:masterHistory}]} />{:else}{@render masterInformation()}{/if}
+{/if}
  </DetailModal></div>{/if}
-{#if formOpen}<WorkforceMasterForm {kind} item={editing} returnFocus={formFocus} onClose={()=>formOpen=false} onSaved={saved}/>{/if}
+{#if formOpen}<div hidden={deleting} inert={deleting}><WorkforceMasterForm deleteError={detailError} onDelete={allowed('delete')?trigger=>{deleteFocus=trigger;deleting=true;}:undefined} {kind} item={editing} returnFocus={formFocus} onClose={()=>formOpen=false} onSaved={saved}/></div>{/if}
 {#if deleting}<DetailModal title={text.deleteTitle} titleId="workforce-master-delete-title" closeLabel={common.cancel} returnFocus={deleteFocus} onClose={()=>{if(!busy)deleting=false;}}><p>{text.deleteHelp}</p>{#snippet actions()}<button class="secondary" disabled={busy} onclick={()=>deleting=false}>{common.cancel}</button><button class="app-danger-action" disabled={busy} onclick={()=>void remove()}>{common.delete}</button>{/snippet}</DetailModal>{/if}
 
 <style>

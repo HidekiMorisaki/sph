@@ -183,6 +183,21 @@ offset, panel state, or authentication data. Names contain 1–100 characters af
 trimming. Duplicate names are allowed, including exact matches and names that
 differ only in case. Each new save creates a separate filter with a generated
 unique filter code and an integer ID; deleted filters are never revived by name.
+
+Employees, books and IT assets remember the applied saved-filter ID in localStorage,
+separately for each signed-in employee and search target in that browser. Creating
+or updating a saved filter also remembers its selection. A normal revisit or reload
+fetches the current definition through the existing personal-filter API before the
+first list search; selection highlighting and search controls are restored together.
+Only the ID is stored locally. Unsaved edits, result rows and page offsets are not
+remembered. Other browsers and devices do not share the selection.
+
+Clear and deletion of the selected filter remove this preference. A deleted,
+unavailable or invalid filter also clears it on restoration and shows a notice.
+Transient restoration failures retain the ID and offer a retry without showing an
+unfiltered list. Denied localStorage access does not prevent searching. Explicit
+employee-analysis navigation state and IT-asset overview query conditions take
+precedence over the remembered filter without replacing its stored ID.
 Each employee may have 32 active filters per target. Updates, renames, and deletes
 remain available at or above the limit. Existing records above 32 are preserved;
 new saves are refused until the active count drops below 32.

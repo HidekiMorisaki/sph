@@ -16,7 +16,7 @@
  import { searchInputExample } from '$lib/search-input-examples';
  import '$lib/styles/search-form.css';
  import { normalizeSharedOptions } from '$lib/shared-search-options';
- let {target,searchState=$bindable(),draftOptions={},onRestoreOptions,filters,userId=null,configuration=searchConfigurations[target]}:{target:SearchTarget;searchState:SearchState;draftOptions?:Record<string,string|boolean>;onRestoreOptions:(options:Record<string,string|boolean>)=>void;filters?:Snippet;userId?:number|null;configuration?:SearchConfiguration}=$props();
+ let {target,searchState=$bindable(),draftOptions={},onRestoreOptions,filters,userId=null,restoreSelectedFilter=true,configuration=searchConfigurations[target]}:{target:SearchTarget;searchState:SearchState;draftOptions?:Record<string,string|boolean>;onRestoreOptions:(options:Record<string,string|boolean>)=>void;filters?:Snippet;userId?:number|null;restoreSelectedFilter?:boolean;configuration?:SearchConfiguration}=$props();
  const id=$props.id();
  let t=$derived(searchMessages[$localization.displayLanguage]);
  let nameExample=$derived(searchInputExample({code:configuration.filterNameExample,type:'string'},$localization.displayLanguage));
@@ -34,13 +34,14 @@
  let definitionsReady=$state(false);let filterOperations=$state<string[]>([]);
  let saved=$state<SavedFilter[]>([]);let selectedId=$state('');let selected=$derived(saved.find(item=>String(item.id)===selectedId));
  let busy=$state(false);let message=$state('');let messageError=$state(false);let saveCompleted=$state(false);
+ let initializationFailed=$state(false);
  let dialog=$state<'save'|null>(null);let dialogElement=$state<HTMLDialogElement>();let returnFocus:HTMLElement|null=null;
  let name=$state('');let saveMode=$state('new');let renameId=$state('');let renameName=$state('');
  let dirty=$derived(stable({keyword:keyword.trim(),conditions,options:draftOptions})!==stable({keyword:searchState.definition.keyword,conditions:searchState.definition.conditions,options:searchState.definition.options}));
  let canSave=$derived(definitionsReady&&searchState.success&&!searchState.loading&&!searchState.error&&!dirty);
 
  $effect(()=>{
-  if(!definitionsReady)return;
+  if(!definitionsReady||searchState.initializing)return;
   const draft={keyword:keyword.trim(),conditions:clone(conditions),options:clone(draftOptions)};
   if(!dirty||ruleCount(draft.conditions)>50)return;
   const timer=setTimeout(()=>apply({...searchState.definition,...draft}),250);
@@ -50,17 +51,41 @@
  beforeNavigate(clearNotice);
  function stable(value:unknown):string {return JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);}
  const clone=<T,>(value:T):T=>JSON.parse(JSON.stringify(value));
- async function loadDefinitions(){definitionsReady=false;try{const response=await fetch(configuration.fieldsEndpoint);if(!response.ok)throw Error();const payload=await response.json();contexts=payload.data;filterOperations=payload.meta.filterOperations;saveMode=filterOperations.includes('create')?'new':'update';definitionsReady=true;}catch{message=t.failed;messageError=true;}}
- async function loadFilters(){if(!filterOperations.includes('read'))return;try{const response=await fetch(`/v1/search-filters?target=${target}&limit=100&sortBy=name&sortOrder=asc`);if(!response.ok)throw Error();saved=(await response.json()).data;}catch{message=t.failed;messageError=true;}}
- function apply(definition?:SearchDefinition){clearNotice();searchState={...searchState,definition:definition??{...searchState.definition,keyword:keyword.trim(),conditions:clone(conditions),options:clone(draftOptions)},version:searchState.version+1,success:false,loading:true,error:false};}
- function clear(){keyword='';conditions=emptyGroup();selectedId='';name='';saveMode=filterOperations.includes('create')?'new':'update';onRestoreOptions({});apply({...searchState.definition,keyword:'',conditions:emptyGroup(),options:{}});}
+ async function loadDefinitions(){definitionsReady=false;try{const response=await fetch(configuration.fieldsEndpoint);if(!response.ok)throw Error();const payload=await response.json();contexts=payload.data;filterOperations=payload.meta.filterOperations;saveMode=filterOperations.includes('create')?'new':'update';definitionsReady=true;return true;}catch{message=t.failed;messageError=true;return false;}}
+ async function loadFilters(){if(!filterOperations.includes('read'))return true;try{const response=await fetch(`/v1/search-filters?target=${target}&limit=100&sortBy=name&sortOrder=asc`);if(!response.ok)throw Error();saved=(await response.json()).data;return true;}catch{message=t.failed;messageError=true;return false;}}
+ function rememberSelection(value:string){if(userId===null)return;try{const key=`${target}-search-selected-filter:${userId}`;if(value)localStorage.setItem(key,value);else localStorage.removeItem(key);}catch{/* Storage is optional. */}}
+ function rememberedSelection(){if(userId===null)return '';try{const value=localStorage.getItem(`${target}-search-selected-filter:${userId}`)??'';if(!value)return '';if(!/^[1-9]\d*$/.test(value)||!Number.isSafeInteger(Number(value))){rememberSelection('');return '';}return value;}catch{return '';}}
+ function apply(definition?:SearchDefinition){clearNotice();initializationFailed=false;searchState={...searchState,initializing:false,definition:definition??{...searchState.definition,keyword:keyword.trim(),conditions:clone(conditions),options:clone(draftOptions)},version:searchState.version+1,success:false,loading:true,error:false};}
+ function clear(){keyword='';conditions=emptyGroup();selectedId='';rememberSelection('');name='';saveMode=filterOperations.includes('create')?'new':'update';onRestoreOptions({});apply({...searchState.definition,keyword:'',conditions:emptyGroup(),options:{}});}
+ class FilterLoadError extends Error {status:number;constructor(status:number){super([400,403,404,422].includes(status)?t.invalid:t.failed);this.status=status;}}
+ async function applySavedFilter(value:string){
+  const response=await fetch(`/v1/search-filters/${value}`);if(!response.ok)throw new FilterLoadError(response.status);
+  const item=(await response.json()).data as SavedFilter;if(item.target!==target)throw new FilterLoadError(422);
+  const definition=normalizeSharedOptions(clone(item.definition),target==='employees'?contexts:[]);
+  keyword=definition.keyword;conditions=definition.conditions;onRestoreOptions(clone(definition.options));selectedId=value;name=item.name;saveMode=filterOperations.includes('update')?'update':'new';saved=saved.some(row=>row.id===item.id)?saved.map(row=>row.id===item.id?item:row):[...saved,item];rememberSelection(value);apply(definition);
+ }
+ async function initializeSearch(){
+  busy=true;initializationFailed=false;clearNotice();searchState={...searchState,initializing:true};
+  try{
+   if(!await loadDefinitions())throw Error(t.failed);
+   const value=restoreSelectedFilter?rememberedSelection():'';
+   const filtersLoaded=await loadFilters();
+   if(value&&filterOperations.includes('read')){
+    try{await applySavedFilter(value);return;}catch(error){
+     if(!(error instanceof FilterLoadError)||![400,403,404,422].includes(error.status))throw error;
+     rememberSelection('');apply({...searchState.definition,options:clone(draftOptions)});message=t.invalid;messageError=true;return;
+    }
+   }
+   if(value)rememberSelection('');
+   apply({...searchState.definition,options:clone(draftOptions)});
+   if(!filtersLoaded){message=t.failed;messageError=true;}
+  }catch{initializationFailed=true;message=t.failed;messageError=true;}finally{busy=false;}
+ }
  async function selectFilter(value:string){
   if(busy)return;
-  if(!value){selectedId='';name='';saveMode=filterOperations.includes('create')?'new':'update';return;}
+  if(!value){selectedId='';rememberSelection('');name='';saveMode=filterOperations.includes('create')?'new':'update';return;}
   busy=true;message='';
-  try{const response=await fetch(`/v1/search-filters/${value}`);if(!response.ok){if([403,422].includes(response.status))throw Error(t.invalid);throw Error(t.failed);}const item=(await response.json()).data as SavedFilter;
-   const definition=normalizeSharedOptions(clone(item.definition),target==='employees'?contexts:[]);
-   keyword=definition.keyword;conditions=definition.conditions;onRestoreOptions(clone(definition.options));selectedId=value;name=item.name;saveMode=filterOperations.includes('update')?'update':'new';saved=saved.map(row=>row.id===item.id?item:row);apply(definition);
+  try{await applySavedFilter(value);
   }catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;}
  }
  async function openDialog(mode:'save',event:MouseEvent){clearNotice();saveCompleted=false;returnFocus=event.currentTarget as HTMLElement;saveMode=selected&&filterOperations.includes('update')?'update':filterOperations.includes('create')?'new':'update';name=saveMode==='new'?'':selected?.name??'';renameId='';dialog=mode;await tick();(dialogElement?.querySelector<HTMLElement>('input')??dialogElement?.querySelector<HTMLElement>('.app-modal-close'))?.focus();}
@@ -70,13 +95,13 @@
   if(!canSave||busy||saveCompleted||!name.trim())return;
   const current=selected;const definition={...searchState.definition,...(compactMode?{limit:20}:{})};busy=true;message='';
   try{const item=saveMode==='update'&&current?await mutate(`/v1/search-filters/${current.id}`,'PATCH',{name:name.trim(),definition,revision:current.revision}):await mutate('/v1/search-filters','POST',{target,name:name.trim(),definition});
-   await loadFilters();selectedId=String(item.id);message=t.savedOk;messageError=false;saveMode=filterOperations.includes('update')?'update':'new';name=item.name;saveCompleted=true;
+   await loadFilters();selectedId=String(item.id);rememberSelection(selectedId);message=t.savedOk;messageError=false;saveMode=filterOperations.includes('update')?'update':'new';name=item.name;saveCompleted=true;
   }catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;if(dialog){await tick();dialogElement?.querySelector<HTMLElement>(saveCompleted?'.app-modal-close':'input')?.focus();}}
  }
  async function rename(item:SavedFilter){if(!renameName.trim())return;clearNotice();busy=true;try{const renamed=await mutate(`/v1/search-filters/${item.id}`,'PATCH',{name:renameName.trim(),revision:item.revision});if(selectedId===String(item.id)&&saveMode==='update')name=renamed.name;await loadFilters();renameId='';cancelCardRename(item);message=t.savedOk;messageError=false;}catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;}}
  function startCardRename(item:SavedFilter){clearNotice();renameId=String(item.id);renameName=item.name;void tick().then(()=>document.getElementById(`${id}-card-rename-${item.id}`)?.focus());}
  function cancelCardRename(item:SavedFilter){clearNotice();renameId='';void tick().then(()=>document.querySelector<HTMLButtonElement>(`[data-filter-id="${item.id}"] .detail-header-edit`)?.focus());}
- async function remove(item:SavedFilter){clearNotice();if(!confirm(t.confirmDelete))return;busy=true;try{await mutate(`/v1/search-filters/${item.id}`,'DELETE');if(selectedId===String(item.id)){selectedId='';name='';saveMode=filterOperations.includes('create')?'new':'update';}await loadFilters();message=t.deletedOk;messageError=false;}catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;}}
+ async function remove(item:SavedFilter){clearNotice();if(!confirm(t.confirmDelete))return;busy=true;try{await mutate(`/v1/search-filters/${item.id}`,'DELETE');if(selectedId===String(item.id)){selectedId='';rememberSelection('');name='';saveMode=filterOperations.includes('create')?'new':'update';}await loadFilters();message=t.deletedOk;messageError=false;}catch(error){message=error instanceof Error?error.message:t.failed;messageError=true;}finally{busy=false;}}
  function keydown(event:KeyboardEvent){if(event.defaultPrevented)return;if(dialog){if(event.key==='Tab'&&dialogElement){const focusable=[...dialogElement.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length);const index=focusable.indexOf(document.activeElement as HTMLElement);if(event.shiftKey&&index<=0){event.preventDefault();focusable.at(-1)?.focus();}else if(!event.shiftKey&&index===focusable.length-1){event.preventDefault();focusable[0]?.focus();}}if(event.key==='Escape'){event.preventDefault();closeDialog();}return;}if(event.key==='Enter'&&event.target instanceof HTMLInputElement&&event.target.type==='search'){event.preventDefault();apply();}}
  function setCollapsed(value:boolean){clearNotice();collapsed=value;if(userId!==null)try{localStorage.setItem(`${target}-search-collapsed:${userId}`,String(value));}catch{ /* Storage is optional. */ }}
  function showSelectedTab(){void tick().then(()=>{const node=document.getElementById(`${id}-${activeTab}-tab`);const strip=node?.parentElement;if(node&&strip){const button=node.getBoundingClientRect(),bounds=strip.getBoundingClientRect();if(button.left<bounds.left)strip.scrollLeft-=bounds.left-button.left;else if(button.right>bounds.right)strip.scrollLeft+=button.right-bounds.right;}});}
@@ -92,7 +117,7 @@
   chooseTab(tab);document.getElementById(`${id}-${tab}-tab`)?.focus();
  }
  onMount(()=>{keyword=searchState.definition.keyword;conditions=clone(searchState.definition.conditions);});
- onMount(()=>{if(userId!==null)try{const savedTab=localStorage.getItem(`${target}-search-tab:${userId}`);activeTab=tabs.includes(savedTab as SearchTab)?savedTab as SearchTab:'simple';collapsed=localStorage.getItem(`${target}-search-collapsed:${userId}`)==='true';}catch{ /* Default to simple search. */ }searchState={...searchState,definition:{...searchState.definition,options:clone(draftOptions)},version:searchState.version+1};void loadDefinitions().then(loadFilters);showSelectedTab();});
+ onMount(()=>{if(userId!==null)try{const savedTab=localStorage.getItem(`${target}-search-tab:${userId}`);activeTab=tabs.includes(savedTab as SearchTab)?savedTab as SearchTab:'simple';collapsed=localStorage.getItem(`${target}-search-collapsed:${userId}`)==='true';}catch{ /* Default to simple search. */ }void initializeSearch();showSelectedTab();});
 </script>
 
 {#snippet quickControls()}
@@ -122,6 +147,7 @@
 {/snippet}
 
 <form class="search-panel search-form" class:mobile-expanded={mobileExpanded} aria-label={t.search} aria-busy={searchState.loading||busy||!definitionsReady||dirty} onsubmit={event=>event.preventDefault()}>
+ {#if initializationFailed}{#if message}<StatusNotice message={message} tone="error" onDismiss={()=>message=''}/>{/if}<button type="button" disabled={busy} onclick={()=>void initializeSearch()}>{t.refresh}</button>{/if}
  {#if compactMode}<div class="mobile-search-bar"><SearchInput label={t.keyword} value={keyword} placeholder={searchInputExample({code:configuration.keywordExample,type:'string'},$localization.displayLanguage)} onValueChange={value=>keyword=value}/><button type="button" aria-expanded={mobileExpanded} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>mobileExpanded=!mobileExpanded}>{common.filters}</button></div>{/if}
  {#if appliedCount}<p class="mobile-search-summary" role="status">{formatLocaleTemplate(common.appliedConditions,appliedCount)}</p>{/if}
   <header class="search-header"><div class="search-tabs" role="tablist" aria-label={t.search}>
@@ -130,7 +156,7 @@
    {/each}
   </div><button class="search-collapse" type="button" aria-label={bodyCollapsed?t.expandSearch:t.collapseSearch} aria-expanded={!bodyCollapsed} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>{if(compactMode)mobileExpanded=!mobileExpanded;else setCollapsed(!collapsed);}}><svg viewBox="0 0 24 24" aria-hidden="true" class:expanded={!bodyCollapsed}><path d="m6 9 6 6 6-6"/></svg></button></header>
  <div id={`${id}-search-body`} class="search-body" hidden={bodyCollapsed}>
- {#if message&&!dialog}<StatusNotice {message} tone={messageError?'error':'success'} onDismiss={()=>message=''}/>{/if}
+ {#if message&&!dialog&&!initializationFailed}<StatusNotice {message} tone={messageError?'error':'success'} onDismiss={()=>message=''}/>{/if}
  <div id={`${id}-simple-panel`} role="tabpanel" aria-labelledby={`${id}-simple-tab`} hidden={activeTab!=='simple'}>
  {#if activeTab==='simple'}{@render quickControls()}{/if}
  </div>

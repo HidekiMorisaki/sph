@@ -3,6 +3,25 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.7.0",
+			"releasedAt": null,
+			"changeGroups": {
+				"newFeatures": [
+					"v0_7_0_schedule",
+					"v0_7_0_notifications"
+				],
+				"improvements": ["v0_7_0_drag_handles", "v0_7_0_purchase_amounts", "v0_7_0_saved_filter_selection", "v0_7_0_employee_departure", "v0_7_0_remaining_modal_tabs", "v0_7_0_detail_modal_tabs"],
+				"bugFixes": [
+					"v0_7_0_book_modal_footer",
+					"v0_7_0_book_action_borders",
+					"v0_7_0_modal_notice_borders",
+					"v0_7_0_modal_tab_alignment",
+					"v0_7_0_home_direct_navigation",
+					"v0_7_0_branch_role_editing"
+				]
+			}
+		},
+		{
 			"version": "0.6.0",
 			"releasedAt": "2026-10-23",
 			"changeGroups": {
@@ -172,5 +191,5 @@
 			]
 		}
 	],
-	"noticeIds": []
+	"noticeIds": ["v0_7_0_development_notice"]
 }

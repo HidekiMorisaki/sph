@@ -1,4 +1,5 @@
 <script lang="ts">
+ import FormTabs from '$lib/components/FormTabs.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
@@ -136,7 +137,7 @@
 		if (detailItem?.id === item.id) detailItem = null;
 		const response = await fetch(`${endpoint}/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { message = response.status === 409 ? 'deleteInUse' : response.status === 403 ? 'deleteForbidden' : 'deleteFailed'; return; }
-		message = ''; await list?.refresh();
+		formOpen = false; editing = null; detailBeforeEdit = null; message = ''; await list?.refresh();
 	}
 	function handleWindowKeydown(event: KeyboardEvent) {
 		if (event.defaultPrevented || confirmingDiscard || !formOpen || !dialogElement) return;
@@ -168,22 +169,24 @@
 </div>
 
 {#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId="employee-master-detail-title" sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} {endpoint} itemId={detailItem.id} fields={[{ key: 'name', label: text.name, value: detailItem.name }, ...(isGroup ? [{ key: 'departmentId', label: text.department, value: detailItem.department?.name ?? detailItem.departmentId }] : []), { key: 'notes', label: text.notes, value: detailItem.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailItem = null}>
-	{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('masters.update') ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
+	{#snippet headerActions()}{#if canManage}<DetailActionButtons editing={false} editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={(allowedOperation('masters.update') || allowedOperation('masters.delete')) ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
 </MasterRecordDetailModal>{/if}
 
 {#if canManage && formOpen}
 	<ModalBackdrop><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="employee-master-dialog-title">
 		<ModalHeader title={modalTitle} titleId="employee-master-dialog-title" closeLabel={t('closeForm', itemLabel)} disabled={saving} onClose={requestCloseForm} />
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-			<div class="master-form-body app-modal-form-body">
+			<div class="master-form-body app-modal-form-body"><FormTabs label={title}>{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={()=>message=''} />{/if}<div data-form-panel="basic">
+
 				{#if formError}<StatusNotice title={text.saveTitle} message={m(formError)} tone="error" onDismiss={() => formError = ''} />{/if}
 				<FormSection title={text.basicInformation} columns={2} framed>
 				{#if isGroup}<SearchSelect label={text.department} field="departmentId" value={departmentId} options={[{ value: '', label: '-' }, ...departments.map((item) => ({ value: String(item.id), label: item.name }))]} required error={m(errors.departmentId ?? '')} onSelect={(value) => { departmentId = value; errors.departmentId = undefined; formError = ''; }} />{/if}
 				<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input bind:this={nameInput} bind:value={name} maxlength="128" placeholder={text.nameExample} class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} oninput={() => { errors.name = undefined; formError = ''; }} />{#if errors.name}<small id="name-error" class="field-error">{m(errors.name)}</small>{/if}</label>
 					</FormSection>
 					<FormSection title={text.additionalInformation} framed><label class="notes-field"><span>{text.notes}</span><textarea name="notes" bind:value={notes} maxlength="5000"></textarea></label></FormSection>
-				</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
+
+</div></FormTabs></div>
+			<footer class="app-modal-footer">{#if editing && allowedOperation('masters.delete')}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(editing!)}>{commonText.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || !allowedOperation(editing ? 'masters.update' : 'masters.create') || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
 		</form>
 	</dialog></ModalBackdrop>
 	{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}

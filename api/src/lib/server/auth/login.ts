@@ -30,7 +30,7 @@ export async function authenticateLogin(identifier: string, password: string, ad
 		const user = await tx.employee.findFirst({ where: {
 			...(identifier.includes('@') ? { email: identifier.trim().toLowerCase() } : { username: identifier.trim() }),
 			deletedAt: null, accountStatus: 'active',
-			OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }],
+			AND: [{ OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }] }, { OR: [{ deletionScheduledOn: null }, { deletionScheduledOn: { gt: employeeReferenceDate() } }] }],
 			roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
 		}, select: { id: true, passwordHash: true } });
 		const accountKey = user ? `employee:${user.id}` : `identifier:${identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim()}`;

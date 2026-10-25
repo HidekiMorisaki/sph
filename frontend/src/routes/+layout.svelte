@@ -156,7 +156,7 @@
  <AppSidebar collapsed={false} forceExpanded {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={()=>{mobileMenu?.close();mobileMenuOpen=false;void logout();}} />
  </dialog>{/if}{/if}
 	<div class:workspace={showShell}>
-		{#if showShell}<AppHeader {collapsed} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
+		{#if showShell}<AppHeader {user} {collapsed} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
 		<div class:app-main={showShell}>{#if logoutError}<StatusNotice message={localeMessages[$localization.displayLanguage].navigation.logoutFailed} tone="error" onDismiss={() => logoutError = false} />{/if}{#if overdueNotice}<StatusNotice message={overdueNotice} tone="warning" onDismiss={() => overdueNotice = ''} />{/if}{@render children()}</div>
 	</div>
 </div>

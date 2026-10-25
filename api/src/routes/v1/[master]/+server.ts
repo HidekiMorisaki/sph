@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
 import { referenceBranchScope } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -34,6 +35,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 }
 
 export async function POST({ params, request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const actor = params.master === 'branches' ? requireBranchManagementApi(locals.user) : requireOperationApi(locals.user, permissionOperations.masterManagement);
 	const selected = resource(params.master);
 	const value = await request.json().catch(() => null);

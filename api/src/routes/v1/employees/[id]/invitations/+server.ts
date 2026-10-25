@@ -21,7 +21,7 @@ export async function POST({ params, locals, request, url }: import('./$types').
 		const employee = await tx.employee.findFirst({ where: {
 			id, deletedAt: null, accountStatus: 'unprovisioned',
 			...(branchId === null ? {} : { branchId }),
-			OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }],
+			AND: [{OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }]},{OR:[{deletionScheduledOn:null},{deletionScheduledOn:{gt:employeeReferenceDate()}}]}],
 			roleGrants: { some: { deletedAt: null, scopeType: 'global', role: { deletedAt: null, ...(branchId === null ? {} : { defaultKey: 'general_user' }) } } }
 		}, select: { email: true } });
 		if (!employee) return { status: 'unavailable' as const };

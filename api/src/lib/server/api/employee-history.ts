@@ -35,6 +35,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 			employmentTypeId: true,
 			branchId: true,
 			retiredAt: true,
+			deletionScheduledOn: true,
 			notes: true,
 			teamAssignments: { where: { deletedAt: null, team: { deletedAt: null } }, select: { team: { select: { id: true, name: true } } }, orderBy: { teamId: 'asc' } },
 			group: { select: { name: true } },
@@ -84,6 +85,7 @@ export async function readEmployeeFields(tx: Prisma.TransactionClient, employeeI
 		employmentTypeId: field(employee.employmentTypeId, employee.employmentType.name),
 		branchId: field(employee.branchId, employee.branch.name),
 		retiredAt: field(date(employee.retiredAt)),
+		deletionScheduledOn: field(date(employee.deletionScheduledOn)),
 		notes: field(employee.notes),
 		roles: field(roles.map((role) => role.id).join('|'), roles.map((role) => role.name).join(', '))
 	};

@@ -4,6 +4,31 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.7.0] - Unreleased
+
+### New features
+
+- Added scheduling to the General group, with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.
+- Added shared header notifications with unread counts, read controls and links to the relevant event. Private details are resolved using current access permissions.
+
+### Existing feature improvements
+
+- Unified drag-and-drop handles with six-dot icons arranged in two columns of three, clearly distinguishing reordering from the hamburger icons used to collapse menus.
+- Added tax-inclusive purchase amount entry for IT assets, individual book copies and license contracts. Zero is allowed for free transfers. Book forms prefill available prices and estimate domestic tax-exclusive JPY prices at 10% tax. Amounts can be edited manually.
+- Remember the selected saved filter for employees, books and IT assets per user in the same browser, and restore its latest conditions on the next visit.
+- Added confirmation and bulk returns of IT assets and books when retiring or deleting employees, with date selection and future deletion scheduling, changes and cancellation. Retirement or deletion is blocked while assets remain unreturned.
+- Added tabs to some modals to make information easier to review.
+- Organized license contract, IT asset, book, role, branch, team and client detail modals into tabs.
+
+### Bug fixes
+
+- Fixed excess space below the book editor footer when selecting Purchase requests or Copies and loans tabs.
+- Fixed the lower edges of Change cover and Refresh openBD details buttons being obscured in the book editor.
+- Fixed notification borders being obscured by sticky tab backgrounds in detail and edit modals.
+- Aligned detail and edit modal tab names, order and field groups. Detail modals are read-only; related changes and deletion are available in editors, with independent related saves preserving the parent draft.
+- Fixed an issue where clicking Home in the hamburger menu briefly displayed the system startup screen.
+- Enabled system administrators to edit the branch administrator role's name, notes and permissions, and delete it when unassigned. Branch operation scopes and system administrator role protection are preserved.
+
 ## [v0.6.0] - 2026-10-23
 
 ### New features

@@ -1,4 +1,12 @@
 {
+	"detailBookInformation": "Book information",
+	"relatedSaveNotice": "Related actions are saved separately. Cancelling this form does not undo related actions already saved.",
+	"relatedAfterCreate": "These actions are available in the edit screen after registration.",
+	"detailContractInformation": "Contract information",
+	"detailUsageInformation": "Assignments and installations",
+	"detailNetworkCredentials": "Network and credentials",
+	"detailContactInformation": "Address and contact",
+	"detailCopyLoans": "Copies and loans",
 	"description": "Sortable, searchable, paginated.",
 	"search": "Search...",
 	"noOptions": "No options found.",

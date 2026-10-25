@@ -1,4 +1,6 @@
 <script lang="ts">
+	import NotificationBell from './NotificationBell.svelte';
+ import type { SessionUser } from '$lib/auth';
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 	import { onMount } from 'svelte';
@@ -9,8 +11,9 @@
 	let {
 		collapsed,
 		breadcrumbs,
-		onToggleSidebar
+		onToggleSidebar, user = null
 	}: {
+		user?: SessionUser | null;
 		collapsed: boolean;
 		breadcrumbs: Breadcrumb[];
 		onToggleSidebar: () => void;
@@ -50,6 +53,7 @@
 			{/each}
 		</nav>
 	</div>
+ <div class="header-actions"><NotificationBell {user}/>
 	<button
 		class="theme"
 		title={navigationText.switchTheme}
@@ -63,10 +67,12 @@
 			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.5" /></svg>
 		{/if}
 	</button>
+ </div>
 </header>
 
 <style>
 	.app-header{position:fixed;z-index:50;top:0;left:252px;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:left .22s}
+ .header-actions{display:flex;align-items:center;gap:8px}
 	.head-left{display:flex;align-items:center;gap:16px}
 	.menu,.theme{display:grid;place-items:center;width:34px;height:34px;padding:7px;background:transparent;color:var(--muted);border:0;border-radius:4px;cursor:pointer;font:inherit}
 	.menu:hover,.theme:hover{background:var(--surface-hover,var(--bg))}

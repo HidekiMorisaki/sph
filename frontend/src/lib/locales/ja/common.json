@@ -1,4 +1,12 @@
 {
+	"detailBookInformation": "書誌情報",
+	"relatedSaveNotice": "関連操作は操作ごとに保存されます。この画面を取り消しても、保存済みの関連操作は取り消されません。",
+	"relatedAfterCreate": "登録後に編集画面で操作できます。",
+	"detailContractInformation": "基本・契約情報",
+	"detailUsageInformation": "割当・インストール",
+	"detailNetworkCredentials": "ネットワーク・認証情報",
+	"detailContactInformation": "所在地・連絡先",
+	"detailCopyLoans": "蔵書・貸出",
 	"description": "並べ替え、検索、ページ切替ができます。",
 	"search": "検索…",
 	"noOptions": "候補が見つかりません。",

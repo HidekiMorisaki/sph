@@ -5,10 +5,11 @@ import { failure } from '$lib/server/api/response';
 import { authenticateRequest } from '$lib/server/auth/request';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 import { granularOperationForRoute } from '$lib/server/auth/route-operation';
-import { ownBranchOperations } from '$lib/server/auth/permissions';
+import { ownBranchOperations, hasPermissionOperation, hasOwnBranchPermissionOperation } from '$lib/server/auth/permissions';
 import { startSystemMetrics } from '$lib/server/system-metrics';
+import { startEmployeeDeletions } from '$lib/server/api/employee-offboarding';
 
-export const init = () => { startSystemMetrics(); };
+export const init = () => { startSystemMetrics(); startEmployeeDeletions(); };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -33,8 +34,8 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 	if (granularOperation) {
 		if (!event.locals.user) return failure(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
 		event.locals.user.activeOperation = granularOperation;
-		if (!event.locals.user.permissionOperations.includes(granularOperation) &&
-			!(ownBranchOperations.has(granularOperation) && event.locals.user.ownBranchPermissionOperations.includes(granularOperation))) {
+		if (!hasPermissionOperation(event.locals.user, granularOperation) &&
+			!(ownBranchOperations.has(granularOperation) && hasOwnBranchPermissionOperation(event.locals.user, granularOperation))) {
 			return failure(403, 'PERMISSION_REQUIRED', 'Permission is required.');
 		}
 	}

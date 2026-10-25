@@ -4,6 +4,10 @@ The browser uses the same-origin `/v1/auth/login`, `/v1/auth/session` and
 `/v1/auth/logout` REST endpoints. Sessions are validated by the API against
 PostgreSQL. Protected and error API responses use `Cache-Control: private, no-store`.
 
+Scheduled employee deletion also prevents login and session use from 00:00 JST on
+the specified business date, independently of background deletion processing.
+See [Employee departure](Employee_Departure.md) for bulk returns and scheduling.
+
 ## Failed sign-in attempts
 
 Five failed password attempts for the same account and source within a rolling
@@ -38,6 +42,21 @@ is inherent in the approved account/source policy.
 A retirement date is a Japanese business date. Access stops at 00:00 Asia/Tokyo
 on that date, including existing sessions. Login, invitations, account setup and
 last-system-administrator protection use the same date boundary.
+
+## Branch administrator role editing
+
+System administrators with the required operation permissions can edit the branch
+administrator role's name, notes and permissions. Branch-scoped operations can
+only use `own_branch`; the API rejects global grants and unsupported operations.
+The editor also supports `branches.update` and `branches.delete` for this role
+without making those operations assignable to other editable roles. Resetting
+defaults restores the initial scopes and does not grant branch deletion.
+Existing grants are not changed automatically.
+
+Roles with active employee assignments cannot be deleted. An unassigned branch
+administrator role can be logically deleted, along with its permission grants;
+audit logs and change history are retained. The system administrator role remains
+protected from editing and deletion. Role assignment rules are unchanged.
 
 ## Recovering an experimental cloud deployment
 

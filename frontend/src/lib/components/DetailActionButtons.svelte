@@ -1,18 +1,20 @@
 <script lang="ts">
+	import { prepareEditorTab } from '$lib/modal-tabs';
 	import MenuItemIcon from './MenuItemIcon.svelte';
 
-	let { editLabel, deleteLabel, onEdit, onDelete, disabled = false }: {
+	let { editLabel, deleteLabel, onEdit, onDelete, disabled = false, editing = true }: {
 		editLabel: string;
 		deleteLabel: string;
 		onEdit?: (trigger: HTMLButtonElement) => void;
 		onDelete?: (trigger: HTMLButtonElement) => void;
 		disabled?: boolean;
+		editing?: boolean;
 	} = $props();
 </script>
 
 <div class="detail-action-buttons">
-	{#if onEdit}<button class="detail-header-edit" type="button" aria-label={editLabel} title={editLabel} {disabled} onclick={(event) => onEdit?.(event.currentTarget)}><MenuItemIcon name="edit" /></button>{/if}
-	{#if onDelete}<button class="detail-header-delete" type="button" aria-label={deleteLabel} title={deleteLabel} {disabled} onclick={(event) => onDelete?.(event.currentTarget)}><MenuItemIcon name="delete" /></button>{/if}
+	{#if onEdit}<button class="detail-header-edit" type="button" aria-label={editLabel} title={editLabel} {disabled} onclick={(event) => { prepareEditorTab(event.currentTarget); onEdit?.(event.currentTarget); }}><MenuItemIcon name="edit" /></button>{/if}
+	{#if editing && onDelete}<button class="detail-header-delete" type="button" aria-label={deleteLabel} title={deleteLabel} {disabled} onclick={(event) => onDelete?.(event.currentTarget)}><MenuItemIcon name="delete" /></button>{/if}
 </div>
 
 <style>

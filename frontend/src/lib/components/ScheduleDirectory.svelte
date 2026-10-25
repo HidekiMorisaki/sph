@@ -1,0 +1,26 @@
+<script lang="ts">
+ import SearchInput from './SearchInput.svelte';
+ import SearchSelect from './SearchSelect.svelte';
+ import ModalActionButton from './ModalActionButton.svelte';
+ import { onMount,untrack } from 'svelte';
+ import { localization } from '$lib/localization';
+ import { scheduleText } from '$lib/schedule-text';
+ import { scheduleRequest,type EmployeeChoice,type RoomChoice } from '$lib/schedule';
+ let {kind='employees',selected=[],rowSelection=false,disabled=false,onSelect}:{kind?:'employees'|'rooms';selected?:number[];rowSelection?:boolean;disabled?:boolean;onSelect:(item:EmployeeChoice|RoomChoice)=>void}=$props();
+ const instance=$props.id();
+ let text=$derived(scheduleText[$localization.displayLanguage]);
+ let search=$state(''),branchId=$state(''),departmentId=$state(''),items=$state<(EmployeeChoice|RoomChoice)[]>([]),branches=$state<{id:number;name:string}[]>([]),departments=$state<{id:number;name:string}[]>([]),hasMore=$state(false),busy=$state(false),error=$state(false),ready=$state(false);
+ let version=0;let controller:AbortController|undefined;
+ async function load(append=false){const revision=++version;controller?.abort();controller=new AbortController();busy=true;error=false;try{const url=kind==='employees'?`/v1/schedule-employees?search=${encodeURIComponent(search)}&branchId=${branchId}&departmentId=${departmentId}`:`/v1/schedule-resources?search=${encodeURIComponent(search)}`;const result=await scheduleRequest<(EmployeeChoice|RoomChoice)[]>(`${url}&offset=${append?items.length:0}&limit=100`,'GET',undefined,{},controller.signal);if(revision!==version)return;items=append?[...items,...result.data]:result.data;hasMore=!!result.meta.hasMore;if(result.meta.branches)branches=result.meta.branches as typeof branches;if(result.meta.departments)departments=result.meta.departments as typeof departments;}catch(e){if(revision===version&&!(e instanceof DOMException&&e.name==='AbortError'))error=true;}finally{if(revision===version)busy=false;}}
+ onMount(()=>{ready=true;return()=>{++version;controller?.abort();};});
+ $effect(()=>{const query=[search,branchId,departmentId,kind],mounted=ready;if(!mounted)return;void query;const timer=setTimeout(()=>untrack(()=>void load()),250);return()=>clearTimeout(timer);});
+</script>
+<div class="directory">
+ <SearchInput label={text.search} placeholder={text.search} value={search} onValueChange={value=>search=value}/>
+ {#if kind==='employees'}<div class="filters"><SearchSelect label={text.branch} field={`schedule-directory-${instance}-branch`} value={branchId} options={[{value:'',label:text.allNotifications},...branches.map(b=>({value:String(b.id),label:b.name}))]} onSelect={value=>branchId=value}/><SearchSelect label={text.department} field={`schedule-directory-${instance}-department`} value={departmentId} options={[{value:'',label:text.allNotifications},...departments.map(d=>({value:String(d.id),label:d.name}))]} onSelect={value=>departmentId=value}/></div>{/if}
+ {#if error}<p role="alert">{text.failed} <button type="button" onclick={()=>load()}>{text.retry}</button></p>{/if}
+ {#snippet identity(item:EmployeeChoice|RoomChoice)}<span class="person-label"><strong>{'employeeCode' in item?item.name:item.room.name}</strong><small>{'employeeCode' in item?`${item.employeeCode} · ${item.branch.name}`:item.room.branch.name}</small></span>{/snippet}
+ <div class="results" aria-busy={busy}>{#each items as item(item.id)}{#if rowSelection}<button type="button" class="person person-select" aria-label={`${text.select} ${'employeeCode' in item?item.name:item.room.name}`} aria-pressed={selected.includes(item.id)} disabled={disabled||selected.includes(item.id)} onclick={()=>onSelect(item)}>{@render identity(item)}{#if selected.includes(item.id)}<span aria-hidden="true">✓</span>{/if}</button>{:else}<div class="person">{@render identity(item)}<ModalActionButton label={text.select} variant="secondary" size="field" disabled={disabled||selected.includes(item.id)} onclick={()=>onSelect(item)}/></div>{/if}{:else}<p>{busy?text.loading:text.empty}</p>{/each}</div>
+ {#if hasMore}<button type="button" disabled={busy} onclick={()=>load(true)}>{text.more}</button>{/if}
+</div>
+<style>.directory{display:grid;gap:12px}.directory :global(.search-box){width:100%}.filters{display:grid;grid-template-columns:1fr 1fr;gap:12px}.results{max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:4px}.person{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--border)}.person-label{min-width:0}.person strong{display:block}.person-select{width:100%;min-height:64px;margin:0;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent!important;color:var(--text)!important;text-align:left;font:inherit;box-shadow:none}.person-select:hover:not(:disabled){background:var(--surface-hover,var(--surface-secondary))!important}.person-select:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.person-select:disabled{cursor:default}.person-select[aria-pressed=true]{background:var(--surface-secondary)!important;color:var(--muted)!important}.person strong{font-weight:500;overflow-wrap:anywhere}.person small{display:block;color:var(--muted)}.results p{padding:12px}</style>

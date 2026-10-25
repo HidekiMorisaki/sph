@@ -5,13 +5,14 @@
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 
-	let { endpoint, itemId, fieldLabels, dateFields = [], valueFormatters = {}, hiddenFields = [], onEmployeeClick }: {
+	let { endpoint, itemId, fieldLabels, dateFields = [], valueFormatters = {}, hiddenFields = [], collapsible = true, onEmployeeClick }: {
 		endpoint: string;
 		itemId: number;
 		fieldLabels: Record<string, string>;
 		dateFields?: string[];
 		valueFormatters?: Record<string, (value: string) => string>;
 		hiddenFields?: string[];
+		collapsible?: boolean;
 		onEmployeeClick?: (id: number, trigger: HTMLButtonElement) => void;
 	} = $props();
 	let entries = $state<ChangeHistoryEntry[]>([]);
@@ -47,4 +48,4 @@
 	});
 </script>
 
-<ChangeHistorySection entries={visibleEntries} {loading} {error} {fieldLabels} {dateFields} valueFormatters={formatters} {actionLabels} {onEmployeeClick} />
+<ChangeHistorySection entries={visibleEntries} {loading} {error} {fieldLabels} {dateFields} valueFormatters={formatters} {actionLabels} {onEmployeeClick} {collapsible} />

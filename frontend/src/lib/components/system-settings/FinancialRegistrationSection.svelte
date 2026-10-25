@@ -5,13 +5,11 @@
  import "$lib/styles/mobile-records.css";
 	import PaginationIcon from '$lib/components/PaginationIcon.svelte';
 	import '$lib/styles/table-scroll.css';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { apiData } from '$lib/api';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FinancialStracPreview from '$lib/components/FinancialStracPreview.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import SearchSelect from '$lib/components/SearchSelect.svelte';
@@ -20,6 +18,8 @@
 	import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 	import { formSnapshot } from '$lib/modalForm';
+	let {periodVersion=0}:{periodVersion?:number}=$props();
+	let observedPeriodVersion=untrack(()=>periodVersion);
 	type Settings = { basis: 'calendar' | 'fiscal'; fiscalStartMonth: number };
 	type Item = { branchId: number; branchName: string; branchDeleted: boolean; completedMonths: number; missingRates: string[]; revenue: string | null; variableCost: string | null; fixedCost: string | null; netProfit: string | null; published: boolean };
 	type Month = { month: string; revenue: string | null; variableCost: string | null; fixedCost: string | null; version: number | null };
@@ -152,12 +152,13 @@
 		finally { if (current === sequence) rateLoading = false; }
 	}
 	async function initialize() {
+		loading=true;
 		try {
 			const response = await fetch('/v1/auth/session');
 			if (response.status === 401) { window.location.assign('/'); return; }
 			if (!response.ok) throw new Error();
 			const user = (await apiData<{ user: SessionUser }>(response)).user;
-			if (!canOperate(user, 'financial.read')) { denied = true; return; }
+			if (!user.capabilities.canManageSystemSettings || !canOperate(user, 'financial.read')) { denied = true; return; }
 			canRetrieveRates = user.capabilities.canManageSystemSettings;
 			const settingResponse = await fetch('/v1/financial-period-settings');
 			if (!settingResponse.ok) throw new Error();
@@ -299,12 +300,12 @@
 		if (!Number.isInteger(next) || next < 1980 || next > 2100) return;
 		year = next; rememberYear(settings.basis, next); offset = 0; editing = null; preview = null; fallbackCurrency = null; rateNotice = ''; fallbackNotice = ''; void refresh(true);
 	}
+	$effect(()=>{const version=periodVersion;if(version!==observedPeriodVersion){observedPeriodVersion=version;if(!editing&&!saving)void initialize();}});
 	onMount(() => { void initialize(); });
 </script>
 
 <svelte:window onkeydown={handleEditorKeydown} />
-<AssetManagementShell {title}>
-	<div class="finance-page"><MasterPageHeader {title} />
+	<div class="finance-page">
 		{#if loading}<LoadingSpinner label={common.loading} />
 		{:else if denied}{#if !deniedDismissed}<StatusNotice message={localeMessages[$localization.displayLanguage].systemSettings.accessDenied} tone="error" onDismiss={() => deniedDismissed = true} />{/if}
 		{:else}
@@ -337,7 +338,6 @@
 			{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeEditor} />{/if}
 		{/if}
 	</div>
-</AssetManagementShell>
 
 <style>
 	.finance-page{display:grid;gap:16px;min-width:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow);min-width:0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{font-size:1.13rem;margin:0 0 4px}p{margin:0;color:var(--text-secondary)}.controls{display:flex;align-items:end;gap:10px}input{min-height:34px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit}.controls :global(.custom-date){width:130px}.secondary,.edit-button,.pagination button{min-height:34px;padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--action-primary);font:inherit;cursor:pointer}.secondary:hover,.edit-button:hover,.pagination button:hover{background:var(--surface-hover,var(--surface-secondary))}button:disabled{opacity:.55;cursor:not-allowed}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px 10px;border-bottom:1px solid var(--border);text-align:right;font-size:var(--font-size-body)}th:first-child,td:first-child{text-align:left;padding-left:20px}th:last-child,td:last-child{padding-right:20px}thead th{color:var(--text-secondary);font-weight:600;background:var(--surface-secondary)}tbody th{font-weight:600}tbody tr:last-child>*{border-bottom:0}.negative{color:#b43636}.editor-currency{display:flex;align-items:end;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}.editor-currency :global(.form-select-field){width:140px}.editor-currency p{padding-bottom:8px;font-size:var(--font-size-support)}.month-table input{width:135px;height:36px;padding:0 12px;text-align:right;outline:none;transition:border-color 150ms,box-shadow 150ms}.month-table input:hover:not(:focus){border-color:var(--muted)}.month-table input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.month-table th,.month-table td{text-align:left}.pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 20px}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.toolbar{align-items:stretch;flex-direction:column}.controls{justify-content:space-between}.editor-currency{align-items:stretch;flex-direction:column}.table-wrap{max-width:100%}}

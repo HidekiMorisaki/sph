@@ -1,4 +1,5 @@
 <script lang="ts">
+ import FormTabs from '$lib/components/FormTabs.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
@@ -179,14 +180,15 @@
 		<div class="panel"><MasterList bind:this={list} endpoint={`/v1/${resource}`} {columns} {title} listHeading={title} description={sectionDescription} canManage={allowedOperation('masters.reorder')} unpaged showNameIcon actionLabel={resource === 'operating-systems' ? (row) => osName(row as Item) : undefined} treeParent={resource === 'operating-systems' ? operatingSystemTreeParent : undefined} minTableWidth={0} headerActions={headerActions} {initialSortBy} reorderEndpoint={`/v1/it-asset-orders/${resource}`} reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => message = reason === 'conflict' ? 'reorderConflict' : reason === 'forbidden' ? 'reorderForbidden' : 'reorderFailed'} onReordered={() => { if (resource === 'operating-system-vendors') notifyVendorsChanged(); }} onDetail={(item, trigger) => { detailItem = item as Item; detailReturnFocus = trigger; }} /></div>
 	</div>
 	{#if detailItem}<MasterRecordDetailModal title={`${title} ${commonText.detail}`} titleId={`it-master-detail-${resource}`} sectionTitle={text.basicInformation} closeLabel={commonText.close} returnFocus={detailReturnFocus} endpoint={`/v1/${resource}`} itemId={detailItem.id} fields={detailFields} hiddenHistoryFields={['sortOrder']} dateFields={['sourceCheckedOn']} valueFormatters={{ disposalDatePolicy: (value) => m(value) }} onClose={() => detailItem = null}>
-		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('masters.update') ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editing={false} editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={(allowedOperation('masters.update') || allowedOperation('masters.delete')) ? () => { const item = detailItem!; const row = detailReturnFocus; detailBeforeEdit = item; detailItem = null; edit(item, row); } : undefined} onDelete={allowedOperation('masters.delete') ? () => void remove(detailItem!) : undefined} />{/if}{/snippet}
 	</MasterRecordDetailModal>{/if}
 
 	{#if canManage && formOpen}
 		<ModalBackdrop><dialog bind:this={dialogElement} class="master-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby={`it-master-dialog-${resource}`}>
 			<ModalHeader title={modalTitle} titleId={`it-master-dialog-${resource}`} closeLabel={t('closeForm', itemLabel)} disabled={saving} onClose={requestCloseForm} />
 			<form bind:this={formElement} class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-				<div class="master-form-body app-modal-form-body">
+				<div class="master-form-body app-modal-form-body"><FormTabs label={title}>{#if message}<StatusNotice message={m(message)} tone="error" onDismiss={()=>message=''} />{/if}<div data-form-panel="basic">
+
 					{#if formError}<StatusNotice title={text.saveTitle} message={m(formError)} tone="error" onDismiss={() => formError = ''} />{/if}
 					<FormSection title={text.basicInformation} framed>
 					{#if resource === 'it-asset-types' || resource === 'manufacturers' || resource === 'operating-system-vendors' || resource === 'it-asset-statuses'}<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" bind:value={form.name} maxlength="128" placeholder={text.nameExample} class:invalid={!!errors.name} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'master-name-error' : undefined} oninput={() => clearError('name')} />{#if errors.name}<small id="master-name-error" class="field-error">{m(errors.name)}</small>{/if}</label>{/if}
@@ -210,8 +212,9 @@
 						<FormSection title={text.supportedFields} framed><fieldset class="supported-fields"><legend class="visually-hidden">{text.supportedFields}</legend><label><input bind:checked={form.supportsCpu} type="checkbox" />CPU</label><label><input bind:checked={form.supportsRam} type="checkbox" />RAM</label><label><input bind:checked={form.supportsOs} type="checkbox" />OS</label><label><input bind:checked={form.supportsLoginUsername} type="checkbox" />{text.loginUsername}</label></fieldset></FormSection>
 					{/if}
 					<FormSection title={text.additionalInformation} framed><label class="notes-field"><span>{text.notes}</span><textarea name="notes" bind:value={form.notes} maxlength="5000"></textarea></label></FormSection>
-				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
+
+</div></FormTabs></div>
+				<footer class="app-modal-footer">{#if editing && allowedOperation('masters.delete')}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(editing!)}>{commonText.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || !allowedOperation(editing ? 'masters.update' : 'masters.create') || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
 			</form>
 		</dialog></ModalBackdrop>
 		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}

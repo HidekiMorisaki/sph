@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { localization } from '$lib/localization';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { tick } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
+	import InfoPopover from './InfoPopover.svelte';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 
 	type Option = { value: string; label: string; searchTerms?: string[] };
-	let { label, field, name, value, options, onSelect, onOpen, required = false, disabled = false, error = '', searchPlaceholder, emptyText, searchable = true }: {
-		label: string; field: string; name?: string; value: string; options: Option[]; onSelect: (value: string) => void; onOpen?: () => void; required?: boolean; disabled?: boolean; error?: string; searchPlaceholder?: string; emptyText?: string; searchable?: boolean;
+	let { label, field, name, value, options, onSelect, onOpen, required = false, disabled = false, error = '', searchPlaceholder, emptyText, searchable = true, help }: {
+		label: string; field: string; name?: string; value: string; options: Option[]; onSelect: (value: string) => void; onOpen?: () => void; required?: boolean; disabled?: boolean; error?: string; searchPlaceholder?: string; emptyText?: string; searchable?: boolean; help?: Snippet;
 	} = $props();
 
 	let open = $state(false);
@@ -82,7 +83,7 @@
 </script>
 
 <div bind:this={root} class="form-select-field" data-empty={value === ''} onfocusout={blur}>
-	<span id={`${field}-label`}>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span>
+	{#if help}<div class="form-select-label"><span id={`${field}-label`}>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><InfoPopover {label}>{@render help()}</InfoPopover></div>{:else}<span id={`${field}-label`}>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span>{/if}
 	<div class="form-select-picker" data-field={field}>
 		<button bind:this={trigger} {name} type="button" role="combobox" class="form-select-trigger" class:unselected class:invalid={Boolean(error)} {disabled} aria-labelledby={`${field}-label`} aria-haspopup="listbox" aria-controls={`${field}-options`} aria-expanded={open} aria-required={required} aria-invalid={Boolean(error)} aria-describedby={error ? `${field}-error` : undefined} onclick={() => open ? close(true) : void show()} onkeydown={triggerKeydown}><span>{selected?.label ?? '-'}</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>
 		{#if open}<div bind:this={panel} class="form-select-options" popover="manual" style={panelStyle}>{#if searchable}<input bind:this={input} class="form-select-search" type="search" value={query} aria-label={formatLocaleTemplate(commonText.searchLabel, label)} aria-controls={`${field}-options`} aria-activedescendant={filtered[active] ? `${field}-option-${active}` : undefined} placeholder={searchPlaceholder ?? commonText.search} oninput={(event) => { query = event.currentTarget.value; active = 0; }} onkeydown={listKeydown} />{/if}<div id={`${field}-options`} class="option-list" role="listbox" aria-label={label}>{#each filtered as option, index}<button id={`${field}-option-${index}`} type="button" role="option" tabindex="-1" class:active={active === index} class:selected={value === option.value} aria-selected={value === option.value} onpointerdown={(event) => event.preventDefault()} onclick={() => choose(option)} onmouseenter={() => active = index} onkeydown={listKeydown}>{option.label}</button>{:else}<p class="form-select-empty">{emptyText ?? commonText.noOptions}</p>{/each}</div></div>{/if}
@@ -91,6 +92,7 @@
 </div>
 
 <style>
+	.form-select-label{display:flex;align-items:center;gap:6px;min-width:0}
 	.form-select-field{display:grid;align-content:start;gap:6px;min-width:0;color:var(--text);font-size:var(--font-size-support);font-weight:500}.form-select-picker{position:relative;min-width:0}.required,.field-error{color:var(--danger,#d63939)}.field-error{display:block;font-size:var(--font-size-support);line-height:1.6}
 	.form-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:36px;margin:0;padding:0 12px;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:4px;text-align:left;font-size:var(--font-size-body);font-weight:400;transition:border-color 150ms,box-shadow 150ms}.form-select-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.form-select-trigger.unselected{color:#c0c7cf!important}:global(html[data-theme='dark']) .form-select-trigger.unselected{color:#5a6473!important}.form-select-trigger:hover:not(:focus):not(:disabled){border-color:var(--muted)}.form-select-trigger:focus-visible,.form-select-trigger[aria-expanded='true']{border-color:#1abb9c;outline:0;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.form-select-trigger.invalid,.form-select-trigger.invalid:hover{border-color:var(--danger,#d63939)}.form-select-trigger.invalid:focus-visible{box-shadow:0 0 0 3px rgba(214,57,57,.14)}.form-select-trigger:disabled{cursor:not-allowed;opacity:.7}.form-select-trigger svg{flex:none;width:10px;height:6px;fill:none;stroke:#9ba5b1;stroke-width:1.5}.form-select-trigger[aria-expanded='true'] svg{transform:rotate(180deg)}
 	.form-select-options{z-index:1400;max-height:calc(100dvh - 16px);padding:3px;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 18px rgba(15,23,42,.18)}.form-select-search{display:block;width:100%;height:30px;margin:0 0 3px;padding:0 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-body);outline:none}.form-select-search::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .form-select-search::placeholder{color:#5a6473}.form-select-search:focus{border-color:#1abb9c;box-shadow:0 0 0 2px rgba(26,187,156,.14)}.option-list{max-height:164px;overflow-y:auto}.option-list button{display:block;width:100%;min-height:32px;margin:0;padding:5px 7px;background:transparent!important;color:var(--text)!important;border:0;border-radius:3px;text-align:left;font-size:var(--font-size-body);line-height:1.4}.option-list button:hover,.option-list button:focus-visible,.option-list button.active{background:var(--surface-secondary)!important;outline:0}.option-list button:hover{background:var(--surface-hover,var(--surface-secondary))!important;outline:0}.option-list button.selected{background:#1abb9c!important;color:#fff!important}.form-select-empty{margin:6px;color:var(--muted);font-size:var(--font-size-support);font-weight:400}

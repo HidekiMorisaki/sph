@@ -9,7 +9,7 @@
  import ModalActionButton from './ModalActionButton.svelte';
  import AddButton from './AddButton.svelte';
  import StatusNotice from './StatusNotice.svelte';
- let { titleId, branchId, canRequest = false, requestOpen = false, onChanged, onReceive }: { titleId?: number; branchId?: number; canRequest?: boolean; requestOpen?: boolean; onChanged?: () => void; onReceive?: (order: PurchaseOrder) => void } = $props();
+ let { titleId, branchId, canRequest = false, requestOpen = false, onChanged, onReceive, readOnly = false }: { titleId?: number; readOnly?: boolean; branchId?: number; canRequest?: boolean; requestOpen?: boolean; onChanged?: () => void; onReceive?: (order: PurchaseOrder) => void } = $props();
  let text = $derived(bookPurchaseMessages[$localization.displayLanguage]);
  let requests = $state<PurchaseRequest[]>([]), orders = $state<PurchaseOrder[]>([]);
  let busy = $state(false), loading = $state(true), history = $state(false), ready = $state(false);
@@ -37,7 +37,7 @@
  async function load() { loading = true; try { [requests, orders] = await Promise.all([all<PurchaseRequest>('/v1/book-purchase-requests'), all<PurchaseOrder>('/v1/book-purchase-orders')]); selected = []; } catch { error = text.failed; } finally { loading = false; } }
  onMount(() => { void load(); });
  async function send(endpoint: string, method: string, body: unknown) {
-  if (busy) return; busy = true; error = ''; notice = '';
+  if (readOnly || busy) return; busy = true; error = ''; notice = '';
   try {
    const response = await fetch(endpoint, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
    if (!response.ok) {
@@ -62,11 +62,11 @@
 <section class="purchases" aria-label={text.heading}>
  {#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
  {#if notice}<StatusNotice message={notice} tone="success" onDismiss={() => notice = ''} />{/if}
- {#if titleId && canRequest && !requests.some(item => item.own && item.branchId === branchId && ['pending','approved','ordered'].includes(item.status))}
+ {#if !readOnly && titleId && canRequest && !requests.some(item => item.own && item.branchId === branchId && ['pending','approved','ordered'].includes(item.status))}
   <details class="request-form" open={requestOpen}><summary>{text.request}</summary><form onsubmit={(event) => { event.preventDefault(); void submit(); }}><BookPurchaseFields {titleId} {branchId} bind:quantity bind:reason bind:ready /><ModalActionButton type="submit" label={text.submit} disabled={busy || !ready} /></form></details>
  {/if}
  {#if loading}<p role="status">{text.loading}</p>{/if}
- {#each groups as group (group.key)}
+ {#each (readOnly?[]:groups) as group (group.key)}
   <section class="purchase-card"><h4>{group.title} · {group.branch}</h4>
    <fieldset disabled={busy}><legend>{text.selected}</legend>
     <label class="check"><input type="checkbox" checked={group.requests.every(item => selected.includes(item.id))} onchange={(event) => { selected = event.currentTarget.checked ? [...new Set([...selected, ...group.requests.map(item => item.id)])] : selected.filter(id => !group.requests.some(item => item.id === id)); }} />{text.all}</label>
@@ -84,13 +84,13 @@
   {#if item.employee}<span>{text.requester}: {[item.employee.firstName,item.employee.middleName,item.employee.lastName].filter(Boolean).join(' ')}</span>{/if}
   <span>{text.date}: {new Date(item.createdAt).toLocaleString($localization.displayLanguage)}</span>
   {#if item.reason}<p>{item.reason}</p>{/if}{#if item.decisionReason}<p>{text.decisionReason}: {item.decisionReason}</p>{/if}
-  {#if item.canCancel}<ModalActionButton label={text.cancel} variant="secondary" disabled={busy} onclick={() => void send(`/v1/book-purchase-requests/${item.id}`, 'PATCH', { status: 'cancelled' })} />{/if}
+  {#if !readOnly && item.canCancel}<ModalActionButton label={text.cancel} variant="secondary" disabled={busy} onclick={() => void send(`/v1/book-purchase-requests/${item.id}`, 'PATCH', { status: 'cancelled' })} />{/if}
  </li>{/each}</ul>
  {#if orders.some(item => history || ['approved','ordered'].includes(item.status))}<h4>{text.orders}</h4>{/if}
  {#each orders.filter(item => history || ['approved','ordered'].includes(item.status)) as item (item.id)}<section class="purchase-card"><h4>{item.title.name} · {item.branch.name}</h4><p>{stateLabel(item.status)} · {text.planned}: {item.quantity} · {text.received}: {item.received}</p>
   {#if item.decisionReason}<p>{text.decisionReason}: {item.decisionReason}</p>{/if}
-  {#if item.canManage && item.status === 'approved'}<label>{text.decisionReason}<textarea maxlength="5000" rows="2" bind:value={reasons[`order:${item.id}`]}></textarea></label><div class="actions"><ModalActionButton label={text.order} disabled={busy} onclick={() => void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'ordered' })} /><ModalActionButton label={text.reject} variant="danger" disabled={busy} onclick={() => { const reason = reasons[`order:${item.id}`]; if (!reason?.trim()) { error = text.reasonRequired; return; } void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'rejected', decisionReason: reason }); }} /></div>{/if}
-  {#if item.status === 'ordered' && onReceive && allowedOperation('books.copies.create', item.branchId)}<AddButton label={text.receive} disabled={busy} onclick={() => onReceive?.(item)} />{/if}
+  {#if !readOnly && item.canManage && item.status === 'approved'}<label>{text.decisionReason}<textarea maxlength="5000" rows="2" bind:value={reasons[`order:${item.id}`]}></textarea></label><div class="actions"><ModalActionButton label={text.order} disabled={busy} onclick={() => void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'ordered' })} /><ModalActionButton label={text.reject} variant="danger" disabled={busy} onclick={() => { const reason = reasons[`order:${item.id}`]; if (!reason?.trim()) { error = text.reasonRequired; return; } void send(`/v1/book-purchase-orders/${item.id}`, 'PATCH', { status: 'rejected', decisionReason: reason }); }} /></div>{/if}
+  {#if !readOnly && item.status === 'ordered' && onReceive && allowedOperation('books.copies.create', item.branchId)}<AddButton label={text.receive} disabled={busy} onclick={() => onReceive?.(item)} />{/if}
  </section>{/each}
 </section>
 <style>

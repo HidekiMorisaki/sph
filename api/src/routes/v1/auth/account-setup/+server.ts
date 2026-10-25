@@ -27,7 +27,7 @@ export async function POST({ request }: import('./$types').RequestEvent) {
 			id: locked[0].id, tokenHash, usedAt: null, deletedAt: null, expiresAt: { gt: new Date() },
 			employee: {
 				deletedAt: null, accountStatus: 'unprovisioned',
-				OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }],
+				AND: [{OR: [{ retiredAt: null }, { retiredAt: { gt: employeeReferenceDate() } }]},{OR:[{deletionScheduledOn:null},{deletionScheduledOn:{gt:employeeReferenceDate()}}]}],
 				roleGrants: { some: { deletedAt: null, scopeType: { in: ['global', 'own_branch'] }, role: { deletedAt: null } } }
 			}
 		}, select: { id: true, employeeId: true, emailAtIssue: true, employee: { select: { email: true } } } });

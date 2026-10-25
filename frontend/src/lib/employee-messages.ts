@@ -14,6 +14,14 @@ export function employeeFieldError(reason: string, language: MessageLanguage): s
 export function employeeSaveError(code: string | undefined, status: number, language: MessageLanguage): string {
 	const text = localeMessages[language].employees;
 	const codes: Record<string, string> = {
+		ASSETS_NOT_RETURNED: text.departure.notReturned,
+		ASSET_RETURN_PERMISSION_REQUIRED: text.departure.permission,
+		DEPARTURE_CONFIRMATION_REQUIRED: text.departure.changed,
+		INVALID_RETURN_DATE: text.departure.returnDateError,
+		INVALID_DEPARTURE_DATE: text.departure.dateError,
+		BRANCH_RESPONSIBILITY: text.departure.branchResponsibility,
+		DELETION_DUE: text.departure.due,
+		EMPLOYEE_DEPARTURE_PENDING: text.departure.pending,
 		VALIDATION_ERROR: text.errors.validation,
 		EMPLOYEE_FIELD_CONFLICT: text.errors.conflict,
 		ROLE_ASSIGNMENT_FORBIDDEN: text.roleForbidden,
