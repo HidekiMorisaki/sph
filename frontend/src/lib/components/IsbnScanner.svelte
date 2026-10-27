@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
 	import { onMount, tick } from 'svelte';
 	import { localization } from '$lib/localization';
 	import { decodeIsbnFrame, loadIsbnDecoder } from '$lib/isbn-scanner';
@@ -6,7 +7,7 @@
 
 	let { onRead, onClose }: { onRead: (isbn: string) => void; onClose: () => void } = $props();
 	let video: HTMLVideoElement;
-	let closeButton: HTMLButtonElement;
+	let closeButton = $state<HTMLButtonElement>();
 	let stream: MediaStream | undefined;
 	let request = 0;
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -97,11 +98,11 @@
 </script>
 
 <section class="isbn-scanner" aria-labelledby={`${id}-title`}>
-	<header><h3 id={`${id}-title`}>{text.title}</h3><button bind:this={closeButton} type="button" class="scan-close" onclick={close}>{text.close}</button></header>
+	<header><h3 id={`${id}-title`}>{text.title}</h3><ActionButton size="touch" bind:element={closeButton} type="button" class="scan-close" onclick={close} variant="secondary" data-button-scope="button-f28ad15111">{text.close}</ActionButton></header>
 	{#if devices.length > 1 && phase !== 'starting'}<SearchSelect label={text.camera} field={`${id}-camera`} value={selectedDevice} options={devices} onSelect={value => void start(value)} />{/if}
 	<video bind:this={video} muted playsinline autoplay aria-label={text.title} hidden={phase !== 'reading'}></video>
 	<p role={phase === 'error' ? 'alert' : 'status'}>{phase === 'error' ? text[error] : phase === 'starting' ? text.starting : text.reading}</p>
-	{#if phase === 'error' && !['https', 'unsupported'].includes(error)}<button type="button" class="scan-retry" onclick={() => void start(selectedDevice)}>{text.retry}</button>{/if}
+	{#if phase === 'error' && !['https', 'unsupported'].includes(error)}<ActionButton size="touch" type="button" class="scan-retry" onclick={() => void start(selectedDevice)} variant="secondary" data-button-scope="button-f28ad15111">{text.retry}</ActionButton>{/if}
 	<p class="privacy">{text.privacy}</p>
 </section>
 
@@ -110,7 +111,7 @@
 	header{display:flex;align-items:center;justify-content:space-between;gap:12px}h3{margin:0;font-size:var(--font-size-subsection)}
 	video{width:100%;max-height:min(300px,35dvh);object-fit:contain;background:#111;border-radius:4px}video[hidden]{display:none}
 	p{margin:0;overflow-wrap:anywhere;color:var(--text-secondary);font-size:var(--font-size-support)}.privacy{color:var(--muted)}
-	button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}.scan-close{flex:none}
-	button:hover{background:var(--surface-hover,var(--surface-secondary))}button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+	:global(button[data-button-scope="button-f28ad15111"]){justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}:global(.scan-close[data-button-scope="button-f28ad15111"]){flex:none}
+	:global(button:hover[data-button-scope="button-f28ad15111"]){background:var(--surface-hover,var(--surface-secondary))}:global(button:focus-visible[data-button-scope="button-f28ad15111"]){outline:2px solid var(--primary);outline-offset:2px}
 	@media(max-width:480px){header{align-items:start;flex-direction:column}}
 </style>

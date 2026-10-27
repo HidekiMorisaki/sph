@@ -25,7 +25,7 @@ export function roleOutput({ permissions, defaultKey, ...role }: RoleRecord) {
 	const permissionScopes = permissions.flatMap((entry) => entry.permission.operations.map(({ operation }) => ({ code: operation, scopeType: entry.scopeType as 'global' | 'own_branch' }))).sort((a, b) => a.code.localeCompare(b.code));
 	const defaultRole = defaultRoles.find((entry) => entry.key === defaultKey);
 	const defaultPermissionCodes = defaultRole ? [...new Set([...defaultRole.permissionCodes,
-		...granularOperations.filter((operation) => (defaultKey !== 'branch_administrator' || operation.code !== 'books.covers.update') && (!operation.systemOnly || defaultKey === 'system_administrator') &&
+		...granularOperations.filter((operation) => !operation.code.startsWith('workflows.') && (defaultKey !== 'branch_administrator' || operation.code !== 'books.covers.update') && (!operation.systemOnly || defaultKey === 'system_administrator') &&
 			(Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some((code) => defaultRole.permissionCodes.includes(code)))
 			.map((operation) => operation.code)])].sort() : null;
 	return {

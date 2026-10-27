@@ -17,6 +17,9 @@ const branchScopedCodes = new Set([
  'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 const roleCodes = role => [...new Set([...role.permissionCodes, ...granularOperations.filter(operation =>
+ // Workflow defaults are explicit: read access must not grant accounting or
+ // template management operations. Runtime grants remain owned by the database.
+ !operation.code.startsWith('workflows.') &&
  (role.key !== 'branch_administrator' || operation.code !== 'books.covers.update') &&
  (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && operation.code === 'branches.update')) &&
  (Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some(code => role.permissionCodes.includes(code))
@@ -33,6 +36,22 @@ export async function insert(client, table, data) {
  if (![table,...keys].every(k => /^[a-z_]+$/.test(k))) throw new Error('Invalid internal sample field.');
  return (await client.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${keys.map((_,i) => '$'+(i+1)).join(',')}) RETURNING id`, Object.values(data))).rows[0].id;
 }
+
+async function allowInitialOfficialWidgets(client) {
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/seed-catalogue.json', import.meta.url), 'utf8')).widgets;
+ for (const definition of bundled) {
+  const result = await client.query(`
+   UPDATE widget_approvals a SET allowed = true
+   FROM widget_releases r JOIN widget_sources s ON s.id = r.source_id
+   WHERE a.release_id = r.id AND a.deleted_at IS NULL
+    AND r.deleted_at IS NULL AND s.deleted_at IS NULL
+    AND s.source_key = 'sph-official' AND s.url = 'bundled:sph'
+    AND r.widget_code = $1 AND r.version = $2 AND r.definition = $3::jsonb
+   RETURNING a.id`, [definition.id, definition.version, JSON.stringify(definition)]);
+  if (result.rowCount !== 1) throw new Error('The bundled official widget seed is unavailable or modified.');
+ }
+}
+
 export async function initializeRequiredData(client, catalog, input) {
  const roleCount = (await client.query('SELECT count(*)::int AS count FROM roles')).rows[0].count;
  if (roleCount === 0) {
@@ -51,6 +70,7 @@ export async function initializeRequiredData(client, catalog, input) {
    const id = await insert(client,'roles',{name:catalog.roles[i],default_key:role.key});
    for (const code of roleCodes(role)) await insert(client,'role_permissions',{role_id:id,permission_id:permissions.get(code),scope_type:role.key === 'branch_administrator' && branchScopedCodes.has(code) ? 'own_branch' : 'global'});
   }
+  await allowInitialOfficialWidgets(client);
  }
  const name = employmentName(catalog,input.employmentType);
  // Keep the existing English selection when provisioning a legacy database.

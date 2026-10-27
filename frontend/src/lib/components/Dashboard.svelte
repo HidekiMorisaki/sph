@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
@@ -196,10 +197,10 @@
 
 {#snippet pdfActions()}
 	{#if data && !error && charts.trend.result}
-		<button type="button" class="app-primary-action pdf-download" disabled={!pdfReady} onclick={downloadPdf}>
+		<ModalActionButton type="button" class="app-primary-action pdf-download" disabled={!pdfReady} onclick={downloadPdf} variant="primary" data-button-scope="button-8494044669">
 			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4" /></svg>
 			{pdfBusy ? text.pdfGenerating : text.pdfDownload}
-		</button>
+		</ModalActionButton>
 	{/if}
 {/snippet}
 <AssetManagementShell title={text.title} active="">
@@ -216,11 +217,11 @@
 		</div>
 		{#if periodError && !periodErrorDismissed}<StatusNotice message={text[periodError]} tone="error" onDismiss={() => periodErrorDismissed = true} />{/if}
 	{/if}
-	{#if saveStatus && saveStatus !== 'saved'}<StatusNotice message={text[saveStatus]} tone={saveStatus === 'saveFailed' ? 'error' : 'info'} onDismiss={() => saveStatus = null} />{#if saveStatus === 'saveFailed'}<button class="app-primary-action" onclick={save}>{text.retry}</button>{/if}{/if}
+	{#if saveStatus && saveStatus !== 'saved'}<StatusNotice message={text[saveStatus]} tone={saveStatus === 'saveFailed' ? 'error' : 'info'} onDismiss={() => saveStatus = null} />{#if saveStatus === 'saveFailed'}<ModalActionButton class="app-primary-action" onclick={save} variant="primary" data-button-scope="button-8494044669">{text.retry}</ModalActionButton>{/if}{/if}
 	{#if loading}
 		<LoadingSpinner label={text.loading} />
 	{:else if error}
-		<div class="status">{#if !errorDismissed}<StatusNotice message={text[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}{#if error !== 'forbidden'}<button class="app-primary-action" onclick={() => initialized ? load() : initialize()}>{text.retry}</button>{/if}</div>
+		<div class="status">{#if !errorDismissed}<StatusNotice message={text[error]} tone="error" onDismiss={() => errorDismissed = true} />{/if}{#if error !== 'forbidden'}<ModalActionButton class="app-primary-action" onclick={() => initialized ? load() : initialize()} variant="primary" data-button-scope="button-8494044669">{text.retry}</ModalActionButton>{/if}</div>
 	{:else if data}
 		<div class="analytics-context">
 			<p class="limitation">{text.limitation}</p>
@@ -309,7 +310,7 @@
 </AssetManagementShell>
 
 <style>
-	.pdf-download{display:inline-flex;align-items:center;justify-content:center;gap:6px}.pdf-download svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+	:global(.pdf-download[data-button-scope="button-8494044669"]){display:inline-flex;align-items:center;justify-content:center;gap:6px}:global(.pdf-download[data-button-scope="button-8494044669"] svg){width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 	.analysis-controls{display:flex;align-items:flex-start;flex-wrap:wrap;gap:16px;margin:0 0 16px;min-width:0;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
 	.analysis-actions{margin-left:auto;align-self:flex-end}
 	.analysis-controls :global(.custom-date .required){display:none}
@@ -350,7 +351,7 @@
 	@media(max-width:1280px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}.turnover-panel,.gender-panel,.combined-panel,.age-panel{grid-column:span 1}}
 	@media(max-width:1100px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 	@media(max-width:1000px){.charts{grid-template-columns:minmax(0,1fr)}.combined-panel,.age-panel{align-self:start}.chart-visual{margin-top:0}}
-	@media(max-width:700px){.reference-controls,.shared-period-controls,.pdf-download{width:100%}}
+	@media(max-width:700px){.reference-controls,.shared-period-controls,:global(.pdf-download[data-button-scope="button-8494044669"]){width:100%}}
 	@media(max-width:500px){.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.reference-controls,.shared-period-controls,.pdf-download{width:100%}.analysis-controls button,.analysis-controls :global(.date-trigger),.reference-controls :global(button),.shared-period-controls :global(button){min-height:44px}.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.reference-controls,.shared-period-controls,:global(.pdf-download[data-button-scope="button-8494044669"]){width:100%}.analysis-controls :global(button[data-button-scope="button-8494044669"]),.analysis-controls :global(.date-trigger),.reference-controls :global(button),.shared-period-controls :global(button){min-height:44px}.metrics{grid-template-columns:minmax(0,1fr)}.metric,.panel{padding:16px}.gender-chart{gap:0}.legend{flex-basis:100%}}
 </style>

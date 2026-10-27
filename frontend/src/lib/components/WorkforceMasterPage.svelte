@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import { onMount,tick } from 'svelte';
  import { apiData } from '$lib/api';
  import type {SessionUser} from '$lib/auth';
@@ -82,7 +83,7 @@
 {/if}
  </DetailModal></div>{/if}
 {#if formOpen}<div hidden={deleting} inert={deleting}><WorkforceMasterForm deleteError={detailError} onDelete={allowed('delete')?trigger=>{deleteFocus=trigger;deleting=true;}:undefined} {kind} item={editing} returnFocus={formFocus} onClose={()=>formOpen=false} onSaved={saved}/></div>{/if}
-{#if deleting}<DetailModal title={text.deleteTitle} titleId="workforce-master-delete-title" closeLabel={common.cancel} returnFocus={deleteFocus} onClose={()=>{if(!busy)deleting=false;}}><p>{text.deleteHelp}</p>{#snippet actions()}<button class="secondary" disabled={busy} onclick={()=>deleting=false}>{common.cancel}</button><button class="app-danger-action" disabled={busy} onclick={()=>void remove()}>{common.delete}</button>{/snippet}</DetailModal>{/if}
+{#if deleting}<DetailModal title={text.deleteTitle} titleId="workforce-master-delete-title" closeLabel={common.cancel} returnFocus={deleteFocus} onClose={()=>{if(!busy)deleting=false;}}><p>{text.deleteHelp}</p>{#snippet actions()}<ModalActionButton class="secondary" disabled={busy} onclick={()=>deleting=false} variant="secondary" data-button-scope="button-01b4718271">{common.cancel}</ModalActionButton><ModalActionButton class="app-danger-action" disabled={busy} onclick={()=>void remove()} variant="danger" data-button-scope="button-01b4718271">{common.delete}</ModalActionButton>{/snippet}</DetailModal>{/if}
 
 <style>
  .mobile-skill{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}

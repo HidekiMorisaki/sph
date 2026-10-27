@@ -1,6 +1,7 @@
 import type { SearchField } from './search';
 
 const examples: Record<string, [string, string]> = {
+ workflowKeyword:['週報 山田','Weekly report'],workflowFilterName:['自分の承認待ち','Awaiting my approval'],title:['週報','Weekly report'],templateName:['精算書','Expense report'],applicantName:['山田','Smith'],
 	assetNotes: ['予備機', 'Spare device'],
 	assetKeyword:['ラップトップ','Laptop'],assetFilterName:['未割当のラップトップ','Unassigned laptops'],assetTag:['PC-001','PC-001'],modelNumber:['ThinkPad','ThinkPad'],serialNumber:['SN001','SN001'],hostname:['office-pc','office-pc'],assigneeName:['山田','Smith'],assigneeCode:['EMP001','EMP001'],
 	employeeCode: ['EMP001', 'EMP001'], lastName: ['山田', 'Smith'], firstName: ['太郎', 'Alex'],

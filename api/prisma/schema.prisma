@@ -8,6 +8,142 @@ datasource db {
   provider = "postgresql"
 }
 
+model WorkflowTemplate {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  templateKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("template_key") @db.Uuid
+  name String @db.VarChar(160)
+  description String @default("")
+  definition Json @db.JsonB
+  route Json @db.JsonB
+  revision Int @default(1)
+  publishedVersion Int? @map("published_version")
+  active Boolean @default(false)
+  versions WorkflowTemplateVersion[]
+  @@map("workflow_templates")
+}
+model WorkflowTemplateVersion {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  templateId Int @map("template_id")
+  version Int
+  name String @db.VarChar(160)
+  description String
+  definition Json @db.JsonB
+  route Json @db.JsonB
+  template WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  requests WorkflowRequest[]
+  @@unique([templateId, version])
+  @@map("workflow_template_versions")
+}
+model WorkflowRequest {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  requestKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("request_key") @db.Uuid
+  templateVersionId Int @map("template_version_id")
+  applicantId Int @map("applicant_id")
+  title String @db.VarChar(160)
+  currency String @default("JPY") @db.VarChar(3)
+  values Json @db.JsonB
+  status String @default("draft") @db.VarChar(24)
+  revision Int @default(1)
+  attempt Int @default(0)
+  currentStep Int @default(0) @map("current_step")
+  templateVersion WorkflowTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  applicant Employee @relation("WorkflowApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  submissions WorkflowSubmission[]
+  steps WorkflowStep[]
+  actions WorkflowAction[]
+  attachments WorkflowAttachment[]
+  @@index([applicantId, status, deletedAt])
+  @@map("workflow_requests")
+}
+model WorkflowSubmission {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  requestId Int @map("request_id")
+  attempt Int
+  snapshot Json @db.JsonB
+  request WorkflowRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  attachments WorkflowSubmissionAttachment[]
+  @@unique([requestId, attempt])
+  @@map("workflow_submissions")
+}
+model WorkflowStep {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  requestId Int @map("request_id")
+  attempt Int
+  position Int
+  employeeId Int @map("employee_id")
+  employeeName String @map("employee_name")
+  status String @default("waiting") @db.VarChar(24)
+  request WorkflowRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  employee Employee @relation("WorkflowApprover", fields: [employeeId], references: [id], onDelete: Restrict)
+  @@unique([requestId, attempt, position])
+  @@index([employeeId, status, deletedAt])
+  @@map("workflow_steps")
+}
+model WorkflowAction {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  actionKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("action_key") @db.Uuid
+  requestId Int @map("request_id")
+  actorId Int @map("actor_id")
+  actorName String @map("actor_name")
+  attempt Int
+  position Int?
+  type String @db.VarChar(32)
+  message String @default("")
+  detail Json @db.JsonB
+  request WorkflowRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  actor Employee @relation("WorkflowActor", fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([requestId, createdAt])
+  @@map("workflow_actions")
+}
+model WorkflowAttachment {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  attachmentKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("attachment_key") @db.Uuid
+  requestId Int @map("request_id")
+  name String @db.VarChar(200)
+  mime String @db.VarChar(80)
+  size Int
+  digest String @db.VarChar(64)
+  content Bytes @db.ByteA
+  request WorkflowRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  submissions WorkflowSubmissionAttachment[]
+  @@index([requestId, deletedAt])
+  @@map("workflow_attachments")
+}
+model WorkflowSubmissionAttachment {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  submissionId Int @map("submission_id")
+  attachmentId Int @map("attachment_id")
+  submission WorkflowSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  attachment WorkflowAttachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  @@unique([submissionId, attachmentId])
+  @@map("workflow_submission_attachments")
+}
+
+
 enum AccountStatus {
   unprovisioned
   active
@@ -21,6 +157,9 @@ enum DisposalDatePolicy {
 }
 
 model Employee {
+  workflowRequests WorkflowRequest[] @relation("WorkflowApplicant")
+  workflowSteps WorkflowStep[] @relation("WorkflowApprover")
+  workflowActions WorkflowAction[] @relation("WorkflowActor")
   scheduleEvents ScheduleEvent[]
   scheduleParticipation ScheduleParticipant[]
   schedulePreference SchedulePreference?

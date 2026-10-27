@@ -1,4 +1,5 @@
 const resources: Record<string, [string, string]> = {
+ workflows:['ワークフロー','Workflows'],
  schedule:['スケジュール','Schedules'],notifications:['通知','Notifications'],
  widgets: ['ウィジェット', 'Widgets'],
  clients: ['取引先', 'Clients'],
@@ -12,6 +13,7 @@ const resources: Record<string, [string, string]> = {
 };
 
 const nouns: Record<string, [string, string]> = {
+ payments:['金銭の受渡し','cash transfers'],templates:['ワークフローテンプレート','workflow templates'],
  preferences:['予定表の表示設定','calendar preferences'],
  drafts:['開発用下書き','development drafts'],
  records: ['保存データ', 'saved records'],
@@ -23,6 +25,7 @@ const nouns: Record<string, [string, string]> = {
 };
 
 const actions: Record<string, [string, string]> = {
+ submit:['提出','submit'],approve:['承認','approve'],comment:['コメント追加','comment'],confirm:['受領確認','confirm receipt'],
  reserve:['予約','reserve'],respond:['出欠回答','respond'],
 	add: ['追加', 'add'], remove: ['所属解除', 'remove'],
 	manage: ['管理', 'manage'], cancel: ['取消', 'cancel'], create: ['追加', 'create'], update: ['変更', 'update'], delete: ['削除', 'delete'],
@@ -33,6 +36,7 @@ const actions: Record<string, [string, string]> = {
 };
 
 export function granularPermissionLabel(code: string, language: 'ja' | 'en'): string {
+ if(code==='workflows.delete')return language==='ja'?'未提出の下書きの削除':'Delete unsubmitted drafts';
 	const parts = code.split('.');
 	const index = language === 'ja' ? 0 : 1;
 	const resource = resources[parts[0]]?.[index];

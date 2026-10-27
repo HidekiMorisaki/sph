@@ -8,11 +8,14 @@ User-facing changes to SME Portal Hub are documented below by release.
 
 ### New features
 
-- Added scheduling to the General group, with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.
 - Added shared header notifications with unread counts, read controls and links to the relevant event. Private details are resolved using current access permissions.
+- Added scheduling to the General group, with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.
+- Added Workflows to the General group, with a designer for creating templates (application forms) using drag-and-drop components and grouping, sequential approvals, returns, comments, attachments, linked notifications and immutable submitted versions. Create templates from `System settings` > `Workflows`.
 
 ### Existing feature improvements
 
+- Moved the account menu from the sidebar footer to the right of the header theme toggle. A profile image or person icon replaces the visible name and role, with access to My Page, Personal settings and Sign out.
+- Enabled all seven bundled SPH official widgets by default on new installations.
 - Unified drag-and-drop handles with six-dot icons arranged in two columns of three, clearly distinguishing reordering from the hamburger icons used to collapse menus.
 - Added tax-inclusive purchase amount entry for IT assets, individual book copies and license contracts. Zero is allowed for free transfers. Book forms prefill available prices and estimate domestic tax-exclusive JPY prices at 10% tax. Amounts can be edited manually.
 - Remember the selected saved filter for employees, books and IT assets per user in the same browser, and restore its latest conditions on the next visit.

@@ -7,14 +7,14 @@
 
 	import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '$lib/locale-messages';
 	import { localizedReleaseText } from '$lib/system-release-text';
-	function releaseTextSegments(change: string, language: MessageLanguage): Array<{ text: string; href?: string }> {
+	function releaseTextSegments(change: string, language: MessageLanguage): Array<{ text: string; href?: string; code?: boolean }> {
 		const content = localizedReleaseText(change, language);
-		const segments: Array<{ text: string; href?: string }> = [];
+		const segments: Array<{ text: string; href?: string; code?: boolean }> = [];
 		let offset = 0;
-		for (const match of content.matchAll(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g)) {
+		for (const match of content.matchAll(/`([^`\n]+)`|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g)) {
 			const index = match.index ?? 0;
 			if (index > offset) segments.push({ text: content.slice(offset, index) });
-			segments.push({ text: match[1], href: match[2] });
+			segments.push(match[1] !== undefined ? { text: match[1], code: true } : { text: match[2], href: match[3] });
 			offset = index + match[0].length;
 		}
 		if (offset < content.length) segments.push({ text: content.slice(offset) });
@@ -70,7 +70,7 @@
 </script>
 
 {#snippet revisionText(change: string)}
-	{#each releaseTextSegments(change, $localization.displayLanguage) as segment}{#if segment.href}<a href={segment.href} target="_blank" rel="noopener noreferrer">{segment.text}<span class="sr-only">{text.externalWindow}</span></a>{:else}{segment.text}{/if}{/each}
+	{#each releaseTextSegments(change, $localization.displayLanguage) as segment}{#if segment.href}<a href={segment.href} target="_blank" rel="noopener noreferrer">{segment.text}<span class="sr-only">{text.externalWindow}</span></a>{:else if segment.code}<code>{segment.text}</code>{:else}{segment.text}{/if}{/each}
 {/snippet}
 
 <div class="information-card">

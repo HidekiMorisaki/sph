@@ -1,3 +1,4 @@
+import {workflowSearchResults,workflowOptions} from '../workflow/search';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { requireScopedOperationApi } from './branch-access';
 import { employeeList } from './employee-list';
@@ -13,6 +14,7 @@ import { success } from './response';
 import { parseAssetSummaryFilters } from './it-asset-summary';
 
 export function searchActor(user:AuthenticatedUser|null,target:SearchTarget) {
+ if(target==='workflows')return requireOperationApi(user?{...user,activeOperation:undefined}:null,'workflows.read');
  if(target==='books')return requireOperationApi(user,'books.read');
  return requireScopedOperationApi(user?{...user,activeOperation:undefined}:null,target==='employees'?'employees.read':target==='assets'?'assets.read':'books.read').actor;
 }
@@ -30,7 +32,7 @@ export async function searchResults(user:AuthenticatedUser|null,target:SearchTar
   if(body.searchLocale!==undefined){if(!['ja','en'].includes(String(body.searchLocale)))invalidSearch('searchLocale');resultUrl.searchParams.set('searchLocale',String(body.searchLocale));}
  }
  const sql=compileSearchConditions(definition,target,actor);
- const response=await (target==='employees'?employeeList(actor,resultUrl,sql):target==='assets'?assetList(actor,resultUrl,sql):bookList(actor,resultUrl,sql));
+ const response=await (target==='workflows'?workflowSearchResults(actor,definition,sql,body.offset as number??0):target==='employees'?employeeList(actor,resultUrl,sql):target==='assets'?assetList(actor,resultUrl,sql):bookList(actor,resultUrl,sql));
  response.headers.set('Cache-Control','no-store');return response;
 }
 export async function searchFields(user:AuthenticatedUser|null,target:SearchTarget) {
@@ -54,17 +56,29 @@ export async function validateSavedDefinition(definition:unknown,target:SearchTa
  await validateSearchReferences(parsed,target,user);
  // Reuse actual list validation, including option permissions and sort allowlists.
  const url=definitionUrl({...parsed,limit:1},new URL('http://search.invalid'));
- await (target==='employees'?employeeList(user,url,compileSearchConditions(parsed,target,user)):target==='assets'?assetList(user,url,compileSearchConditions(parsed,target,user)):bookList(user,url,compileSearchConditions(parsed,target,user)));
+ await (target==='workflows'?workflowSearchResults(user,parsed,compileSearchConditions(parsed,target,user)):target==='employees'?employeeList(user,url,compileSearchConditions(parsed,target,user)):target==='assets'?assetList(user,url,compileSearchConditions(parsed,target,user)):bookList(user,url,compileSearchConditions(parsed,target,user)));
  return parsed;
 }
 
 async function referenceOptions(contextCode:string,reference:{table:string;key:string;name:string},user:AuthenticatedUser,target:SearchTarget) {
+ if(target==='workflows')return workflowOptions(reference.table,user);
  const scope=operationScope(user,target==='employees'?'employees.read':target==='assets'?'assets.read':'books.read');
  const branch=scope===null?Prisma.empty:reference.table==='branches'?Prisma.sql`AND id=${scope}`:target==='assets'&&['rooms','storage'].includes(reference.table)?Prisma.sql`AND branch_id=${scope}`:Prisma.empty;
  return getPrisma().$queryRaw<Array<{value:string;label:string}>>(Prisma.sql`SELECT ${Prisma.raw(reference.key)}::text AS value,${Prisma.raw(reference.name)} AS label FROM ${Prisma.raw(reference.table)} WHERE deleted_at IS NULL ${branch} ORDER BY ${Prisma.raw(reference.name)},id`);
 }
 async function validateSearchReferences(definition:SearchDefinition,target:SearchTarget,user:AuthenticatedUser) {
  const contexts=contextsFor(target);
+ if(target==='workflows'){
+  if(definition.options.view!==undefined&&!['all','mine','pending'].includes(String(definition.options.view)))invalidSearch('view');
+  if(definition.options.statuses){const values=String(definition.options.statuses).split(',');if(values.length>6||new Set(values).size!==values.length||values.some(value=>!['draft','pending','returned','approved','rejected','cancelled'].includes(value)))invalidSearch('statuses');}
+  for(const [key,kind] of [['applicantIds','applicant'],['approverIds','approver'],['finalApproverIds','finalApprover'],['currentAssigneeIds','currentAssignee'],['templateIds','template']]){
+   if(definition.options[key]===undefined)continue;
+   const raw=definition.options[key];if(typeof raw!=='string')invalidSearch(key);const values=raw.split(',');
+   if(values.length>100||new Set(values).size!==values.length||values.some(value=>!/^[1-9]\d*$/.test(value)||!Number.isSafeInteger(Number(value))))invalidSearch(key);
+   const permitted=await workflowOptions('workflow_'+kind,user);if(values.some(value=>!permitted.some(option=>option.value===value)))invalidSearch(key);
+  }
+ }
+
  if(target==='assets'){
   parseAssetSummaryFilters(definitionUrl(definition,new URL('http://search.invalid')),operationScope(user,'assets.read'));
   if(definition.options.branchId!==undefined){

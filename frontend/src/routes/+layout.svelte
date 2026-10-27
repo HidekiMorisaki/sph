@@ -1,4 +1,5 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
 	import { COMPACT_NAVIGATION_QUERY } from '$lib/responsive-layout';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount, setContext, untrack, tick } from 'svelte';
@@ -150,13 +151,13 @@
 </svelte:head>
 
 <div class:shell={showShell} class:collapsed>
-	{#if showShell}<div class="desktop-navigation"><AppSidebar {collapsed} {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={logout} /></div>
+	{#if showShell}<div class="desktop-navigation"><AppSidebar {collapsed} {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} /></div>
  {#if mobileMenuOpen}<dialog bind:this={mobileMenu} class="mobile-navigation" aria-label={localeMessages[$localization.displayLanguage].navigation.primaryNavigation} onclick={event=>{if(event.target===mobileMenu)void closeMobileMenu();else mobileMenuClick(event);}} onkeydown={event=>{if(event.key==='Escape'){event.preventDefault();void closeMobileMenu();}}} oncancel={event=>{event.preventDefault();void closeMobileMenu();}}>
- <button type="button" class="mobile-menu-close" aria-label={localeMessages[$localization.displayLanguage].common.close} onclick={()=>void closeMobileMenu()}>×</button>
- <AppSidebar collapsed={false} forceExpanded {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} onLogout={()=>{mobileMenu?.close();mobileMenuOpen=false;void logout();}} />
+ <IconActionButton type="button" class="mobile-menu-close" aria-label={localeMessages[$localization.displayLanguage].common.close} onclick={()=>void closeMobileMenu()} data-button-scope="button-90990bb395">×</IconActionButton>
+ <AppSidebar collapsed={false} forceExpanded {user} groupExpansion={sidebarGroups} onToggleGroup={toggleSidebarGroup} currentPath={page.url.pathname} />
  </dialog>{/if}{/if}
 	<div class:workspace={showShell}>
-		{#if showShell}<AppHeader {user} {collapsed} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
+		{#if showShell}<AppHeader {user} {collapsed} onLogout={logout} onToggleSidebar={toggleSidebar} breadcrumbs={breadcrumbsForPath(page.url.pathname, title, $localization.displayLanguage)} />{/if}
 		<div class:app-main={showShell}>{#if logoutError}<StatusNotice message={localeMessages[$localization.displayLanguage].navigation.logoutFailed} tone="error" onDismiss={() => logoutError = false} />{/if}{#if overdueNotice}<StatusNotice message={overdueNotice} tone="warning" onDismiss={() => overdueNotice = ''} />{/if}{@render children()}</div>
 	</div>
 </div>
@@ -167,7 +168,7 @@
 	.workspace{width:calc(100% - 252px);min-height:100vh;margin-left:252px;transition:margin-left .22s}
 	.app-main{min-width:0;padding:88px 28px 36px}
 	.collapsed .workspace{width:calc(100% - 64px);margin-left:64px}
-	.mobile-navigation{position:fixed;inset:0 auto 0 0;width:min(300px,90vw);height:100dvh;max-height:100dvh;max-width:90vw;margin:0;padding:0;border:0;background:var(--surface);color:var(--text);overflow:visible}.mobile-navigation::backdrop{background:rgba(0,0,0,.5)}.mobile-navigation :global(.app-sidebar){position:absolute;width:100%;height:100%;min-height:0}.mobile-menu-close{position:absolute;z-index:101;right:8px;top:8px;min-width:44px;min-height:44px;padding:0;background:transparent!important;color:#fff;font-size:26px}.mobile-navigation :global(.brand){padding-right:54px}
+	.mobile-navigation{position:fixed;inset:0 auto 0 0;width:min(300px,90vw);height:100dvh;max-height:100dvh;max-width:90vw;margin:0;padding:0;border:0;background:var(--surface);color:var(--text);overflow:visible}.mobile-navigation::backdrop{background:rgba(0,0,0,.5)}.mobile-navigation :global(.app-sidebar){position:absolute;width:100%;height:100%;min-height:0}:global(.mobile-menu-close[data-button-scope="button-90990bb395"]){position:absolute;z-index:101;right:8px;top:8px;min-width:44px;min-height:44px;padding:0;background:transparent!important;color:#fff;font-size:26px}.mobile-navigation :global(.brand){padding-right:54px}
  @media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.desktop-navigation{display:none}.shell .workspace{width:100%;margin-left:0}.app-main{padding:72px 12px 20px}}
 
 </style>

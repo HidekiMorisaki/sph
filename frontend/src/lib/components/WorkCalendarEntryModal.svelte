@@ -1,4 +1,5 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
@@ -108,7 +109,7 @@
 <svelte:window onkeydown={handleKeydown} />
 <ModalBackdrop>
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact entry-dialog" open aria-modal="true" aria-labelledby="entry-dialog-title">
-		<header><h2 id="entry-dialog-title">{entry ? text.editEntry : text.addEntry}</h2><button class="app-modal-close" type="button" aria-label={text.closeEntry} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="entry-dialog-title">{entry ? text.editEntry : text.addEntry}</h2><IconActionButton class="app-modal-close" type="button" aria-label={text.closeEntry} disabled={saving} onclick={requestClose} data-button-scope="button-a2dc2c8802"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 		<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body entry-form-body">
 				{#if formError}<StatusNotice title={text.entrySaveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
@@ -119,7 +120,7 @@
 					<label class="wide">{text.note}<textarea maxlength="5000" rows="5" bind:value={note} placeholder={text.notePlaceholder}></textarea></label>
 				</FormSection>
 			</div>
-			<footer class="app-modal-footer">{#if entry}<ModalActionButton label={common.delete} variant="danger" disabled={saving} onclick={() => void remove()} />{/if}<span class="footer-spacer"></span><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (Boolean(entry) && !hasUnsavedChanges)}>{saving ? common.saving : text.save}</button></footer>
+			<footer class="app-modal-footer">{#if entry}<ModalActionButton label={common.delete} variant="danger" disabled={saving} onclick={() => void remove()} />{/if}<span class="footer-spacer"></span><ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestClose} variant="secondary" data-button-scope="button-a2dc2c8802">{common.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || (Boolean(entry) && !hasUnsavedChanges)} variant="primary" data-button-scope="button-a2dc2c8802">{saving ? common.saving : text.save}</ModalActionButton></footer>
 		</form>
 	</dialog>
 </ModalBackdrop>

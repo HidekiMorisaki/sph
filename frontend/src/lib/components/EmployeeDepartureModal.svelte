@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import {onMount,untrack} from 'svelte';
  import {apiData} from '$lib/api';
  import {employeeSaveError} from '$lib/employee-messages';
@@ -44,6 +45,6 @@
  </form>
  {#if mode==='delete'&&employee.deletionScheduledOn}<p>{text.scheduled}: {employee.deletionScheduledOn.slice(0,10)}</p><p>{text.cancelHelp}</p>{/if}
  {/if}
- {#snippet actions()}{#if mode==='delete'&&employee.deletionScheduledOn}<button type="button" class="app-danger-action" disabled={busy||loading} onclick={()=>void cancelReservation()}>{text.cancelReservation}</button>{/if}<button class="secondary" type="button" disabled={busy} onclick={onClose}>{common.cancel}</button><button type="submit" form="employee-departure-form" class="app-primary-action" disabled={loading||!ready||busy||!checked||Boolean(error)}>{busy?common.saving:text.save}</button>{/snippet}
+ {#snippet actions()}{#if mode==='delete'&&employee.deletionScheduledOn}<ModalActionButton multiline type="button" class="app-danger-action" disabled={busy||loading} onclick={()=>void cancelReservation()} variant="danger" data-button-scope="button-ed42a7cf0c">{text.cancelReservation}</ModalActionButton>{/if}<ModalActionButton multiline class="secondary" type="button" disabled={busy} onclick={onClose} variant="secondary" data-button-scope="button-ed42a7cf0c">{common.cancel}</ModalActionButton><ModalActionButton multiline type="submit" form="employee-departure-form" class="app-primary-action" disabled={loading||!ready||busy||!checked||Boolean(error)} variant="primary" data-button-scope="button-ed42a7cf0c">{busy?common.saving:text.save}</ModalActionButton>{/snippet}
 </DetailModal>
 <style>form{display:grid;gap:16px}.confirm-returns{display:flex;align-items:flex-start;gap:10px}.confirm-returns input{flex:none;width:18px;height:18px;margin-top:3px}ul{padding-left:24px;overflow-wrap:anywhere}p{margin:0;line-height:1.7}:global(.employee-departure-modal>.app-modal-footer){flex-wrap:wrap}:global(.employee-departure-modal>.app-modal-footer button){max-width:100%;height:auto;min-height:32px;white-space:normal;overflow-wrap:anywhere}</style>

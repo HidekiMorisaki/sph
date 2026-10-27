@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { localization } from '$lib/localization';
 	import { localeMessages } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
@@ -45,6 +46,6 @@
 	<dialog bind:this={dialogElement} class="app-modal app-modal--compact app-confirm-dialog" open aria-modal="true" aria-labelledby="discard-changes-title" aria-describedby="discard-changes-description">
 		<header><h2 id="discard-changes-title">{commonText.discardTitle}</h2></header>
 		<div class="app-confirm-body"><p id="discard-changes-description">{commonText.discardDescription}</p></div>
-		<footer class="app-modal-footer"><button bind:this={continueButton} class="secondary" type="button" onclick={continueEditing}>{commonText.continueEditing}</button><button class="app-danger-action" type="button" onclick={onDiscard}>{commonText.discard}</button></footer>
+		<footer class="app-modal-footer"><ModalActionButton bind:element={continueButton} class="secondary" type="button" onclick={continueEditing} variant="secondary" data-button-scope="button-7148d70c62">{commonText.continueEditing}</ModalActionButton><ModalActionButton class="app-danger-action" type="button" onclick={onDiscard} variant="danger" data-button-scope="button-7148d70c62">{commonText.discard}</ModalActionButton></footer>
 	</dialog>
 </ModalBackdrop>

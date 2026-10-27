@@ -20,6 +20,13 @@ export type SearchConfiguration = {
 // interaction, rendering, persistence and condition conversion. API definitions
 // remain the authority for which fields and related contexts are available.
 export const searchConfigurations: Record<SearchTarget, SearchConfiguration> = {
+ workflows: {
+  fieldsEndpoint:'/v1/workflow-search-fields',keywordExample:'workflowKeyword',filterNameExample:'workflowFilterName',
+  fields:{rootContext:'workflow',initialSection:'basic',sections(contexts){
+   const root=contexts.find(context=>context.code==='workflow');const fields=(root?.fields??[]).map(field=>({context:'workflow',field,root:true}));
+   return [{code:'basic',fields:fields.filter(item=>['title','templateName','status','applicantName','applicantSelection','templateSelection'].includes(item.field.code))},{code:'participants',fields:[],contexts:contexts.filter(context=>context.related)},{code:'management',fields:fields.filter(item=>['createdAt','updatedAt'].includes(item.field.code))},{code:'quick',fields:[]}];
+  },widths:{title:'256px',templateName:'256px',applicantName:'224px'}}
+ },
 	employees: {
 		fieldsEndpoint: '/v1/employee-search-fields', keywordExample: 'keyword', filterNameExample: 'filterName',
 		fields: {

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
 	import { onMount, tick } from 'svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import StatusNotice from '$lib/components/StatusNotice.svelte';
@@ -52,7 +53,7 @@
 			<label>New password<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="new-password" minlength="12" maxlength="1024" aria-invalid={!!passwordError} aria-describedby={passwordError?'setup-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="setup-password-error" class="field-error">{passwordError}</small>{/if}</label>
 			<label>Confirm password<input bind:this={confirmInput} bind:value={confirmPassword} type="password" autocomplete="new-password" minlength="12" maxlength="1024" aria-invalid={!!confirmError} aria-describedby={confirmError?'setup-confirm-error':undefined} oninput={()=>confirmError=''} />{#if confirmError}<small id="setup-confirm-error" class="field-error">{confirmError}</small>{/if}</label>
 			{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
-			<button type="submit" disabled={loading}>{loading ? 'Setting up…' : 'Set password'}</button>
+			<ActionButton type="submit" disabled={loading} variant="secondary" data-button-scope="button-5bdd677e05">{loading ? 'Setting up…' : 'Set password'}</ActionButton>
 		</form>
 	{/if}
 </section></main>
@@ -62,7 +63,7 @@
 	.setup-card{display:grid;gap:16px;width:min(100%,440px);padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow)}
 	h1,p{margin:0}h1{font-size:24px}.setup-card>p{color:var(--muted);font-size:var(--font-size-body);line-height:1.5}
 	form{display:grid;gap:15px}label{display:grid;gap:6px;font-size:var(--font-size-support);font-weight:600}input{width:100%;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:400}
-	button,a{display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:9px 14px;border-radius:4px;font-size:var(--font-size-body);font-weight:600;text-decoration:none}
-	button{background:var(--action-primary-background);color:var(--action-primary-text);border:1px solid var(--action-primary-button-border)}button:disabled{opacity:.6;cursor:wait}a{width:max-content;background:var(--action-primary-background);color:var(--action-primary-text)}
-button:hover:not(:disabled),a:hover{background:var(--action-primary-background-hover)}
+	:global(button[data-button-scope="button-5bdd677e05"]),a{display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:9px 14px;border-radius:4px;font-size:var(--font-size-body);font-weight:600;text-decoration:none}
+	:global(button[data-button-scope="button-5bdd677e05"]){background:var(--action-primary-background);color:var(--action-primary-text);border:1px solid var(--action-primary-button-border)}:global(button:disabled[data-button-scope="button-5bdd677e05"]){opacity:.6;cursor:wait}a{width:max-content;background:var(--action-primary-background);color:var(--action-primary-text)}
+:global(button:hover:not(:disabled)[data-button-scope="button-5bdd677e05"]),a:hover{background:var(--action-primary-background-hover)}
 </style>

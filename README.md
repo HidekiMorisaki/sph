@@ -19,6 +19,7 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Financial analytics                    | View charts showing published financial trends by branch and year               |
 | Employee management and access control | Manage employee information and role-based access control                       |
 | Internal calendars                     | Create and publish internal calendars                                           |
+| Workflow forms and approvals           | [Design forms, approve requests and settle cash advances and expenses](docs/Workflows.md) |
 | Location management                    | Manage branches, rooms, and storage locations                                   |
 | IT asset management                    | Manage IT asset records, assignments, returns, and change history               |
 | License management                     | Manage software licenses                                                        |
@@ -64,7 +65,7 @@ cd sph
 The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
 > [!NOTE]
-> At the "Optional samples (fictional business data and book introductions)" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
+> At the "Sample data" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
 
 <a id="installing-on-blitz-cloud"></a>
 

@@ -27,8 +27,14 @@ source listing and catalogue refresh operations remain in the Sources card.
 
 My Page has a catalogue modal and independently configurable widget cards.
 All current size IDs use ASCII `rowsxcolumns` and match their `sizeLayouts` entry.
-The unpublished m0032 seeds the seven current official releases with canonical
-IDs, no approvals and no personal placements. It clears obsolete legacy widget
+The m0032 migration seeds the seven current official releases with canonical
+IDs and initially disabled approval records. On a new installation, initial master
+data setup enables all seven bundled official releases, with or without sample
+data. The source key, bundled source URL, widget ID, version and complete definition
+must match the bundled catalogue; an unavailable or modified seed aborts initial
+setup. This allows users to add the widgets from their catalogue without a separate
+administrator approval step. Personal placements are still chosen by each user.
+The migration clears obsolete legacy widget
 placements; m0033 removes the old placement table. The size column has no default:
 callers must explicitly choose a declared size. Historical size-maintenance
 procedures below predate this clean start and are not applicable to this seed.

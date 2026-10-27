@@ -1,4 +1,6 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
@@ -72,7 +74,7 @@
 <svelte:window onkeydown={handleConfirmKeydown} />
 <div class="financial-settings"><h2>{text.periodSettings}</h2><p>{text.periodSettingsDescription}</p>
 	{#if notice}<StatusNotice message={notice} tone={isError ? 'error' : 'success'} onDismiss={() => notice = ''} />{/if}
-	{#if loading}<LoadingSpinner label={common.loading} compact />{:else}<div class="fields"><SearchSelect label={text.year} field="financial-basis" value={settings.basis} options={basisOptions} searchable={false} disabled={saving || confirming} onSelect={(value) => settings.basis = value as Settings['basis']} />{#if settings.basis === 'fiscal'}<SearchSelect label={text.fiscalStartMonth} field="financial-start-month" value={String(settings.fiscalStartMonth)} options={monthOptions} disabled={saving || confirming} onSelect={(value) => settings.fiscalStartMonth = Number(value)} />{/if}</div><button bind:this={saveButton} type="button" disabled={saving || !hasChanges} onclick={requestSave}>{saving ? common.saving : common.saveChanges}</button>{/if}
+	{#if loading}<LoadingSpinner label={common.loading} compact />{:else}<div class="fields"><SearchSelect label={text.year} field="financial-basis" value={settings.basis} options={basisOptions} searchable={false} disabled={saving || confirming} onSelect={(value) => settings.basis = value as Settings['basis']} />{#if settings.basis === 'fiscal'}<SearchSelect label={text.fiscalStartMonth} field="financial-start-month" value={String(settings.fiscalStartMonth)} options={monthOptions} disabled={saving || confirming} onSelect={(value) => settings.fiscalStartMonth = Number(value)} />{/if}</div><ActionButton bind:element={saveButton} type="button" disabled={saving || !hasChanges} onclick={requestSave} variant="secondary" data-button-scope="button-9aa9a11f11">{saving ? common.saving : common.saveChanges}</ActionButton>{/if}
 </div>
 
 {#if confirming}
@@ -86,14 +88,14 @@
 					<ol><li>{text.settingConfirmStepReview}</li><li>{text.settingConfirmStepPublish}</li></ol>
 				</div>
 			</div>
-			<footer class="app-modal-footer"><button bind:this={cancelButton} class="secondary" type="button" onclick={cancelSave}>{common.cancel}</button><button class="app-primary-action" type="button" onclick={() => void save()}>{text.settingConfirmSave}</button></footer>
+			<footer class="app-modal-footer"><ModalActionButton bind:element={cancelButton} class="secondary" type="button" onclick={cancelSave} variant="secondary" data-button-scope="button-9aa9a11f11">{common.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="button" onclick={() => void save()} variant="primary" data-button-scope="button-9aa9a11f11">{text.settingConfirmSave}</ModalActionButton></footer>
 		</dialog>
 	</ModalBackdrop>
 {/if}
 
 <style>
-	.financial-settings{padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}h2{margin:0 0 6px;font-size:1.1rem}p{margin:0 0 16px;color:var(--text-secondary)}.fields{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}.fields :global(.form-select-field){width:180px}button{padding:8px 18px;border:1px solid var(--action-primary-button-border);border-radius:4px;background:var(--action-primary-background);color:var(--action-primary-text);font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
+	.financial-settings{padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}h2{margin:0 0 6px;font-size:1.1rem}p{margin:0 0 16px;color:var(--text-secondary)}.fields{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}.fields :global(.form-select-field){width:180px}:global(button[data-button-scope="button-9aa9a11f11"]){padding:8px 18px;border:1px solid var(--action-primary-button-border);border-radius:4px;background:var(--action-primary-background);color:var(--action-primary-text);font:inherit;cursor:pointer}:global(button:disabled[data-button-scope="button-9aa9a11f11"]){opacity:.55;cursor:not-allowed}
 	.financial-settings-confirm-body{display:grid;gap:16px}.financial-settings-confirm-body p{margin:0}.financial-settings-confirm-body ol{margin:8px 0 0;padding-left:1.5em;color:var(--text-secondary);line-height:1.6}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.financial-settings{padding:12px}.fields{flex-direction:column}.fields :global(.form-select-field){width:100%}.financial-settings button,.fields :global(button){min-height:44px}}
-button:hover:not(:disabled){background:var(--action-primary-background-hover)}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.financial-settings{padding:12px}.fields{flex-direction:column}.fields :global(.form-select-field){width:100%}.financial-settings :global(button[data-button-scope="button-9aa9a11f11"]),.fields :global(button){min-height:44px}}
+:global(button:hover:not(:disabled)[data-button-scope="button-9aa9a11f11"]){background:var(--action-primary-background-hover)}
 </style>

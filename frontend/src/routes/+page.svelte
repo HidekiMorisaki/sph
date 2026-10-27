@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
 	import { localeMessages } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
 	import type { SessionUser } from '$lib/auth';
@@ -112,7 +113,7 @@
 <svelte:head><meta name="description" content={pageText.metaDescription} /></svelte:head>
 
 {#if isLoading||user}<main class="auth"><section class="startup" data-service-startup aria-live="polite" aria-atomic="true"><h1>{productName}</h1><LoadingSpinner /><p>{serviceUnavailable ? startupText.serviceUnavailable : startupText.serviceStarting}</p><p class="startup-help">{serviceUnavailable ? startupText.serviceRetrying : startupText.serviceStartingHelp}</p></section></main>
-{:else}<main class="auth"><form novalidate onsubmit={(event) => { event.preventDefault(); void login(); }}><h1>{productName}</h1><p>{pageText.loginDescription}</p><label>{pageText.identifier}<input bind:this={identifierInput} bind:value={identifier} autocomplete="username" maxlength="254" aria-invalid={!!identifierError} aria-describedby={identifierError?'identifier-error':undefined} oninput={()=>{identifierError='';limitedUntil=0;remainingMinutes=0;message='';}} />{#if identifierError}<small id="identifier-error" class="field-error">{identifierError}</small>{/if}</label><label>{pageText.password}<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="current-password" aria-invalid={!!passwordError} aria-describedby={passwordError?'login-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="login-password-error" class="field-error">{passwordError}</small>{/if}</label><button type="submit" disabled={isSubmitting}>{isSubmitting ? pageText.signingIn : pageText.signIn}</button>{#if message}<StatusNotice message={message} tone="error" onDismiss={() => message = ''} />{/if}</form></main>{/if}
+{:else}<main class="auth"><form novalidate onsubmit={(event) => { event.preventDefault(); void login(); }}><h1>{productName}</h1><p>{pageText.loginDescription}</p><label>{pageText.identifier}<input bind:this={identifierInput} bind:value={identifier} autocomplete="username" maxlength="254" aria-invalid={!!identifierError} aria-describedby={identifierError?'identifier-error':undefined} oninput={()=>{identifierError='';limitedUntil=0;remainingMinutes=0;message='';}} />{#if identifierError}<small id="identifier-error" class="field-error">{identifierError}</small>{/if}</label><label>{pageText.password}<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="current-password" aria-invalid={!!passwordError} aria-describedby={passwordError?'login-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="login-password-error" class="field-error">{passwordError}</small>{/if}</label><ActionButton type="submit" disabled={isSubmitting} variant="secondary" data-button-scope="button-dec4a5bbb9">{isSubmitting ? pageText.signingIn : pageText.signIn}</ActionButton>{#if message}<StatusNotice message={message} tone="error" onDismiss={() => message = ''} />{/if}</form></main>{/if}
 
 <style>
   .auth{min-height:100vh;display:grid;place-items:center;padding:24px}
@@ -121,6 +122,6 @@
   h1,p{margin:0}.auth p{color:var(--muted)}
   label{display:grid;gap:6px;font-size:var(--font-size-support);font-weight:600}
   input{height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:400}
-  form button{padding:10px;background:#2a85c8;color:#fff}
+  form :global(button[data-button-scope="button-dec4a5bbb9"]){padding:10px;background:#2a85c8;color:#fff}
 
 </style>

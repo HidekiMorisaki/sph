@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import TeamMembersSection from './TeamMembersSection.svelte';
  import type { SessionUser } from '$lib/auth';
  import FormTabs from '$lib/components/FormTabs.svelte';
@@ -64,7 +65,7 @@
   </FormSection>
 </div><div data-form-panel="members">{#if team && user}<p>{common.relatedSaveNotice}</p><TeamMembersSection {team} {user} editable onChanged={() => { void (async () => { const response=await fetch(`/v1/teams/${team!.id}`); if(response.ok)await onSaved(await apiData<Team>(response)); })(); }}/>{:else}<p>{common.relatedAfterCreate}</p>{/if}</div></FormTabs>
  </form>
- {#snippet actions()}{#if onDelete && team?.allowedOperations?.delete}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={event=>onDelete?.(event.currentTarget)}>{common.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={close}>{common.cancel}</button><button class="app-primary-action" form="team-form" type="submit" disabled={saving || (team ? !user?.capabilities.canUpdateTeams : !user?.capabilities.canCreateTeams) || (Boolean(team) && !dirty)}>{saving ? common.saving : team ? common.saveChanges : text.add}</button>{/snippet}
+ {#snippet actions()}{#if onDelete && team?.allowedOperations?.delete}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={event=>onDelete?.(event.currentTarget)} variant="danger" data-button-scope="button-8adf269538">{common.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={close} variant="secondary" data-button-scope="button-8adf269538">{common.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" form="team-form" type="submit" disabled={saving || (team ? !user?.capabilities.canUpdateTeams : !user?.capabilities.canCreateTeams) || (Boolean(team) && !dirty)} variant="primary" data-button-scope="button-8adf269538">{saving ? common.saving : team ? common.saveChanges : text.add}</ModalActionButton>{/snippet}
 </DetailModal>
 {#if discard}<DiscardChangesDialog onContinue={() => discard = false} onDiscard={closeNow} />{/if}
 

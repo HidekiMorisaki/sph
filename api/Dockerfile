@@ -18,7 +18,7 @@ FROM node:22-alpine AS production
 RUN apk add --no-cache 'zlib>=1.3.2-r1'
 
 ENV NODE_ENV=production
-ENV BODY_SIZE_LIMIT=2M
+ENV BODY_SIZE_LIMIT=12M
 ENV TZ=Asia/Tokyo
 WORKDIR /app
 COPY api/package*.json ./

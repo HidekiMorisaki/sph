@@ -1,5 +1,6 @@
 <script lang="ts">
 	import NotificationBell from './NotificationBell.svelte';
+	import AccountMenu from './AccountMenu.svelte';
  import type { SessionUser } from '$lib/auth';
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
@@ -11,12 +12,13 @@
 	let {
 		collapsed,
 		breadcrumbs,
-		onToggleSidebar, user = null
+		onToggleSidebar, onLogout, user = null
 	}: {
 		user?: SessionUser | null;
 		collapsed: boolean;
 		breadcrumbs: Breadcrumb[];
 		onToggleSidebar: () => void;
+		onLogout: () => void | Promise<void>;
 	} = $props();
 
 	let navigationText = $derived(localeMessages[$localization.displayLanguage].navigation);
@@ -67,18 +69,22 @@
 			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.5" /></svg>
 		{/if}
 	</button>
+ {#if user}<AccountMenu {user} {onLogout} />{/if}
  </div>
 </header>
 
 <style>
 	.app-header{position:fixed;z-index:50;top:0;left:252px;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:left .22s}
- .header-actions{display:flex;align-items:center;gap:8px}
-	.head-left{display:flex;align-items:center;gap:16px}
+ .header-actions{display:flex;flex:none;align-items:center;gap:8px}
+	.app-header{gap:12px}
+	.head-left{display:flex;flex:1;min-width:0;align-items:center;gap:16px}
 	.menu,.theme{display:grid;place-items:center;width:34px;height:34px;padding:7px;background:transparent;color:var(--muted);border:0;border-radius:4px;cursor:pointer;font:inherit}
 	.menu:hover,.theme:hover{background:var(--surface-hover,var(--bg))}
 	.menu svg{width:18px;height:18px;transition:transform .2s}
 	.theme svg{width:20px;height:20px}
-	.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--font-size-support)}
+	.menu,.theme{flex:none;margin:0}
+	.crumb{display:flex;min-width:0;align-items:center;gap:8px;overflow:hidden;white-space:nowrap;color:var(--muted);font-size:var(--font-size-support)}
+	.crumb a,.crumb span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 	.crumb a{color:inherit;text-decoration:none}
 	.crumb a:hover{color:var(--text)}
 	.crumb b{font-weight:600}

@@ -1,4 +1,6 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import type { Snippet } from 'svelte';
  import EmployeeDepartureModal, { type ReturnConfirmation } from './EmployeeDepartureModal.svelte';
  import EmployeeWorkforceSection from './EmployeeWorkforceSection.svelte';
@@ -217,7 +219,7 @@
 
 <div hidden={Boolean(workforceContext)||departureOpen} inert={Boolean(workforceContext)||departureOpen}><ModalBackdrop>
 	<dialog bind:this={dialogElement} class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title">
-		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><button class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><IconActionButton class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose} data-button-scope="button-c8a55f4239"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 		<form class="employee-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="app-modal-form-body">{#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={()=>deleteError=''} />{/if}<FormTabs label={text.edit} kind="employee">
 				{#if formError}<StatusNotice title={text.saveHeading} message={typeof formError === 'string' ? text[formError] : employeeSaveError(formError.code, formError.status, $localization.displayLanguage)} tone="error" onDismiss={() => formError = null} />{/if}
@@ -250,7 +252,7 @@
 						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="radio" name="employee-role" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
 					</FormSection>
 </fieldset></div></FormTabs></div>
-			<footer class="app-modal-footer">{#if onDelete}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={onDelete}>{commonText.delete}</button>{/if}{#if extraActions}{@render extraActions()}{/if}<button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (mode!=='create'&&!canEditEmployee) || (mode !== 'create' && !hasUnsavedChanges)}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>
+			<footer class="app-modal-footer">{#if onDelete}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={onDelete} variant="danger" data-button-scope="button-c8a55f4239">{commonText.delete}</ModalActionButton>{/if}{#if extraActions}{@render extraActions()}{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestClose} variant="secondary" data-button-scope="button-c8a55f4239">{commonText.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || (mode!=='create'&&!canEditEmployee) || (mode !== 'create' && !hasUnsavedChanges)} variant="primary" data-button-scope="button-c8a55f4239">{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</ModalActionButton></footer>
 		</form>
 	</dialog>
 </ModalBackdrop></div>

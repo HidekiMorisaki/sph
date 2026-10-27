@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import {onMount,untrack,tick} from 'svelte';
  import {apiData} from '$lib/api';
  import {localeMessages} from '$lib/locale-messages';
@@ -59,7 +60,7 @@
    <label class="wide"><span>{kind==='skills'?text.notes:text.responsibility}</span><textarea name="workforceNotes" bind:value={notes} placeholder={kind==='skills'?text.examples.notes:text.examples.responsibility} maxlength="5000" disabled={busy}></textarea></label>
   </FormSection>
  </form>{/if}
- {#snippet actions()}<button type="button" class="secondary" disabled={busy} onclick={close}>{common.cancel}</button>{#if deleting}<button type="button" class="app-danger-action" disabled={busy} onclick={()=>void save()}>{common.delete}</button>{:else}<button type="submit" form="workforce-record-form" class="app-primary-action" disabled={busy||loading||(Boolean(record)&&!dirty)}>{busy?common.saving:record?common.saveChanges:text.add}</button>{/if}{/snippet}
+ {#snippet actions()}<ModalActionButton type="button" class="secondary" disabled={busy} onclick={close} variant="secondary" data-button-scope="button-b89fbecfa4">{common.cancel}</ModalActionButton>{#if deleting}<ModalActionButton type="button" class="app-danger-action" disabled={busy} onclick={()=>void save()} variant="danger" data-button-scope="button-b89fbecfa4">{common.delete}</ModalActionButton>{:else}<ModalActionButton type="submit" form="workforce-record-form" class="app-primary-action" disabled={busy||loading||(Boolean(record)&&!dirty)} variant="primary" data-button-scope="button-b89fbecfa4">{busy?common.saving:record?common.saveChanges:text.add}</ModalActionButton>{/if}{/snippet}
 </DetailModal>
 {#if discard}<DiscardChangesDialog onContinue={()=>discard=false} onDiscard={closeNow}/>{/if}
 <style>.wide{grid-column:1/-1}.help,small{font-size:var(--font-size-support);color:var(--muted)}.help{margin:0}</style>

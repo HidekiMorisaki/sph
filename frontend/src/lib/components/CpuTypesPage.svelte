@@ -1,4 +1,6 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
  import FormTabs from '$lib/components/FormTabs.svelte';
@@ -237,7 +239,7 @@
 	</DetailModal>
 {:else if mode}
 	<ModalBackdrop><dialog bind:this={dialogElement} class="cpu-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="cpu-dialog-title">
-		<header><h2 id="cpu-dialog-title">{mode === 'add' ? text.cpuAdd : text.cpuEdit}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.cpuClose} onclick={requestCloseModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="cpu-dialog-title">{mode === 'add' ? text.cpuAdd : text.cpuEdit}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.cpuClose} onclick={requestCloseModal} data-button-scope="button-6f9686d86f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 		<form id="cpu-form" class="cpu-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
 			<div class="cpu-form-body app-modal-form-body"><FormTabs label={text.cpuEdit}>{#if notice}<StatusNotice message={m(notice)} tone="error" onDismiss={()=>notice=''} />{/if}<div data-form-panel="basic">
 
@@ -255,7 +257,7 @@
 				</FormSection>
 
 </div></FormTabs></div>
-			<footer class="app-modal-footer">{#if mode==='edit' && selected && allowedOperation('masters.delete')}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(selected!)}>{commonText.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={requestCloseModal}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || !allowedOperation(mode==='edit' ? 'masters.update' : 'masters.create') || (mode === 'edit' && !hasUnsavedChanges)}>{saving ? text.saving : mode === 'add' ? text.cpuAdd : text.saveChanges}</button></footer>
+			<footer class="app-modal-footer">{#if mode==='edit' && selected && allowedOperation('masters.delete')}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(selected!)} variant="danger" data-button-scope="button-6f9686d86f">{commonText.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestCloseModal} variant="secondary" data-button-scope="button-6f9686d86f">{text.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || !allowedOperation(mode==='edit' ? 'masters.update' : 'masters.create') || (mode === 'edit' && !hasUnsavedChanges)} variant="primary" data-button-scope="button-6f9686d86f">{saving ? text.saving : mode === 'add' ? text.cpuAdd : text.saveChanges}</ModalActionButton></footer>
 		</form>
 	</dialog></ModalBackdrop>
 	{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeModalImmediately} />{/if}

@@ -1,4 +1,7 @@
 {
+	"v0_7_0_workflows": "Added Workflows to the General group, with a designer for creating templates (application forms) using drag-and-drop components and grouping, sequential approvals, returns, comments, attachments, linked notifications and immutable submitted versions. Create templates from `System settings` > `Workflows`.",
+	"v0_7_0_header_account_menu": "Moved the account menu from the sidebar footer to the right of the header theme toggle. A profile image or person icon replaces the visible name and role, with access to My Page, Personal settings and Sign out.",
+	"v0_7_0_official_widgets_initial_approval": "Enabled all seven bundled SPH official widgets by default on new installations.",
 	"v0_7_0_drag_handles": "Unified drag-and-drop handles with six-dot icons arranged in two columns of three, clearly distinguishing reordering from the hamburger icons used to collapse menus.",
 	"v0_7_0_schedule": "Added scheduling to the General group, with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.",
 	"v0_7_0_notifications": "Added shared header notifications with unread counts, read controls and links to the relevant event. Private details are resolved using current access permissions.",

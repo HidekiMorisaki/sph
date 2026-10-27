@@ -32,6 +32,8 @@ export const routes: Record<string, Partial<Record<string, string>>> = {
  '/v1/it-asset-summary': { GET: 'assets.read' },
  '/v1/clients': {GET:'clients.read',POST:'clients.create'},
  '/v1/clients/[id]': {GET:'clients.read',PATCH:'clients.update',DELETE:'clients.delete'},
+ '/v1/workflow-searches': {POST:'workflows.read'},
+ '/v1/workflow-search-fields': {GET:'workflows.read'},
  '/v1/employee-searches': {POST:'employees.read'},
  '/v1/book-searches': {POST:'books.read'},
  '/v1/search-filters': {GET:'search_filters.read',POST:'search_filters.create'},

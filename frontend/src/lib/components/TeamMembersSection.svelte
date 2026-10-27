@@ -1,4 +1,6 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
  import { onMount } from 'svelte';
@@ -73,7 +75,7 @@
 </script>
 {#if message}<StatusNotice message={text[message]} tone={message === 'failed' ? 'error' : 'success'} onDismiss={() => message = ''} />{/if}
   {#if canAdd}<section class="app-detail-section"><h3>{text.addMember}</h3>
-   {#if candidateError}<StatusNotice message={text.candidatesFailed} tone="error" onDismiss={() => candidateError = false} /><button class="secondary" type="button" onclick={() => void loadCandidates()}>{text.retry}</button>{:else}<div class="member-picker"><SearchSelect label={text.employee} field="teamMember" value={selectedEmployeeId} options={[{ value: '', label: '-' },...candidateOptions]} disabled={!candidateReady || busy} onSelect={value => selectedEmployeeId = value} /><AddButton label={text.addMember} disabled={!selectedEmployeeId || busy} onclick={() => void change(Number(selectedEmployeeId),true)} /></div>{/if}
+   {#if candidateError}<StatusNotice message={text.candidatesFailed} tone="error" onDismiss={() => candidateError = false} /><ModalActionButton class="secondary" type="button" onclick={() => void loadCandidates()} variant="secondary" data-button-scope="button-a5657f9b17">{text.retry}</ModalActionButton>{:else}<div class="member-picker"><SearchSelect label={text.employee} field="teamMember" value={selectedEmployeeId} options={[{ value: '', label: '-' },...candidateOptions]} disabled={!candidateReady || busy} onSelect={value => selectedEmployeeId = value} /><AddButton label={text.addMember} disabled={!selectedEmployeeId || busy} onclick={() => void change(Number(selectedEmployeeId),true)} /></div>{/if}
   </section>{/if}
   <section class="app-detail-section"><h3>{text.members}</h3>
    <MasterList mobileItem={mobileMember} bind:this={memberList} endpoint={`/v1/teams/${team.id}/members`} title={text.members} listHeading="" description="" initialSortBy="employeeCode" minTableWidth={560} canDetail={true} onDetail={(item,trigger) => void detail(item as Employee,trigger)} columns={[
@@ -83,8 +85,8 @@
     { key: 'remove', label: '', width: 18, cell: removeAction, sortable: false }
    ]} />
   </section>
-{#snippet removeAction(item: Employee)}{#if canRemove && (user.capabilities.canRemoveTeamMembersGlobally || item.branchId === user.branchId)}<button class="remove-member" type="button" disabled={busy} onclick={() => void change(item.id,false)}>{text.removeMember}</button>{/if}{/snippet}
+{#snippet removeAction(item: Employee)}{#if canRemove && (user.capabilities.canRemoveTeamMembersGlobally || item.branchId === user.branchId)}<ActionButton class="remove-member" type="button" disabled={busy} onclick={() => void change(item.id,false)} variant="danger" data-button-scope="button-a5657f9b17">{text.removeMember}</ActionButton>{/if}{/snippet}
 {#snippet mobileMember(item: Employee)}<div class="mobile-member"><strong>{formatEmployeeName(item,$localization)}</strong><span>{item.employeeCode} · {item.branch?.name ?? '-'}</span>{@render removeAction(item)}</div>{/snippet}
 {#if employee}<EmployeeDetailModal {employee} titleId={`team-member-${instanceId}-employee-detail-title`} returnFocus={employeeFocus} onClose={() => employee = null} onUpdated={updated => { employee = updated; void memberList?.refresh(); onChanged(); }} />{/if}
 
-<style>.mobile-member{display:flex;min-width:0;flex-direction:column;gap:4px;overflow-wrap:anywhere}.mobile-member span{font-size:var(--font-size-support);color:var(--text-secondary)}.mobile-member .remove-member{align-self:flex-start;min-height:44px}.member-picker{display:flex;gap:12px;align-items:flex-end}.member-picker :global(.form-select-field){flex:1;min-width:0}.remove-member{border:1px solid var(--danger);border-radius:4px;padding:5px 10px;background:var(--surface);color:var(--danger);font-size:var(--font-size-support)}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.member-picker{align-items:stretch;flex-direction:column}}</style>
+<style>.mobile-member{display:flex;min-width:0;flex-direction:column;gap:4px;overflow-wrap:anywhere}.mobile-member span{font-size:var(--font-size-support);color:var(--text-secondary)}.mobile-member :global(.remove-member[data-button-scope="button-a5657f9b17"]){align-self:flex-start;min-height:44px}.member-picker{display:flex;gap:12px;align-items:flex-end}.member-picker :global(.form-select-field){flex:1;min-width:0}:global(.remove-member[data-button-scope="button-a5657f9b17"]){border:1px solid var(--danger);border-radius:4px;padding:5px 10px;background:var(--surface);color:var(--danger);font-size:var(--font-size-support)}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.member-picker{align-items:stretch;flex-direction:column}}</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
  import {COMPACT_CONTENT_QUERY} from '$lib/responsive-layout';
  import {previewValues} from '$lib/widget-record-values';
  import {onMount,untrack} from 'svelte';import {localization} from '$lib/localization';import {apiData} from '$lib/api';
@@ -57,8 +58,8 @@
 <div class="runtime-widget" data-runtime-ready={ready} class:expanded class:clock-centered={definition.id==='sph.world_clock'}>
  {#if measureOnly}<div style="min-height:80px"></div>{:else}
  <iframe bind:this={frame} src={documentUrl} title={definition.name[(language??$localization.displayLanguage)==='ja'?'ja':'en']} sandbox="allow-scripts" referrerpolicy="no-referrer" style:height={fillsHeight?'100%':`${height}px`} style:display={error?'none':undefined}></iframe>
- {#if error}<p role="alert">{error}</p><button type="button" onclick={start}>{$localization.displayLanguage==='ja'?'再試行':'Retry'}</button>{/if}
+ {#if error}<p role="alert">{error}</p><ActionButton type="button" onclick={start} variant="secondary" data-button-scope="button-c5f9e34abc">{$localization.displayLanguage==='ja'?'再試行':'Retry'}</ActionButton>{/if}
  {/if}
 </div>
 {#if full}<DetailModal title={definition.name[$localization.displayLanguage==='ja'?'ja':'en']} titleId="runtime-full-title" closeLabel={$localization.displayLanguage==='ja'?'閉じる':'Close'} returnFocus={trigger} initialFocusFromPointer={fullFromPointer} onClose={()=>full=false}><RuntimeWidget definition={{...definition,runtime:{sdkVersion:1,html:fullHtml,css:definition.runtime?.css??'',javascript:'sph.ready(()=>{});'}}} {configuration} preview={true} {size} {scale} expanded={true}/></DetailModal>{/if}
-<style>.runtime-widget{min-width:0;width:100%;height:100%;overflow:hidden}.runtime-widget.clock-centered iframe{min-height:0}.runtime-widget iframe{display:block;width:100%;min-height:80px;max-height:4000px;border:0;background:transparent}.runtime-widget.expanded iframe{max-height:200000px}.runtime-widget p{color:var(--danger);overflow-wrap:anywhere}button{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}</style>
+<style>.runtime-widget{min-width:0;width:100%;height:100%;overflow:hidden}.runtime-widget.clock-centered iframe{min-height:0}.runtime-widget iframe{display:block;width:100%;min-height:80px;max-height:4000px;border:0;background:transparent}.runtime-widget.expanded iframe{max-height:200000px}.runtime-widget p{color:var(--danger);overflow-wrap:anywhere}:global(button[data-button-scope="button-c5f9e34abc"]){padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}</style>

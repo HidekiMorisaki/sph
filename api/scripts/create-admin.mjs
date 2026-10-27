@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync } from 'node:crypto';
 import { Client } from 'pg';
 import { assertSampleDatabaseEmpty, catalogFor, initializeRequiredData, installRequiredItAssetMasters, installSamples } from './install-data.mjs';
+import {seedDefaultWorkflowTemplates} from './workflow-defaults.mjs';
 
 const input = {
 	username: process.env.INITIAL_ADMIN_USERNAME?.trim(),
@@ -66,6 +67,8 @@ try {
 		await client.query('INSERT INTO employee_settings (employee_id, display_language, display_currency) VALUES ($1, $2, $3)', [created.rows[0].id, input.displayLanguage, input.displayLanguage === 'ja' ? 'JPY' : 'USD']);
 		if (samples === 'yes') ({ failedHolidayCountries, failedBooks } = await installSamples(client, catalog, { adminId: created.rows[0].id, branchId: branch.rows[0].id, displayLanguage: input.displayLanguage }));
 	}
+	const workflowLanguage=accounts.rows[0].count===0?input.displayLanguage:(await client.query('SELECT display_language FROM employee_settings WHERE deleted_at IS NULL ORDER BY employee_id LIMIT 1')).rows[0]?.display_language??input.displayLanguage;
+	await seedDefaultWorkflowTemplates(client,workflowLanguage);
 	await client.query('COMMIT');
 	for (const countryCode of failedHolidayCountries) console.log(`SPH_SAMPLE_HOLIDAY_WARNING=${countryCode}`);
 	for (const kind of ['lookup', 'cover']) {

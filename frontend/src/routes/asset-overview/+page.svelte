@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -37,7 +38,7 @@
 		{#if loading}<LoadingSpinner label={text.loading} />
 		{:else if failure}
 			{#if !dismissed}<StatusNotice tone="error" message={text[failure]} onDismiss={() => dismissed = true} />{/if}
-			{#if failure !== 'forbidden'}<button class="app-primary-action" onclick={load}>{text.retry}</button>{/if}
+			{#if failure !== 'forbidden'}<ModalActionButton class="app-primary-action" onclick={load} variant="primary" data-button-scope="button-047ef950b3">{text.retry}</ModalActionButton>{/if}
 		{:else if data}
 			<section class="summary-card summary-total" aria-labelledby="asset-summary-heading">
 				<div><h2 id="asset-summary-heading">{text.unassigned}</h2><p>{formatDate(data.asOf, $localization)} · {data.scope === 'own_branch' ? text.ownBranch : text.allBranches}</p></div>

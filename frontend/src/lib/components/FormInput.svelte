@@ -1,13 +1,13 @@
 <script lang="ts">
-	let { label, field, value = '', placeholder, type = 'text', showLabel = true, required = false, disabled = false, error = '', min, max, step, maxlength, onkeydown, onValueChange, onCommit }: {
-		label: string; field: string; value?: string; type?: 'text' | 'number' | 'time' | 'url' | 'color'; showLabel?: boolean; required?: boolean; disabled?: boolean; error?: string;
+	let { label, field, value = '', placeholder, type = 'text', inputmode, showLabel = true, required = false, disabled = false, error = '', min, max, step, maxlength, onkeydown, onValueChange, onCommit }: {
+		label: string; field: string; value?: string; type?: 'text' | 'number' | 'time' | 'url' | 'color' | 'email' | 'tel'; inputmode?: 'text' | 'decimal' | 'numeric' | 'tel' | 'email' | 'url'; showLabel?: boolean; required?: boolean; disabled?: boolean; error?: string;
 		placeholder?: string; min?: string; max?: string; step?: string; maxlength?: number; onkeydown?: (event: KeyboardEvent) => void; onValueChange: (value: string) => void; onCommit?: () => void;
 	} = $props();
 </script>
 
 <label class="form-input-field" for={field}>
 	<span class:visually-hidden={!showLabel}>{label}{#if required}<span class="required" aria-hidden="true"> *</span>{/if}</span>
-	<input id={field} {type} {value} {placeholder} {required} {disabled} {min} {max} {step} {maxlength} {onkeydown} class:invalid={Boolean(error)} aria-invalid={Boolean(error)} aria-describedby={error ? `${field}-error` : undefined} oninput={event => onValueChange(event.currentTarget.value)} onchange={onCommit} />
+	<input id={field} {type} {inputmode} {value} {placeholder} {required} {disabled} {min} {max} {step} {maxlength} {onkeydown} class:invalid={Boolean(error)} aria-invalid={Boolean(error)} aria-describedby={error ? `${field}-error` : undefined} oninput={event => onValueChange(event.currentTarget.value)} onchange={onCommit} />
 	{#if error}<span id={`${field}-error`} class="field-error" role="alert">{error}</span>{/if}
 </label>
 

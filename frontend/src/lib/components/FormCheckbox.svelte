@@ -1,8 +1,8 @@
 <script lang="ts">
- let {label,field,checked=false,disabled=false,required=false,onChange}:{label:string;field:string;checked?:boolean;disabled?:boolean;required?:boolean;onChange:(checked:boolean)=>void}=$props();
+ let {label,field,type='checkbox',name,checked=false,disabled=false,required=false,onChange}:{label:string;field:string;type?:'checkbox'|'radio';name?:string;checked?:boolean;disabled?:boolean;required?:boolean;onChange:(checked:boolean)=>void}=$props();
 </script>
 <label class="form-checkbox-field" for={field}>
- <input id={field} type="checkbox" {checked} {disabled} {required} onchange={event=>onChange(event.currentTarget.checked)}/>
+ <input id={field} {type} {name} {checked} {disabled} {required} onchange={event=>onChange(event.currentTarget.checked)}/>
  <span>{label}{#if required}<span class="required" aria-hidden="true"> *</span>{/if}</span>
 </label>
 <style>

@@ -1,3 +1,4 @@
+import {workflowSearchContexts} from '../workflow/search-registry';
 import { assetSearchContexts } from './asset-search-registry';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
@@ -5,7 +6,7 @@ import { requiredBranchScope } from './branch-access';
 import { throwApiError } from './response';
 import { bookRentableSql } from './book-availability';
 
-export type SearchTarget = 'employees' | 'books' | 'assets';
+export type SearchTarget = 'employees' | 'books' | 'assets' | 'workflows';
 export type SearchField = { code: string; label: { en: string; ja: string }; type: 'string' | 'number' | 'date' | 'datetime' | 'boolean' | 'choice'; maxLength: number; choices?: string[]; expression: string; source: string; operation?: string; private?: boolean; reference?: {table:string;key:string;name:string;branch?:string} };
 export type SearchContext = { code: string; label: { en: string; ja: string }; category: string; from: string; link: string; operation?: string; branch?: string; private?: boolean; policy?: 'loans' | 'reservations' | 'purchases'; fields: SearchField[] };
 const snake = (value: string) => value.replace(/[A-Z]/g, char => '_' + char.toLowerCase()).replace(/([a-z])(\d)/g,'$1_$2');
@@ -120,7 +121,7 @@ const refs:Record<string,[string,string,string,string,string?]>={
 };
 for(const ctx of employeeSearchContexts){const ref=refs[ctx.code];if(!ref)continue;const [table,alias,key,name]=ref;virtual(ctx,'selection','選択','choice',`${alias}.${key}::text`);ctx.fields.at(-1)!.reference={table,key,name};}
 
-export const contextsFor = (target: SearchTarget) => target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
+export const contextsFor = (target: SearchTarget) => target === 'workflows' ? workflowSearchContexts : target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
 export function operationScope(user: AuthenticatedUser, operation: string) {
  // Related read operations must not inherit the saved-filter mutation operation.
  return requiredBranchScope({...user,activeOperation:undefined},operation);

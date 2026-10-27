@@ -3,7 +3,9 @@ import { getPrisma } from '$lib/server/prisma';
 import { resolveScheduleNotification,scheduleNotificationTypes } from '$lib/server/schedule/notification-resolver';
 // Register a domain's authorization, known types and typed internal target here.
 // The producer never stores HTML, arbitrary URLs or private message snapshots.
+import {resolveWorkflowNotification,workflowTypes} from '$lib/server/workflow/service';
 const resolvers={
+ 'workflow-action':{types:workflowTypes,canRead:(actor:AuthenticatedUser)=>actor.permissionOperations.includes('workflows.read'),resolve:resolveWorkflowNotification},
  'schedule-occurrence':{types:scheduleNotificationTypes,canRead:(actor:AuthenticatedUser)=>actor.permissionOperations.includes('schedule.read'),resolve:resolveScheduleNotification}
 };
 export function allowedNotificationTypes(actor:AuthenticatedUser) {return Object.values(resolvers).flatMap(r=>r.canRead(actor)?r.types:[]);}

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
 	import { localization } from '$lib/localization';
 	import { operatorLabels, type SearchContext, type SearchGroup, type SearchRule } from '$lib/search';
 	import SearchSelect from './SearchSelect.svelte';
@@ -19,10 +20,10 @@
 	{#each count?.operator==='between'?[0,1]:[0] as part}
 		<FormInput label={count?.operator==='between'?(part===0?(ja?'最小冊数':'Minimum copies'):(ja?'最大冊数':'Maximum copies')):(ja?'冊数':'Copies')} field={`${id}-count-${part}`} type="number" min="0" step="1" value={String((Array.isArray(count?.value)?count.value[part]:count?.value)??'')} placeholder="0" onValueChange={value=>setValue(value,part)}/>
 	{/each}
-	<button type="button" onclick={onRemove}>{ja?'条件を削除':'Remove condition'}</button>
+	<ActionButton type="button" onclick={onRemove} variant="secondary" data-button-scope="button-a5241d3e85">{ja?'条件を削除':'Remove condition'}</ActionButton>
 	<p>{ja?'有効な配置先の現物を数えます。貸出中・貸出不可も含み、0冊も指定できます。':'Counts copies in active locations, including loaned and non-rentable copies. Zero copies is supported.'}</p>
 </fieldset>
 
 <style>
-	.branch-copy-count{display:flex;align-items:end;flex-wrap:wrap;gap:12px;min-width:0;margin:12px 0;padding:16px;border:1px solid var(--border);border-radius:8px}legend{font-size:var(--font-size-support);color:var(--text-secondary)}p{flex-basis:100%;margin:0;font-size:var(--font-size-support);color:var(--muted)}button{padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font:inherit;cursor:pointer}button:hover{background:var(--surface-hover)}
+	.branch-copy-count{display:flex;align-items:end;flex-wrap:wrap;gap:12px;min-width:0;margin:12px 0;padding:16px;border:1px solid var(--border);border-radius:8px}legend{font-size:var(--font-size-support);color:var(--text-secondary)}p{flex-basis:100%;margin:0;font-size:var(--font-size-support);color:var(--muted)}:global(button[data-button-scope="button-a5241d3e85"]){padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font:inherit;cursor:pointer}:global(button:hover[data-button-scope="button-a5241d3e85"]){background:var(--surface-hover)}
 </style>

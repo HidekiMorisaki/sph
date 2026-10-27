@@ -1,0 +1,1000 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "templateKey": "0d3b361a-4777-4b74-83a6-6ee2f5c19bed",
+      "localized": {
+        "ja": {
+          "name": "仮払い金申請書（サンプル）",
+          "description": "必要に応じて項目と承認経路を編集し、公開して使用してください。",
+          "definition": {
+            "fields": [
+              {
+                "id": "applicant",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "申請者情報",
+                "required": false
+              },
+              {
+                "id": "purpose",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 4,
+                  "column": 3,
+                  "height": 1
+                },
+                "type": "textarea",
+                "label": "用途",
+                "required": true
+              },
+              {
+                "id": "plannedOn",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 7,
+                  "height": 1
+                },
+                "type": "date",
+                "label": "使用予定日",
+                "required": true
+              },
+              {
+                "id": "items",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "table",
+                "label": "経費明細",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "spentOn",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "date",
+                    "label": "使用予定日",
+                    "required": true
+                  },
+                  {
+                    "id": "vendor",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 3,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "支払先",
+                    "required": true
+                  },
+                  {
+                    "id": "f_63339db501f1453f8271b8a41e5bc236",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 5,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "内容",
+                    "required": true
+                  },
+                  {
+                    "id": "amount",
+                    "min": 0,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 7,
+                      "height": 1
+                    },
+                    "type": "money",
+                    "label": "金額",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "id": "total",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "calculated",
+                "label": "申請合計",
+                "calculation": {
+                  "op": "sum",
+                  "refs": [
+                    "amount"
+                  ],
+                  "decimals": 0
+                }
+              }
+            ],
+            "version": 1
+          }
+        },
+        "en": {
+          "name": "Cash advance request (Sample)",
+          "description": "Edit the fields and approval route before publishing.",
+          "definition": {
+            "fields": [
+              {
+                "id": "applicant",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "Applicant information",
+                "required": false
+              },
+              {
+                "id": "purpose",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 4,
+                  "column": 3,
+                  "height": 1
+                },
+                "type": "textarea",
+                "label": "Purpose",
+                "required": true
+              },
+              {
+                "id": "plannedOn",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 7,
+                  "height": 1
+                },
+                "type": "date",
+                "label": "Planned date",
+                "required": true
+              },
+              {
+                "id": "items",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "table",
+                "label": "Expense items",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "spentOn",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "date",
+                    "label": "Planned date",
+                    "required": true
+                  },
+                  {
+                    "id": "vendor",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 3,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "Payee",
+                    "required": true
+                  },
+                  {
+                    "id": "f_63339db501f1453f8271b8a41e5bc236",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 5,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "Description",
+                    "required": true
+                  },
+                  {
+                    "id": "amount",
+                    "min": 0,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 7,
+                      "height": 1
+                    },
+                    "type": "money",
+                    "label": "Amount",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "id": "total",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "calculated",
+                "label": "Requested total",
+                "calculation": {
+                  "op": "sum",
+                  "refs": [
+                    "amount"
+                  ],
+                  "decimals": 0
+                }
+              }
+            ],
+            "version": 1
+          }
+        }
+      }
+    },
+    {
+      "templateKey": "b77f24dc-7ace-4d91-a051-71ad43e09020",
+      "localized": {
+        "ja": {
+          "name": "精算書（サンプル）",
+          "description": "明細ごとの領収書を必須とするサンプルです。",
+          "definition": {
+            "fields": [
+              {
+                "id": "total",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 7,
+                  "height": 1
+                },
+                "type": "calculated",
+                "label": "精算合計",
+                "calculation": {
+                  "op": "sum",
+                  "refs": [
+                    "amount"
+                  ],
+                  "decimals": 2
+                }
+              },
+              {
+                "id": "items",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "table",
+                "label": "経費明細",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "spentOn",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 1,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "date",
+                    "label": "支払日",
+                    "required": true
+                  },
+                  {
+                    "id": "vendor",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 2,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "支払先",
+                    "required": true
+                  },
+                  {
+                    "id": "f_1bcafca411d44b26b7b7d57bd22b8a90",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 4,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "内容",
+                    "required": true
+                  },
+                  {
+                    "id": "amount",
+                    "min": 0,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 1,
+                      "column": 6,
+                      "height": 1
+                    },
+                    "type": "money",
+                    "label": "金額",
+                    "required": true
+                  },
+                  {
+                    "id": "receipts",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 7,
+                      "height": 1
+                    },
+                    "type": "attachment",
+                    "label": "領収書",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "id": "notes",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "textarea",
+                "label": "備考",
+                "required": false
+              },
+              {
+                "id": "f_596509122e734397a65db00a3711beab",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 6,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "申請者情報"
+              }
+            ],
+            "version": 1
+          }
+        },
+        "en": {
+          "name": "Expense report (Sample)",
+          "description": "A sample requiring receipts for every expense item.",
+          "definition": {
+            "fields": [
+              {
+                "id": "total",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 2,
+                  "column": 7,
+                  "height": 1
+                },
+                "type": "calculated",
+                "label": "Expense total",
+                "calculation": {
+                  "op": "sum",
+                  "refs": [
+                    "amount"
+                  ],
+                  "decimals": 2
+                }
+              },
+              {
+                "id": "items",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "table",
+                "label": "Expense items",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "spentOn",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 1,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "date",
+                    "label": "Payment date",
+                    "required": true
+                  },
+                  {
+                    "id": "vendor",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 2,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "Payee",
+                    "required": true
+                  },
+                  {
+                    "id": "f_1bcafca411d44b26b7b7d57bd22b8a90",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 4,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "Description",
+                    "required": true
+                  },
+                  {
+                    "id": "amount",
+                    "min": 0,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 1,
+                      "column": 6,
+                      "height": 1
+                    },
+                    "type": "money",
+                    "label": "Amount",
+                    "required": true
+                  },
+                  {
+                    "id": "receipts",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 2,
+                      "column": 7,
+                      "height": 1
+                    },
+                    "type": "attachment",
+                    "label": "Receipts",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "id": "notes",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "textarea",
+                "label": "Notes",
+                "required": false
+              },
+              {
+                "id": "f_596509122e734397a65db00a3711beab",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 6,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "Applicant information"
+              }
+            ],
+            "version": 1
+          }
+        }
+      }
+    },
+    {
+      "templateKey": "bea60f40-b905-4fa6-9a9a-86cf728ff3c1",
+      "localized": {
+        "ja": {
+          "name": "週報（サンプル）",
+          "description": "期間・繰り返し・必須項目を組み合わせたサンプルです。",
+          "definition": {
+            "fields": [
+              {
+                "id": "week",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 5,
+                  "column": 4,
+                  "height": 1
+                },
+                "type": "dateRange",
+                "label": "対象週",
+                "required": true
+              },
+              {
+                "id": "nextWeek",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "業務実績",
+                "required": true,
+                "placeholder": ""
+              },
+              {
+                "id": "learning",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 4
+                },
+                "type": "group",
+                "label": "学んだこと",
+                "children": [
+                  {
+                    "id": "summary",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "概要",
+                    "required": false,
+                    "defaultValue": "特になし"
+                  },
+                  {
+                    "id": "details",
+                    "grid": {
+                      "row": 2,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "詳細",
+                    "required": false,
+                    "defaultValue": "特になし"
+                  }
+                ]
+              },
+              {
+                "id": "problems",
+                "grid": {
+                  "row": 8,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 5
+                },
+                "type": "repeat",
+                "label": "問題点",
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "content",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "内容",
+                    "required": false,
+                    "defaultValue": "特になし"
+                  },
+                  {
+                    "id": "problem",
+                    "grid": {
+                      "row": 3,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "原因",
+                    "required": false,
+                    "defaultValue": "特になし"
+                  },
+                  {
+                    "id": "solution",
+                    "grid": {
+                      "row": 3,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 5,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "対策",
+                    "required": false,
+                    "defaultValue": "特になし"
+                  }
+                ]
+              },
+              {
+                "id": "f_29c8033f38394158a9a292896e8a000f",
+                "grid": {
+                  "row": 13,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "打ち上げ事項",
+                "required": true
+              },
+              {
+                "id": "f_a98b26c33c344cc8b1d5360cddffb393",
+                "grid": {
+                  "row": 15,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "翌週の作業予定",
+                "required": true
+              },
+              {
+                "id": "f_7d1889defc304c898c2c51eb32e4799c",
+                "grid": {
+                  "row": 17,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 3
+                },
+                "type": "repeat",
+                "label": "前週コメント",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "f_88c57c78d90d4be8b3478ac9e0af285d",
+                    "min": 1,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "上司コメント",
+                    "required": true,
+                    "defaultValue": "特になし"
+                  },
+                  {
+                    "id": "f_3aa2701164bc424dbce31f4eee194819",
+                    "min": 1,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 5,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "上司コメントへの返信",
+                    "required": true,
+                    "defaultValue": "特になし"
+                  }
+                ]
+              },
+              {
+                "id": "f_d53c0d5ee59842209c4316b37c36cb1c",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 3,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "申請者情報"
+              }
+            ],
+            "version": 1
+          }
+        },
+        "en": {
+          "name": "Weekly report (Sample)",
+          "description": "A sample combining a date range, repeatable groups and required fields.",
+          "definition": {
+            "fields": [
+              {
+                "id": "week",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 5,
+                  "column": 4,
+                  "height": 1
+                },
+                "type": "dateRange",
+                "label": "Reporting period",
+                "required": true
+              },
+              {
+                "id": "nextWeek",
+                "grid": {
+                  "row": 2,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "Work performed",
+                "required": true,
+                "placeholder": ""
+              },
+              {
+                "id": "learning",
+                "grid": {
+                  "row": 4,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 4
+                },
+                "type": "group",
+                "label": "Lessons learned",
+                "children": [
+                  {
+                    "id": "summary",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 1
+                    },
+                    "type": "text",
+                    "label": "Summary",
+                    "required": false,
+                    "defaultValue": "None"
+                  },
+                  {
+                    "id": "details",
+                    "grid": {
+                      "row": 2,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Details",
+                    "required": false,
+                    "defaultValue": "None"
+                  }
+                ]
+              },
+              {
+                "id": "problems",
+                "grid": {
+                  "row": 8,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 5
+                },
+                "type": "repeat",
+                "label": "Issues",
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "content",
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 8,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Description",
+                    "required": false,
+                    "defaultValue": "None"
+                  },
+                  {
+                    "id": "problem",
+                    "grid": {
+                      "row": 3,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Cause",
+                    "required": false,
+                    "defaultValue": "None"
+                  },
+                  {
+                    "id": "solution",
+                    "grid": {
+                      "row": 3,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 5,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Action",
+                    "required": false,
+                    "defaultValue": "None"
+                  }
+                ]
+              },
+              {
+                "id": "f_29c8033f38394158a9a292896e8a000f",
+                "grid": {
+                  "row": 13,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "Items to escalate",
+                "required": true
+              },
+              {
+                "id": "f_a98b26c33c344cc8b1d5360cddffb393",
+                "grid": {
+                  "row": 15,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 2
+                },
+                "type": "textarea",
+                "label": "Work planned for next week",
+                "required": true
+              },
+              {
+                "id": "f_7d1889defc304c898c2c51eb32e4799c",
+                "grid": {
+                  "row": 17,
+                  "scale": 2,
+                  "width": 8,
+                  "column": 1,
+                  "height": 3
+                },
+                "type": "repeat",
+                "label": "Previous week’s comments",
+                "maxRows": 100,
+                "minRows": 1,
+                "children": [
+                  {
+                    "id": "f_88c57c78d90d4be8b3478ac9e0af285d",
+                    "min": 1,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 1,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Supervisor’s comments",
+                    "required": true,
+                    "defaultValue": "None"
+                  },
+                  {
+                    "id": "f_3aa2701164bc424dbce31f4eee194819",
+                    "min": 1,
+                    "grid": {
+                      "row": 1,
+                      "scale": 2,
+                      "width": 4,
+                      "column": 5,
+                      "height": 2
+                    },
+                    "type": "textarea",
+                    "label": "Reply to supervisor’s comments",
+                    "required": true,
+                    "defaultValue": "None"
+                  }
+                ]
+              },
+              {
+                "id": "f_d53c0d5ee59842209c4316b37c36cb1c",
+                "grid": {
+                  "row": 1,
+                  "scale": 2,
+                  "width": 3,
+                  "column": 1,
+                  "height": 1
+                },
+                "type": "applicant",
+                "label": "Applicant information"
+              }
+            ],
+            "version": 1
+          }
+        }
+      }
+    }
+  ]
+}

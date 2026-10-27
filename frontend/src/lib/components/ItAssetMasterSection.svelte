@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import FormTabs from '$lib/components/FormTabs.svelte';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
@@ -214,7 +215,7 @@
 					<FormSection title={text.additionalInformation} framed><label class="notes-field"><span>{text.notes}</span><textarea name="notes" bind:value={form.notes} maxlength="5000"></textarea></label></FormSection>
 
 </div></FormTabs></div>
-				<footer class="app-modal-footer">{#if editing && allowedOperation('masters.delete')}<button class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(editing!)}>{commonText.delete}</button>{/if}<button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || !allowedOperation(editing ? 'masters.update' : 'masters.create') || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? text.saving : editing ? text.saveChanges : addLabel}</button></footer>
+				<footer class="app-modal-footer">{#if editing && allowedOperation('masters.delete')}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(editing!)} variant="danger" data-button-scope="button-a855c66130">{commonText.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestCloseForm} variant="secondary" data-button-scope="button-a855c66130">{text.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || !allowedOperation(editing ? 'masters.update' : 'masters.create') || (Boolean(editing) && !hasUnsavedChanges)} variant="primary" data-button-scope="button-a855c66130">{saving ? text.saving : editing ? text.saveChanges : addLabel}</ModalActionButton></footer>
 			</form>
 		</dialog></ModalBackdrop>
 		{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeFormImmediately} />{/if}

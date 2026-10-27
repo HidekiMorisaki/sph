@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import FormTabs from '$lib/components/FormTabs.svelte';
  import { untrack,tick,onMount } from 'svelte';
  import { apiData } from '$lib/api';
@@ -79,7 +80,7 @@
 </div>{/if}{/snippet}
 {#if kind==='skills'}{@render sections()}{:else}<FormTabs label={text[kind]} kind={kind==='clients'?'client':'basic'}>{@render sections()}</FormTabs>{/if}
  </form>
- {#snippet actions()}{#if onDelete && item}<button class="app-danger-action editor-delete" type="button" disabled={busy} onclick={()=>void onDelete(document.activeElement as HTMLElement)}>{common.delete}</button>{/if}<button type="button" class="secondary" disabled={busy} onclick={close}>{common.cancel}</button><button type="submit" form="workforce-master-form" class="app-primary-action" disabled={busy||loading||(Boolean(item)&&!dirty)}>{busy?common.saving:item?common.saveChanges:text.add}</button>{/snippet}
+ {#snippet actions()}{#if onDelete && item}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={busy} onclick={()=>void onDelete(document.activeElement as HTMLElement)} variant="danger" data-button-scope="button-5d08da6a60">{common.delete}</ModalActionButton>{/if}<ModalActionButton type="button" class="secondary" disabled={busy} onclick={close} variant="secondary" data-button-scope="button-5d08da6a60">{common.cancel}</ModalActionButton><ModalActionButton type="submit" form="workforce-master-form" class="app-primary-action" disabled={busy||loading||(Boolean(item)&&!dirty)} variant="primary" data-button-scope="button-5d08da6a60">{busy?common.saving:item?common.saveChanges:text.add}</ModalActionButton>{/snippet}
 </DetailModal>
 {#if discard}<DiscardChangesDialog onContinue={()=>discard=false} onDiscard={closeNow}/>{/if}
 <style>.wide{grid-column:1/-1}</style>

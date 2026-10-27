@@ -126,5 +126,14 @@
   {"code": "notifications.update", "category": "notifications", "prerequisite": "notifications.read"},
   {"code": "notifications.delete", "category": "notifications", "prerequisite": "notifications.read"},
   {"code":"schedule.reserve","category":"schedule","prerequisite":"schedule.read"},
-  {"code":"schedule.reservations.release","category":"schedule","prerequisite":"system.manage","systemOnly":true}
+  {"code":"schedule.reservations.release","category":"schedule","prerequisite":"system.manage","systemOnly":true},
+  {"code": "workflows.read", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.create", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.update", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.submit", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.approve", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.comment", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.delete", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.cancel", "category": "workflows", "prerequisite": "workflows.read"},
+  {"code": "workflows.templates.manage", "category": "workflows", "prerequisite": "system.manage", "systemOnly": true}
 ]

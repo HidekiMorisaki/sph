@@ -33,10 +33,10 @@
   return ()=>{++generation;controller?.abort();clearInterval(timer);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);};
  });
  function close(){open=false;trigger?.focus();}
- async function toggle(){open=!open;if(open){void load();await tick();root?.querySelector<HTMLButtonElement>('.notification-close')?.focus();}}
+ function toggle(){open=!open;trigger?.focus();if(open)void load();}
  async function mark(item:Notice,navigate=false) {
   if(updating||busy)return;const current=generation;updating=true;
-  try {if(canOperate(user,'notifications.update'))await scheduleRequest(`/v1/notifications/${item.id}/read-receipt`,'PUT',{});if(current!==generation)return;if(navigate){if((item.href?.startsWith('/schedule?occurrence=')||item.href==='/schedule?notice=unavailable')){open=false;await goto(item.href);}else error=true;}if(current===generation)await load();}catch{if(current===generation)error=true;}finally{if(current===generation)updating=false;}
+  try {if(canOperate(user,'notifications.update'))await scheduleRequest(`/v1/notifications/${item.id}/read-receipt`,'PUT',{});if(current!==generation)return;if(navigate){if((item.href?.startsWith('/schedule?occurrence=')||item.href?.startsWith('/workflows?request=')||item.href==='/schedule?notice=unavailable')){open=false;await goto(item.href);}else error=true;}if(current===generation)await load();}catch{if(current===generation)error=true;}finally{if(current===generation)updating=false;}
  }
  async function markAll(){if(updating||busy)return;const current=generation;updating=true;try{await scheduleRequest('/v1/notifications/read-receipts','PUT',{through:snapshot});if(current===generation)await load();}catch{if(current===generation)error=true;}finally{if(current===generation)updating=false;}}
  async function dismiss(item?:Notice){
@@ -49,10 +49,10 @@
    items=items.filter(notice=>item?notice.id!==item.id:!notice.readAt||Date.parse(notice.readAt)>Date.parse(cutoff));
    if(item&&!item.readAt)unread=Math.max(0,unread-result.data.deleted);else readCount=Math.max(0,readCount-result.data.deleted);
    await load();updating=false;await tick();
-   if(open&&current===generation){const choices=root?.querySelectorAll<HTMLButtonElement>('.dismiss');const next=index>=0?choices?.[Math.min(index,(choices?.length??0)-1)]:null;(next??root?.querySelector<HTMLButtonElement>('.notification-close'))?.focus();}
+   if(open&&current===generation){const choices=root?.querySelectorAll<HTMLButtonElement>('.dismiss');const next=index>=0?choices?.[Math.min(index,(choices?.length??0)-1)]:null;(next??trigger)?.focus();}
   }catch{if(current===generation)error=true;}finally{if(current===generation)updating=false;}
  }
- function kind(type:string){return ({'schedule.invitation':text.invitation,'schedule.change':text.change,'schedule.cancellation':text.cancellation,'schedule.response':text.response,'schedule.resource-release':text.resourceRelease} as Record<string,string>)[type]??text.notifications;}
+ function kind(type:string){const ja=$localization.displayLanguage==='ja';const workflow:Record<string,[string,string]>={'workflow.requested':['承認依頼','Approval requested'],'workflow.approved':['承認されました','Approved'],'workflow.returned':['差し戻されました','Returned'],'workflow.rejected':['却下されました','Rejected'],'workflow.completed':['最終承認が完了しました','Final approval completed'],'workflow.cancelled':['申請が取り下げられました','Request withdrawn'],'workflow.comment':['コメントが追加されました','New comment'],'workflow.reassigned':['承認者が変更されました','Approver reassigned'],'workflow.payment':['受渡しの確認依頼','Transfer receipt requested'],'workflow.received':['受領が確認されました','Receipt confirmed'],'workflow.correction':['受渡し記録の訂正・取消','Transfer correction']};if(workflow[type])return workflow[type][ja?0:1];return ({'schedule.invitation':text.invitation,'schedule.change':text.change,'schedule.cancellation':text.cancellation,'schedule.response':text.response,'schedule.resource-release':text.resourceRelease} as Record<string,string>)[type]??text.notifications;}
 </script>
 <svelte:window onpointerdown={event=>{if(open&&!root?.contains(event.target as Node))open=false;}} onkeydown={event=>{if(open&&event.key==='Escape'){event.preventDefault();close();}}}/>
 {#if allowed}
@@ -65,7 +65,6 @@
     <header><strong>{text.notifications}</strong><div class="header-actions">
      {#if canOperate(user,'notifications.delete')}<button class="delete-read icon-action" type="button" aria-label={text.deleteReadNotifications} title={text.deleteReadNotifications} disabled={busy||updating||!readCount} onclick={()=>dismiss()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M9 10v7M15 10v7"/></svg></button>{/if}
      {#if canOperate(user,'notifications.update')}<button class="mark-all icon-action" type="button" aria-label={text.markAllRead} title={text.markAllRead} disabled={busy||updating||!unread} onclick={markAll}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m3 12 5 5L19 6M12 17l9-9"/></svg></button>{/if}
-     <button class="notification-close icon-action" type="button" aria-label={text.close} title={text.close} onclick={close}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
     </div></header>
     <div class="filters"><button type="button" aria-pressed={!onlyUnread} disabled={busy||updating} onclick={()=>{onlyUnread=false;void load();}}>{text.allNotifications}</button><button type="button" aria-pressed={onlyUnread} disabled={busy||updating} onclick={()=>{onlyUnread=true;void load();}}>{text.unread} ({unread})</button></div>
     {#if error}<p role="alert">{text.failed} <button type="button" onclick={()=>load()}>{text.retry}</button></p>{/if}

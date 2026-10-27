@@ -1,4 +1,7 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import ControlButton from '$lib/components/ControlButton.svelte';
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
  import PurchaseMoneyFields from "$lib/components/PurchaseMoneyFields.svelte";
  import { purchaseText as purchaseMoneyText, validPurchaseAmount, displayPurchaseMoney } from "$lib/purchase-money";
  let moneyText=$derived(purchaseMoneyText[$localization.displayLanguage]);
@@ -694,7 +697,7 @@
 {#snippet bookEditor(mode:Exclude<typeof modal,'detail'|null>)}{@const modeTitle=mode==='title'?'book-modal-title':'book-child-modal-title'}
 <ModalBackdrop>
 			<dialog use:trackBookEditor={mode} class="app-modal book-dialog" class:app-modal--compact={mode !== 'copies'} open aria-modal="true" aria-labelledby={modeTitle} onkeydown={handleDialogKeydown}>
-				<header><h2 id={modeTitle}>{mode === 'title' ? editingTitleId ? actionText.editTitle : t.addTitle : mode === 'copies' ? t.addCopies : mode === 'loan' ? c.loan : mode === 'cover' ? coverText.change : mode === 'copy_edit' ? actionText.editCopy : mode === 'delete_title' ? actionText.deleteTitle : mode === 'delete_copy' ? actionText.deleteCopy : t.detail}</h2><button class="app-modal-close" type="button" aria-label={t.close} onclick={() => requestClose()} disabled={saving}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<header><h2 id={modeTitle}>{mode === 'title' ? editingTitleId ? actionText.editTitle : t.addTitle : mode === 'copies' ? t.addCopies : mode === 'loan' ? c.loan : mode === 'cover' ? coverText.change : mode === 'copy_edit' ? actionText.editCopy : mode === 'delete_title' ? actionText.deleteTitle : mode === 'delete_copy' ? actionText.deleteCopy : t.detail}</h2><IconActionButton class="app-modal-close" type="button" aria-label={t.close} onclick={() => requestClose()} disabled={saving} data-button-scope="button-1e84df5316"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 				<div class="app-modal-form-body book-dialog-body">
 					{#if detailNotice}<StatusNotice message={detailNotice.message} tone={detailNotice.tone} onDismiss={() => detailNotice = null} />{/if}
 					{#if error}<p class="book-error" role="alert">{error}</p>{/if}
@@ -709,7 +712,7 @@
 								<div class="book-lookup book-isbn-row" class:book-isbn-edit={editingTitleId !== null}>
 									<label>{t.isbn}<input maxlength="17" placeholder="9784873115658" bind:value={titleForm.isbn} readonly={sourceLocked || isbnScannerOpen} class:invalid={Boolean(fieldErrors.isbn)} aria-invalid={Boolean(fieldErrors.isbn)} aria-describedby={fieldErrors.isbn ? 'book-title-isbn-error' : undefined} oninput={changeLookupIsbn} onkeydown={(event) => { if (!isbnScannerOpen && editingTitleId === null && event.key === 'Enter') { event.preventDefault(); void searchBookLookup(); } }} /></label>
 									<div class="book-isbn-actions">
-										{#if !sourceLocked}<button bind:this={isbnScanTrigger} class="secondary isbn-scan-trigger" type="button" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving} aria-expanded={isbnScannerOpen} onclick={() => isbnScannerOpen = true}>{$localization.displayLanguage === 'ja' ? 'カメラで読み取る' : 'Scan with camera'}</button>{/if}
+										{#if !sourceLocked}<ModalActionButton bind:element={isbnScanTrigger} class="secondary isbn-scan-trigger" type="button" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving} aria-expanded={isbnScannerOpen} onclick={() => isbnScannerOpen = true} variant="secondary" data-button-scope="button-1e84df5316">{$localization.displayLanguage === 'ja' ? 'カメラで読み取る' : 'Scan with camera'}</ModalActionButton>{/if}
 										{#if editingTitleId === null}<ModalActionButton label={lookupStatus === 'loading' ? lookupText.searching : lookupText.search} variant="secondary" size="field" disabled={isbnScannerOpen || lookupStatus === 'loading' || saving || sourceLocked} onclick={() => void searchBookLookup()} />{/if}
 									</div>
 									{#if isbnScannerOpen}<IsbnScanner onRead={readIsbn} onClose={closeIsbnScanner} />{/if}
@@ -771,13 +774,10 @@
 							<div class="wide book-cover-picker">
 								<span id="book-cover-label" class="book-cover-label">{coverText.image}</span>
 								<input bind:this={coverInput} type="file" accept="image/png" hidden disabled={saving} aria-label={coverText.image} onchange={(event) => { if (event.currentTarget.files?.length) selectCoverFiles(event.currentTarget.files); event.currentTarget.value = ''; }} />
-								<button class="book-cover-dropzone" class:dragging={coverDragging} type="button" disabled={saving} aria-labelledby="book-cover-label book-cover-prompt" aria-describedby="book-cover-help" onclick={() => coverInput?.click()}
-									ondragover={(event) => { event.preventDefault(); if (!saving) { coverDragging = true; if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'; } }}
-									ondragleave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) coverDragging = false; }}
-									ondrop={(event) => { event.preventDefault(); selectCoverFiles(event.dataTransfer?.files ?? null); }}>
+								<ControlButton type="button" disabled={saving} aria-labelledby="book-cover-label book-cover-prompt" aria-describedby="book-cover-help" onclick={() => coverInput?.click()} ondragover={(event) => { event.preventDefault(); if (!saving) { coverDragging = true; if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'; } }} ondragleave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) coverDragging = false; }} ondrop={(event) => { event.preventDefault(); selectCoverFiles(event.dataTransfer?.files ?? null); }} class={[`book-cover-dropzone`,(coverDragging?"dragging":'')]} data-button-scope="button-1e84df5316">
 									{#if coverFile}<strong class="book-cover-filename">{coverFile.name}</strong>{/if}
 									<span id="book-cover-prompt">{coverFile ? coverText.replace : coverText.drop}</span>
-								</button>
+								</ControlButton>
 								<small id="book-cover-help" class="field-hint">{coverText.imageHelp}</small>
 							</div>
 						</FormSection></form>
@@ -785,14 +785,14 @@
 						<p>{actionText.deleteConfirm}</p><p><strong>{mode === 'delete_title' ? selectedTitle?.name : editingCopy?.copyCode}</strong></p>
 					{/if}
 				</div>
-				<footer class="app-modal-footer">{#if mode==='title' && selectedTitle && editingTitleId && allowedOperation('books.titles.delete')}<button type="button" class="app-danger-action editor-delete" disabled={saving} onclick={()=>openModal('delete_title')}>{detailCommon.delete}</button>{/if}
-					<button type="button" class="secondary" onclick={() => requestClose()} disabled={saving}>{t.cancel}</button>
-					{#if mode === 'title'}<button type="submit" form="book-title-form" class="app-primary-action" disabled={(Boolean(editingTitleId)&&!allowedOperation('books.titles.update')) || saving || isbnScannerOpen}>{t.save}</button>
-					{:else if mode === 'copies'}<button type="submit" form="book-copy-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if mode === 'loan'}<button type="submit" form="book-loan-form" class="app-primary-action" disabled={saving}>{c.loan}</button>
-					{:else if mode === 'copy_edit'}<button type="submit" form="book-copy-edit-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if mode === 'cover'}<button type="submit" form="book-cover-form" class="app-primary-action" disabled={saving}>{t.save}</button>
-					{:else if mode === 'delete_title' || mode === 'delete_copy'}<button type="button" class="app-danger-action" disabled={saving} onclick={() => void deleteSelected()}>{mode === 'delete_title' ? actionText.deleteTitle : actionText.deleteCopy}</button>{/if}
+				<footer class="app-modal-footer">{#if mode==='title' && selectedTitle && editingTitleId && allowedOperation('books.titles.delete')}<ModalActionButton type="button" class="app-danger-action editor-delete" disabled={saving} onclick={()=>openModal('delete_title')} variant="danger" data-button-scope="button-1e84df5316">{detailCommon.delete}</ModalActionButton>{/if}
+					<ModalActionButton type="button" class="secondary" onclick={() => requestClose()} disabled={saving} variant="secondary" data-button-scope="button-1e84df5316">{t.cancel}</ModalActionButton>
+					{#if mode === 'title'}<ModalActionButton type="submit" form="book-title-form" class="app-primary-action" disabled={(Boolean(editingTitleId)&&!allowedOperation('books.titles.update')) || saving || isbnScannerOpen} variant="primary" data-button-scope="button-1e84df5316">{t.save}</ModalActionButton>
+					{:else if mode === 'copies'}<ModalActionButton type="submit" form="book-copy-form" class="app-primary-action" disabled={saving} variant="primary" data-button-scope="button-1e84df5316">{t.save}</ModalActionButton>
+					{:else if mode === 'loan'}<ModalActionButton type="submit" form="book-loan-form" class="app-primary-action" disabled={saving} variant="primary" data-button-scope="button-1e84df5316">{c.loan}</ModalActionButton>
+					{:else if mode === 'copy_edit'}<ModalActionButton type="submit" form="book-copy-edit-form" class="app-primary-action" disabled={saving} variant="primary" data-button-scope="button-1e84df5316">{t.save}</ModalActionButton>
+					{:else if mode === 'cover'}<ModalActionButton type="submit" form="book-cover-form" class="app-primary-action" disabled={saving} variant="primary" data-button-scope="button-1e84df5316">{t.save}</ModalActionButton>
+					{:else if mode === 'delete_title' || mode === 'delete_copy'}<ModalActionButton type="button" class="app-danger-action" disabled={saving} onclick={() => void deleteSelected()} variant="danger" data-button-scope="button-1e84df5316">{mode === 'delete_title' ? actionText.deleteTitle : actionText.deleteCopy}</ModalActionButton>{/if}
 				</footer>
 			</dialog>
 		</ModalBackdrop>
@@ -802,16 +802,16 @@
 <section class="app-detail-section">
 			<h3>{t.copies}: {detailCopies.length}</h3>
 			{#if detailCopies.length}
-				{#if reservations.length}{#each reservations as reservation}<p class="book-reservation-row">{c.reservation}: {reservation.branch.name} · {reservation.status} {#if editable}<button type="button" disabled={saving || !allowedOperation('books.reservations.cancel')} onclick={() => void cancelReservation(reservation.id)}>{c.cancelReservation}</button>{/if}</p>{/each}{:else if editable}<div class="book-reserve"><SearchSelect label={t.branch} field="book-reservation-branch" value={reserveBranchId} options={[...new Map(detailCopies.map(copy => [copy.storage.branchId, { value: String(copy.storage.branchId), label: copy.storage.room.branch.name }])).values()]} onSelect={(value) => reserveBranchId = value} /><button type="button" disabled={saving || !reserveBranchId || !allowedOperation('books.reservations.create')} onclick={() => void reserve()}>{c.reserve}</button></div>{/if}
+				{#if reservations.length}{#each reservations as reservation}<p class="book-reservation-row">{c.reservation}: {reservation.branch.name} · {reservation.status} {#if editable}<ActionButton type="button" disabled={saving || !allowedOperation('books.reservations.cancel')} onclick={() => void cancelReservation(reservation.id)} variant="secondary" data-button-scope="button-1e84df5316">{c.cancelReservation}</ActionButton>{/if}</p>{/each}{:else if editable}<div class="book-reserve"><SearchSelect label={t.branch} field="book-reservation-branch" value={reserveBranchId} options={[...new Map(detailCopies.map(copy => [copy.storage.branchId, { value: String(copy.storage.branchId), label: copy.storage.room.branch.name }])).values()]} onSelect={(value) => reserveBranchId = value} /><ActionButton type="button" disabled={saving || !reserveBranchId || !allowedOperation('books.reservations.create')} onclick={() => void reserve()} variant="secondary" data-button-scope="button-1e84df5316">{c.reserve}</ActionButton></div>{/if}
 				<ul class="book-copy-list">
 					{#each detailCopies as copy}
 						<li class="book-copy-item">
 							<div class="book-copy-meta"><strong>{copy.copyCode}</strong><span>{moneyText.amount}: {displayPurchaseMoney(copy.purchaseAmount,copy.purchaseCurrency,$localization.displayLanguage)}</span><span>{copy.storage.room.branch.name} / {copy.storage.name} · {copy.onLoan ? c.onLoan : copy.status === 'available' ? t.available : t.unavailable}</span>{#if copy.loans[0]}<span>{copy.loans[0].employee.lastName} {copy.loans[0].employee.firstName} · {c.dueOn}: {copy.loans[0].dueOn.slice(0, 10)}</span>{/if}</div>
 							{#if editable && user?.capabilities.canManageBooks && (user.capabilities.canManageBooksGlobally || user.branchId === copy.storage.branchId)}
 								<div class="book-copy-actions">
-									{#if copy.loans[0] && allowedOperation('books.loans.return', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void returnLoan(copy.loans[0].id)}>{c.return}</button>{:else if !copy.onLoan && copy.status === 'available' && allowedOperation('books.loans.create', copy.storage.branchId)}<button type="button" disabled={saving} onclick={() => void openLoan(copy)}>{c.loan}</button>{/if}
-									{#if allowedOperation('books.copies.update', copy.storage.branchId)}<button type="button" disabled={saving || copy.onLoan} onclick={() => openCopyEdit(copy)}>{actionText.editCopy}</button>{/if}
-									{#if allowedOperation('books.copies.delete', copy.storage.branchId)}<button type="button" class="danger" disabled={saving || copy.onLoan} onclick={() => { editingCopy = copy; openModal('delete_copy'); }}>{actionText.deleteCopy}</button>{/if}
+									{#if copy.loans[0] && allowedOperation('books.loans.return', copy.storage.branchId)}<ActionButton type="button" disabled={saving} onclick={() => void returnLoan(copy.loans[0].id)} variant="secondary" data-button-scope="button-1e84df5316">{c.return}</ActionButton>{:else if !copy.onLoan && copy.status === 'available' && allowedOperation('books.loans.create', copy.storage.branchId)}<ActionButton type="button" disabled={saving} onclick={() => void openLoan(copy)} variant="secondary" data-button-scope="button-1e84df5316">{c.loan}</ActionButton>{/if}
+									{#if allowedOperation('books.copies.update', copy.storage.branchId)}<ActionButton type="button" disabled={saving || copy.onLoan} onclick={() => openCopyEdit(copy)} variant="secondary" data-button-scope="button-1e84df5316">{actionText.editCopy}</ActionButton>{/if}
+									{#if allowedOperation('books.copies.delete', copy.storage.branchId)}<ActionButton type="button" class="danger" disabled={saving || copy.onLoan} onclick={() => { editingCopy = copy; openModal('delete_copy'); }} variant="danger" data-button-scope="button-1e84df5316">{actionText.deleteCopy}</ActionButton>{/if}
 								</div>
 							{/if}
 						</li>
@@ -906,7 +906,7 @@
 	<MasterPageHeader title={t.title} />
 	{#if exportError}<StatusNotice message={exportErrorText} tone="error" onDismiss={() => exportError = false} />{/if}
 	{#if notice && !modal}<StatusNotice message={notice} tone={noticeTone} onDismiss={() => notice = ''} />{/if}
-	{#if loadError}<div class="book-load-error"><p role="alert">{t.loadFailed}</p><button type="button" onclick={() => void load()}>{t.retry}</button></div>{/if}
+	{#if loadError}<div class="book-load-error"><p role="alert">{t.loadFailed}</p><ActionButton type="button" onclick={() => void load()} variant="secondary" data-button-scope="button-1e84df5316">{t.retry}</ActionButton></div>{/if}
 	{#if loaded}<SearchPanel target="books" userId={user?.id ?? null} bind:searchState draftOptions={purchaseOnly?{purchaseRequests:true}:{}} onRestoreOptions={options=>purchaseOnly=options.purchaseRequests===true} filters={purchaseFilter}/><MasterList mobileItem={mobileBook} bind:searchState bind:this={titleList} endpoint="/v1/book-searches" title={t.list} listHeading={t.list} headerActions={listActions} footerLeading={sourceCredit} initialSortBy="name" pageSizeStorageKey="books-page-size" minTableWidth={760} canDetail actionLabel={(item) => (item as Title).name} loadingLabel={t.loading} emptyLabel={t.noBooks} columns={[
 		{ key: 'cover', label: coverText.cover, width: '76px', cell: coverCell, sortable: false },
 		{ key: 'name', label: t.name, width: 'calc(70% - 296px)', cell: titleCell, value: (item) => (item as Title).name, sortable: true },
@@ -939,18 +939,18 @@
 	.book-copy-item{border:1px solid var(--border);border-radius:9px;padding:12px;display:grid;gap:10px}
 	.book-copy-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
 	.book-copy-actions{display:flex;flex-wrap:wrap;gap:8px}
-	.book-copy-actions button{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
-	.book-copy-actions button:disabled{opacity:.55;cursor:default}
+	.book-copy-actions :global(button[data-button-scope="button-1e84df5316"]){border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+	.book-copy-actions :global(button:disabled[data-button-scope="button-1e84df5316"]){opacity:.55;cursor:default}
 	.book-detail{display:grid;min-width:0;gap:16px}.book-detail-overview{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:start;gap:18px}.book-detail-cover{display:flex;justify-content:center}.book-detail-overview .app-detail-grid{min-width:0}.book-reservation-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;color:var(--text-secondary);font-size:var(--font-size-body)}
 	.book-lookup{display:grid;gap:8px;min-width:0}.book-lookup-results{display:grid;gap:8px;border:1px solid var(--border);border-radius:6px;padding:12px}.book-lookup-results h3{margin:0;font-size:var(--font-size-section)}.book-lookup-result,.book-lookup-existing{display:grid;gap:5px;border-top:1px solid var(--border);padding-top:8px}.book-lookup-result span,.book-source{overflow-wrap:anywhere;font-size:var(--font-size-support);color:var(--muted)}.book-lookup p{margin:0}
 	.book-isbn-row{grid-column:1/-1;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 12px}.book-isbn-row>.field-error,.book-isbn-row>.field-hint,.book-isbn-row>p,.book-isbn-row>.book-lookup-existing,.book-isbn-row>.book-lookup-results,.book-isbn-row>.book-source{grid-column:1/-1}.book-isbn-edit label{grid-column:1/-1}.book-title-notes{white-space:pre-wrap;overflow-wrap:anywhere}
-	.book-isbn-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.isbn-scan-trigger{min-height:36px;padding:0 12px;font:inherit}
-	@media(max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.book-isbn-row{grid-template-columns:minmax(0,1fr)}.book-isbn-actions{grid-column:1/-1}.isbn-scan-trigger{min-height:44px}}
+	.book-isbn-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}:global(.isbn-scan-trigger[data-button-scope="button-1e84df5316"]){min-height:36px;padding:0 12px;font:inherit}
+	@media(max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.book-isbn-row{grid-template-columns:minmax(0,1fr)}.book-isbn-actions{grid-column:1/-1}:global(.isbn-scan-trigger[data-button-scope="button-1e84df5316"]){min-height:44px}}
 	.book-lookup-result{grid-template-columns:44px minmax(0,1fr);align-items:start;gap:12px}.book-lookup-result-details{display:grid;min-width:0;gap:5px}.book-lookup-result-details strong{overflow-wrap:anywhere}
 	.book-source-credit{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:0 4px;margin:0;text-align:left;color:var(--muted);font-size:var(--font-size-support)}.book-source-credit a,.book-source a,.book-detail-source a{color:var(--link-color,#337ab7)}
-	.book-edit-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}.book-detail button.danger{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}.book-detail button.danger{border-color:#b91c1c;color:#b91c1c}
-	.book-cover-picker{display:grid;gap:8px;min-width:0}.book-cover-picker input[hidden]{display:none}.book-cover-label{font-size:var(--font-size-support);font-weight:500}.book-cover-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:160px;padding:24px;border:2px dashed var(--border);border-radius:6px;background:var(--surface)!important;color:var(--text-secondary)!important;font:inherit;text-align:center;overflow-wrap:anywhere;cursor:pointer}.book-cover-dropzone:hover:not(:disabled),.book-cover-dropzone.dragging{border-color:var(--action-primary);background:var(--surface-secondary)!important}.book-cover-dropzone:hover:not(:disabled){border-color:var(--action-primary);background:var(--surface-hover,var(--surface-secondary))!important}.book-cover-dropzone:focus-visible{outline:2px solid var(--action-primary);outline-offset:3px}.book-cover-dropzone:disabled{opacity:.65;cursor:not-allowed}.book-cover-filename{max-width:100%;color:var(--text)}
-	.book-detail button,.book-reserve button{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+	.book-edit-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}.book-detail :global(button.danger[data-button-scope="button-1e84df5316"]){border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}.book-detail :global(button.danger[data-button-scope="button-1e84df5316"]){border-color:#b91c1c;color:#b91c1c}
+	.book-cover-picker{display:grid;gap:8px;min-width:0}.book-cover-picker input[hidden]{display:none}.book-cover-label{font-size:var(--font-size-support);font-weight:500}:global(.book-cover-dropzone[data-button-scope="button-1e84df5316"]){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:160px;padding:24px;border:2px dashed var(--border);border-radius:6px;background:var(--surface)!important;color:var(--text-secondary)!important;font:inherit;text-align:center;overflow-wrap:anywhere;cursor:pointer}:global(.book-cover-dropzone:hover:not(:disabled)[data-button-scope="button-1e84df5316"]),:global(.book-cover-dropzone.dragging[data-button-scope="button-1e84df5316"]){border-color:var(--action-primary);background:var(--surface-secondary)!important}:global(.book-cover-dropzone:hover:not(:disabled)[data-button-scope="button-1e84df5316"]){border-color:var(--action-primary);background:var(--surface-hover,var(--surface-secondary))!important}:global(.book-cover-dropzone:focus-visible[data-button-scope="button-1e84df5316"]){outline:2px solid var(--action-primary);outline-offset:3px}:global(.book-cover-dropzone:disabled[data-button-scope="button-1e84df5316"]){opacity:.65;cursor:not-allowed}.book-cover-filename{max-width:100%;color:var(--text)}
+	.book-detail :global(button[data-button-scope="button-1e84df5316"]),.book-reserve :global(button[data-button-scope="button-1e84df5316"]){border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
 	.book-reserve{display:flex;align-items:end;gap:8px;margin:0 0 14px}.book-reserve :global(.form-select-field){min-width:180px;max-width:280px;flex:1}
 	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.book-detail-overview{grid-template-columns:1fr;gap:14px}.book-detail-cover{justify-content:flex-start}.book-reservation-row{align-items:flex-start;flex-direction:column}}
 

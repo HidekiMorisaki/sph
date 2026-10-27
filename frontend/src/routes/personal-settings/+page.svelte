@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount, tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
@@ -241,7 +242,7 @@
 									<PostalLookup countryCode={profile.countryCode} postalCode={profile.postalCode ?? ''} language={$appliedLocalization.displayLanguage} onSelect={selectAddress} />
 								</FormSection>
 							</div>
-							<footer><button class="app-primary-action" type="submit" disabled={profileSaving}>{profileSaving ? text.saving : text.saveProfile}</button></footer>
+							<footer><ModalActionButton class="app-primary-action" type="submit" disabled={profileSaving} variant="primary" data-button-scope="button-c83417162b">{profileSaving ? text.saving : text.saveProfile}</ModalActionButton></footer>
 						</form>
 </div>
 
@@ -252,7 +253,7 @@
 							{#each socialLinkPlatforms as site}
 								<label><span class="social-link-label"><SocialLinkIcon platform={site.value} size={17} />{site.label}</span><input name={`socialLink-${site.value}`} value={socialLinks[site.value]} maxlength="2048" type="url" inputmode="url" autocomplete="url" placeholder="https://" aria-invalid={!!socialLinkErrors[site.value]} aria-describedby={socialLinkErrors[site.value] ? `socialLink-${site.value}-error` : undefined} oninput={(event) => updateSocialLink(site.value, event.currentTarget.value)} />{#if socialLinkErrors[site.value]}<small id={`socialLink-${site.value}-error`}>{fieldError(socialLinkErrors[site.value] ?? '')}</small>{/if}</label>
 							{/each}
-						</div><footer><button class="app-primary-action" type="submit" disabled={socialLinksSaving}>{socialLinksSaving ? text.saving : text.saveSocialLinks}</button></footer></form>
+						</div><footer><ModalActionButton class="app-primary-action" type="submit" disabled={socialLinksSaving} variant="primary" data-button-scope="button-c83417162b">{socialLinksSaving ? text.saving : text.saveSocialLinks}</ModalActionButton></footer></form>
 					</div>
 
 					<div id="localization" class="settings-card localization-card" role="tabpanel" aria-labelledby="personal-setting-localization-tab" hidden={activeSection !== 'localization'} tabindex="0">
@@ -262,7 +263,7 @@
 							<SearchSelect label={text.timeZone} field="timeZone" value={localization.timeZone} options={timeZoneOptions} required error={localizationErrors.timeZone ? fieldError(localizationErrors.timeZone) : ''} onSelect={(value) => { localization.timeZone = value; localizationMessage = ''; }} />
 							<SearchSelect label={text.displayLanguage} field="displayLanguage" value={localization.displayLanguage} options={languageOptions} required error={localizationErrors.displayLanguage ? fieldError(localizationErrors.displayLanguage) : ''} onSelect={(value) => { localization.displayLanguage = value as DisplayLanguage; localizationMessage = ''; }} />
 							<SearchSelect label={text.displayCurrency} field="displayCurrency" value={localization.displayCurrency} options={currencyOptions} searchable={false} required error={localizationErrors.displayCurrency ? fieldError(localizationErrors.displayCurrency) : ''} onSelect={(value) => { localization.displayCurrency = value as FinancialCurrency; localizationMessage = ''; }} />
-						</div><footer><button class="app-primary-action" type="submit" disabled={localizationSaving}>{localizationSaving ? text.saving : text.saveLocalization}</button></footer></form>
+						</div><footer><ModalActionButton class="app-primary-action" type="submit" disabled={localizationSaving} variant="primary" data-button-scope="button-c83417162b">{localizationSaving ? text.saving : text.saveLocalization}</ModalActionButton></footer></form>
 					</div>
 
 					<div id="password" class="settings-card" role="tabpanel" aria-labelledby="personal-setting-password-tab" hidden={activeSection !== 'password'} tabindex="0">
@@ -273,7 +274,7 @@
 							<label><span>{text.newPassword} <i>*</i></span><input name="newPassword" bind:value={newPassword} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.newPassword} aria-describedby="password-requirements newPassword-error" oninput={() => clearPasswordError('newPassword')} />{#if passwordErrors.newPassword}<small id="newPassword-error">{fieldError(passwordErrors.newPassword)}</small>{/if}</label>
 							<label><span>{text.confirmation} <i>*</i></span><input name="confirmation" bind:value={confirmation} type="password" autocomplete="new-password" aria-invalid={!!passwordErrors.confirmation} aria-describedby={passwordErrors.confirmation ? 'confirmation-error' : undefined} oninput={() => clearPasswordError('confirmation')} />{#if passwordErrors.confirmation}<small id="confirmation-error">{fieldError(passwordErrors.confirmation)}</small>{/if}</label>
 							<div id="password-requirements" class="password-requirements"><strong>{text.passwordRequirements}</strong><ul>{#each passwordRules as rule}<li class:met={rule.met}><span aria-hidden="true">{rule.met ? '✓' : '○'}</span><span>{rule.text}</span><span class="sr-only">: {rule.met ? text.met : text.notMet}</span></li>{/each}</ul></div>
-						</div><footer><button class="app-primary-action" type="submit" disabled={passwordSaving}>{passwordSaving ? text.changing : text.changePassword}</button></footer></form>
+						</div><footer><ModalActionButton class="app-primary-action" type="submit" disabled={passwordSaving} variant="primary" data-button-scope="button-c83417162b">{passwordSaving ? text.changing : text.changePassword}</ModalActionButton></footer></form>
 					</div>
 				</div>
 			</div>
@@ -283,7 +284,7 @@
 
 <style>
 	.settings-page{width:100%}.settings-layout{min-width:0}.settings-content{display:flex;min-width:0;flex-direction:column;gap:20px;isolation:isolate;container:settings-content / inline-size}.settings-card{position:relative;scroll-margin-top:72px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.localization-card{z-index:2}.settings-card>header{padding:14px 16px;border-bottom:1px solid var(--border-light);border-radius:6px 6px 0 0}.settings-card h2,.settings-card p{margin:0}.settings-card h2{font-size:var(--font-size-section)}.settings-card header p{margin-top:4px;color:var(--muted);font-size:var(--font-size-support)}.form-body{display:grid;gap:16px;padding:16px;background:var(--bg)}.form-body :global(.app-form-section-grid){grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.form-body label{display:grid;width:100%;max-width:480px;gap:6px;min-width:0;color:var(--text);font-size:var(--font-size-support);font-weight:500}.form-body label span i{color:var(--danger);font-style:normal}.form-body input{width:100%;max-width:480px;height:36px;padding:0 12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-body)}.form-body :global(.form-select-field),.form-body :global(.custom-date){width:100%;max-width:480px}.form-body :global(.form-select-options){visibility:hidden}.form-body input::placeholder{color:#c0c7cf}.form-body input:hover{border-color:var(--text-secondary)}.form-body input:focus{outline:0;border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}.form-body input[aria-invalid='true']{border-color:var(--danger);box-shadow:0 0 0 1px color-mix(in srgb,var(--danger) 25%,transparent)}.form-body label small{color:var(--danger);font-size:var(--font-size-support);font-weight:400;line-height:1.6}.form-body label .field-hint{color:var(--muted)}.form-body label .field-error{font-weight:500}.wide{grid-column:auto}.compact-grid,.social-links-grid,.password-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.social-link-label{display:flex;align-items:center;gap:7px}.social-link-label :global(.social-link-icon){color:var(--text-secondary)}.password-grid{align-items:start}.settings-card footer{display:flex;justify-content:flex-end;padding:14px 16px;background:var(--surface);border-top:1px solid var(--border-light);border-radius:0 0 6px 6px}.password-requirements{grid-row:auto;grid-column:auto;padding:12px;background:var(--surface-secondary);border:1px solid var(--border);border-radius:5px}.password-requirements strong{font-size:var(--font-size-support)}.password-requirements ul{display:grid;gap:6px;margin:9px 0 0;padding:0;list-style:none}.password-requirements li{display:flex;gap:7px;color:var(--muted);font-size:var(--font-size-support)}.password-requirements li.met{color:#168b76}.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-	.settings-card footer .app-primary-action{width:100%}
+	.settings-card footer :global(.app-primary-action[data-button-scope="button-c83417162b"]){width:100%}
 	.password-requirements{display:grid;grid-template-columns:1fr;grid-column:1/-1;align-items:start;gap:6px;padding:0;background:transparent;border:0;border-radius:0}.password-requirements strong{font-weight:500}.password-requirements ul{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 16px;margin:0;padding:10px 12px;background:var(--surface-secondary);border:1px solid var(--border);border-radius:5px}.password-requirements li{align-items:center}
 	:global(html[data-theme='dark']) .form-body input::placeholder{color:#5a6473}
 	@container settings-content (max-width:1200px){.form-body :global(.app-form-section-grid),.compact-grid,.social-links-grid,.password-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -292,7 +293,7 @@
 	@container settings-content (max-width:480px){.form-body :global(.app-form-section-grid),.compact-grid,.social-links-grid,.password-grid{grid-template-columns:minmax(0,1fr)}.password-requirements{grid-template-columns:1fr}.password-requirements ul{grid-template-columns:1fr}}
 	@media(max-width:900px){.settings-layout{min-width:0}}
 	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.settings-layout{min-width:0}.settings-card>header,.form-body,.settings-card footer{padding-left:16px;padding-right:16px}}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.settings-layout{min-width:0}.form-body :global(input),.form-body :global(.form-select-trigger),.form-body :global(.date-trigger){min-height:44px}.settings-card footer button{min-height:44px}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.settings-layout{min-width:0}.form-body :global(input),.form-body :global(.form-select-trigger),.form-body :global(.date-trigger){min-height:44px}.settings-card footer :global(button[data-button-scope="button-c83417162b"]){min-height:44px}}
 	.profile-form-body :global(.app-form-section-grid){display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px}
 	.profile-form-body :global(.app-form-section-grid > *){flex:0 1 var(--profile-field-width,128px);width:var(--profile-field-width,128px);max-width:100%;min-width:0}
 	.profile-form-body :global(.app-form-section-grid > :has([name='nameKana'])){--profile-field-width:176px}

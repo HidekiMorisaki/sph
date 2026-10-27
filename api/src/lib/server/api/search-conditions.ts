@@ -77,14 +77,14 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
 export function parseSearchDefinition(value: unknown,target: SearchTarget,user: AuthenticatedUser): SearchDefinition {
  const body=searchObject(value);keys(body,['schemaVersion','keyword','conditions','sortBy','sortOrder','limit','options']);
  if(body.schemaVersion!==1||typeof body.keyword!=='string'||body.keyword.length>500)invalidSearch('keyword');
- const sorts: readonly string[]=target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
+ const sorts: readonly string[]=target==='workflows'?['id','title','status','createdAt','updatedAt']:target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
  if(typeof body.sortBy!=='string'||!sorts.includes(body.sortBy)||!['asc','desc'].includes(String(body.sortOrder)))invalidSearch('sort');
  if(body.sortBy==='teams')operationScope(user,'teams.read');
  if(typeof body.limit!=='number'||!Number.isInteger(body.limit)||body.limit<1||body.limit>500)invalidSearch('limit');
  const options=searchObject(body.options??{});
- keys(options,target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
+ keys(options,target==='workflows'?['view','statuses','applicantIds','approverIds','finalApproverIds','currentAssigneeIds','templateIds','includeHistory']:target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
  for(const [key,val] of Object.entries(options)){
-  if(['includeRetired','includeDeleted','purchaseRequests','unassigned'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
+  if(['includeHistory','includeRetired','includeDeleted','purchaseRequests','unassigned'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
   else if(typeof val!=='string'||val.length>1000)invalidSearch(key);
  }
  if(options.skillIds)operationScope(user,'skills.read');

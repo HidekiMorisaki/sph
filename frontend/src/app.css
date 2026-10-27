@@ -19,15 +19,11 @@ html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] 
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-text,
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .badge,
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-chev,
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-sub,
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .sidebar-user-info,
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .more-icon{display:none}
+html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-sub{display:none}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-link{justify-content:center;gap:0;padding:8px}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .group-icon{display:grid}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .group-toggle{justify-content:center;padding:8px}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .group-chevron{position:absolute;right:1px;bottom:5px;width:10px;height:10px}
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .account-trigger{justify-content:center;padding:8px}
-html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .user-menu{left:calc(100% + 8px);right:auto;bottom:0;max-height:calc(100vh - 16px);overflow-y:auto}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-link[data-rail-label]::after{position:absolute;left:calc(100% + 12px);top:50%;z-index:110;padding:5px 9px;border-radius:4px;background:#182230;color:#fff;content:attr(data-rail-label);font-size:var(--font-size-support);opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-4px);transition:opacity .12s,transform .12s;white-space:nowrap}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .app-sidebar .nav-link[data-rail-label]:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
 html:not([data-compact-navigation='true'])[data-asset-sidebar-collapsed='true'] .shell>.workspace{width:calc(100% - 64px);margin-left:64px}
