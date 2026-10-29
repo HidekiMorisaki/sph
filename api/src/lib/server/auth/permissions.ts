@@ -58,7 +58,7 @@ export const ownBranchOperations = new Set([
 
 // Global grants supported by the branch-administrator session. Resource guards
 // still enforce owner, branch and responsibility requirements where applicable.
-export const branchGlobalOperations = new Set(['workflows.read','workflows.create','workflows.update','workflows.submit','workflows.approve','workflows.comment','workflows.cancel','workflows.delete','schedule.reserve', 'schedule.read', 'schedule.create', 'schedule.update', 'schedule.cancel', 'schedule.respond', 'schedule.preferences.update', 'notifications.read', 'notifications.update', 'notifications.delete', 'books.read', 'books.titles.create', 'books.purchases.read', 'books.purchases.create', 'books.purchases.cancel', 'books.reservations.create', 'books.reservations.cancel', 'widgets.read', 'widgets.layout.update', 'widgets.records.create', 'widgets.records.update', 'widgets.records.delete', 'search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'projects.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
+export const branchGlobalOperations = new Set(['projects.preferences.update','projects.read','projects.create','projects.update','projects.delete','projects.members.manage','projects.settings.manage','projects.tickets.create','projects.tickets.update','projects.tickets.delete','projects.comments.manage','projects.time.manage','projects.attachments.manage','workflows.read','workflows.create','workflows.update','workflows.submit','workflows.approve','workflows.comment','workflows.cancel','workflows.delete','schedule.reserve', 'schedule.read', 'schedule.create', 'schedule.update', 'schedule.cancel', 'schedule.respond', 'schedule.preferences.update', 'notifications.read', 'notifications.update', 'notifications.delete', 'books.read', 'books.titles.create', 'books.purchases.read', 'books.purchases.create', 'books.purchases.cancel', 'books.reservations.create', 'books.reservations.cancel', 'widgets.read', 'widgets.layout.update', 'widgets.records.create', 'widgets.records.update', 'widgets.records.delete', 'search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'engagements.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
 
 export const branchEditablePermissionCatalog = [
 	...editablePermissionCatalog.filter(({ code }) => ownBranchOperations.has(code) || branchGlobalOperations.has(code)),
@@ -113,9 +113,9 @@ export function capabilitiesFor(user: AuthenticatedUser) {
 		widgetDraftOperations:Object.keys(scopes).filter(code=>code.startsWith('widgets.drafts.')),
 		canReadWidgetDrafts: hasPermissionOperation(user,'widgets.read')&&hasPermissionOperation(user,'widgets.drafts.read'),
 		canReadSkills: hasPermissionOperation(user, 'skills.read'),
-		canReadProjects: hasPermissionOperation(user, 'projects.read'),
+		canReadEngagements: hasPermissionOperation(user, 'engagements.read'),
         canReadClients: hasPermissionOperation(user, 'clients.read'),
-		workforceOperations: Object.keys(scopes).filter(code => code.startsWith('skills.') || code.startsWith('projects.') || code.startsWith('clients.')),
+		workforceOperations: Object.keys(scopes).filter(code => code.startsWith('skills.') || code.startsWith('engagements.') || code.startsWith('clients.')),
 		canAddTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.add'),
 		canRemoveTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.remove'),
 		canReadTeams: hasPermissionOperation(user, 'teams.read'),

@@ -55,8 +55,8 @@
 </div>
 
 <style>
-	:global([data-theme='dark']) .system-information-page{--border:#2c3542;--border-light:#252e3c}
-	.page-state{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted)}
+	:global([data-theme='dark']) .system-information-page{--border:var(--sph-color-monitor-border-dark);--border-light:var(--sph-color-monitor-border-subtle-dark)}
+	.page-state{padding:var(--sph-space-24px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);color:var(--muted)}
 
 	[role='tabpanel']:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 </style>

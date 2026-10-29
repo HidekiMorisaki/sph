@@ -5,6 +5,10 @@ const root = new URL('../', import.meta.url);
 const vendor = new URL('vendor/jspdf/', root);
 const manifest = JSON.parse(await readFile(new URL('source-manifest.json', vendor), 'utf8'));
 const hash = value => createHash('sha256').update(value).digest('hex');
+const fflateNotice=JSON.parse(await readFile(new URL('licenses/fflate-0.8.3.json',root),'utf8'));
+for(const entry of fflateNotice.embeddedSources){
+ for(const folder of ['licenses/','static/licenses/'])if(hash(await readFile(new URL(folder+entry.file,root)))!==entry.licenseSha256)throw Error('fflate embedded original notice differs: '+entry.name);
+}
 for (const entry of manifest.files) {
  if (hash(await readFile(new URL(entry.path, vendor))) !== entry.sha256) throw Error('PDF source differs from reviewed manifest: ' + entry.path);
 }

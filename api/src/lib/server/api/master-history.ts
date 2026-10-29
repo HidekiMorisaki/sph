@@ -2,7 +2,7 @@ import type { Prisma } from '$lib/server/generated/prisma/client';
 
 export const masterHistoryFields = {
  clients: ['name', 'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'phoneNumber2', 'faxNumber1', 'faxNumber2', 'notes', 'companyName', 'contactName', 'contactDepartment', 'contactEmail', 'contactMobile'],
- projects: ['name','description','clientId','contractStartsOn','contractEndsOn'],
+ engagements: ['name','description','clientId','contractStartsOn','contractEndsOn'],
 	departments: ['name', 'sortOrder', 'notes'],
 	'employee-groups': ['name', 'departmentId', 'sortOrder', 'notes'],
 	positions: ['name', 'sortOrder', 'notes'],
@@ -33,7 +33,7 @@ export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource:
 	let item: unknown;
 	switch (resource) {
 		case 'clients': item = await tx.client.findUnique({ where: { id } }); break;
-        case 'projects': item = await tx.project.findUnique({ where: { id }, include: { client: { select: { name: true } } } }); break;
+        case 'engagements': item = await tx.engagement.findUnique({ where: { id }, include: { client: { select: { name: true } } } }); break;
         case 'departments': item = await tx.department.findUnique({ where: { id } }); break;
 		case 'employee-groups': item = await tx.employeeGroup.findUnique({ where: { id }, include: { department: { select: { name: true } } } }); break;
 		case 'positions': item = await tx.position.findUnique({ where: { id } }); break;
@@ -52,7 +52,7 @@ export async function readMasterSnapshot(tx: Prisma.TransactionClient, resource:
 	}
 	if (!item) return null;
 	const record = item as Record<string, unknown>;
-	if (resource === 'projects') record.clientId = (record.client as {name:string}|null)?.name ?? null;
+	if (resource === 'engagements') record.clientId = (record.client as {name:string}|null)?.name ?? null;
  if (resource === 'employee-groups') record.departmentId = (record.department as { name: string }).name;
 	if (resource === 'room') record.branchId = (record.branch as { name: string }).name;
 	if (resource === 'storage') record.roomId = (record.room as { name: string }).name;

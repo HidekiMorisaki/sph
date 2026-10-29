@@ -25,5 +25,5 @@
  <ActionButton type="button" disabled={!fields.length} onclick={add} variant="secondary" data-button-scope="button-33d3433149">＋ {t('条件を追加','Add condition')}</ActionButton>
 </fieldset>
 <style>
- fieldset{display:grid;gap:12px;margin:0;min-width:0;border:1px solid var(--border);border-radius:6px;padding:12px}legend{font-size:var(--font-size-support)}.rule{display:grid;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}.rule :global(button[data-button-scope="button-33d3433149"]){justify-self:start}
+ fieldset{display:grid;gap:var(--sph-space-12px);margin:0;min-width:0;border:1px solid var(--border);border-radius:var(--sph-radius-6px);padding:var(--sph-space-12px)}legend{font-size:var(--font-size-support)}.rule{display:grid;gap:var(--sph-space-10px);padding:var(--sph-space-8px) 0;border-bottom:1px solid var(--border)}.rule :global(button[data-button-scope="button-33d3433149"]){justify-self:start}
 </style>

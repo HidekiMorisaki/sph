@@ -2,10 +2,10 @@
 
 SDK v2 is the current authoring format. System administrators can create HTML/CSS/JavaScript widgets in Development → Widgets (`/widget-editor`), save private drafts, export HTTPS catalogues and request administrator approval. All seven official widgets use the same sandbox/Worker SDK. See [Widget SDK](Widget_SDK.md) for the current format and developer workflow. Legacy declarative text/list/clock/records definitions remain supported; the former built-in calculator/timer/note view types are retired.
 
-The sections below retain historical v1 UI and maintenance details; do not apply their old catalogue/checksum tools to SDK v2 definitions.
+The sections below describe the current official widgets and their API contract.
 
 
-The current storage contract is [Widget storage](Widget_Storage.md). New v0.6.0 installations use shared JSONB records; the old note/time-zone layout format is not supported. Historical maintenance procedures below do not apply to this storage change.
+The current storage contract is [Widget storage](Widget_Storage.md). New v0.6.0 installations use shared JSONB records; the old note/time-zone layout format is not supported.
 
 System settings shows a per-release user count and asks for confirmation before
 stopping a release with users. Hidden cards are included; duplicate cards from
@@ -27,17 +27,11 @@ source listing and catalogue refresh operations remain in the Sources card.
 
 My Page has a catalogue modal and independently configurable widget cards.
 All current size IDs use ASCII `rowsxcolumns` and match their `sizeLayouts` entry.
-The m0032 migration seeds the seven current official releases with canonical
-IDs and initially disabled approval records. On a new installation, initial master
-data setup enables all seven bundled official releases, with or without sample
-data. The source key, bundled source URL, widget ID, version and complete definition
-must match the bundled catalogue; an unavailable or modified seed aborts initial
-setup. This allows users to add the widgets from their catalogue without a separate
-administrator approval step. Personal placements are still chosen by each user.
+The m0032 migration seeds exactly seven current 1.0.1 official releases, initially disabled. Initial master setup verifies the complete definitions and enables all seven, with or without samples. Each user chooses their own placements. No old official releases or widget-version upgrade blocks are bundled.
+Run `node scripts/build-widget-catalogue.mjs --check` and `node scripts/build-widget-seed.mjs --check` from the product root to verify the catalogue and canonical seed digests. See [Themes.md](Themes.md) for the theme token contract.
 The migration clears obsolete legacy widget
 placements; m0033 removes the old placement table. The size column has no default:
-callers must explicitly choose a declared size. Historical size-maintenance
-procedures below predate this clean start and are not applicable to this seed.
+callers must explicitly choose a declared size.
 Authors define each size as 1–8 rows and 1–8 columns. The minimum cell is a 230px
 square. The grid fits one to nine columns, chooses a count that respects that
 minimum, and distributes remaining width equally between them with 12px gaps.
@@ -65,7 +59,7 @@ the top, to the right of existing cards when there is room. It opens the focus-t
 catalogue modal. Its compact common widget and size pickers stay on one line,
 including phones; long selected labels are ellipsized.
 
-Official 1.0.0 footprints (rows × columns):
+Official 1.0.1 footprints (rows × columns):
 
 | Widget | Small | Medium | Large |
 | --- | --- | --- | --- |
@@ -131,16 +125,6 @@ and Note are in the official catalogue and require
 administrator review. New layouts start empty. The four retired official widgets cannot be
 listed, approved, added or accessed through the data endpoint.
 
-The explicitly approved retirement script physically removes all versions of the
-four retired official widgets, their instances and approvals, and legacy account/book
-settings. It preserves World clock definitions, approvals and instance settings,
-advancing revisions only for layouts that lose active cards. Initial administrator
-setup runs the same idempotent cleanup. Existing installations run
-`node api/scripts/retire-official-widgets.mjs --apply` after backup, before starting
-the updated API. Without `--apply` the transaction rolls back. The historical
-`seed-catalogue.json` is used only to verify the immutable migration seed before
-sample installation; it is never fetched as the current catalogue.
-
 Stopping a release
 blocks existing instances at the data endpoint as well as new installations.
 Removing an enterprise source stops all its releases; the official source cannot
@@ -183,11 +167,6 @@ sent to the API or saved with the layout and resets on reload. The existing
 owner/approval-guarded data endpoint returns only its usual date for this block.
 There are no new dependencies, fonts, images or third-party calculator code.
 
-Existing installations fetch the bundled source and approve Calculator 1.0.0 in
-System settings before adding it. Initial setup preserves the immutable historical
-migration seeds; newly bundled releases are registered through the same catalogue
-refresh workflow. Calculator has its own developer description in the manifest.
-
 ## Developer information
 
 A manifest may include `author` (a nonempty string, at most 160 characters) and
@@ -198,10 +177,7 @@ with line breaks preserved. No HTML or Markdown is executed.
 
 `GET /v1/employees/me/widget-layout` adds `information: {author, description}` to
 each instance. Author falls back to `provider`; missing descriptions are `null` and
-shown as not provided. Existing official World clock 1.0.0 gets its supplementary
-description from `api/widgets/information.json` only when source, version and exact
-bundled definition digest match. Its stored definition and approval stay unchanged.
-All other definitions use their own metadata and cannot inherit official text.
+shown as not provided. Official definitions use the same metadata fields.
 
 ## Contract 1
 
@@ -293,37 +269,11 @@ Instance identifiers cannot be reused by another owner or after deletion. Multip
 instances may use the same release with different settings. A newly initialized
 layout stays empty.
 
-## Consolidated unpublished m0032
+## Programmer calculator
 
-By explicit owner instruction, the later unpublished m0033 is incorporated into
-m0032. The widget table is created with the final size-ID CHECK and the catalogue
-is inserted directly as the five authored-size 1.0.0 definitions. There is no
-intermediate widget ALTER or old-definition update during a fresh install.
-Legacy widget preferences become visible cards when imported. Existing deployments
-that already applied the development m0032 and m0033 require the reviewed local
-consolidation tool after a complete backup; do not manually replace migration
-checksums or rerun the table creation. The tool verifies known checksums and the
-final schema/catalogue, preserves data/settings/order/approvals, restores active
-hidden cards and increments affected layout revisions, then reconciles history
-transactionally. This is pre-release local maintenance, not a supported public
-upgrade procedure; it never runs in product startup.
+`sph.calculator` 1.0.1 is named 電卓（標準） / Calculator (Standard).
 
-The owner explicitly requested resetting official widgets to 1.0.0. Superseded
-versions are logically removed and existing instances reference their canonical
-1.0.0 release. This one-time maintenance does not relax the normal immutable
-same-version catalogue rule for enterprise sources or future releases.
-
-## Programmer calculator and saved standard name
-
-`sph.calculator` 1.0.0 is named 電卓（標準） / Calculator (Standard).
-The owner explicitly approved updating the saved official definition and digest.
-`scripts/rename-standard-calculator.mjs --apply` performs this name-only revision
-transactionally after verifying the exact previous definition and digest.
-It preserves release IDs, approvals, instances, settings and layout revisions;
-unknown definitions are rejected. Back up the database and stop API writes first.
-Without `--apply` it rolls back. Other same-version changes remain forbidden.
-
-`sph.programmer_calculator` 1.0.0 offers HEX/DEC/OCT/BIN, 8/16/32/64 bits,
+`sph.programmer_calculator` 1.0.1 offers HEX/DEC/OCT/BIN, 8/16/32/64 bits,
 signed/unsigned decimal interpretation, integer arithmetic, remainder, AND/OR/XOR/NOT
 and logical shifts. BigInt preserves every bit; overflow wraps at the selected width.
 Division truncates toward zero and remainder follows the left operand's sign.
@@ -336,11 +286,6 @@ Numeric and arithmetic keys expand evenly to fill the available body height;
 base, hexadecimal and bitwise keys stay compact.
 Base-selection labels use 16px text and conversion headings use bold 14px text, with 14px values.
 Backspace uses a 24px SVG icon in both calculators.
-The owner approved revising the saved official programmer definition in place.
-`scripts/compact-programmer-calculator.mjs --apply` checks the exact old definition
-and digest before updating only its size layouts and digest. It preserves instance
-IDs, size IDs, settings and approvals, advancing revisions of affected active layouts.
-Back up the database and stop API writes first; the default is a dry-run rollback.
 Both calculators have interactive add previews, keyboard input and information.
 Values and programmer modes reset on reload and are never sent to the API or saved.
 
@@ -425,34 +370,6 @@ Resizing and edits re-evaluate the condition. Newlines are preserved and HTML is
 There is no Markdown execution, sharing, attachment support or automatic saving.
 Note contents are never included in catalogue definitions or approval audit logs.
 
-The owner initially requested reducing the unpublished combined timer to one 2×2
-size. `api/scripts/resize-timer-widget.mjs --apply` accepts only the exact known
-earlier three-size definition and valid digest, then updates the definition/digest,
-normalizes active instances to `small` and advances affected layout revisions.
-It preserves approvals, instance IDs, settings, order and unrelated releases.
-Back up the database and stop API writes first; the default is a dry-run rollback.
-Normal catalogue refresh still rejects changed content at an existing version.
-
-The final requested split uses `api/scripts/split-timer-widget.mjs`: only the exact
-known combined 2×2 definition is accepted, and existing `sph.timer` instance IDs,
-settings, approvals and `small` selections remain, with a Timer-only 1×2 definition.
-Affected layout revisions advance. Stopwatch (`sph.stopwatch`) is registered as a
-new 1.0.0 release via ordinary catalogue refresh and administrator approval.
-`combined-timer-metadata.json` retains only the exact earlier public metadata for
-these guarded maintenance stages. No running measurement state is persisted.
-
-The same owner-requested one-size maintenance for Unit converter and Personal
-note is in `api/scripts/resize-unit-converter.mjs` and `resize-personal-note.mjs`.
-Both default to rollback, accept only their exact known earlier definitions/digests,
-normalize active sizes to `small`, preserve note text and approvals, and advance
-affected layout revisions. Back up and stop API writes before applying.
-
-After the note's single-size stage, `api/scripts/extend-personal-note-sizes.mjs`
-accepts that exact 2×2 definition and adds `compact` (1×2). It preserves all existing
-note texts and `small` selections and advances affected layout revisions. Each
-maintenance script defaults to rollback and rejects unknown definitions/digests;
-use only the stage matching the saved installation, after backup and with API writes stopped.
-
 The add previews for these four tools use the current grid's actual body width
 and height, subtracting the same border, padding and header as a real card. Compact
 timing/converter previews use natural height. When the modal is narrower, a transform
@@ -467,12 +384,7 @@ without character-count approximations. Selection and menu rows never wrap.
 The picker stays within available width beside the size control; narrow screens
 use single-line ellipsis and do not create horizontal page scrolling.
 
-The subsequent requested footprint revision uses
-`api/scripts/resize-timing-widgets.mjs`: only the exact dedicated Timer/Stopwatch
-2×1 definitions, the intermediate 2×2 Timer, or the current definitions are accepted.
-Timer now offers only `small` (1 row × 2 columns), Stopwatch only `small` (2×2). Release IDs, approvals, instance settings and size IDs
-are preserved. Affected layout revisions advance once, even when both widgets
-share a layout. Unknown definitions/digests fail and roll back.
+Timer uses one row × two columns; Stopwatch uses two rows × two columns.
 
 Timer places the time display and actions side by side on desktop to fit one row.
 On phones they stack at natural height. Its status line shows guidance, invalid
@@ -483,9 +395,3 @@ list and returns after reset.
 The note widget is named メモ / Note. When empty, its entire body is a dashed,
 bordered placeholder using the same spacing, border and text colors as the empty
 stopwatch lap area. Entered notes retain the existing text and overflow behavior.
-The explicit local `api/scripts/rename-note-widget.mjs` maintenance accepts only
-the exact preceding 個人メモ / Personal note definition or the current definition,
-preserves all instance data/size IDs and approvals, and advances affected layout
-revisions. It defaults to rollback; back up and stop API writes before applying.
-The historical size-maintenance stages keep their original names for strict
-definition matching and recognize the final bundled definition without downgrade.

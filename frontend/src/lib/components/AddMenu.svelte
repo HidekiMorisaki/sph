@@ -41,8 +41,8 @@
 </div>
 
 <style>
-	.add-menu{position:fixed;inset:auto;margin:0;min-width:180px;max-width:calc(100vw - 16px);padding:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}
-	button{display:block;width:100%;margin:0;padding:10px 12px;border:0;border-radius:4px;background:transparent;color:var(--text);text-align:left;font:inherit;cursor:pointer}
+	.add-menu{position:fixed;inset:auto;margin:0;min-width:180px;max-width:calc(100vw - 16px);padding:var(--sph-space-6px);background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--sph-radius-6px);box-shadow:var(--shadow)}
+	button{display:block;width:100%;margin:0;padding:var(--sph-space-10px) var(--sph-space-12px);border:0;border-radius:var(--sph-radius-4px);background:transparent;color:var(--text);text-align:left;font:inherit;cursor:pointer}
 	button:hover,button:focus-visible{background:var(--bg);outline:2px solid var(--action-primary);outline-offset:-2px}
 	button:hover{background:var(--surface-hover,var(--bg));outline:2px solid var(--action-primary);outline-offset:-2px}
 </style>

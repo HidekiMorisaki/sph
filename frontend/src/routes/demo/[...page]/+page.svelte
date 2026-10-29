@@ -5,4 +5,4 @@
 	let label = $derived((page.params.page ?? 'preview').split('-').map((word) => word[0]?.toUpperCase() + word.slice(1)).join(' '));
 </script>
 <AssetManagementShell title={label} active=""><div class="preview"><MasterPageHeader title={label} /><section><h2>{label}</h2><span>This destination is ready for the {productName} implementation.</span></section></div></AssetManagementShell>
-<style>.preview{min-height:60vh;padding:0;background:var(--bg);color:var(--text)}.preview section{max-width:720px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:7px;box-shadow:var(--shadow)}.preview h2{margin:0 0 8px;font-size:var(--font-size-section)}.preview span{color:var(--muted);font-size:var(--font-size-body)}</style>
+<style>.preview{min-height:60vh;padding:0;background:var(--bg);color:var(--text)}.preview section{max-width:720px;padding:var(--sph-space-20px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-7px);box-shadow:var(--shadow)}.preview h2{margin:0 0 var(--sph-space-8px);font-size:var(--font-size-section)}.preview span{color:var(--muted);font-size:var(--font-size-body)}</style>

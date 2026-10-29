@@ -1,4 +1,7 @@
 import {workflowSearchContexts} from '../workflow/search-registry';
+import {ticketSearchContexts} from '../projects/ticket-search-registry';
+import {projectSearchContexts} from '../projects/search-registry';
+import { businessSearchContexts, isBusinessTarget, type BusinessTarget } from './business-search-registry';
 import { assetSearchContexts } from './asset-search-registry';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
@@ -6,7 +9,7 @@ import { requiredBranchScope } from './branch-access';
 import { throwApiError } from './response';
 import { bookRentableSql } from './book-availability';
 
-export type SearchTarget = 'employees' | 'books' | 'assets' | 'workflows';
+export type SearchTarget = 'employees' | 'books' | 'assets' | 'workflows' | 'projects' | 'projectTickets' | BusinessTarget;
 export type SearchField = { code: string; label: { en: string; ja: string }; type: 'string' | 'number' | 'date' | 'datetime' | 'boolean' | 'choice'; maxLength: number; choices?: string[]; expression: string; source: string; operation?: string; private?: boolean; reference?: {table:string;key:string;name:string;branch?:string} };
 export type SearchContext = { code: string; label: { en: string; ja: string }; category: string; from: string; link: string; operation?: string; branch?: string; private?: boolean; policy?: 'loans' | 'reservations' | 'purchases'; fields: SearchField[] };
 const snake = (value: string) => value.replace(/[A-Z]/g, char => '_' + char.toLowerCase()).replace(/([a-z])(\d)/g,'$1_$2');
@@ -58,7 +61,7 @@ export const employeeSearchContexts: SearchContext[] = [
  context('managedBranches','主責任拠点','organization','branches branch','branch.manager_employee_id=employee.id AND branch.deleted_at IS NULL',branchFields('branch'),{operation:'masters.read',branch:'branch.id'}),
  context('deputyManagedBranches','副責任拠点','organization','branches branch','branch.deputy_manager_employee_id=employee.id AND branch.deleted_at IS NULL',branchFields('branch'),{operation:'masters.read',branch:'branch.id'}),
  context('skills','スキル','workforce','employee_skills record JOIN skills skill ON skill.id=record.skill_id AND skill.deleted_at IS NULL','record.employee_id=employee.id AND record.deleted_at IS NULL',[...named('Skill','skill','name|名称|string|128;category|分類|string|128;description|説明'),...prefix(fields('EmployeeSkill','record','proficiency|習熟度|number;experienceYears|経験年数|number;notes|備考'+timestamps),'record','習熟')],{operation:'skills.read'}),
- context('participations','案件参画','workforce','project_participations record JOIN projects project ON project.id=record.project_id AND project.deleted_at IS NULL','record.employee_id=employee.id AND record.deleted_at IS NULL',[...named('Project','project','name|名称|string|128;description|説明'),...prefix(fields('ProjectParticipation','record','startsOn|開始日|date;endsOn|終了日|date;responsibility|担当内容'+timestamps),'record','参画')],{operation:'projects.read'}),
+ context('participations','案件参画','workforce','engagement_participations record JOIN engagements engagement ON engagement.id=record.engagement_id AND engagement.deleted_at IS NULL','record.employee_id=employee.id AND record.deleted_at IS NULL',[...named('Engagement','engagement','name|名称|string|128;description|説明'),...prefix(fields('EngagementParticipation','record','startsOn|開始日|date;endsOn|終了日|date;responsibility|担当内容'+timestamps),'record','参画')],{operation:'engagements.read'}),
  context('calendar','勤務カレンダー','other','work_calendars calendar','calendar.id=employee.work_calendar_id AND calendar.deleted_at IS NULL',named('WorkCalendar','calendar','name|名称|string|128;calendarYear|年度|number;countryCode|国コード|choice|2|JP,US;scheduledWorkMinutesPerDay|所定勤務時間（分）|number;description|説明|string|1000'),{operation:'calendars.read',branch:'employee.branch_id'}),
  context('calendarDays','勤務日','other','work_calendars calendar JOIN work_calendar_days day ON day.calendar_id=calendar.id AND day.deleted_at IS NULL','calendar.id=employee.work_calendar_id AND calendar.deleted_at IS NULL',fields('WorkCalendarDay','day','workDate|勤務日|date;entryType|勤務区分|string|32;title|名称|string|128;note|備考'+timestamps),{operation:'calendars.read',branch:'employee.branch_id'}),
  context('socialLinks','SNS','other','employee_social_links link','link.employee_id=employee.id AND link.deleted_at IS NULL',fields('EmployeeSocialLink','link','platform|プラットフォーム|string|32;url|URL|string|2048'+timestamps)),
@@ -116,12 +119,12 @@ employeeSearchContexts.find(ctx=>ctx.code==='roles')!.operation='roles.read';
 const refs:Record<string,[string,string,string,string,string?]>={
  branch:['branches','branch','id','name'],employmentType:['employment_types','employment_type','id','name'],group:['employee_groups','employee_group','id','name'],
  departments:['employment_departments','department','id','name'],positions:['employment_positions','position','id','name'],teams:['teams','team','id','name'],roles:['roles','role','id','name'],
- skills:['skills','skill','id','name'],participations:['projects','project','code','name'],calendar:['work_calendars','calendar','id','name'],
+ skills:['skills','skill','id','name'],participations:['engagements','engagement','code','name'],calendar:['work_calendars','calendar','id','name'],
  managedBranches:['branches','branch','id','name'],deputyManagedBranches:['branches','branch','id','name']
 };
 for(const ctx of employeeSearchContexts){const ref=refs[ctx.code];if(!ref)continue;const [table,alias,key,name]=ref;virtual(ctx,'selection','選択','choice',`${alias}.${key}::text`);ctx.fields.at(-1)!.reference={table,key,name};}
 
-export const contextsFor = (target: SearchTarget) => target === 'workflows' ? workflowSearchContexts : target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
+export const contextsFor = (target: SearchTarget) => target==='projectTickets'?ticketSearchContexts:target==='projects'?projectSearchContexts:isBusinessTarget(target) ? businessSearchContexts(target) : target === 'workflows' ? workflowSearchContexts : target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
 export function operationScope(user: AuthenticatedUser, operation: string) {
  // Related read operations must not inherit the saved-filter mutation operation.
  return requiredBranchScope({...user,activeOperation:undefined},operation);

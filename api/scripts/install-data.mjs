@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createCipheriv, randomBytes } from 'node:crypto';
 import { installBookSamples } from './install-book-samples.mjs';
+import { installProjectSamples } from './install-project-samples.mjs';
 import { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, fetchHolidayData } from './holiday-source.mjs';
 
 export const catalogFor = language => JSON.parse(readFileSync(new URL(`sample-data/${language}.json`, import.meta.url), 'utf8'));
@@ -38,7 +39,7 @@ export async function insert(client, table, data) {
 }
 
 async function allowInitialOfficialWidgets(client) {
- const bundled = JSON.parse(readFileSync(new URL('../widgets/seed-catalogue.json', import.meta.url), 'utf8')).widgets;
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/catalogue.json', import.meta.url), 'utf8')).widgets;
  for (const definition of bundled) {
   const result = await client.query(`
    UPDATE widget_approvals a SET allowed = true
@@ -83,9 +84,8 @@ export async function initializeRequiredData(client, catalog, input) {
 
 export async function assertSampleDatabaseEmpty(client) {
 
- // m0032 installs only the reviewed official catalogue before initial setup.
- // Treat precisely that immutable seed as infrastructure, never user content.
- const bundled = JSON.parse(readFileSync(new URL('../widgets/seed-catalogue.json', import.meta.url), 'utf8')).widgets;
+ // Fresh installation accepts only the current seven exact bundled definitions.
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/catalogue.json', import.meta.url), 'utf8')).widgets;
  const source = await client.query("SELECT id FROM widget_sources WHERE source_key='sph-official' AND url='bundled:sph' AND deleted_at IS NULL");
  if (source.rowCount !== 1 || (await client.query('SELECT count(*)::int AS count FROM widget_sources')).rows[0].count !== 1) throw new Error('Unexpected widget sources before sample installation.');
  if ((await client.query('SELECT count(*)::int AS count FROM widget_releases')).rows[0].count !== bundled.length || (await client.query('SELECT count(*)::int AS count FROM widget_approvals')).rows[0].count !== bundled.length) throw new Error('Unexpected widget releases before sample installation.');
@@ -374,20 +374,20 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   });
  }
  // Business masters belong to the same initial-configuration transaction. Internal
- // project/team codes are deliberately omitted so PostgreSQL allocates them.
+ // engagement/team codes are deliberately omitted so PostgreSQL allocates them.
  const clientIds = [];
  for (const row of catalog.business.clients) clientIds.push(await insert(client, 'clients', {...row, notes: note}));
- const projects = [], skills = [];
- for (const [index, row] of catalog.business.projects.entries()) {
-  const id = await insert(client, 'projects', {...row, client_id: clientIds[index % clientIds.length], contract_starts_on: dayFromToday(-90 - index * 7), contract_ends_on: index % 3 === 0 ? null : dayFromToday(90 + index * 14)});
-  projects.push({id, name: row.name});
+ const engagements = [], skills = [];
+ for (const [index, row] of catalog.business.engagements.entries()) {
+  const id = await insert(client, 'engagements', {...row, client_id: clientIds[index % clientIds.length], contract_starts_on: dayFromToday(-90 - index * 7), contract_ends_on: index % 3 === 0 ? null : dayFromToday(90 + index * 14)});
+  engagements.push({id, name: row.name});
  }
  for (const row of catalog.business.skills) skills.push({id: await insert(client, 'skills', {...row, name_key: row.name.trim().toLowerCase()}), name: row.name});
  for (const row of catalog.business.teams) await insert(client, 'teams', row);
  // Three out of four active sample employees receive three distinct skills.
  // Across 216 employees, every one of 24 skills has 27 assignments, nine per
  // proficiency level. Each employee also receives all three proficiency levels.
- if (skills.length !== 24 || projects.length !== 12) throw new Error('Unexpected sample workforce catalog size.');
+ if (skills.length !== 24 || engagements.length !== 12) throw new Error('Unexpected sample workforce catalog size.');
  const skilledEmployees = employees.filter(employee => !employee.retired && !employee.deleted).filter((_, index) => index % 4 !== 3);
  const workforceHistory = async (employeeId, resource, resourceId, snapshot) => {
   const changes = Object.entries(snapshot).map(([field, after]) => ({field, before: null, after: after == null ? null : String(after)}));
@@ -409,19 +409,20 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  const eligible = skilledEmployees.filter(employee => employee.hire <= dayFromToday(-60));
  const participantCount = Math.floor(skilledEmployees.length / 2);
  if (eligible.length < participantCount) throw new Error('Insufficient sample employees for participation dates.');
- // Reproducible small, medium and large projects, in catalog order.
- const projectSizes = [18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11, 6];
- const participationProjects = projects.flatMap((project, index) => Array(projectSizes[index]).fill(project));
- if (participationProjects.length !== participantCount) throw new Error('Sample project sizes must match the participant count.');
+ // Reproducible small, medium and large engagements, in catalog order.
+ const engagementSizes = [18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11, 6];
+ const participationEngagements = engagements.flatMap((engagement, index) => Array(engagementSizes[index]).fill(engagement));
+ if (participationEngagements.length !== participantCount) throw new Error('Sample engagement sizes must match the participant count.');
  for (let index = 0; index < participantCount; index++) {
-  const employee = eligible[Math.floor(index * eligible.length / participantCount)], project = participationProjects[index];
+  const employee = eligible[Math.floor(index * eligible.length / participantCount)], engagement = participationEngagements[index];
   const phase = index % 3;
   const startsOn = dayFromToday(phase === 0 ? -60 : phase === 1 ? -30 : 14);
   const endsOn = phase === 0 ? dayFromToday(-10) : phase === 1 ? null : dayFromToday(60);
   const responsibility = displayLanguage === 'ja' ? `サンプル参画。担当スキル: ${employee.skills.join(' / ')}` : `Sample participation. Assigned skills: ${employee.skills.join(' / ')}`;
-  const id = await insert(client, 'project_participations', {employee_id: employee.id, project_id: project.id, starts_on: startsOn, ends_on: endsOn, responsibility});
-  await workforceHistory(employee.id, 'participations', id, {project: project.name, startsOn, endsOn, responsibility});
+  const id = await insert(client, 'engagement_participations', {employee_id: employee.id, engagement_id: engagement.id, starts_on: startsOn, ends_on: endsOn, responsibility});
+  await workforceHistory(employee.id, 'participations', id, {engagement: engagement.name, startsOn, endsOn, responsibility});
  }
+ await installProjectSamples(client,{adminId,displayLanguage});
  const failedBooks = await installBookSamples(client, { adminId, note: displayLanguage === 'ja' ? 'インストール時に追加した書籍紹介サンプルです。' : 'Book introduction sample added during installation.', displayLanguage });
  return { failedHolidayCountries: ['JP', 'US'].filter((_, index) => holidayImports[index].status === 'failed'), failedBooks };
 }

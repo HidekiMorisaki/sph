@@ -1,6 +1,6 @@
 {
   "skills": "スキル",
-  "projects": "案件",
+  "engagements": "案件",
   "participations": "案件参画期間",
   "information": "基本情報",
   "name": "名称",
@@ -49,7 +49,7 @@
   "periodHelp": "開始日・終了日は当日を含みます。終了日未定の場合は空欄にしてください。",
   "loadFailed": "記録を読み込めませんでした。",
   "skill": "スキル",
-  "project": "案件",
+  "engagement": "案件",
   "clients": "取引先",
   "clientId": "取引先",
   "companyName": "企業名",
@@ -74,7 +74,7 @@
   "nameExamples": {
     "clients": "東京営業所",
     "skills": "TypeScript",
-    "projects": "販売管理システム刷新"
+    "engagements": "販売管理システム刷新"
   },
   "examples": {
     "companyName": "株式会社サンプル",

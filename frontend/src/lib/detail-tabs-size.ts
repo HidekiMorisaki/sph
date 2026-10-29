@@ -1,6 +1,8 @@
+import {tabNavigationHeight} from './tab-navigation-height';
 /** Measure retained panels without mounting duplicate content or issuing requests. */
 export function detailTabsSize(host: HTMLElement): { destroy: () => void } {
 	const dialog = host.closest('dialog');
+	const originalHeight=dialog?.style.height??'';
 	let frame = 0;
 	let disposed = false;
 	const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(measure); };
@@ -13,6 +15,7 @@ export function detailTabsSize(host: HTMLElement): { destroy: () => void } {
 		if (!body || !navigation || !panels) return;
 		host.dataset.measuring = '';
 		try {
+			tabNavigationHeight(navigation);
 			const largest = Math.max(0, ...[...panels.children].map(panel => panel.getBoundingClientRect().height));
 			const number = (value: string) => parseFloat(value) || 0;
 			const style = getComputedStyle(body);
@@ -30,16 +33,19 @@ export function detailTabsSize(host: HTMLElement): { destroy: () => void } {
 		} finally { delete host.dataset.measuring; }
 	}
 	const resize = new ResizeObserver(schedule);
+	for(const panel of host.querySelectorAll<HTMLElement>('.detail-tab-panel'))resize.observe(panel);
 	if (dialog) resize.observe(dialog);
 	const mutations = new MutationObserver(schedule);
 	mutations.observe(host, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded', 'aria-busy'] });
+	host.addEventListener('load',schedule,true);
+	document.fonts.addEventListener('loadingdone',schedule);
 	window.addEventListener('resize', schedule);
 	void document.fonts.ready.then(schedule);
 	schedule();
 	return { destroy: () => {
-		disposed = true;
+		disposed = true;if(dialog)dialog.style.height=originalHeight;
 		cancelAnimationFrame(frame);
 		resize.disconnect(); mutations.disconnect();
-		window.removeEventListener('resize', schedule);
+		window.removeEventListener('resize', schedule);host.removeEventListener('load',schedule,true);document.fonts.removeEventListener('loadingdone',schedule);
 	} };
 }

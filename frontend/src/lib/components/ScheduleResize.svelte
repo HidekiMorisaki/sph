@@ -47,4 +47,4 @@
   {/snippet}
  </DetailModal>
 {:else}<span class="sr-only" role="status">{phase==='saving'?text.saving:text.loading}</span>{/if}
-<style>.resize-question{margin:0;line-height:1.7}.resize-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0;width:100%}.resize-actions :global(button){max-width:100%;white-space:normal}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+<style>.resize-question{margin:0;line-height:var(--sph-leading-1-7)}.resize-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--sph-space-8px);min-width:0;width:100%}.resize-actions :global(button){max-width:100%;white-space:normal}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>

@@ -1,14 +1,52 @@
-# Employee skills and project participation
+# Employee skills and engagement participation
 
-Skills and projects are reusable masters. Employee skills and project participation
-are separate records. Project participation does not represent an employment
+Skills and engagements are reusable masters. Employee skills and engagement participation
+are separate records. Engagement participation does not represent an employment
 contract or team membership.
 
-## Clients and project contracts
+## Engagement naming and upgrade
+
+The Business Management resource is **Engagements** in English and **案件** in
+Japanese. Its page is `/engagements`, REST resource `/v1/engagements`, search routes
+`/v1/engagement-searches` and `/v1/engagement-search-fields`. The previous
+`/projects` engagement routes are removed; those paths now belong to the separate
+General-group [Projects](Projects.md) module and never alias Engagements.
+Employee `/participations` routes retain their
+names, but their JSON uses `engagementId` and `engagement`; the old `projectId`
+input is rejected, including when a valid `engagementId` is also supplied.
+
+Consolidated migration m0037 renames Project/ProjectParticipation to
+Engagement/EngagementParticipation, `projects`/`project_participations` to
+`engagements`/`engagement_participations`, and `project_id` to `engagement_id`.
+Attached constraints, indexes, triggers and sequences follow the same terminology.
+IDs, existing codes, dates, deletion states and sequence positions are retained;
+new codes use `ENG-`. The database name and connection configuration stay the same.
+
+Operation codes become `engagements.read/create/update/delete`. Permission IDs,
+UUIDs, grants/scopes, deleted states and timestamps are retained. Session
+capabilities expose `canReadEngagements`. Saved-filter targets become `engagements`
+with their IDs, definitions, names, revisions and timestamps retained. Existing
+per-user search tabs, collapse/category/selection settings and page-size settings
+are transferred in browser storage before the new search mounts. Existing new
+settings take precedence, and other employees' preferences are untouched.
+
+Historical audit and change-history rows retain their original resource/field
+identifiers and contents. The new engagement history route also reads legacy
+`projects` rows; participation history renders both legacy `project` and current
+`engagement` field labels. New records use the new identifiers. Fixed migration
+history and existing backups are preserved. Restore an older full backup together
+with its matching application/schema, then apply the upgrade; the active-data
+backup tools require a matching current schema and stop on an unknown structure.
+Active-data exports also retain the engagement/team business-code sequence
+positions, so allocation after restore continues beyond the exported codes.
+
+This rename reserves project terminology for a separately planned feature.
+
+## Clients and engagement contracts
 
 `/clients` is a shared Business Management list. `/v1/clients` supports GET/POST,
-`/v1/clients/{id}` supports GET/PATCH/DELETE, and client/project details use
-`/v1/clients/{id}/history` and `/v1/projects/{id}/history` (GET). History requires
+`/v1/clients/{id}` supports GET/PATCH/DELETE, and client/engagement details use
+`/v1/clients/{id}/history` and `/v1/engagements/{id}/history` (GET). History requires
 the corresponding resource's read operation, independent of masters.read.
 
 Clients accept name, country/address, two phone numbers,
@@ -22,20 +60,20 @@ contactMobile (32). Name is a unique retained natural key; company names need no
 be unique. Country/postal/phone/date validation follows branches. Client forms
 reuse authenticated `/v1/postal-addresses` lookups with country-specific examples,
 user-selected suggestions, manual correction and provider attribution.
-Closing a client does not delete it. DELETE is logical and rejects active project
+Closing a client does not delete it. DELETE is logical and rejects active engagement
 references (409); names remain reserved after deletion.
 
 Client lists accept search over name, company, contact, city and notes. Sorting
 allows name, companyName, contactName, contactDepartment, contactEmail,
 contactMobile, createdAt and updatedAt, with the common pagination.
 
-Project POST/PATCH requires an active clientId and contractStartsOn (YYYY-MM-DD).
+Engagement POST/PATCH requires an active clientId and contractStartsOn (YYYY-MM-DD).
 contractEndsOn is optional and cannot precede contractStartsOn. These contract
 dates are separate from each employee's participation dates; no automatic
-participation restriction is introduced. Project responses include client name
-and company, while internal project codes remain omitted. Consolidated m0031
-creates projects with their final contract columns and code defaults. Legacy
-projects with null client/start/end require completion on the next edit.
+participation restriction is introduced. Engagement responses include client name
+and company, while internal engagement codes remain omitted. Consolidated m0031
+creates engagements with their final contract columns and code defaults. Legacy
+engagements with null client/start/end require completion on the next edit.
 Database constraints require a paired client/start
 and a valid contract period. No client or contract date is fabricated for old data.
 
@@ -46,27 +84,27 @@ custom roles use their explicitly selected DB grants. Own-branch client grants
 never authorize global writes. The branch administrator's global read follows
 the existing approved shared-master mechanism and requires an active DB grant.
 Changes and audit entries are stored in the same serializable transaction as
-the mutation. Project history snapshots store client names and date-only strings.
+the mutation. Engagement history snapshots store client names and date-only strings.
 
 ## Input and period rules
 
 - Skill names are 1–128 characters, with optional category (128 characters) and
   description (5,000 characters). Leading/trailing whitespace and letter case do
   not distinguish names. Names remain reserved after logical deletion.
-- Project codes are internal identifiers allocated by PostgreSQL (`PRJ-1`,
-  `PRJ-2`, …). Existing codes remain unchanged and reserved after logical deletion.
-  Codes cannot be supplied on POST/PATCH and are omitted from project/participation REST responses,
+- Engagement codes are internal identifiers allocated by PostgreSQL (`ENG-1`,
+  `ENG-2`, …). Pre-migration `PRJ-` codes remain unchanged and reserved after logical deletion.
+  Codes cannot be supplied on POST/PATCH and are omitted from engagement/participation REST responses,
   forms, lists, details and participation history. Sequence gaps are allowed.
-  Projects are selected and displayed by name. Names need not be unique.
+  Engagements are selected and displayed by name. Names need not be unique.
 - Employees can have multiple skills, with one active record per skill.
   Proficiency is 1 (needs guidance), 2 (works independently), or 3 (can guide
   others). Experience is optional, 0–80 years in 0.1-year increments.
 - Participation has a required start date, optional end date and responsibility
   (5,000 characters). Both dates are inclusive. End cannot precede start; an empty
   end date means undecided.
-- Different projects may overlap. Periods for the same employee and project cannot
+- Different engagements may overlap. Periods for the same employee and engagement cannot
   overlap, including a shared boundary date. Re-entry creates a separate record;
-  employee/project/start-date remains unique even after logical deletion.
+  employee/engagement/start-date remains unique even after logical deletion.
 - Status uses the business date in Asia/Tokyo: planned before start, active from
   start through end, ended after end. An undecided end remains active after start.
 - Deleting a master referenced by active records of an active employee is rejected.
@@ -83,8 +121,8 @@ returns 422; duplicates, period overlap and in-use masters return 409.
 | --- | --- | --- |
 | /v1/skills | GET, POST | name, category, description, createdAt, updatedAt |
 | /v1/skills/{id} | GET, PATCH, DELETE | — |
-| /v1/projects | GET, POST | name, description, contractStartsOn, contractEndsOn, createdAt, updatedAt |
-| /v1/projects/{id} | GET, PATCH, DELETE | — |
+| /v1/engagements | GET, POST | name, description, contractStartsOn, contractEndsOn, createdAt, updatedAt |
+| /v1/engagements/{id} | GET, PATCH, DELETE | — |
 | /v1/employees/{id}/skills | GET, POST | proficiency, experienceYears, createdAt, updatedAt |
 | /v1/employees/{id}/skills/{recordId} | PATCH, DELETE | — |
 | /v1/employees/{id}/participations | GET, POST | startsOn, endsOn, createdAt, updatedAt |
@@ -92,9 +130,9 @@ returns 422; duplicates, period overlap and in-use masters return 409.
 | /v1/employees/{id}/workforce-history | GET | createdAt |
 
 Master lists accept search. Employee skill writes use skillId, proficiency,
-experienceYears, notes; participation writes use projectId, startsOn, endsOn,
+experienceYears, notes; participation writes use engagementId, startsOn, endsOn,
 responsibility. PATCH supplies the full editable record; its referenced skill or
-project cannot change. Create a new record to choose another master. Employee
+engagement cannot change. Create a new record to choose another master. Employee
 record list metadata includes target-specific editable flags for create/update/delete.
 
 The employee list adds:
@@ -115,7 +153,7 @@ with active status or an omitted status.
 ## Permissions and initial roles
 
 Masters use independent skills.read/create/update/delete and
-projects.read/create/update/delete permissions. Employee writes use
+engagements.read/create/update/delete permissions. Employee writes use
 employees.skills.create/update/delete and employees.participations.create/update/delete.
 Record/history reading follows employees.read and its branch scope.
 
@@ -135,16 +173,16 @@ staffing suggestions, allocation, or automated notifications.
 
 ## Optional installer examples
 
-Both languages include 24 skills, 12 projects, six clients and six teams.
+Both languages include 24 skills, 12 engagements, six clients and six teams.
 Among 360 sample employees, 216 active employees have three skills each (648
 records). Every skill has 27 assignments: nine at each proficiency level. Each
 employee has one skill at each of the three levels. Experience examples use
 0.5, 1.5 and 2.5 years. Selection and rotation are deterministic.
 
-Of the skilled employees, 108 participate in projects. In catalog order, project
+Of the skilled employees, 108 participate in engagements. In catalog order, engagement
 sizes are 18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11 and 6 people, with
 36 ended, 36 active and 36 planned examples. Past participation starts after
-the employee's hire date and project contract start; dated ends fit the contract.
+the employee's hire date and engagement contract start; dated ends fit the contract.
 Responsibilities identify the employee's sample skills. Workforce history and
 sample-import audit records accompany every skill and participation.
 

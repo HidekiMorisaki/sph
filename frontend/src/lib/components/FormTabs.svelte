@@ -87,12 +87,12 @@
 </div>
 
 <style>
-	.form-tabs{display:grid;gap:16px;min-width:0;grid-column:1/-1}
-	.form-tabs-card{position:sticky;top:0;z-index:3;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+	.form-tabs{display:grid;gap:var(--sph-space-16px);min-width:0;grid-column:1/-1}
+	.form-tabs-card{position:sticky;top:0;z-index:3;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px)}
 	.form-tabs-card::before{content:"";position:absolute;top:calc(-1px - var(--sticky-tab-backdrop-height,24px));left:-25px;right:-25px;height:var(--sticky-tab-backdrop-height,24px);background:var(--bg);pointer-events:none}
-	.form-tabs-card :global(.page-tabs){margin:0;border:0;border-radius:6px}
-	.form-tabs-panels{display:grid;gap:16px;min-width:0;position:relative}
-	.form-tabs-panels > :global([data-form-panel]){display:grid;gap:16px;min-width:0}
+	.form-tabs-card :global(.page-tabs){margin:0;border:0;border-radius:var(--sph-radius-6px)}
+	.form-tabs-panels{display:grid;gap:var(--sph-space-16px);min-width:0;position:relative}
+	.form-tabs-panels > :global([data-form-panel]){display:grid;gap:var(--sph-space-16px);min-width:0}
 	.form-tabs-panels > :global([data-form-panel][hidden]){display:none!important}
 	.form-tabs:global([data-measuring]) .form-tabs-panels > :global([data-form-panel]){display:grid!important;position:absolute;inset:0 0 auto;visibility:hidden}
 	@media(max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.form-tabs-card::before{left:-17px;right:-17px}}

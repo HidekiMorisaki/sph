@@ -5,10 +5,10 @@ export type ClientTextField = typeof clientTextFields[number];
 export type WorkforceMaster = Partial<Record<ClientTextField,string|null>> & {
  countryCode?:string; notes?:string|null;
  clientId?:number|null; client?:{id:number;name:string;companyName:string}|null; contractStartsOn?:string|null; contractEndsOn?:string|null; id:number; name:string; category?:string|null; description:string|null; createdAt:string; updatedAt:string };
-export type WorkforceRecord = { id:number; employeeId:number; skillId?:number; projectId?:number; proficiency?:number; experienceYears?:number|null; notes?:string|null; startsOn?:string; endsOn?:string|null; responsibility?:string|null; participationStatus?:'planned'|'active'|'ended'; skill?:WorkforceMaster; project?:WorkforceMaster };
+export type WorkforceRecord = { id:number; employeeId:number; skillId?:number; engagementId?:number; proficiency?:number; experienceYears?:number|null; notes?:string|null; startsOn?:string; endsOn?:string|null; responsibility?:string|null; participationStatus?:'planned'|'active'|'ended'; skill?:WorkforceMaster; engagement?:WorkforceMaster };
 export type RecordKind = 'skills'|'participations';
 export type RecordContext = { kind:RecordKind; record:WorkforceRecord|null; trigger:HTMLElement; deleting?:boolean };
-export async function workforceOptions(kind:'skills'|'projects'|'clients'):Promise<WorkforceMaster[]> {
+export async function workforceOptions(kind:'skills'|'engagements'|'clients'):Promise<WorkforceMaster[]> {
  const items:WorkforceMaster[]=[];
  for(let offset=0;;offset+=500) {
   const response=await fetch('/v1/'+kind+'?limit=500&offset='+offset+'&sortBy=name');

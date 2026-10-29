@@ -28,6 +28,6 @@
 </span>
 
 <style>
-	.country-flag{display:inline-flex;flex:none;align-self:center;line-height:0}
-	svg{display:block;width:1.9em;height:1em;border:1px solid var(--border);border-radius:2px}
+	.country-flag{display:inline-flex;flex:none;align-self:center;line-height:var(--sph-leading-0)}
+	svg{display:block;width:1.9em;height:1em;border:1px solid var(--border);border-radius:var(--sph-radius-2px)}
 </style>

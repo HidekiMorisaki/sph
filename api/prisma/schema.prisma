@@ -157,6 +157,14 @@ enum DisposalDatePolicy {
 }
 
 model Employee {
+  projectMemberemployeeId     ProjectMember[]            @relation("ProjectMemberemployeeId")
+  projectTicketassigneeId     ProjectTicket[]            @relation("ProjectTicketassigneeId")
+  projectTicketauthorId       ProjectTicket[]            @relation("ProjectTicketauthorId")
+  projectCommentauthorId      ProjectComment[]           @relation("ProjectCommentauthorId")
+  projectTimeEntryemployeeId  ProjectTimeEntry[]         @relation("ProjectTimeEntryemployeeId")
+  projectWatcheremployeeId    ProjectWatcher[]           @relation("ProjectWatcheremployeeId")
+  projectAttachmentuploaderId ProjectAttachment[]        @relation("ProjectAttachmentuploaderId")
+  projectHistoryactorId       ProjectHistory[]           @relation("ProjectHistoryactorId")
   workflowRequests WorkflowRequest[] @relation("WorkflowApplicant")
   workflowSteps WorkflowStep[] @relation("WorkflowApprover")
   workflowActions WorkflowAction[] @relation("WorkflowActor")
@@ -166,7 +174,7 @@ model Employee {
   notificationReceipts NotificationRecipient[]
   savedSearchFilters SavedSearchFilter[]
   skills EmployeeSkill[]
-  projectParticipations ProjectParticipation[]
+  engagementParticipations EngagementParticipation[]
   workforceHistory WorkforceChangeHistory[] @relation("WorkforceSubject")
   workforceActions WorkforceChangeHistory[] @relation("WorkforceActor")
   id                      Int                     @id @default(autoincrement())
@@ -282,6 +290,8 @@ model EmployeeSettings {
   timeZone           String    @default("Asia/Tokyo") @map("time_zone") @db.VarChar(64)
   displayLanguage    String    @default("en") @map("display_language") @db.VarChar(64)
   displayCurrency    String    @default("USD") @map("display_currency") @db.VarChar(3)
+  projectColumns     Json? @map("project_columns") @db.JsonB
+  projectTicketColumns Json? @map("project_ticket_columns") @db.JsonB
   analyticsSelection Json?     @map("analytics_selection") @db.JsonB
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -540,27 +550,28 @@ model Client {
   contactDepartment       String?   @map("contact_department") @db.VarChar(128)
   contactEmail            String?   @map("contact_email") @db.VarChar(254)
   contactMobile           String?   @map("contact_mobile") @db.VarChar(32)
-  projects                Project[]
+  engagements                Engagement[]
 
   @@map("clients")
 }
 
-model Project {
+model Engagement {
+  projectengagementId Project[]                 @relation("ProjectengagementId")
   clientId Int? @map("client_id")
   contractStartsOn DateTime? @map("contract_starts_on") @db.Date
   contractEndsOn DateTime? @map("contract_ends_on") @db.Date
   client Client? @relation(fields: [clientId], references: [id], onDelete: Restrict)
   id             Int                    @id @default(autoincrement())
-  code           String                 @unique @default(dbgenerated("('PRJ-'::text || (nextval('project_code_seq'::regclass))::text)")) @db.VarChar(64)
+  code           String                 @unique @default(dbgenerated("('ENG-'::text || (nextval('engagement_code_seq'::regclass))::text)")) @db.VarChar(64)
   name           String                 @db.VarChar(128)
   description    String?                @db.VarChar(5000)
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt      DateTime?              @map("deleted_at") @db.Timestamptz(3)
-  participations ProjectParticipation[]
+  participations EngagementParticipation[]
 
   @@index([clientId])
-  @@map("projects")
+  @@map("engagements")
 }
 
 model EmployeeSkill {
@@ -581,10 +592,10 @@ model EmployeeSkill {
   @@map("employee_skills")
 }
 
-model ProjectParticipation {
+model EngagementParticipation {
   id             Int       @id @default(autoincrement())
   employeeId     Int       @map("employee_id")
-  projectId      Int       @map("project_id")
+  engagementId      Int       @map("engagement_id")
   startsOn       DateTime  @map("starts_on") @db.Date
   endsOn         DateTime? @map("ends_on") @db.Date
   responsibility String?   @db.VarChar(5000)
@@ -592,11 +603,11 @@ model ProjectParticipation {
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
   employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  project        Project   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  engagement        Engagement   @relation(fields: [engagementId], references: [id], onDelete: Restrict)
 
-  @@unique([employeeId, projectId, startsOn])
-  @@index([projectId, endsOn])
-  @@map("project_participations")
+  @@unique([employeeId, engagementId, startsOn])
+  @@index([engagementId, endsOn])
+  @@map("engagement_participations")
 }
 
 model WorkforceChangeHistory {
@@ -1810,4 +1821,282 @@ model NotificationRecipient {
   @@unique([notificationId, employeeId])
   @@index([employeeId, readAt, deletedAt])
   @@map("notification_recipients")
+}
+
+model Project {
+  id                             Int                     @id @default(autoincrement())
+  code                           String                  @unique @default(dbgenerated("('PJT-'::text || nextval('project_code_seq'::regclass))::text)"))
+  name                           String                  @db.VarChar(128)
+  description                    String                  @default("")
+  visibility                     String                  @default("private")
+  status                         String                  @default("active")
+  engagementId                   Int?                    @map("engagement_id")
+  revision                       Int                     @default(1)
+  nextTicketNumber               Int                     @default(1) @map("next_ticket_number")
+  createdAt                      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                      DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  engagement                     Engagement?             @relation("ProjectengagementId", fields: [engagementId], references: [id], onDelete: Restrict)
+  projectMemberprojectId         ProjectMember[]         @relation("ProjectMemberprojectId")
+  projectTicketTypeprojectId     ProjectTicketType[]     @relation("ProjectTicketTypeprojectId")
+  projectTicketStatusprojectId   ProjectTicketStatus[]   @relation("ProjectTicketStatusprojectId")
+  projectTypeStatusprojectId     ProjectTypeStatus[]     @relation("ProjectTypeStatusprojectId")
+  projectTicketprojectId         ProjectTicket[]         @relation("ProjectTicketprojectId")
+  projectTicketRelationprojectId ProjectTicketRelation[] @relation("ProjectTicketRelationprojectId")
+  projectHistoryprojectId        ProjectHistory[]        @relation("ProjectHistoryprojectId")
+
+  @@index([engagementId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id         Int       @id @default(autoincrement())
+  projectId  Int       @map("project_id")
+  employeeId Int       @map("employee_id")
+  role       String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  project    Project   @relation("ProjectMemberprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  employee   Employee  @relation("ProjectMemberemployeeId", fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, employeeId])
+  @@index([projectId])
+  @@index([employeeId])
+  @@map("project_members")
+}
+
+model ProjectTicketType {
+  milestone Boolean @default(false)
+  id                      Int                 @id @default(autoincrement())
+  projectId               Int                 @map("project_id")
+  name                    String              @db.VarChar(64)
+  position                Int                 @default(0)
+  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt               DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  project                 Project             @relation("ProjectTicketTypeprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  projectTypeStatustypeId ProjectTypeStatus[] @relation("ProjectTypeStatustypeId")
+  projectTickettypeId     ProjectTicket[]     @relation("ProjectTickettypeId")
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_ticket_types")
+}
+
+model ProjectTicketStatus {
+  id                        Int                 @id @default(autoincrement())
+  projectId                 Int                 @map("project_id")
+  name                      String              @db.VarChar(64)
+  category                  String              @default("open")
+  position                  Int                 @default(0)
+  createdAt                 DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                 DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  project                   Project             @relation("ProjectTicketStatusprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  projectTypeStatusstatusId ProjectTypeStatus[] @relation("ProjectTypeStatusstatusId")
+  projectTicketstatusId     ProjectTicket[]     @relation("ProjectTicketstatusId")
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_ticket_statuses")
+}
+
+model ProjectTypeStatus {
+  id        Int                 @id @default(autoincrement())
+  projectId Int                 @map("project_id")
+  typeId    Int                 @map("type_id")
+  statusId  Int                 @map("status_id")
+  position  Int                 @default(0)
+  initial   Boolean             @default(false)
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  project   Project             @relation("ProjectTypeStatusprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  type      ProjectTicketType   @relation("ProjectTypeStatustypeId", fields: [typeId], references: [id], onDelete: Restrict)
+  status    ProjectTicketStatus @relation("ProjectTypeStatusstatusId", fields: [statusId], references: [id], onDelete: Restrict)
+
+  @@unique([typeId, statusId])
+  @@index([projectId])
+  @@index([typeId])
+  @@index([statusId])
+  @@map("project_type_statuses")
+}
+
+model ProjectTicket {
+  id                          Int                     @id @default(autoincrement())
+  projectId                   Int                     @map("project_id")
+  number                      Int
+  parentId                    Int?                    @map("parent_id")
+  typeId                      Int                     @map("type_id")
+  statusId                    Int                     @map("status_id")
+  title                       String                  @db.VarChar(255)
+  description                 String                  @default("")
+  assigneeId                  Int?                    @map("assignee_id")
+  authorId                    Int                     @map("author_id")
+  priority                    String                  @default("normal")
+  startsOn                    DateTime?               @map("starts_on") @db.Date
+  dueOn                       DateTime?               @map("due_on") @db.Date
+  estimatedMinutes            Int                     @default(0) @map("estimated_minutes")
+  position                    Int                     @default(0)
+  labels                      Json                    @default("[]")
+  revision                    Int                     @default(1)
+  createdAt                   DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                   DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  project                     Project                 @relation("ProjectTicketprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  parent                      ProjectTicket?          @relation("ProjectTicketparentId", fields: [parentId], references: [id], onDelete: Restrict)
+  type                        ProjectTicketType       @relation("ProjectTickettypeId", fields: [typeId], references: [id], onDelete: Restrict)
+  status                      ProjectTicketStatus     @relation("ProjectTicketstatusId", fields: [statusId], references: [id], onDelete: Restrict)
+  assignee                    Employee?               @relation("ProjectTicketassigneeId", fields: [assigneeId], references: [id], onDelete: Restrict)
+  author                      Employee                @relation("ProjectTicketauthorId", fields: [authorId], references: [id], onDelete: Restrict)
+  projectTicketparentId       ProjectTicket[]         @relation("ProjectTicketparentId")
+  projectTicketRelationfromId ProjectTicketRelation[] @relation("ProjectTicketRelationfromId")
+  projectTicketRelationtoId   ProjectTicketRelation[] @relation("ProjectTicketRelationtoId")
+  projectCommentticketId      ProjectComment[]        @relation("ProjectCommentticketId")
+  projectChecklistticketId    ProjectChecklist[]      @relation("ProjectChecklistticketId")
+  projectTimeEntryticketId    ProjectTimeEntry[]      @relation("ProjectTimeEntryticketId")
+  projectWatcherticketId      ProjectWatcher[]        @relation("ProjectWatcherticketId")
+  projectAttachmentticketId   ProjectAttachment[]     @relation("ProjectAttachmentticketId")
+  projectHistoryticketId      ProjectHistory[]        @relation("ProjectHistoryticketId")
+
+  @@unique([projectId, number])
+  @@index([projectId])
+  @@index([parentId])
+  @@index([typeId])
+  @@index([statusId])
+  @@index([assigneeId])
+  @@index([authorId])
+  @@map("project_tickets")
+}
+
+model ProjectTicketRelation {
+  id        Int           @id @default(autoincrement())
+  projectId Int           @map("project_id")
+  fromId    Int           @map("from_id")
+  toId      Int           @map("to_id")
+  kind      String
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  project   Project       @relation("ProjectTicketRelationprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  from      ProjectTicket @relation("ProjectTicketRelationfromId", fields: [fromId], references: [id], onDelete: Restrict)
+  to        ProjectTicket @relation("ProjectTicketRelationtoId", fields: [toId], references: [id], onDelete: Restrict)
+
+  @@unique([fromId, toId, kind])
+  @@index([projectId])
+  @@index([fromId])
+  @@index([toId])
+  @@map("project_ticket_relations")
+}
+
+model ProjectComment {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int           @map("ticket_id")
+  authorId  Int           @map("author_id")
+  body      String
+  revision  Int           @default(1)
+  recordKey String        @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  ticket    ProjectTicket @relation("ProjectCommentticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+  author    Employee      @relation("ProjectCommentauthorId", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@map("project_comments")
+}
+
+model ProjectChecklist {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int           @map("ticket_id")
+  text      String        @db.VarChar(500)
+  completed Boolean       @default(false)
+  position  Int           @default(0)
+  recordKey String        @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  ticket    ProjectTicket @relation("ProjectChecklistticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@map("project_checklists")
+}
+
+model ProjectTimeEntry {
+  id         Int           @id @default(autoincrement())
+  ticketId   Int           @map("ticket_id")
+  employeeId Int           @map("employee_id")
+  workDate   DateTime      @map("work_date") @db.Date
+  minutes    Int
+  note       String        @default("")
+  revision   Int           @default(1)
+  recordKey  String        @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  ticket     ProjectTicket @relation("ProjectTimeEntryticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+  employee   Employee      @relation("ProjectTimeEntryemployeeId", fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([employeeId])
+  @@map("project_time_entries")
+}
+
+model ProjectWatcher {
+  id         Int           @id @default(autoincrement())
+  ticketId   Int           @map("ticket_id")
+  employeeId Int           @map("employee_id")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  ticket     ProjectTicket @relation("ProjectWatcherticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+  employee   Employee      @relation("ProjectWatcheremployeeId", fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([ticketId, employeeId])
+  @@index([ticketId])
+  @@index([employeeId])
+  @@map("project_watchers")
+}
+
+model ProjectAttachment {
+  id         Int           @id @default(autoincrement())
+  ticketId   Int           @map("ticket_id")
+  uploaderId Int           @map("uploader_id")
+  name       String        @db.VarChar(255)
+  mime       String
+  size       Int
+  content    Bytes         @db.ByteA
+  recordKey  String        @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt  DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  ticket     ProjectTicket @relation("ProjectAttachmentticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+  uploader   Employee      @relation("ProjectAttachmentuploaderId", fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([uploaderId])
+  @@map("project_attachments")
+}
+
+model ProjectHistory {
+  id        Int            @id @default(autoincrement())
+  projectId Int            @map("project_id")
+  ticketId  Int?           @map("ticket_id")
+  actorId   Int            @map("actor_id")
+  kind      String
+  detail    Json
+  recordKey String         @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  project   Project        @relation("ProjectHistoryprojectId", fields: [projectId], references: [id], onDelete: Restrict)
+  ticket    ProjectTicket? @relation("ProjectHistoryticketId", fields: [ticketId], references: [id], onDelete: Restrict)
+  actor     Employee       @relation("ProjectHistoryactorId", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@index([ticketId])
+  @@index([actorId])
+  @@map("project_history")
 }

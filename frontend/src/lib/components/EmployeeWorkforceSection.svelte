@@ -24,7 +24,7 @@
   try{const empty={all:[] as WorkforceRecord[],operations:{}};const [s,p,h]=await Promise.all([only==='participations'?Promise.resolve(empty):records('skills'),only==='skills'?Promise.resolve(empty):records('participations'),only?Promise.resolve([]):histories()]);if(current!==requestId)return;skills=s.all;participations=p.all;history=h;editable={skills:s.operations,participations:p.operations};}catch{if(current===requestId)error=true;}finally{if(current===requestId)loading=false;}
  }
  $effect(()=>{employeeId;void refresh();return()=>{requestId++;};});
- let fields=$derived({skill:text.skill,project:text.project,proficiency:text.proficiency,experienceYears:text.experienceYears,notes:text.notes,startsOn:text.startsOn,endsOn:text.endsOn,responsibility:text.responsibility});
+ let fields=$derived({skill:text.skill,engagement:text.engagement,project:text.engagement,proficiency:text.proficiency,experienceYears:text.experienceYears,notes:text.notes,startsOn:text.startsOn,endsOn:text.endsOn,responsibility:text.responsibility});
  const formatters={proficiency:(value:string)=>level(Number(value))};
 </script>
 {#each (only?[only]:['skills','participations']) as rawKind}{@const kind=rawKind as RecordKind}{@const items=kind==='skills'?skills:participations}
@@ -33,7 +33,7 @@
   <div class="section-heading"><h3>{text[kind]}</h3>{#if !readOnly&&editable[kind].create}<AddButton iconOnly label={text.add+' · '+text[kind]} onclick={event=>onEdit({kind,record:null,trigger:event.currentTarget as HTMLElement})}/>{/if}</div>
   {#if loading}<p>{common.loading}</p>{:else if error}<p role="alert">{text.loadFailed}</p>{:else if !items.length}<p>{text.noRecords}</p>{:else}
   <div class="record-list">{#each items as item}<article>
-   <div class="record-heading"><strong>{item.skill?.name??item.project?.name}</strong><DetailActionButtons editing editLabel={text.edit} deleteLabel={common.delete} onEdit={!readOnly&&editable[kind].update?trigger=>onEdit({kind,record:item,trigger}):undefined} onDelete={!readOnly&&editable[kind].delete?trigger=>onEdit({kind,record:item,deleting:true,trigger}):undefined}/></div>
+   <div class="record-heading"><strong>{item.skill?.name??item.engagement?.name}</strong><DetailActionButtons editing editLabel={text.edit} deleteLabel={common.delete} onEdit={!readOnly&&editable[kind].update?trigger=>onEdit({kind,record:item,trigger}):undefined} onDelete={!readOnly&&editable[kind].delete?trigger=>onEdit({kind,record:item,deleting:true,trigger}):undefined}/></div>
    <dl class="app-detail-grid">{#if kind==='skills'}<div><dt>{text.proficiency}</dt><dd>{level(item.proficiency)}</dd></div><div><dt>{text.experienceYears}</dt><dd>{item.experienceYears??'-'}</dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{item.notes}</dd></div>
    {:else}<div><dt>{text.participationStatus}</dt><dd>{item.participationStatus?text[item.participationStatus]:''}</dd></div><div><dt>{text.startsOn}</dt><dd>{formatDate(item.startsOn,$localization)}</dd></div><div><dt>{text.endsOn}</dt><dd>{item.endsOn?formatDate(item.endsOn,$localization):text.unknownEnd}</dd></div><div class="app-detail-wide"><dt>{text.responsibility}</dt><dd class="app-detail-notes">{item.responsibility}</dd></div>{/if}</dl>
   </article>{/each}</div>{/if}
@@ -48,4 +48,4 @@
  {@render historyContent(workforceHistory)}
 </div>
 {/if}
-<style>.workforce-panel{display:grid;gap:16px;min-width:0}.workforce-panel[hidden]{display:none}.section-heading,.record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-heading h3{margin:0}.section-heading{margin-bottom:12px}.record-list{display:grid;gap:12px}.record-list article{padding:12px;border:1px solid var(--border);border-radius:4px}.record-heading{margin-bottom:8px}.workforce-section p{color:var(--muted);font-size:var(--font-size-body)}strong{font-size:var(--font-size-body);overflow-wrap:anywhere}</style>
+<style>.workforce-panel{display:grid;gap:var(--sph-space-16px);min-width:0}.workforce-panel[hidden]{display:none}.section-heading,.record-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-12px)}.section-heading h3{margin:0}.section-heading{margin-bottom:var(--sph-space-12px)}.record-list{display:grid;gap:var(--sph-space-12px)}.record-list article{padding:var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-4px)}.record-heading{margin-bottom:var(--sph-space-8px)}.workforce-section p{color:var(--muted);font-size:var(--font-size-body)}strong{font-size:var(--font-size-body);overflow-wrap:anywhere}</style>

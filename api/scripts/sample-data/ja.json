@@ -50,7 +50,7 @@
         "contact_email": "sample-client-6@example.test"
       }
     ],
-    "projects": [
+    "engagements": [
       {
         "name": "販売管理システム刷新",
         "description": "架空のサンプル案件。受注・売上・請求業務を統合し、既存データの移行と利用部門への展開を行う案件。"

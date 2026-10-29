@@ -16,10 +16,28 @@ export type SearchConfiguration = {
 	fields: SearchFieldsConfiguration;
 };
 
+function businessConfiguration(target: 'teams'|'skills'|'clients'|'engagements'|'projects'): SearchConfiguration {
+ const rootContext = target.slice(0,-1);
+ return {
+  fieldsEndpoint:`/v1/${rootContext}-search-fields`,keywordExample:target+'Keyword',filterNameExample:target+'FilterName',
+  fields:{rootContext,initialSection:'basic',sections(contexts){
+   const fields=(contexts.find(context=>context.code===rootContext)?.fields??[]).map(field=>({context:rootContext,field,root:true,numericRange:field.type==='number',minimum:field.type==='number'?'0':undefined,step:field.type==='number'?'1':undefined,exampleCode:field.code==='name'?target+'Name':field.code}));
+   const contact=['contactName','contactDepartment','contactEmail','contactMobile','countryCode','postalCode','prefecture','city','streetAddress','buildingName','phoneNumber1','phoneNumber2','faxNumber1','faxNumber2'];
+   const management=['createdAt','updatedAt'];
+   return [{code:'basic',fields:fields.filter(item=>!management.includes(item.field.code)&&!contact.includes(item.field.code))},
+    ...(target==='clients'?[{code:'contact',fields:fields.filter(item=>contact.includes(item.field.code))}]:[]),
+    {code:'management',fields:fields.filter(item=>management.includes(item.field.code))},{code:'quick',fields:[]}];
+  },widths:{name:'256px',description:'320px',notes:'320px',companyName:'256px',clientName:'256px',contactEmail:'272px',streetAddress:'256px',buildingName:'240px',memberCount:'224px'}}
+ };
+}
+
 // Page-specific definitions only. SearchPanel and SearchFields own the shared
 // interaction, rendering, persistence and condition conversion. API definitions
 // remain the authority for which fields and related contexts are available.
 export const searchConfigurations: Record<SearchTarget, SearchConfiguration> = {
+ projectTickets:{fieldsEndpoint:'/v1/project-ticket-search-fields',keywordExample:'projectsKeyword',filterNameExample:'projectsFilterName',fields:{rootContext:'ticket',initialSection:'basic',sections(contexts){const fields=(contexts.find(c=>c.code==='ticket')?.fields??[]).map(field=>({context:'ticket',field,root:true}));return [{code:'basic',fields:fields.filter(f=>!['createdAt','updatedAt'].includes(f.field.code))},{code:'management',fields:fields.filter(f=>['createdAt','updatedAt'].includes(f.field.code))},{code:'quick',fields:[]}];}}},
+ projects:businessConfiguration('projects'),
+ teams:businessConfiguration('teams'),skills:businessConfiguration('skills'),clients:businessConfiguration('clients'),engagements:businessConfiguration('engagements'),
  workflows: {
   fieldsEndpoint:'/v1/workflow-search-fields',keywordExample:'workflowKeyword',filterNameExample:'workflowFilterName',
   fields:{rootContext:'workflow',initialSection:'basic',sections(contexts){

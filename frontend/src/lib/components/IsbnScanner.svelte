@@ -107,11 +107,11 @@
 </section>
 
 <style>
-	.isbn-scanner{grid-column:1/-1;display:grid;min-width:0;gap:12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
-	header{display:flex;align-items:center;justify-content:space-between;gap:12px}h3{margin:0;font-size:var(--font-size-subsection)}
-	video{width:100%;max-height:min(300px,35dvh);object-fit:contain;background:#111;border-radius:4px}video[hidden]{display:none}
+	.isbn-scanner{grid-column:1/-1;display:grid;min-width:0;gap:var(--sph-space-12px);padding:var(--sph-space-16px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px)}
+	header{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-12px)}h3{margin:0;font-size:var(--font-size-subsection)}
+	video{width:100%;max-height:min(300px,35dvh);object-fit:contain;background:var(--sph-color-print-ink);border-radius:var(--sph-radius-4px)}video[hidden]{display:none}
 	p{margin:0;overflow-wrap:anywhere;color:var(--text-secondary);font-size:var(--font-size-support)}.privacy{color:var(--muted)}
-	:global(button[data-button-scope="button-f28ad15111"]){justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}:global(.scan-close[data-button-scope="button-f28ad15111"]){flex:none}
+	:global(button[data-button-scope="button-f28ad15111"]){justify-self:start;min-height:44px;padding:var(--sph-space-8px) var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text);font:inherit;cursor:pointer}:global(.scan-close[data-button-scope="button-f28ad15111"]){flex:none}
 	:global(button:hover[data-button-scope="button-f28ad15111"]){background:var(--surface-hover,var(--surface-secondary))}:global(button:focus-visible[data-button-scope="button-f28ad15111"]){outline:2px solid var(--primary);outline-offset:2px}
 	@media(max-width:480px){header{align-items:start;flex-direction:column}}
 </style>

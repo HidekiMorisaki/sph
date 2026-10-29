@@ -1,10 +1,11 @@
 <script lang="ts">
+ import InfoIconButton from './InfoIconButton.svelte';
 	import { onMount, type Snippet } from 'svelte';
 	import { localization } from '$lib/localization';
 	import { localeMessages } from '$lib/locale-messages';
-	let { label, children }: { label: string; children: Snippet } = $props();
+	let { label, children, showHeading = true }: { label: string; children: Snippet; showHeading?: boolean } = $props();
 	const id = $props.id();
-	let trigger: HTMLButtonElement;
+	let trigger = $state<HTMLButtonElement>();
 	let panel: HTMLDivElement;
 	let expanded = $state(false), left = $state(8), top = $state(8);
 	function position() {
@@ -30,19 +31,16 @@
 	});
 </script>
 
-<button bind:this={trigger} type="button" class="info-trigger" aria-label={label} aria-expanded={expanded} aria-controls={id} aria-haspopup="dialog" onclick={toggle} onkeydown={keydown}>
-	<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v1"/></svg>
-</button>
+<InfoIconButton bind:element={trigger} class="info-trigger" label={label} aria-expanded={expanded} aria-controls={id} aria-haspopup="dialog" onclick={toggle} onkeydown={keydown}/>
 <div bind:this={panel} {id} class="info-popover" popover="auto" role="dialog" aria-label={label} tabindex="-1" style:left={`${left}px`} style:top={`${top}px`} ontoggle={() => expanded = panel?.matches(':popover-open') ?? false} onkeydown={keydown}>
-	<div class="info-heading"><strong>{label}</strong><button type="button" class="info-close" aria-label={localeMessages[$localization.displayLanguage].common.close} onclick={close}>×</button></div>
+	{#if showHeading}<div class="info-heading"><strong>{label}</strong><button type="button" class="info-close" aria-label={localeMessages[$localization.displayLanguage].common.close} onclick={close}>×</button></div>{/if}
 	{@render children()}
 </div>
 
 <style>
-	.info-trigger{display:inline-flex;flex:none;align-items:center;justify-content:center;width:20px;height:20px;margin:0;padding:1px;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;vertical-align:middle}
-	.info-trigger svg{width:18px;height:18px}.info-trigger:hover{color:var(--text);background:var(--surface-hover,var(--surface-secondary))}.info-trigger:focus-visible,.info-close:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
-	.info-popover{position:fixed;inset:auto;margin:0;width:360px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);box-shadow:0 8px 24px #0003;font-size:var(--font-size-support);font-weight:400;line-height:1.6;overflow-wrap:anywhere}
-	.info-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.info-close{display:grid;place-items:center;flex:none;width:28px;height:28px;margin:0;padding:0;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+	.info-close:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
+	.info-popover{position:fixed;inset:auto;margin:0;width:360px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;padding:var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:var(--surface);color:var(--text);box-shadow:var(--sph-shadow-popover);font-size:var(--font-size-support);font-weight:var(--sph-weight-400);line-height:var(--sph-leading-1-6);overflow-wrap:anywhere}
+	.info-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-12px);margin-bottom:var(--sph-space-8px)}.info-close{display:grid;place-items:center;flex:none;width:28px;height:28px;margin:0;padding:0;border:0;border-radius:var(--sph-radius-4px);background:transparent;color:var(--muted);font-size:var(--sph-type-20px);cursor:pointer}
 	.info-popover :global(p){margin:0}
-	@media(max-width:700px){.info-trigger{width:44px;height:44px}.info-close{width:44px;height:44px}}
+	@media(max-width:700px){.info-close{width:44px;height:44px}}
 </style>

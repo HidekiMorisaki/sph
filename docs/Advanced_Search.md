@@ -1,8 +1,53 @@
 # Advanced search and personal saved filters
 
-The employee, book and IT asset catalogs have a search area above the data card. The existing
+The employee, book, IT asset, workflow and business-management catalogs have a search area above the data card. The existing
 registration actions, columns, sort controls, page sizes, and pagination remain in
-the data card. Other lists retain their existing search behavior. IT asset specifics are documented in [IT asset search](IT_Asset_Search.md).
+the data card. IT asset specifics are documented in [IT asset search](IT_Asset_Search.md).
+
+## Projects
+
+The General-group Projects catalogue also uses SearchPanel/SearchFields/MasterList.
+`POST /v1/project-searches` and `GET /v1/project-search-fields` support code, name,
+description, visibility, project status and timestamps, requiring `projects.read`.
+All results/counts apply current membership and internal visibility on the server.
+`m0037` adds the separate saved-filter target `projects`; ownership, revision,
+32-filter limit and existing `search_filters.*` guards remain unchanged. Browser
+preferences use `projects-v1` so the legacy Engagement preference transfer cannot
+consume new Projects settings. Workspace ticket filters are separate from this
+project catalogue search. See [Projects](Projects.md).
+
+## Business management
+
+Teams, skills, clients and engagements use the shared SearchPanel, SearchFields and
+MasterList components: one search card above one data card, with the same Simple
+search, Advanced search and Saved filters tabs as employees. Conditions update
+after 250ms; details and editing preserve the search and current page. Existing
+keyword matching, columns, create/edit actions and list permissions remain in use.
+
+Advanced search includes name and created/updated timestamps on all four pages.
+Teams also expose description and an inclusive member-count range; the count,
+sort and conditions all cover only employees the caller can read. Skills expose
+category and description. Clients expose company, contact, country/address,
+telephone/FAX and notes, grouped into Basic, Contact and Created and updated.
+Engagements expose description, contract date ranges and the client name/company
+already visible through engagement reading. Related employees, memberships, employee
+skills and engagement participation records are outside this search expansion.
+All four pages also share the Keyword and quick filters category. Blank inputs
+remove conditions. The existing typed AND/OR definition format is preserved when
+saved conditions cannot be represented by individual inputs.
+
+The REST interfaces are `POST /v1/team-searches`, `/v1/skill-searches`,
+`/v1/client-searches`, `/v1/engagement-searches` and their corresponding
+`GET /v1/{team|skill|client|engagement}-search-fields` routes. They use the existing
+search definition and paginated JSON response contracts. The matching resource's
+read operation is required before parsing or querying. GET lists and search POSTs
+share the same list service. Sort allowlists and limits remain resource-specific;
+definitions reject unknown options and internal identifiers.
+
+`/v1/search-filters` accepts the additional targets `teams`, `skills`, `clients`
+and `engagements`. Consolidated migration m0037 replaces the target CHECK constraint once with its final definition, including business lists, Projects and projectTickets. Existing
+personal ownership, `search_filters.*` permissions, the 32-active-filters limit
+per employee/target, revision conflict checks, audit and soft deletion apply.
 
 ## Using the search area
 
@@ -88,7 +133,7 @@ apply to the same record. For example, TypeScript plus proficiency 3 must match
 one employee skill record, rather than TypeScript at level 1 and Python at level 3.
 Create separate related groups when different records must each match.
 
-Search covers current, non-deleted records. Completed project participations are
+Search covers current, non-deleted records. Completed engagement participations are
 current business records and remain searchable. Returned assets, released software
 assignments, removed installations, ended software usage, returned book loans,
 inactive reservations, completed purchase processes, change histories, and audit

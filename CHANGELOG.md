@@ -8,23 +8,31 @@ User-facing changes to SME Portal Hub are documented below by release.
 
 ### New features
 
+- Added a Projects group with hierarchical ticket management, Kanban and Gantt views, time tracking, history and other features.
 - Added shared header notifications with unread counts, read controls and links to the relevant event. Private details are resolved using current access permissions.
 - Added scheduling to the General group, with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.
-- Added Workflows to the General group, with a designer for creating templates (application forms) using drag-and-drop components and grouping, sequential approvals, returns, comments, attachments, linked notifications and immutable submitted versions. Create templates from `System settings` > `Workflows`.
+- Added Workflows to the General group, with a designer for creating templates (application forms) using drag-and-drop components and grouping, sequential approvals, returns, comments, attachments, linked notifications and immutable submitted versions. Create templates from System settings.
 
 ### Existing feature improvements
 
+- Added full-height Gantt ticket-column resizing with subtle grips, a compact Group by selector and display-period controls. The timeline clips to the selected dates while retaining ticket rows, and separate project codes are hidden from project labels. Project grouping shows the project name only in its group heading, without repeating it on ticket rows.
+- Added per-user display column selection and ordering to the project list, shared across browsers and mobile views.
+
 - Moved the account menu from the sidebar footer to the right of the header theme toggle. A profile image or person icon replaces the visible name and role, with access to My Page, Personal settings and Sign out.
-- Enabled all seven bundled SPH official widgets by default on new installations.
 - Unified drag-and-drop handles with six-dot icons arranged in two columns of three, clearly distinguishing reordering from the hamburger icons used to collapse menus.
 - Added tax-inclusive purchase amount entry for IT assets, individual book copies and license contracts. Zero is allowed for free transfers. Book forms prefill available prices and estimate domestic tax-exclusive JPY prices at 10% tax. Amounts can be edited manually.
 - Remember the selected saved filter for employees, books and IT assets per user in the same browser, and restore its latest conditions on the next visit.
 - Added confirmation and bulk returns of IT assets and books when retiring or deleting employees, with date selection and future deletion scheduling, changes and cancellation. Retirement or deletion is blocked while assets remain unreturned.
 - Added tabs to some modals to make information easier to review.
 - Organized license contract, IT asset, book, role, branch, team and client detail modals into tabs.
+- Renamed the English label for client engagements from Projects to Engagements as part of introducing the Projects group.
 
 ### Bug fixes
 
+- Standardized text sizes in shared search dates, tickets, schedules, notifications and financial charts so inputs and event text remain readable on phones.
+- Fixed undersized display-period dates on phones by using the shared DatePicker at its standard text size with hidden labels.
+- Prevented the first Gantt date label from overlapping the column resize grip.
+- Fixed blank Gantt assignee group headings by showing Unassigned when no assignee is set.
 - Fixed excess space below the book editor footer when selecting Purchase requests or Copies and loans tabs.
 - Fixed the lower edges of Change cover and Refresh openBD details buttons being obscured in the book editor.
 - Fixed notification borders being obscured by sticky tab backgrounds in detail and edit modals.

@@ -50,7 +50,7 @@
         "contact_email": "sample-client-6@example.test"
       }
     ],
-    "projects": [
+    "engagements": [
       {
         "name": "Sales Management Renewal",
         "description": "Fictional sample project. Integrate orders, sales and billing, migrate legacy records and roll out the service."

@@ -1,10 +1,10 @@
+import { businessList } from './business-list';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { getPrisma } from '$lib/server/prisma';
 import { requireOperationApi, writeAuditLog } from './admin';
 import { masterInput } from './employee-masters';
 import { parseId } from './database';
-import { listMeta, parseListQuery, parseSearch } from './query';
 import { failure, success, throwApiError } from './response';
 import { readMasterSnapshot, recordMasterChange } from './master-history';
 
@@ -23,16 +23,8 @@ export async function clients({locals,params,request,url}:Event) {
  const id=params.id===undefined?null:parseId(params.id);
  if(params.id!==undefined&&!id)return failure(404,'NOT_FOUND','Not found.');
  const db=getPrisma();
- if(method==='GET'&&!id){
-  const query=parseListQuery(url,['name','companyName','contactName','contactDepartment','contactEmail','contactMobile','createdAt','updatedAt'] as const,'name');
-  const search=parseSearch(url),contains={contains:search,mode:'insensitive' as const};
-  const where={deletedAt:null,OR:['name','companyName','contactName','contactDepartment','contactEmail','contactMobile','city','notes'].map(field=>({[field]:contains}))};
-  return db.$transaction(async tx=>{
-   const total=await tx.client.count({where});
-   const items=await tx.client.findMany({where,orderBy:[{[query.sortBy]:query.sortOrder},{id:'asc'}],skip:query.offset,take:query.limit});
-   return success(items,200,listMeta(query,items.length,total));
-  },{isolationLevel:'RepeatableRead'});
- }
+ if (method === 'GET' && !id) return businessList(actor,'clients',url);
+
  if(method==='GET'){
   const item=await db.client.findFirst({where:{id:id!,deletedAt:null}});
   return item?success(item):failure(404,'NOT_FOUND','Not found.');
@@ -51,7 +43,7 @@ export async function clients({locals,params,request,url}:Event) {
   if(id&&!before)return failure(404,'NOT_FOUND','Not found.');
   const snapshot=id?await readMasterSnapshot(tx,'clients',id):null;
   if(method==='DELETE'){
-   if(await tx.project.count({where:{clientId:id!,deletedAt:null}}))return failure(409,'RESOURCE_IN_USE','This client is used by an active project.');
+   if(await tx.engagement.count({where:{clientId:id!,deletedAt:null}}))return failure(409,'RESOURCE_IN_USE','This client is used by an active engagement.');
    await tx.client.update({where:{id:id!},data:{deletedAt:new Date()}});
    await recordMasterChange(tx,'clients',id!,actor.id,'delete',snapshot,null);
    await writeAuditLog(tx,actor.id,'delete','clients',id!);

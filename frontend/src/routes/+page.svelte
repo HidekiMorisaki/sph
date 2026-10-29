@@ -116,12 +116,12 @@
 {:else}<main class="auth"><form novalidate onsubmit={(event) => { event.preventDefault(); void login(); }}><h1>{productName}</h1><p>{pageText.loginDescription}</p><label>{pageText.identifier}<input bind:this={identifierInput} bind:value={identifier} autocomplete="username" maxlength="254" aria-invalid={!!identifierError} aria-describedby={identifierError?'identifier-error':undefined} oninput={()=>{identifierError='';limitedUntil=0;remainingMinutes=0;message='';}} />{#if identifierError}<small id="identifier-error" class="field-error">{identifierError}</small>{/if}</label><label>{pageText.password}<input bind:this={passwordInput} bind:value={password} type="password" autocomplete="current-password" aria-invalid={!!passwordError} aria-describedby={passwordError?'login-password-error':undefined} oninput={()=>passwordError=''} />{#if passwordError}<small id="login-password-error" class="field-error">{passwordError}</small>{/if}</label><ActionButton type="submit" disabled={isSubmitting} variant="secondary" data-button-scope="button-dec4a5bbb9">{isSubmitting ? pageText.signingIn : pageText.signIn}</ActionButton>{#if message}<StatusNotice message={message} tone="error" onDismiss={() => message = ''} />{/if}</form></main>{/if}
 
 <style>
-  .auth{min-height:100vh;display:grid;place-items:center;padding:24px}
-  .auth form,.startup{width:min(100%,400px);display:grid;gap:15px;padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow)}
+  .auth{min-height:100vh;display:grid;place-items:center;padding:var(--sph-space-24px)}
+  .auth form,.startup{width:min(100%,400px);display:grid;gap:var(--sph-space-15px);padding:var(--sph-space-32px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-8px);box-shadow:var(--shadow)}
   .startup{text-align:center}.startup-help{font-size:var(--font-size-support);color:var(--muted)}
   h1,p{margin:0}.auth p{color:var(--muted)}
-  label{display:grid;gap:6px;font-size:var(--font-size-support);font-weight:600}
-  input{height:36px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:400}
-  form :global(button[data-button-scope="button-dec4a5bbb9"]){padding:10px;background:#2a85c8;color:#fff}
+  label{display:grid;gap:var(--sph-space-6px);font-size:var(--font-size-support);font-weight:var(--sph-weight-600)}
+  input{height:36px;padding:0 var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--bg);color:var(--text)}input[aria-invalid='true']{border-color:var(--danger)}.field-error{color:var(--danger);font-size:var(--font-size-support);font-weight:var(--sph-weight-400)}
+  form :global(button[data-button-scope="button-dec4a5bbb9"]){padding:var(--sph-space-10px);background:var(--sph-color-schedule-event);color:var(--sph-color-on-emphasis)}
 
 </style>

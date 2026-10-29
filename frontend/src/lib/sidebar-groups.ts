@@ -1,4 +1,4 @@
-export const sidebarGroupIds = ['dashboard', 'general', 'businessManagement', 'assets', 'otherSystems', 'siteManagement', 'development'] as const;
+export const sidebarGroupIds = ['dashboard', 'general', 'projects', 'businessManagement', 'assets', 'otherSystems', 'siteManagement', 'development'] as const;
 export type SidebarGroupId = typeof sidebarGroupIds[number];
 export type SidebarGroupState = Partial<Record<SidebarGroupId, boolean>>;
 export const sidebarGroupExpanded = (state: SidebarGroupState, id: SidebarGroupId) => state[id] !== false;

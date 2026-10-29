@@ -18,4 +18,4 @@
  <SearchSelect label={text.room} field="schedule-booking-room" value={value===null?'':String(value)} options={[{value:'',label:text.none},...choices.map(room=>({value:String(room.id),label:room.room.name}))]} disabled={disabled||loading||failed||!branchId} onSelect={selected=>onSelect(rooms.find(room=>String(room.id)===selected)??null)}/>
  {#if loading}<p role="status">{text.loading}</p>{:else if failed}<p role="alert">{text.failed} <button type="button" onclick={load}>{text.retry}</button></p>{:else if !rooms.length}<p>{text.noBookableRooms}</p>{/if}
 </div>
-<style>.room-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.room-picker p{grid-column:1/-1;margin:0;color:var(--muted)}@media(max-width:700px){.room-picker{grid-template-columns:minmax(0,1fr)}}</style>
+<style>.room-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sph-space-12px)}.room-picker p{grid-column:1/-1;margin:0;color:var(--muted)}@media(max-width:700px){.room-picker{grid-template-columns:minmax(0,1fr)}}</style>

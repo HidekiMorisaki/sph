@@ -3,6 +3,7 @@ release-metadata.json
 docker-compose.local.yml
 scripts/install-config.mjs
 scripts/install-display.mjs
+scripts/installer-banner.txt
 scripts/install-preflight.mjs
 scripts/install-maintenance.mjs
 scripts/install-i18n.mjs

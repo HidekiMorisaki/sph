@@ -22,5 +22,5 @@
 </div>
 <style>
  .workflow-search-filters{display:contents}.workflow-search-filters>:global(.form-select-field),.workflow-search-filters>:global(.form-multi-select-field){width:208px;max-width:100%}.history-filter{display:flex;align-items:center;align-self:flex-end;min-height:36px;max-width:100%;min-width:0}
- @media(max-width:700px){.history-filter{align-self:stretch;min-height:44px}.workflow-search-filters{display:flex;flex-direction:column;gap:12px;width:100%}.workflow-search-filters>:global(.form-select-field),.workflow-search-filters>:global(.form-multi-select-field){width:100%}}
+ @media(max-width:700px){.history-filter{align-self:stretch;min-height:44px}.workflow-search-filters{display:flex;flex-direction:column;gap:var(--sph-space-12px);width:100%}.workflow-search-filters>:global(.form-select-field),.workflow-search-filters>:global(.form-multi-select-field){width:100%}}
 </style>

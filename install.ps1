@@ -2,6 +2,31 @@
 param([switch]$WaitAtExit)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$interactive = -not [Console]::IsOutputRedirected
+$useColor = $interactive -and -not (Test-Path Env:NO_COLOR) -and $env:TERM -ne 'dumb'
+$lightBackground = [Console]::BackgroundColor -in @('Gray', 'White') -or $env:COLORFGBG -match '(?:^|;)(?:7|15)$'
+function Write-InstallerLine([string]$Text, [string]$Color = '', [switch]$Inline) {
+	if (Get-Command Clear-InstallerProgress -ErrorAction SilentlyContinue) { Clear-InstallerProgress }
+	if ($lightBackground -and $Color -in @('Cyan', 'Blue', 'Magenta', 'Green', 'Yellow', 'Red')) { $Color = 'Dark' + $Color }
+	if ($useColor -and $Color) { Write-Host $Text -ForegroundColor $Color -NoNewline:$Inline }
+	else { Write-Host $Text -NoNewline:$Inline }
+}
+function Show-InstallerBanner([int]$Columns = 0) {
+	if ($Columns -le 0) { try { $Columns = [Console]::WindowWidth } catch { $Columns = 0 } }
+	$bannerPath = Join-Path $PSScriptRoot 'scripts/installer-banner.txt'
+	if (-not $useColor -or -not (Test-Path -LiteralPath $bannerPath)) { Write-InstallerLine 'SPH Installer'; return }
+	$rows = [IO.File]::ReadAllLines($bannerPath, [Text.Encoding]::UTF8)
+	$width = ($rows | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
+	if ($Columns -lt $width) { Write-InstallerLine 'SPH Installer'; return }
+	Write-InstallerLine ''
+	$tone = 'Blue'
+	foreach ($row in $rows) {
+		if ($row -eq '') { $tone = $(if ($lightBackground) { 'DarkGray' } else { 'White' }) }
+		Write-InstallerLine $row $tone
+	}
+	Write-InstallerLine ''
+}
+Show-InstallerBanner
 # Bootstrap resources are generated at development time; only PowerShell is needed here.
 try {
 	$languageMenu = . (Join-Path $PSScriptRoot 'scripts/locales/generated/languages.ps1')
@@ -30,8 +55,6 @@ function Get-InstallerMessage([string]$Key, [string[]]$Values = @()) {
 		return $Values[$position]
 	})
 }
-$interactive = -not [Console]::IsOutputRedirected
-$useColor = $interactive -and -not (Test-Path Env:NO_COLOR) -and $env:TERM -ne 'dumb'
 $step = 0
 $stage = ''
 $failureKey = 'error.unexpected'
@@ -42,12 +65,6 @@ $preflightFailures = 0
 $holidayWarnings = @()
 $bookWarnings = @()
 function Stop-Installation([string]$Key, [string[]]$Values = @()) { $script:failureKey = $Key; $script:failureValues = $Values; throw 'Installation failed.' }
-function Write-InstallerLine([string]$Text, [string]$Color = '', [switch]$Inline) {
-	Clear-InstallerProgress
-	if ($lightBackground -and $Color -in @('Cyan', 'Blue', 'Magenta', 'Green', 'Yellow', 'Red')) { $Color = 'Dark' + $Color }
-	if ($useColor -and $Color) { Write-Host $Text -ForegroundColor $Color -NoNewline:$Inline }
-	else { Write-Host $Text -NoNewline:$Inline }
-}
 try { . (Join-Path $PSScriptRoot 'scripts/install-progress.ps1') }
 catch { Write-Host (Get-InstallerMessage 'error.releaseFiles'); exit 1 }
 function Confirm-InstallerCapacity([string]$Label, $Current, [int]$Recommended, [string]$Warning, [string]$Unknown) {
@@ -133,10 +150,6 @@ $savedEnvironment = @{}
 $compose = @('compose', '-f', 'docker-compose.local.yml', '--env-file', '.env', '-p', 'sph')
 Push-Location $PSScriptRoot
 try {
-	Write-InstallerLine "`n  ================================================" Cyan
-	Write-InstallerLine '     SME Portal Hub' Cyan
-	Write-InstallerLine ('     ' + (Get-InstallerMessage 'title')) Cyan
-	Write-InstallerLine '  ================================================' Cyan
 	Write-InstallerLine (Get-InstallerMessage 'progress.notice')
 	Start-Step 'stage.environment' 13
 	function Test-InstallerCheck([string]$Label, [string]$ErrorKey, [scriptblock]$Action, [bool]$Available = $true) {

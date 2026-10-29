@@ -16,6 +16,9 @@
  import TeamDetailModal from '$lib/components/TeamDetailModal.svelte';
  import TeamFormModal from '$lib/components/TeamFormModal.svelte';
  import ViewportListPage from '$lib/components/ViewportListPage.svelte';
+ import SearchPanel from '$lib/components/SearchPanel.svelte';
+ import { initialSearch } from '$lib/search';
+ let searchState = $state(initialSearch('teams'));
 
  let text = $derived(localeMessages[$localization.displayLanguage].teams);
  let common = $derived(localeMessages[$localization.displayLanguage].common);
@@ -62,7 +65,8 @@
  <ViewportListPage>
   <MasterPageHeader title={text.title} />
   {#if message}<StatusNotice message={text[message]} tone={message === 'failed' ? 'error' : 'success'} onDismiss={() => message = ''} />{/if}
-  <MasterList bind:this={list} mobileItem={mobileTeam} endpoint="/v1/teams" title={text.title} listHeading={text.title} headerActions={listActions} description={text.introduction} initialSortBy="name" minTableWidth={680} canDetail={true} onDetail={(item,trigger) => void open(item as Team,trigger)} columns={[
+  {#if user}<SearchPanel target="teams" userId={user.id} bind:searchState onRestoreOptions={() => {}} />{/if}
+  <MasterList bind:searchState bind:this={list} mobileItem={mobileTeam} endpoint="/v1/team-searches" pageSizeStorageKey="master-size:/v1/teams" title={text.title} listHeading={text.title} description="" headerActions={listActions} initialSortBy="name" minTableWidth={680} canDetail={true} onDetail={(item,trigger) => void open(item as Team,trigger)} columns={[
    { key: 'name', label: text.name, width: 40, value: item => item.name },
    { key: 'description', label: text.description, width: 45, value: item => item.description },
    { key: 'memberCount', label: text.memberCount, width: 15, align: 'center', value: item => item.memberCount }
@@ -73,4 +77,4 @@
 {#if selected && user}{#key selected.id}<div hidden={formOpen || deleting}><TeamDetailModal team={selected} {user} {returnFocus} onClose={closeDetail} onEdit={trigger => { formReturnFocus = trigger; editing = selected; formOpen = true; }} onDelete={trigger => { deleteReturnFocus = trigger; deleting = true; }} onChanged={() => void list?.refresh()} /></div>{/key}{/if}
 {#if formOpen}<div hidden={deleting} inert={deleting}><TeamFormModal deleteError={message==='failed'?text.failed:''} {user} onDelete={trigger=>{deleteReturnFocus=trigger;deleting=true;}} team={editing} returnFocus={formReturnFocus} onClose={() => formOpen = false} onSaved={saved} /></div>{/if}
 {#if deleting && selected}<DetailModal title={text.deleteTitle} titleId="team-delete-title" closeLabel={common.cancel} returnFocus={deleteReturnFocus} onClose={() => { if (!busy) deleting = false; }}><p>{text.deleteHelp}</p>{#snippet actions()}<ModalActionButton class="secondary" type="button" disabled={busy} onclick={() => { deleting = false; void tick().then(() => deleteReturnFocus?.focus()); }} variant="secondary" data-button-scope="button-2491c9e500">{common.cancel}</ModalActionButton><ModalActionButton class="app-danger-action" type="button" disabled={busy} onclick={() => void remove()} variant="danger" data-button-scope="button-2491c9e500">{common.delete}</ModalActionButton>{/snippet}</DetailModal>{/if}
-<style>.mobile-team{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}.mobile-team span,.mobile-team p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-team p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}</style>
+<style>.mobile-team{display:flex;min-width:0;flex-direction:column;gap:var(--sph-space-3px);overflow-wrap:anywhere}.mobile-team span,.mobile-team p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-team p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}</style>

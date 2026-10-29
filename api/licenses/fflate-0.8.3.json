@@ -1,0 +1,22 @@
+{
+  "license": "MIT",
+  "runtimeDependencies": [],
+  "package": "fflate@0.8.3",
+  "source": "https://github.com/101arrowz/fflate/tree/v0.8.3",
+  "noticeRequirement": "Retain copyright and full MIT text with distributed copies; API image notice collector includes the installed root LICENSE.",
+  "licenseSha256": "0a1df3a083d0c010560aa342e87959c8c1070e6fd54545741f083f22d0c8b551",
+  "copyright": "Copyright (c) 2026 Arjun Barrett",
+  "licenseSource": "https://raw.githubusercontent.com/101arrowz/fflate/v0.8.3/LICENSE",
+  "embeddedSources": [
+    {
+      "licenseSha256": "786adae9320db47cd483f9a8774ebd3edab8876d714caa4fb0aee8e5b2c3edc0",
+      "name": "UZIP.js",
+      "licenseSource": "https://raw.githubusercontent.com/photopea/UZIP.js/c662c40514c125d6e7b3936948c71f2a9aa3a4ac/LICENSE",
+      "sourceCommit": "c662c40514c125d6e7b3936948c71f2a9aa3a4ac",
+      "license": "MIT",
+      "file": "fflate-UZIP-LICENSE",
+      "basis": "fflate 0.8.3 attributes UZIP.js code in its node/browser modules.",
+      "copyright": "Copyright (c) 2018 Photopea"
+    }
+  ]
+}

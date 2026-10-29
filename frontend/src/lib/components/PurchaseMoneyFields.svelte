@@ -15,6 +15,6 @@
 <SearchSelect label={text.currency} field={`${prefix}-currency`} value={currency} {options} {required} {disabled} searchable={false} error={currencyError ? text.invalidCurrency : ''} onSelect={value => { currency = value; onChange(); }} />
 
 <style>
-	.purchase-amount-field{display:grid;align-content:start;gap:6px;min-width:0;color:var(--text);font-size:var(--font-size-support);font-weight:500}
-	.purchase-amount-label{display:flex;align-items:center;gap:6px;min-width:0}.purchase-amount-label label{display:inline!important;line-height:1.5}
+	.purchase-amount-field{display:grid;align-content:start;gap:var(--sph-space-6px);min-width:0;color:var(--text);font-size:var(--font-size-support);font-weight:var(--sph-weight-500)}
+	.purchase-amount-label{display:flex;align-items:center;gap:var(--sph-space-6px);min-width:0}.purchase-amount-label label{display:inline!important;line-height:var(--sph-leading-1-5)}
 </style>

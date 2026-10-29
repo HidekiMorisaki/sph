@@ -1,5 +1,15 @@
 # Third-party licenses
 
+Projects attachment inspection uses the explicitly approved API dependency
+`fflate@0.8.3`, already used by the frontend. Its official MIT text, copyright,
+source URL and digest are retained in [`fflate-0.8.3/`](./fflate-0.8.3/).
+It has no runtime package dependencies, but attributes embedded algorithms to
+UZIP.js. Photopea's original 2018 MIT grant is pinned to its original license
+commit and retained in both API image licenses and browser static licenses;
+the provenance records its digest. The installed package retains its own LICENSE.
+Both production builds verify these additional notices. This addition does not resolve the
+unrelated historical license residuals described below.
+
 Keep each third-party component's applicable license text, copyright notices,
 NOTICE files, and any required source-availability information with its distributed
 copy. A package's SPDX identifier alone is not a replacement for those notices.

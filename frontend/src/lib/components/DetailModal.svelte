@@ -116,5 +116,5 @@
 <style>
 	/* Pointer input inside a sandboxed iframe does not update host focus modality. */
 	.app-modal--pointer-focus :global(.app-modal-close:focus-visible){outline:none!important}
-	.app-detail-header-actions{display:flex;align-items:center;gap:4px;flex:none}
+	.app-detail-header-actions{display:flex;align-items:center;gap:var(--sph-space-4px);flex:none}
 </style>

@@ -44,11 +44,11 @@
   </div>
  </section>
 <style>
- .workflow-tabbar{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+ .workflow-tabbar{display:flex;align-items:center;gap:var(--sph-space-8px);border-bottom:1px solid var(--border)}
  .workflow-tabs{flex:1;min-width:0;--page-tabs-min-height:32px;--page-tabs-padding:4px 12px}
  .workflow-tabs :global(.page-tabs){padding-top:0;border-bottom:0}
- .workflow-tabs :global(.page-tabs button){line-height:1.4}
- .templates-panel,.designer-panel{padding-top:16px}
+ .workflow-tabs :global(.page-tabs button){line-height:var(--sph-leading-1-4)}
+ .templates-panel,.designer-panel{padding-top:var(--sph-space-16px)}
  .templates-panel>.cards{margin-top:0}
- .workflow-settings{padding:16px}header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}h4{margin:0 0 8px}p,small{font-size:var(--font-size-support);color:var(--muted)}.cards{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}article{padding:16px;border:1px solid var(--border);background:var(--surface);border-radius:6px;min-width:0;overflow-wrap:anywhere;box-shadow:var(--shadow)}.actions{margin-top:12px}.published{color:var(--action-primary)}.confirm{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}
+ .workflow-settings{padding:var(--sph-space-16px)}header{display:flex;gap:var(--sph-space-12px);align-items:flex-start;justify-content:space-between;flex-wrap:wrap}h4{margin:0 0 var(--sph-space-8px)}p,small{font-size:var(--font-size-support);color:var(--muted)}.cards{margin-top:var(--sph-space-16px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--sph-space-16px)}article{padding:var(--sph-space-16px);border:1px solid var(--border);background:var(--surface);border-radius:var(--sph-radius-6px);min-width:0;overflow-wrap:anywhere;box-shadow:var(--shadow)}.actions{margin-top:var(--sph-space-12px)}.published{color:var(--action-primary)}.confirm{border-top:1px solid var(--border);padding-top:var(--sph-space-12px);margin-top:var(--sph-space-12px)}
 </style>

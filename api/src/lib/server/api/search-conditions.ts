@@ -1,9 +1,11 @@
+import {ticketSorts} from '../projects/ticket-search-registry';
 import { Prisma } from '$lib/server/generated/prisma/client';
 import type { AuthenticatedUser } from '$lib/server/auth/types';
 import { employeeReferenceDate } from './employee-derived';
 import { contextScope, contextsFor, operationScope, operatorsFor, type SearchTarget, type SearchField, type SearchContext } from './search-registry';
 import { throwApiError } from './response';
 import { canonicalIsbn } from './book-isbn';
+import { businessSorts, isBusinessTarget, teamMemberCount } from './business-search-registry';
 
 export type SearchRule = { kind: 'rule'; field: string; operator: string; value?: string | number | boolean | Array<string | number> };
 export type SearchGroup = { kind: 'group'; mode: 'all' | 'any'; context?: string; match?: 'some' | 'none'; children: SearchNode[] };
@@ -77,18 +79,18 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
 export function parseSearchDefinition(value: unknown,target: SearchTarget,user: AuthenticatedUser): SearchDefinition {
  const body=searchObject(value);keys(body,['schemaVersion','keyword','conditions','sortBy','sortOrder','limit','options']);
  if(body.schemaVersion!==1||typeof body.keyword!=='string'||body.keyword.length>500)invalidSearch('keyword');
- const sorts: readonly string[]=target==='workflows'?['id','title','status','createdAt','updatedAt']:target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
+ const sorts: readonly string[]=target==='projectTickets'?ticketSorts:target==='projects'?['id','code','name','status','visibility','createdAt','updatedAt']:isBusinessTarget(target)?businessSorts[target]:target==='workflows'?['id','title','status','createdAt','updatedAt']:target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
  if(typeof body.sortBy!=='string'||!sorts.includes(body.sortBy)||!['asc','desc'].includes(String(body.sortOrder)))invalidSearch('sort');
  if(body.sortBy==='teams')operationScope(user,'teams.read');
  if(typeof body.limit!=='number'||!Number.isInteger(body.limit)||body.limit<1||body.limit>500)invalidSearch('limit');
  const options=searchObject(body.options??{});
- keys(options,target==='workflows'?['view','statuses','applicantIds','approverIds','finalApproverIds','currentAssigneeIds','templateIds','includeHistory']:target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
+ keys(options,target==='projectTickets'?['projectIds','assigneeIds','typeIds','statusIds','categories']:target==='projects'||isBusinessTarget(target)?[]:target==='workflows'?['view','statuses','applicantIds','approverIds','finalApproverIds','currentAssigneeIds','includeHistory']:target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
  for(const [key,val] of Object.entries(options)){
   if(['includeHistory','includeRetired','includeDeleted','purchaseRequests','unassigned'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
   else if(typeof val!=='string'||val.length>1000)invalidSearch(key);
  }
  if(options.skillIds)operationScope(user,'skills.read');
- if(options.participationStatus||options.endingWithinDays)operationScope(user,'projects.read');
+ if(options.participationStatus||options.endingWithinDays)operationScope(user,'engagements.read');
  const conditions=parseNode(body.conditions,target,user,0,{rules:0,nodes:0},contextsFor(target)[0]);
  if(conditions.kind!=='group')invalidSearch('conditions');
  if(conditions.children.length&&options.includeDeleted===true)invalidSearch('includeDeleted');
@@ -107,7 +109,7 @@ function scalarSql(field:SearchField,value:string|number|boolean):Prisma.Sql {
  return Prisma.sql`${value}`;
 }
 function ruleSql(rule:SearchRule,field:SearchField,user:AuthenticatedUser):Prisma.Sql {
- const raw=Prisma.sql`(${Prisma.raw(field.expression)})`, value=rule.value!;
+ const raw=field.source==='derived.teamMemberCount'?teamMemberCount(user):Prisma.sql`(${Prisma.raw(field.expression)})`, value=rule.value!;
  const column=field.type==='string'||field.type==='choice'?Prisma.sql`lower((${raw})::text)`:raw;
  const normalize=(value:string|number|boolean)=>scalarSql(field,typeof value==='string'&&['string','choice'].includes(field.type)?value.toLowerCase():value);
  const empty=['string','choice'].includes(field.type)?Prisma.sql`(${raw} IS NULL OR (${raw})::text ~ '^[[:space:]]*$')`:Prisma.sql`${raw} IS NULL`;

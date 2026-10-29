@@ -1,7 +1,7 @@
 {
   "skills": "Skills",
-  "projects": "Projects",
-  "participations": "Project participation",
+  "engagements": "Engagements",
+  "participations": "Engagement participation",
   "information": "Information",
   "name": "Name",
   "category": "Category",
@@ -19,7 +19,7 @@
   "failed": "Unable to complete the operation. Reload and try again.",
   "invalid": "Check the required fields, numbers and dates.",
   "duplicate": "This value is already in use, including retained records.",
-  "overlap": "Periods for the same project must not overlap.",
+  "overlap": "Periods for the same engagement must not overlap.",
   "inUse": "This master is in use. Remove the employee records first.",
   "deleteTitle": "Delete record",
   "deleteHelp": "Delete this record? Change history will be retained.",
@@ -49,7 +49,7 @@
   "periodHelp": "Both dates are inclusive. Leave the end date blank if undecided.",
   "loadFailed": "Unable to load records.",
   "skill": "Skill",
-  "project": "Project",
+  "engagement": "Engagement",
   "clients": "Clients",
   "clientId": "Client",
   "companyName": "Company name",
@@ -70,11 +70,11 @@
   "faxNumber1": "Fax 1",
   "faxNumber2": "Fax 2",
   "addressContact": "Address and contact",
-  "clientInUse": "This client is referenced by a project. Change or delete the project first.",
+  "clientInUse": "This client is referenced by an engagement. Change or delete the engagement first.",
   "nameExamples": {
     "clients": "Tokyo office",
     "skills": "TypeScript",
-    "projects": "Sales management system renewal"
+    "engagements": "Sales management system renewal"
   },
   "examples": {
     "companyName": "Example Corporation",

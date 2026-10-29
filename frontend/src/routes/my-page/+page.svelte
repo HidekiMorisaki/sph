@@ -34,5 +34,5 @@
 </AssetManagementShell>
 
 <style>
-	.page-state{min-height:100vh;display:grid;place-items:center;padding:24px;color:var(--muted)}
+	.page-state{min-height:100vh;display:grid;place-items:center;padding:var(--sph-space-24px);color:var(--muted)}
 </style>

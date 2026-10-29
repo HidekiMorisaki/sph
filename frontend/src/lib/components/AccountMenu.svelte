@@ -70,7 +70,7 @@
 
 <style>
 	.header-account{position:relative;flex:none}
-	.account-trigger{display:grid;place-items:center;width:34px;height:34px;margin:0;padding:1px;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+	.account-trigger{display:grid;place-items:center;width:34px;height:34px;margin:0;padding:var(--sph-space-1px);border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
 	.account-trigger:hover,.account-trigger[aria-expanded='true']{background:var(--surface-hover)}
 	.account-trigger:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;overflow:hidden}

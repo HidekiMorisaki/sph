@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --port 5174",
-		"build": "prisma generate && vite build",
+		"build": "node scripts/verify-project-licenses.mjs && prisma generate && vite build",
 		"start": "node build",
 		"prepare": "svelte-kit sync && prisma generate && node scripts/prepare-book-samples.mjs",
 		"prisma:generate": "prisma generate",
@@ -13,7 +13,7 @@
 		"db:deploy": "prisma migrate deploy",
 		"admin:create": "node scripts/create-admin.mjs",
 		"db:baseline": "node scripts/baseline-existing.mjs",
-		"check": "svelte-kit sync && prisma generate && tsc --noEmit && node scripts/prepare-book-samples.mjs --check"
+		"check": "node scripts/verify-project-licenses.mjs && svelte-kit sync && prisma generate && tsc --noEmit && node scripts/prepare-book-samples.mjs --check"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.3.2",
@@ -29,6 +29,7 @@
 	"dependencies": {
 		"@prisma/adapter-pg": "^7.10.1",
 		"@prisma/client": "^7.10.1",
+		"fflate": "0.8.3",
 		"jpeg-js": "0.4.4",
 		"luxon": "3.7.2",
 		"pg": "^8.23.1",

@@ -6,12 +6,13 @@ import { requireOperationApi, writeAuditLog } from './admin';
 import { searchActor, validateSavedDefinition } from './search';
 import { invalidSearch, searchBody } from './search-conditions';
 import type { SearchTarget } from './search-registry';
+import { isBusinessTarget } from './business-search-registry';
 import { listMeta, parseListQuery } from './query';
 import { failure, success, throwApiError } from './response';
 
 type Event={locals:{user:AuthenticatedUser|null};request:Request;url:URL;params:Record<string,string|undefined>};
 const selection={id:true,target:true,name:true,definition:true,schemaVersion:true,revision:true,createdAt:true,updatedAt:true} as const;
-function targetOf(value:unknown):SearchTarget {if(value!=='employees'&&value!=='books'&&value!=='assets'&&value!=='workflows')invalidSearch('target');return value;}
+function targetOf(value:unknown):SearchTarget {if(value!=='projectTickets'&&value!=='projects'&&value!=='employees'&&value!=='books'&&value!=='assets'&&value!=='workflows'&&!(typeof value==='string'&&isBusinessTarget(value)))invalidSearch('target');return value as SearchTarget;}
 function filterName(value:unknown){if(typeof value!=='string'||!value.trim()||value.trim().length>100)invalidSearch('name');const name=value.trim();return {name};}
 export async function savedFilters({locals,request,url,params}:Event) {
  const method=request.method;

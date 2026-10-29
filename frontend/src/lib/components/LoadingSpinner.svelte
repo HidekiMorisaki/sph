@@ -11,8 +11,8 @@
 </div>
 
 <style>
-	.loading-spinner{display:flex;align-items:center;justify-content:center;min-height:72px;padding:16px}
-	.loading-spinner.compact{min-height:40px;padding:8px}
+	.loading-spinner{display:flex;align-items:center;justify-content:center;min-height:72px;padding:var(--sph-space-16px)}
+	.loading-spinner.compact{min-height:40px;padding:var(--sph-space-8px)}
 	.loading-spinner.inline{justify-content:flex-start;min-height:0;padding:0}
 	.spinner{width:20px;height:20px;flex:none;border:2px solid color-mix(in srgb,var(--action-primary) 25%,transparent);border-top-color:var(--action-primary);border-radius:50%;animation:loading-spin .8s linear infinite}
 	.compact .spinner,.inline .spinner{width:16px;height:16px}

@@ -127,5 +127,5 @@
 {#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeImmediately} />{/if}
 
 <style>
-	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:16px}.wide{grid-column:1/-1}.footer-spacer{flex:1}
+	.entry-dialog{width:min(100%,680px)}.entry-form-body{grid-template-columns:1fr;padding-top:var(--sph-space-16px)}.wide{grid-column:1/-1}.footer-spacer{flex:1}
 </style>

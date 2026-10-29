@@ -26,6 +26,6 @@
 </section>
 
 <style>
-	.app-form-section-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+	.app-form-section-header{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-12px);min-width:0}
 	.app-form-section-header h3{margin:0}
 </style>

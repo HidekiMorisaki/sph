@@ -73,20 +73,20 @@
 </div>
 
 <style>
-	.page-tabs{display:flex;gap:12px;overflow-x:auto;margin-bottom:16px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
-	.page-tabs button{flex:none;min-height:var(--page-tabs-min-height,44px);margin:0;padding:var(--page-tabs-padding,10px 8px);background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--text-secondary,var(--muted));font:inherit;font-size:var(--page-tabs-font-size,inherit);white-space:nowrap;cursor:pointer}
-	.page-tabs button[aria-selected='true']{border-bottom-color:var(--primary);color:var(--primary);font-weight:600}
+	.page-tabs{display:flex;gap:var(--sph-space-12px);overflow-x:auto;margin-bottom:var(--sph-space-16px);padding:0 var(--sph-space-16px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px)}
+	.page-tabs button{flex:none;min-height:var(--page-tabs-min-height,44px);margin:0;padding:var(--page-tabs-padding,var(--sph-space-10px) var(--sph-space-8px));background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--text-secondary,var(--muted));font:inherit;font-size:var(--page-tabs-font-size,inherit);white-space:nowrap;cursor:pointer}
+	.page-tabs button[aria-selected='true']{border-bottom-color:var(--primary);color:var(--primary);font-weight:var(--sph-weight-600)}
 	.page-tabs button:hover{background:var(--surface-hover,var(--surface-secondary))}
 	.page-tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 	.tab-count{font-size:var(--font-size-support)}
-	.page-tabs.embedded{gap:8px;margin-bottom:0;padding:12px 16px 0;background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0}
-	.page-tabs.embedded button{padding:var(--page-tabs-padding,10px 12px)}
+	.page-tabs.embedded{gap:var(--sph-space-8px);margin-bottom:0;padding:var(--sph-space-12px) var(--sph-space-16px) 0;background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0}
+	.page-tabs.embedded button{padding:var(--page-tabs-padding,var(--sph-space-10px) var(--sph-space-12px))}
 	.page-tabs.embedded button[aria-selected='true']{color:var(--text);border-bottom-color:var(--action-primary)}
 	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){
 		.page-tabs{min-width:0;max-width:100%;flex-wrap:wrap;row-gap:0;overflow:visible}
 		.page-tabs button{flex:0 1 auto;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
-		.page-tabs.embedded{padding-right:12px;padding-left:12px;row-gap:0}
+		.page-tabs.embedded{padding-right:var(--sph-space-12px);padding-left:var(--sph-space-12px);row-gap:0}
 		.page-tabs button{min-height:var(--page-tabs-mobile-min-height,var(--page-tabs-min-height,44px))}
-		.page-tabs.embedded button{padding:var(--page-tabs-mobile-padding,var(--page-tabs-padding,10px 12px))}
+		.page-tabs.embedded button{padding:var(--page-tabs-mobile-padding,var(--page-tabs-padding,var(--sph-space-10px) var(--sph-space-12px)))}
 	}
 </style>

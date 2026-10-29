@@ -15,7 +15,7 @@
  let text=$derived(localeMessages[$localization.displayLanguage].workforce),common=$derived(localeMessages[$localization.displayLanguage].common);
  const record=untrack(()=>context.record),kind=untrack(()=>context.kind),deleting=untrack(()=>Boolean(context.deleting));
  const returnFocus=untrack(()=>context.trigger);
- let reference=$state(untrack(()=>String(record?.skillId??record?.projectId??'')));
+ let reference=$state(untrack(()=>String(record?.skillId??record?.engagementId??'')));
  let proficiency=$state(untrack(()=>String(record?.proficiency??2)));
  let experience=$state<number|undefined>(untrack(()=>record?.experienceYears??undefined));
  let notes=$state(untrack(()=>record?.notes??record?.responsibility??''));
@@ -24,7 +24,7 @@
  let dirty=$derived(JSON.stringify([reference,proficiency,experience??null,notes,start,end])!==initial);
  let options=$state<WorkforceMaster[]>([]),busy=$state(false),loading=$state(true),discard=$state(false),saved=$state(false),error=$state(''),openDate=$state('');
  $effect(()=>{if(dirty)saved=false;});
- onMount(()=>{void(async()=>{if(deleting){loading=false;return;}try{options=await workforceOptions(kind==='skills'?'skills':'projects');if(record){const existing=record.skill??record.project;if(existing&&!options.some(item=>item.id===existing.id))options.push(existing);}}catch{error=text.loadFailed;}finally{loading=false;}})();});
+ onMount(()=>{void(async()=>{if(deleting){loading=false;return;}try{options=await workforceOptions(kind==='skills'?'skills':'engagements');if(record){const existing=record.skill??record.engagement;if(existing&&!options.some(item=>item.id===existing.id))options.push(existing);}}catch{error=text.loadFailed;}finally{loading=false;}})();});
  function closeNow(){onClose();void tick().then(()=>returnFocus?.focus({preventScroll:true}));}
  function close(){if(busy)return;if(dirty&&!deleting)discard=true;else closeNow();}
  async function save(event?:SubmitEvent){
@@ -32,10 +32,10 @@
   if(!deleting&&(!reference||(kind==='participations'&&(!start||(end&&end<start)))||(kind==='skills'&&experience!==undefined&&(!Number.isFinite(experience)||experience<0||experience>80)))){error=text.invalid;return;}
   busy=true;
   try{
-   const body=kind==='skills'?{skillId:Number(reference),proficiency:Number(proficiency),experienceYears:experience??null,notes}:{projectId:Number(reference),startsOn:start,endsOn:end||null,responsibility:notes};
+   const body=kind==='skills'?{skillId:Number(reference),proficiency:Number(proficiency),experienceYears:experience??null,notes}:{engagementId:Number(reference),startsOn:start,endsOn:end||null,responsibility:notes};
    const response=await fetch('/v1/employees/'+employeeId+'/'+kind+(record?'/'+record.id:''),{method:deleting?'DELETE':record?'PATCH':'POST',headers:{'content-type':'application/json'},...(deleting?{}:{body:JSON.stringify(body)})});
    if(!response.ok){const payload=await response.json().catch(()=>null);error=payload?.error?.code==='PERIOD_OVERLAP'?text.overlap:payload?.error?.code==='DUPLICATE_VALUE'?text.duplicate:response.status===422?text.invalid:text.failed;return;}
-   if(!deleting){const result=await apiData<WorkforceRecord>(response);reference=String(result.skillId??result.projectId);proficiency=String(result.proficiency??2);experience=result.experienceYears??undefined;notes=result.notes??result.responsibility??'';start=result.startsOn?.slice(0,10)??'';end=result.endsOn?.slice(0,10)??'';initial=JSON.stringify([reference,proficiency,experience??null,notes,start,end]);}
+   if(!deleting){const result=await apiData<WorkforceRecord>(response);reference=String(result.skillId??result.engagementId);proficiency=String(result.proficiency??2);experience=result.experienceYears??undefined;notes=result.notes??result.responsibility??'';start=result.startsOn?.slice(0,10)??'';end=result.endsOn?.slice(0,10)??'';initial=JSON.stringify([reference,proficiency,experience??null,notes,start,end]);}
    await onSaved();
    if(deleting||!record)closeNow();else saved=true;
   }catch{error=text.failed;}finally{busy=false;}
@@ -48,7 +48,7 @@
   {#if error}<StatusNotice message={error} tone="error" onDismiss={()=>error=''}/>{/if}
   {#if saved}<StatusNotice message={text.saved} tone="success" onDismiss={()=>saved=false}/>{/if}
   <FormSection title={text.information} framed columns={2}>
-   <SearchSelect label={kind==='skills'?text.skill:text.project} field="workforceReference" value={reference} required disabled={busy||loading||Boolean(record)} options={options.map(item=>({value:String(item.id),label:item.name,searchTerms:[item.category??'']}))} onSelect={value=>reference=value}/>
+   <SearchSelect label={kind==='skills'?text.skill:text.engagement} field="workforceReference" value={reference} required disabled={busy||loading||Boolean(record)} options={options.map(item=>({value:String(item.id),label:item.name,searchTerms:[item.category??'']}))} onSelect={value=>reference=value}/>
    {#if kind==='skills'}
     <SearchSelect label={text.proficiency} field="workforceProficiency" value={proficiency} options={[{value:'1',label:text.level1},{value:'2',label:text.level2},{value:'3',label:text.level3}]} searchable={false} required disabled={busy} onSelect={value=>proficiency=value}/>
     <label><span>{text.experienceYears}</span><input name="experienceYears" type="number" min="0" max="80" step="0.1" bind:value={experience} placeholder={text.examples.experienceYears} disabled={busy}/><small>{text.experienceHelp}</small></label>

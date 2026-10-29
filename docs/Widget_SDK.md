@@ -63,6 +63,8 @@ contextには `language`、`timeZone`、`theme`、`configuration`、`size`、`wi
 
 色には `--text`, `--surface`, `--surface-secondary`, `--border`, `--primary`, `--primary-bg`, `--muted`, `--danger` が使えます。SPHのテーマ切替に追従します。iframe外の画面やスタイルを変更することはできません。
 
+テーマ基盤はcontextに `themeId`（現在は `default`）と `themeTokens`（許可済みの `--sph-*` の値）を追加します。従来の `theme` は引き続き明暗モードです。プレビューはホストと異なる明暗を選べます。色・角丸・余白・フォント・影には `var(--sph-radius-6px,6px)` のように既定値付きのCSS変数を利用できます。許可リスト外の値はiframeへ適用しません。旧ホストとの互換性のためフォールバックを指定してください。仕様と移行手順は [Themes.md](Themes.md) を参照してください。
+
 ## 設定・個人保存
 
 `configuration` は既存の保存フィールドと同じフィールド定義を使います。`fields`, `titleField`, `listFields`, `operations` を指定し、operationsはすべてfalseにします。配置ごとの設定フォームをSPHが生成し、初期値または保存値を `context.configuration` に渡します。文字列の `title` があればカード名へ補足表示します。

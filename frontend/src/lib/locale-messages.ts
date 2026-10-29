@@ -36,8 +36,9 @@ export function namespacesForPath(path: string): LocaleNamespace[] {
 	if (path === '/') return ['login', 'analytics'];
 	if (path === '/employee-analytics') return ['analytics'];
 	if (path === '/my-page') return ['myPage', 'employees', 'teams', 'workforce'];
-	if (path === '/skills' || path === '/projects' || path === '/clients') return ['workforce'];
+	if (path === '/skills' || path === '/engagements' || path === '/clients') return ['workforce'];
 	if (path === '/teams') return ['teams', 'employees', 'workforce'];
+	if (path === '/projects' || path.startsWith('/projects/')) return ['employees', 'teams', 'workforce'];
 	if (path === '/employees') return ['employees', 'employeeForm', 'teams', 'workforce'];
 	if (path === '/work-calendars') return ['workCalendars'];
 	if (path === '/system-settings') return ['systemSettings', 'systemReleases', 'financial', 'masters', 'employees', 'teams', 'workforce'];

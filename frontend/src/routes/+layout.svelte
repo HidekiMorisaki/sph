@@ -17,8 +17,10 @@
 	import { breadcrumbsForPath } from '$lib/components/sidebarNavigation';
 	import { applyLocalization, initializeLocalization, LOCALIZATION_CONTEXT, localization } from '$lib/localization';
 	import '../app.css';
+	import { initializeAppearance } from '$lib/themes/appearance';
 
 	let { children, data } = $props();
+	onMount(initializeAppearance);
 	// Initialize before child rendering; later changes use the applied client store.
 	setContext(LOCALIZATION_CONTEXT, untrack(() => initializeLocalization(data.initialLocalization)));
 	let user = $state<SessionUser | null>(null);
@@ -166,9 +168,9 @@
 	:global(body:has(.mobile-navigation[open])){overflow:hidden}
 	.shell{min-height:100vh;background:var(--bg);color:var(--text)}
 	.workspace{width:calc(100% - 252px);min-height:100vh;margin-left:252px;transition:margin-left .22s}
-	.app-main{min-width:0;padding:88px 28px 36px}
+	.app-main{min-width:0;padding:var(--sph-space-88px) var(--sph-space-28px) var(--sph-space-36px)}
 	.collapsed .workspace{width:calc(100% - 64px);margin-left:64px}
-	.mobile-navigation{position:fixed;inset:0 auto 0 0;width:min(300px,90vw);height:100dvh;max-height:100dvh;max-width:90vw;margin:0;padding:0;border:0;background:var(--surface);color:var(--text);overflow:visible}.mobile-navigation::backdrop{background:rgba(0,0,0,.5)}.mobile-navigation :global(.app-sidebar){position:absolute;width:100%;height:100%;min-height:0}:global(.mobile-menu-close[data-button-scope="button-90990bb395"]){position:absolute;z-index:101;right:8px;top:8px;min-width:44px;min-height:44px;padding:0;background:transparent!important;color:#fff;font-size:26px}.mobile-navigation :global(.brand){padding-right:54px}
- @media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.desktop-navigation{display:none}.shell .workspace{width:100%;margin-left:0}.app-main{padding:72px 12px 20px}}
+	.mobile-navigation{position:fixed;inset:0 auto 0 0;width:min(300px,90vw);height:100dvh;max-height:100dvh;max-width:90vw;margin:0;padding:0;border:0;background:var(--surface);color:var(--text);overflow:visible}.mobile-navigation::backdrop{background:var(--sph-color-shadow-50)}.mobile-navigation :global(.app-sidebar){position:absolute;width:100%;height:100%;min-height:0}:global(.mobile-menu-close[data-button-scope="button-90990bb395"]){position:absolute;z-index:101;right:8px;top:8px;min-width:44px;min-height:44px;padding:0;background:transparent!important;color:var(--sph-color-on-emphasis);font-size:var(--sph-type-26px)}.mobile-navigation :global(.brand){padding-right:var(--sph-space-54px)}
+ @media (max-width:760px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.desktop-navigation{display:none}.shell .workspace{width:100%;margin-left:0}.app-main{padding:var(--sph-space-72px) var(--sph-space-12px) var(--sph-space-20px)}}
 
 </style>

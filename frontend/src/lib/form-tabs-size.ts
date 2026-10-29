@@ -1,6 +1,8 @@
+import {tabNavigationHeight} from './tab-navigation-height';
 /** Measure the original retained sections, including form/footer wrappers. */
 export function formTabsSize(host: HTMLElement): { destroy: () => void } {
 	const dialog = host.closest('dialog');
+	const originalHeight=dialog?.style.height??'';
 	let frame = 0;
 	let disposed = false;
 	const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(measure); };
@@ -13,21 +15,7 @@ export function formTabsSize(host: HTMLElement): { destroy: () => void } {
 		host.dataset.measuring = '';
 		try {
 			const number = (value: string) => parseFloat(value) || 0;
-			// The selected label is bold. On narrow screens it can add a wrap row;
-			// reserve the largest navigation height as well as the largest panel.
-			const buttons = [...navigation.querySelectorAll<HTMLElement>('[role=tab]')];
-			const weights = buttons.map(button => button.style.fontWeight);
-			let navigationHeight = 0;
-			navigation.style.removeProperty('min-height');
-			try {
-				for (const selected of buttons) {
-					for (const button of buttons) button.style.fontWeight = button === selected ? '600' : '400';
-					navigationHeight = Math.max(navigationHeight, navigation.getBoundingClientRect().height);
-				}
-			} finally {
-				buttons.forEach((button, index) => { button.style.fontWeight = weights[index]; });
-			}
-			navigation.style.minHeight = `${Math.ceil(navigationHeight)}px`;
+			tabNavigationHeight(navigation);
 			const sections = [...panels.children].filter((element): element is HTMLElement => element instanceof HTMLElement && element.matches('[data-form-panel]'));
 			const notices = [...panels.children].filter(element => !sections.includes(element as HTMLElement)
 				&& !sections.some(section => element.contains(section)) && getComputedStyle(element).display !== 'none');
@@ -52,9 +40,12 @@ export function formTabsSize(host: HTMLElement): { destroy: () => void } {
 	const observer = new MutationObserver(schedule);
 	observer.observe(host, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded', 'aria-invalid'] });
 	const resize = new ResizeObserver(schedule);
+	for(const panel of host.querySelectorAll<HTMLElement>('[data-form-panel]'))resize.observe(panel);
 	if (dialog) resize.observe(dialog);
+	host.addEventListener('load',schedule,true);
+	document.fonts.addEventListener('loadingdone',schedule);
 	window.addEventListener('resize', schedule);
 	void document.fonts.ready.then(schedule);
 	schedule();
-	return { destroy: () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', schedule); } };
+	return { destroy: () => { disposed = true;if(dialog)dialog.style.height=originalHeight; cancelAnimationFrame(frame); observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', schedule);host.removeEventListener('load',schedule,true);document.fonts.removeEventListener('loadingdone',schedule); } };
 }
