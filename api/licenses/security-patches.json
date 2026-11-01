@@ -1,0 +1,115 @@
+{
+  "description": "SPH downstream changes for GHSA-gcqx-w48m-w2h4 and GHSA-27mw-82g8-phjj. GHSA-pfhg-q3qv-9q6r is mitigated in both application hooks. npm audit version advisories remain visible.",
+  "files": [
+    {
+      "path": "node_modules/deepmerge/index.js",
+      "packageJson": "node_modules/deepmerge/package.json",
+      "version": "4.3.1",
+      "originalSha256": "12440c84957c1990ea2d5e33dc0091722dc1dc1585c6d20e0c780e568ffa9d30",
+      "patchedSha256": "3ef13fbc841b6d36f054d28f1069ea8c7a479205ba9ad0198a35edb61c59f206",
+      "replacements": [
+        {
+          "before": "function mergeObject(target, source, options) {",
+          "after": "// SPH: define own data properties; never invoke the legacy __proto__ setter.\nfunction setOwn(target, key, value) {\n\tObject.defineProperty(target, key, { value: value, writable: true, enumerable: true, configurable: true });\n}\n\nfunction mergeObject(target, source, options) {"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))"
+        },
+        {
+          "before": "destination[key] = getMergeFunction(key, options)(target[key], source[key], options)",
+          "after": "setOwn(destination, key, getMergeFunction(key, options)(target[key], source[key], options))"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))"
+        }
+      ],
+      "archive": "https://registry.npmjs.org/deepmerge/-/deepmerge-4.3.1.tgz",
+      "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
+    },
+    {
+      "path": "node_modules/deepmerge/dist/cjs.js",
+      "packageJson": "node_modules/deepmerge/package.json",
+      "version": "4.3.1",
+      "originalSha256": "2e5160f84a1141bd927264afe4d15766f1e6cf07daef182b37ff53fea121de7d",
+      "patchedSha256": "fd0b99861bf3b905931edc0cb2098a90768aa7d1a32a6ed07cdb2e56cda40425",
+      "replacements": [
+        {
+          "before": "function mergeObject(target, source, options) {",
+          "after": "// SPH: define own data properties; never invoke the legacy __proto__ setter.\nfunction setOwn(target, key, value) {\n\tObject.defineProperty(target, key, { value: value, writable: true, enumerable: true, configurable: true });\n}\n\nfunction mergeObject(target, source, options) {"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))"
+        },
+        {
+          "before": "destination[key] = getMergeFunction(key, options)(target[key], source[key], options)",
+          "after": "setOwn(destination, key, getMergeFunction(key, options)(target[key], source[key], options))"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))"
+        }
+      ],
+      "archive": "https://registry.npmjs.org/deepmerge/-/deepmerge-4.3.1.tgz",
+      "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
+    },
+    {
+      "path": "node_modules/deepmerge/dist/umd.js",
+      "packageJson": "node_modules/deepmerge/package.json",
+      "version": "4.3.1",
+      "originalSha256": "f33e6596482d1fb5c7c427f8ef92f2aa849eea9223acd974176b2fb27ddbf73a",
+      "patchedSha256": "8fe366213e2c4f2be8df8bd7c576f93813ca1f5f12aaa16dbccbab1594b71cf2",
+      "replacements": [
+        {
+          "before": "function mergeObject(target, source, options) {",
+          "after": "// SPH: define own data properties; never invoke the legacy __proto__ setter.\nfunction setOwn(target, key, value) {\n\tObject.defineProperty(target, key, { value: value, writable: true, enumerable: true, configurable: true });\n}\n\nfunction mergeObject(target, source, options) {"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))"
+        },
+        {
+          "before": "destination[key] = getMergeFunction(key, options)(target[key], source[key], options)",
+          "after": "setOwn(destination, key, getMergeFunction(key, options)(target[key], source[key], options))"
+        },
+        {
+          "before": "destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)",
+          "after": "setOwn(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))"
+        }
+      ],
+      "archive": "https://registry.npmjs.org/deepmerge/-/deepmerge-4.3.1.tgz",
+      "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
+    },
+    {
+      "path": "node_modules/@sveltejs/kit/src/runtime/server/page/render.js",
+      "packageJson": "node_modules/@sveltejs/kit/package.json",
+      "version": "2.70.3",
+      "originalSha256": "dd41b0bbf460e8d60c2e5c8334547fc5cc0b90b2aebe6c79a13c0026dfbcb725",
+      "patchedSha256": "2f43e1a6c85910d69eec472f8af719c80e598c19b66be4a36c4db799aae95754",
+      "replacements": [
+        {
+          "before": "import { hash } from '../../../utils/hash.js';",
+          "after": "import { hash } from '../../../utils/hash.js';\nimport { escape_html } from '../../../utils/escape.js'; // SPH security backport"
+        },
+        {
+          "before": "${state.prerendering.cache}",
+          "after": "${escape_html(state.prerendering.cache, true)}"
+        }
+      ],
+      "archive": "https://registry.npmjs.org/@sveltejs/kit/-/kit-2.70.3.tgz",
+      "integrity": "sha512-UDvEYuZqAMbfB/oXIoqKvbKcb7YczK5zYrzmsGV1zRJk03jntwp8dXiYoIJotxAndsKvcPFtx9H1GRSKFdSHgg=="
+    }
+  ],
+  "licenses": [
+    {
+      "path": "node_modules/deepmerge/license.txt",
+      "sha256": "6cfc4687cb2f2d86f4a77e6b526290d3878e5e512f3fec2f4cb36a9cb36f798b"
+    },
+    {
+      "path": "node_modules/@sveltejs/kit/LICENSE",
+      "sha256": "ac6ecdc526c9e6aec1db76f0e8dfe344d792380e974686476e7c512152ae2636"
+    }
+  ]
+}

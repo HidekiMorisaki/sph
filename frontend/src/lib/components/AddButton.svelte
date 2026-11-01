@@ -34,7 +34,7 @@
 </button>
 
 <style>
-	.app-add-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;margin:0;padding:7px;border:1px solid var(--action-primary-button-border);border-radius:4px;background:var(--action-primary-background);color:var(--action-primary-text);cursor:pointer}
+	.app-add-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;margin:0;padding:var(--sph-space-7px);border:1px solid var(--action-primary-button-border);border-radius:var(--sph-radius-4px);background:var(--action-primary-background);color:var(--action-primary-text);cursor:pointer}
 	.app-add-icon:hover:not(:disabled){background:var(--action-primary-background-hover)}
 	.app-add-icon:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.app-add-icon:disabled{opacity:.5;cursor:not-allowed}

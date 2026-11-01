@@ -1,0 +1,314 @@
+{
+  "schema": 1,
+  "packages": [
+    {
+      "name": "svelte",
+      "version": "5.57.2",
+      "source": "https://registry.npmjs.org/svelte/-/svelte-5.57.2.tgz",
+      "integrity": "sha512-1YiPCAXT0Ct6g1vOMmSLa0Nsc3QRMvtDF32ihgglGVrugIuIK38RyDiFNXVDhtQ81TJjSO57NdMw6DyYLqSGDQ==",
+      "directory": "svelte-5.57.2",
+      "files": [
+        {
+          "path": "compiler/index.js",
+          "originalSha256": "6946633fcb54a98b6e15fbf363988bdd0bd8719ed805dc804a65d51686dc8154",
+          "modifiedSha256": "1cc606e4cebb569d3eeddccf2812a253bd08e233380d455b2823db712e491b95",
+          "edits": [
+            {
+              "start": 3703,
+              "end": 3746,
+              "sha256": "c16029870f76e80cf4a1329ab0f8bf6d98ab277990c8a32494cfb7c2be0f3227",
+              "after": ""
+            },
+            {
+              "start": 3746,
+              "end": 4118,
+              "sha256": "81d4f440b921e19465b549d473894ecc52d8eba569eaf5bfe98be8164384ff60",
+              "after": "function j(text,options){return require('./sph-helpers.cjs').getLocator(text,options);}"
+            },
+            {
+              "start": 351259,
+              "end": 351753,
+              "sha256": "c0d6e5c4ee34bafd765b9fd0fab0d82ea51ad29b2904b9d213d984ae4aeb278e",
+              "after": "function _c(node,parent){return require('./sph-helpers.cjs').reference(node,parent,true);}"
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/utils/compile_diagnostic.js",
+          "originalSha256": "719d766ae260bcfb35814d74ff78317630db8b2d9979b989f0bd7332458e6842",
+          "modifiedSha256": "13cedc213170bd7495d4bfe6fef59eab4f211fe42b3685e59ecee1a3903fa20e",
+          "edits": [
+            {
+              "start": 30,
+              "end": 48,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../../sph-location.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/1-parse/state/element.js",
+          "originalSha256": "d41b7b226cbfaff676158bc3019cfeaef8e5ea3bb9d94996d48e67677a8eeaf4",
+          "modifiedSha256": "c5b3429fe3fc0fc9453e10a854fd148a9756c1bfbe1377877d8c0869fdc100d0",
+          "edits": [
+            {
+              "start": 102,
+              "end": 120,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../../../../sph-location.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/2-analyze/visitors/Identifier.js",
+          "originalSha256": "6ef112584ff986cc9c6aec9e435f6acdee07e988d2462580215844382bbfbc5d",
+          "modifiedSha256": "3a8d35d83eeded52f4583753b57ca790b44ed2b415b5f24b31025a144ad24307",
+          "edits": [
+            {
+              "start": 124,
+              "end": 138,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/3-transform/client/visitors/Identifier.js",
+          "originalSha256": "8824fb8b61a47581ad5f052bd89fb944a396ef03b5573b57b810db5d36540d55",
+          "modifiedSha256": "9d0d5bf1fec1e3b058b14baf264d362d0cec52d9c9874ffa1eb8a1aff16323d1",
+          "edits": [
+            {
+              "start": 118,
+              "end": 132,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/3-transform/server/visitors/Identifier.js",
+          "originalSha256": "8d3fcc5bce882afea6170b30a14ff65c0b41f5828fd2f0f1e165ffbbefc8c239",
+          "modifiedSha256": "970f0769eb09cdfd8419f193baf93e1ce17e87b8fbd49821a2afa4492fd0514d",
+          "edits": [
+            {
+              "start": 121,
+              "end": 135,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/1-parse/index.js",
+          "originalSha256": "589a70ff687be3644115ebfdb152b7dab77bb8c8aed4631d7912dae65f9cd29f",
+          "modifiedSha256": "9e0a41c7fb5942d96316b5fb831e813e39799cbbcb1455bd9a261ef217a984f1",
+          "edits": [
+            {
+              "start": 70,
+              "end": 88,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../../../sph-location.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/2-analyze/index.js",
+          "originalSha256": "f121af6df350e4d48d3b22b5d02f450b26e975e9cca2cdfb44640a2a7a2bff27",
+          "modifiedSha256": "3080d87175df29deba909a60c9227d4f8e22a5aa456d1e4b3b34b3bc38e10013",
+          "edits": [
+            {
+              "start": 4997,
+              "end": 5011,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/preprocess/index.js",
+          "originalSha256": "503adab598d47f03a6e4c24bf467ea7a3b780eb85e0f121a743b0472acfe4edb",
+          "modifiedSha256": "de9127461328741d47c876ac275f9aa273cd97dc0cb35a964486b9fbc6726f41",
+          "edits": [
+            {
+              "start": 267,
+              "end": 285,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../../sph-location.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/scope.js",
+          "originalSha256": "5bcc43eb67d1dbd9d31461ca5626a0bdef271f921aa213d77521627f0e868847",
+          "modifiedSha256": "4bcaa206d0568730595b44b46cc870051da6a468f2430f4692299551c9c57e35",
+          "edits": [
+            {
+              "start": 432,
+              "end": 446,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/state.js",
+          "originalSha256": "2faf9e8c74961feec6527d033124fcd9a6b1919fce3334c813e5e88bd7817fae",
+          "modifiedSha256": "9cf268801b54434eadfed6a15a18ce1f1fc43d9b236eab0fba2fb5cfc3c2a17a",
+          "edits": [
+            {
+              "start": 30,
+              "end": 48,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../sph-location.js\""
+            },
+            {
+              "start": 177,
+              "end": 195,
+              "sha256": "ecb6bf0c5f6185247c94f47e785faa65afccb952332879c80c23418ea257c49c",
+              "after": "\"../../sph-location.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/3-transform/client/visitors/shared/utils.js",
+          "originalSha256": "6568157c79f0b306f7597cba1955aabf11a877fe2f591236ab00da29de5a698d",
+          "modifiedSha256": "1836194bc13f1af0183fa4e4686ae85951df4880259d5c39737e10abe1ff6c2a",
+          "edits": [
+            {
+              "start": 624,
+              "end": 638,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../../../../sph-reference.js\""
+            }
+          ]
+        },
+        {
+          "path": "src/compiler/phases/3-transform/utils.js",
+          "originalSha256": "a3ba2cc30d15d4ac5f755e5b011163f3dd8d563df81fea931c430f7f6afec344",
+          "modifiedSha256": "dc61f97706e6bf714287828cf9886fe7303655cb166e73e355031ee72ae20dc1",
+          "edits": [
+            {
+              "start": 572,
+              "end": 586,
+              "sha256": "4be30d7504efc92dd9f5d6431d29c2e130e8bf2351fa6dd148a5b3933d6217e3",
+              "after": "\"../../../../sph-reference.js\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "svelte-check",
+      "version": "4.4.6",
+      "source": "https://registry.npmjs.org/svelte-check/-/svelte-check-4.4.6.tgz",
+      "integrity": "sha512-kP1zG81EWaFe9ZyTv4ZXv44Csi6Pkdpb7S3oj6m+K2ec/IcDg/a8LsFsnVLqm2nxtkSwsd5xPj/qFkTBgXHXjg==",
+      "directory": "svelte-check-4.4.6",
+      "files": [
+        {
+          "path": "dist/src/index.js",
+          "originalSha256": "956b46e7a2fb50520fb6c9ffabe222677445aa3816031a962037435ad0253246",
+          "modifiedSha256": "b6457a7caa4ab3a436971956ee565bb9bed44ea7e762f428bd1bfdbfb3c4dead",
+          "edits": [
+            {
+              "start": 3771489,
+              "end": 3772362,
+              "sha256": "571660e907aa5b90399a897e2bf0fe6de72f5a5b33766a6a695e4ad590575c8d",
+              "after": "function isReference(node,parent){return require('./sph-helpers.cjs').reference(node,parent,false);}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "svelte-check",
+      "version": "4.7.6",
+      "source": "https://registry.npmjs.org/svelte-check/-/svelte-check-4.7.6.tgz",
+      "integrity": "sha512-t2scM//ZuVbSY/T2w6FSBw1v9s2NEmh/g+sy1lqtosW5ylBV5AF4wFb1Ts9Kf3MbfPDUDJDZ9L436YT0SPTdvw==",
+      "directory": "svelte-check-4.7.6",
+      "files": [
+        {
+          "path": "dist/src/index.js",
+          "originalSha256": "dc660e28bc246946ef1ce71a4e4d36483082edaf916470938889ab0518d18a79",
+          "modifiedSha256": "a7fa8fe5b61f6126e1b473804642e1f444f12228547e2588797e19d9fec92f79",
+          "edits": [
+            {
+              "start": 3571853,
+              "end": 3572726,
+              "sha256": "571660e907aa5b90399a897e2bf0fe6de72f5a5b33766a6a695e4ad590575c8d",
+              "after": "function isReference(node,parent){return require('./sph-helpers.cjs').reference(node,parent,false);}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "prisma",
+      "version": "7.10.1",
+      "source": "https://registry.npmjs.org/prisma/-/prisma-7.10.1.tgz",
+      "integrity": "sha512-GoVeErHGGtsSjsflQ1r2BA3RKTXtxNraQJz8OLkLhoLr7OgCscdx4qw4WMM4HnERYc+a1cq2VnMNbep+vOjNcQ==",
+      "directory": "prisma-7.10.1",
+      "files": [
+        {
+          "path": "build/cli.js",
+          "originalSha256": "4ab8a95f0072dfa7c3db869a5ff8f775499f22c346a4556991c0ae28eb1220fd",
+          "modifiedSha256": "167120c18511c31f68453e6d0495b3cae164aa8ca2795d85b6cceff418c32e56",
+          "edits": [
+            {
+              "start": 2491072,
+              "end": 2491093,
+              "sha256": "65f9f69d5a8a2fc420caa0c67736139d8aeea1e8dda312889db55b6e1d4da405",
+              "after": "Promise.reject(new Error(\"SPH excludes the embedded Prisma dev database; use the configured PostgreSQL server.\"))"
+            },
+            {
+              "start": 2491094,
+              "end": 2491130,
+              "sha256": "4b860b12cc6ee3ece56ccd2d3ae8072d008f85f9f12b296d35d51f82b7aa27af",
+              "after": "Promise.reject(new Error(\"SPH excludes the embedded Prisma dev database; use the configured PostgreSQL server.\"))"
+            },
+            {
+              "start": 2726786,
+              "end": 2726823,
+              "sha256": "a3faccbaf1f8f84b6eb29dee52af0c73484440d50e8778ac789fa8de28d59d71",
+              "after": "({ServerState:{scan:async()=>[]}})"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "@rollup/plugin-commonjs",
+      "version": "29.0.3",
+      "source": "https://registry.npmjs.org/@rollup/plugin-commonjs/-/plugin-commonjs-29.0.3.tgz",
+      "integrity": "sha512-ZaOxZceP7SOUW7Lqw5IRVweSQYWaeIPnXIGLiB690EBA3FGJTO40EEr2L5yZplJWsgTCogILRSpcAe7+U0Otdg==",
+      "directory": "plugin-commonjs-29.0.3",
+      "files": [
+        {
+          "path": "dist/cjs/index.js",
+          "originalSha256": "31590d3a49c3e6df7812823f742ee980532bd7cdef8b8b26bff2a68103128fd1",
+          "modifiedSha256": "9f004c696d869eac83d456c01c6a01904f21e141f4a44aae730fdce5113e17a4",
+          "edits": [
+            {
+              "start": 338,
+              "end": 380,
+              "sha256": "726cb8013d1a8fc97f0b7a2726772548d0a1bb184f464e4a77a4d745d92f03dc",
+              "after": "const isReference = (node,parent) => require('./sph-helpers.cjs').reference(node,parent,false);"
+            }
+          ]
+        },
+        {
+          "path": "dist/es/index.js",
+          "originalSha256": "8739589aa82f5afca569f7af4bc474837191f4ef7eaddba3874c8712613cafec",
+          "modifiedSha256": "dab6f3fd79ded9c4ed499149e110b0a9fe78791a4e18ea1af2808a7855af2bca",
+          "edits": [
+            {
+              "start": 392,
+              "end": 431,
+              "sha256": "4c3fe22539edb2f5a906fe670bb806f39cecec576bd3152488b8efee88090541",
+              "after": "import sphHelpers from './sph-helpers.cjs'; const isReference = (node,parent) => sphHelpers.reference(node,parent,false);"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

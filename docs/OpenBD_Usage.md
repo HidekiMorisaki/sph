@@ -7,6 +7,22 @@ Official sources reviewed on 2026-10-14:
 - Publisher consent terms (2024-03-15): https://www.hanmoto.com/permission-for-use/agreement
 - Data coverage changes: https://openbd.jp/news/20230829.html
 
+Price assistance was additionally reviewed on 2026-10-24 against the current
+service/publisher terms above, the official openBD specification and ONIX list 58
+(https://ns.editeur.org/onix/en/58). Book-introduction metadata may supply a
+tax-inclusive initial price in a copy registration form. The source value is not
+rewritten or presented as an updated publisher price: the operator's independently
+confirmed acquisition cost, including discounts/free transfers, is local business
+data. Explicit tax-inclusive PriceType 02/04 entries are preferred. Domestic
+9784-ISBN JPY tax-exclusive PriceType 01/03 entries may supply a separately labelled
+10% reference estimate, rounded down to whole yen. The source amount, conversion
+and rounding are shown without changing publisher metadata. This estimate is not
+a historical tax calculation; the operator confirms the actual acquisition cost.
+Absent, conditional, dated, conflicting or tax-unknown prices are not guessed. Reference
+prices are transient and use the existing five-minute cache, not a bundled price
+dataset. No new external provider or third-party code is introduced. Existing
+attribution, source-update and removal obligations continue to apply.
+
 SPH uses the ISBN lookup to introduce books in its employee-facing library catalog.
 Only language-specific lists of ISBN identifiers are bundled for optional installer
 samples: 11 Japanese titles or 11 English-language titles, selected by the initial

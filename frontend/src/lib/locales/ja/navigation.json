@@ -1,5 +1,6 @@
 {
 	"groups": {
+		"development": "開発",
 		"dashboard": "ダッシュボード",
 		"general": "一般",
 		"businessManagement": "業務管理",
@@ -9,6 +10,7 @@
 		"otherSystems": "他のシステム"
 	},
 	"items": {
+		"widgets": "ウィジェット",
 		"assetOverview": "資産状況",
 		"employeeAnalytics": "従業員分析",
 		"financialTrends": "経営状況",
@@ -37,7 +39,7 @@
 		"operatingSystems": "OS",
 		"statuses": "状態",
 		"skills": "スキル",
-		"projects": "案件",
+		"engagements": "案件",
 		"teams": "チーム",
 		"clients": "取引先"
 	},

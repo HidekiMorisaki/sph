@@ -1,7 +1,7 @@
 import type { LocalizationSettings } from '$lib/localization';
 
 // Only the session cookie is forwarded to the configured REST API host.
-export async function readInitialLocalization(sessionCookie: string | undefined, apiOrigin: string, fetcher: typeof fetch = fetch): Promise<LocalizationSettings | null> {
+export async function readInitialSession(sessionCookie: string | undefined, apiOrigin: string, fetcher: typeof fetch = fetch): Promise<(LocalizationSettings & { canManageSystemSettings: boolean }) | null> {
 	if (!sessionCookie) return null;
 	const response = await fetcher(new URL('/v1/auth/session', apiOrigin), {
 		headers: { cookie: `equipment_session=${encodeURIComponent(sessionCookie)}` },
@@ -18,5 +18,5 @@ export async function readInitialLocalization(sessionCookie: string | undefined,
 	}
 	try { new Intl.DateTimeFormat('en', { timeZone: user.timeZone }); }
 	catch { throw new Error('Invalid display settings.'); }
-	return { timeZone: user.timeZone, displayLanguage: user.displayLanguage, displayCurrency: user.displayCurrency };
+	return { timeZone: user.timeZone, displayLanguage: user.displayLanguage, displayCurrency: user.displayCurrency, canManageSystemSettings: user.capabilities?.canManageSystemSettings === true };
 }

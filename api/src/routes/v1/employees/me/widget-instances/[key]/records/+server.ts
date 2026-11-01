@@ -6,4 +6,4 @@ export async function GET({locals,params,url,setHeaders}:import('./$types').Requ
  const q=parseListQuery(url,['recordKey','createdAt','updatedAt'] as const,'createdAt');
  const result=await listRecords(locals.user,params.key,q);return success(result.items,200,{...listMeta(q,result.items.length,result.total),operations:result.operations});
 }
-export async function POST({locals,params,request}:import('./$types').RequestEvent){return success(await mutateRecord(locals.user,params.key,'create',await readRecordBody(request)),201);}
+export async function POST({locals,params,request}:import('./$types').RequestEvent){return success(await mutateRecord(locals.user,params.key,'create',await readRecordBody(request),undefined,request.headers.get('X-Widget-Version')),201);}

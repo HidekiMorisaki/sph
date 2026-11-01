@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireBranchAccess } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { convertAmount, financialSettings, monthKey, parseAmount, parseYear, periodMonths, roundedAmount, type Currency } from '$lib/server/api/financial';
@@ -26,6 +27,7 @@ function parseMonths(value: unknown, expected: string[], currency: Currency): Pr
 }
 
 export async function POST({ locals, params, request }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const branchId = Number(params.branchId);
 	const year = parseYear(params.year);
 	if (!Number.isSafeInteger(branchId) || branchId < 1 || year === null) return failure(422, 'INVALID_PERIOD', 'Invalid branch or year.');

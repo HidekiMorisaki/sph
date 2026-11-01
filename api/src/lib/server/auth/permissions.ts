@@ -25,6 +25,10 @@ export const permissionOperations = {
 	bookManage: 'books.manage'
 } as const;
 
+const systemOnlyOperations=new Set(granularOperations.filter(operation=>operation.systemOnly).map(operation=>operation.code));
+export const isSystemOnlyOperation=(operation:string)=>systemOnlyOperations.has(operation);
+const permittedBySystemPolicy=(user:AuthenticatedUser,operation:string)=>!systemOnlyOperations.has(operation)||user.permissionOperations.includes(permissionOperations.systemManagement);
+
 export const editablePermissionCatalog = [
 	{ code: permissionOperations.employeeRead, category: 'employees' },
 	{ code: permissionOperations.masterRead, category: 'masters' },
@@ -52,16 +56,28 @@ export const ownBranchOperations = new Set([
 	'calendars.read', 'calendars.assign', 'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 
+// Global grants supported by the branch-administrator session. Resource guards
+// still enforce owner, branch and responsibility requirements where applicable.
+export const branchGlobalOperations = new Set(['projects.preferences.update','projects.read','projects.create','projects.update','projects.delete','projects.members.manage','projects.settings.manage','projects.tickets.create','projects.tickets.update','projects.tickets.delete','projects.comments.manage','projects.time.manage','projects.attachments.manage','projects.images.read','projects.images.create','projects.images.delete','projects.diagrams.render','workflows.read','workflows.create','workflows.update','workflows.submit','workflows.approve','workflows.comment','workflows.cancel','workflows.delete','schedule.reserve', 'schedule.read', 'schedule.create', 'schedule.update', 'schedule.cancel', 'schedule.respond', 'schedule.preferences.update', 'notifications.read', 'notifications.update', 'notifications.delete', 'books.read', 'books.titles.create', 'books.purchases.read', 'books.purchases.create', 'books.purchases.cancel', 'books.reservations.create', 'books.reservations.cancel', 'widgets.read', 'widgets.layout.update', 'widgets.records.create', 'widgets.records.update', 'widgets.records.delete', 'search_filters.read', 'search_filters.create', 'search_filters.update', 'search_filters.delete', 'skills.read', 'engagements.read', 'clients.read', 'teams.read', 'teams.create', 'teams.update', 'teams.delete']);
+
+export const branchEditablePermissionCatalog = [
+	...editablePermissionCatalog.filter(({ code }) => ownBranchOperations.has(code) || branchGlobalOperations.has(code)),
+	{ code: 'calendars.assign', category: 'calendars' }
+];
+
 export function hasPermissionOperation(user: AuthenticatedUser, operation: string): boolean {
+	if(!permittedBySystemPolicy(user,operation))return false;
 	return user.permissionOperations.includes(operation) ||
 		(['masters.read', 'calendars.read'].includes(operation) && hasOwnBranchPermissionOperation(user, operation));
 }
 
 export function hasOwnBranchPermissionOperation(user: AuthenticatedUser, operation: string): boolean {
+	if(!permittedBySystemPolicy(user,operation))return false;
 	return user.ownBranchPermissionOperations?.includes(operation) ?? false;
 }
 
 export function hasScopedPermissionOperation(user: AuthenticatedUser, operation: string, branchId: number): boolean {
+	if(!permittedBySystemPolicy(user,operation))return false;
 	return user.permissionOperations.includes(operation) ||
 		(hasOwnBranchPermissionOperation(user, operation) && user.branchId === branchId);
 }
@@ -69,6 +85,7 @@ export function hasScopedPermissionOperation(user: AuthenticatedUser, operation:
 export function operationScopesFor(user: AuthenticatedUser): Record<string, 'global' | 'own_branch'> {
  const scopes: Record<string, 'global' | 'own_branch'> = {};
  for (const code of new Set([...user.permissionOperations, ...(user.ownBranchPermissionOperations ?? [])])) {
+  if(!permittedBySystemPolicy(user,code))continue;
   const pending = [code], seen = new Set<string>();
   let valid = true, ownBranch = false;
   while (pending.length) {
@@ -96,9 +113,9 @@ export function capabilitiesFor(user: AuthenticatedUser) {
 		widgetDraftOperations:Object.keys(scopes).filter(code=>code.startsWith('widgets.drafts.')),
 		canReadWidgetDrafts: hasPermissionOperation(user,'widgets.read')&&hasPermissionOperation(user,'widgets.drafts.read'),
 		canReadSkills: hasPermissionOperation(user, 'skills.read'),
-		canReadProjects: hasPermissionOperation(user, 'projects.read'),
+		canReadEngagements: hasPermissionOperation(user, 'engagements.read'),
         canReadClients: hasPermissionOperation(user, 'clients.read'),
-		workforceOperations: Object.keys(scopes).filter(code => code.startsWith('skills.') || code.startsWith('projects.') || code.startsWith('clients.')),
+		workforceOperations: Object.keys(scopes).filter(code => code.startsWith('skills.') || code.startsWith('engagements.') || code.startsWith('clients.')),
 		canAddTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.add'),
 		canRemoveTeamMembersGlobally: hasPermissionOperation(user, 'teams.members.remove'),
 		canReadTeams: hasPermissionOperation(user, 'teams.read'),
@@ -113,8 +130,8 @@ export function capabilitiesFor(user: AuthenticatedUser) {
 		canManageEmployees: hasPermissionOperation(user, permissionOperations.employeeManagement) || hasOwnBranchPermissionOperation(user, permissionOperations.employeeManagement),
 		canInviteEmployees: hasPermissionOperation(user, 'employees.invite') || hasOwnBranchPermissionOperation(user, 'employees.invite'),
 		canAssignEmployeeRoles: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, 'roles.assign'),
-		canManageMasters: hasPermissionOperation(user, permissionOperations.masterManagement),
-		canManageBranches: (hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement)) || hasOwnBranchPermissionOperation(user, permissionOperations.branchManagement),
+		canManageMasters: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.masterManagement),
+		canManageBranches: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement),
 		canCreateBranches: hasPermissionOperation(user, permissionOperations.systemManagement) && hasPermissionOperation(user, permissionOperations.branchManagement),
 		canDeleteBranches: hasPermissionOperation(user, 'branches.delete') || hasOwnBranchPermissionOperation(user, 'branches.delete'),
 		canReadCalendars: hasPermissionOperation(user, permissionOperations.calendarRead),

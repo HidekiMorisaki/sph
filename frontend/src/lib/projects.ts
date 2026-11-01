@@ -1,0 +1,28 @@
+export type Person={id:number;employeeCode:string;firstName:string;lastName:string};
+export type TicketType={id:number;name:string;position:number;milestone?:boolean};
+export type TicketStatus={id:number;name:string;category:string;position:number};
+export type TypeStatus={typeId:number;statusId:number;position:number;initial:boolean};
+export type Project={id:number;code:string;name:string;description:string;visibility:string;status:string;revision:number;role:string;operations:string[];types:TicketType[];statuses:TicketStatus[];typeStatuses:TypeStatus[];members:Array<{employeeId:number;role:string;employee:Person}>;counts:Array<{statusId:number;_count:number}>;actualMinutes:number;estimatedMinutes:number;engagement:{id:number;name:string;code:string;contractStartsOn:string|null;contractEndsOn:string|null}|null};
+export type Relation={fromCode?:string|null;toCode?:string|null;id:number;fromId:number;toId:number;kind:string};
+export type Ticket={code:string;parentCode?:string|null;id:number;number:number;projectId:number;parentId:number|null;title:string;description:string;typeId:number;statusId:number;assigneeId:number|null;authorId:number;priority:string;startsOn:string|null;dueOn:string|null;estimatedMinutes:number;actualMinutes?:number;position:number;labels:string[];revision:number};
+export type TicketDetail=Ticket&{comments:Array<{id:number;authorId:number;body:string;createdAt:string;author:Person}>;checklists:Array<{id:number;text:string;completed:boolean;position:number}>;timeEntries:Array<{id:number;employeeId:number;workDate:string;minutes:number;note:string;employee:Person}>;attachments:Array<{id:number;name:string;mime:string;size:number}>;watchers:Array<{employeeId:number}>};
+export type History={ticketCode:string|null;id:number;kind:string;ticketId:number|null;createdAt:string;detail:unknown;actor:Person};
+export class ProjectError extends Error{constructor(public code:string,public httpStatus:number){super(code);}}
+export async function projectRequest<T>(url:string,method='GET',body?:unknown):Promise<T>{
+ const r=await fetch(url,{method,headers:body instanceof FormData?{}:body===undefined?{}:{'content-type':'application/json'},...(body===undefined?{}:{body:body instanceof FormData?body:JSON.stringify(body)})});
+ const payload=await r.json().catch(()=>null);if(!r.ok)throw new ProjectError(payload?.error?.code??'FAILED',r.status);return payload.data as T;
+}
+export const personName=(p:Person)=>`${p.lastName} ${p.firstName} (${p.employeeCode})`;
+export function ticketProjectCode(code:string){const m=/^([A-Z][A-Z0-9_]{0,63})-([0-9]{4,10})$/.exec(code);if(!m)return null;const n=Number(m[2]);return n>0&&n<=2147483647&&String(n).padStart(4,'0')===m[2]?m[1]:null;}
+export const day=(v:string|null|undefined)=>v?.slice(0,10)??'';
+export function projectError(error:unknown,ja:boolean){
+ const code=error instanceof ProjectError?error.code:'FAILED';
+ const messages:Record<string,[string,string]>={
+  INVALID_PROJECT_CODE:['プロジェクトIDは英字で始まる1〜64文字の半角英数字とアンダースコアで入力してください。ハイフンは使用できません。','Use 1–64 ASCII letters, digits or underscores, starting with a letter. Hyphens are not allowed.'],PROJECT_CODE_UNAVAILABLE:['このプロジェクトIDは使用できません。','This project ID is unavailable.'],PROJECT_CODE_IMMUTABLE:['登録済みのプロジェクトIDは変更できません。','Project IDs cannot be changed.'],REVISION_CONFLICT:['他の操作で更新されています。入力を控えて再読込してください。','This record changed. Keep your edits and reload.'],STATUS_NOT_ALLOWED_FOR_TYPE:['この種別では使用できない状態です。状態を選び直してください。','Choose a status allowed for this type.'],LAST_PROJECT_MANAGER:['最後の有効な管理者は解除できません。','The last active manager cannot be removed.'],MEMBER_HAS_ASSIGNMENTS:['担当チケットを引き継いでから役割を変更してください。','Reassign this member’s tickets first.'],HIERARCHY_CYCLE:['親子関係が循環しています。','The hierarchy would contain a cycle.'],HIERARCHY_LIMIT:['チケット階層は20階層までです。','Tickets support up to 20 levels.'],DEPENDENCY_CYCLE:['依存関係が循環しています。','Dependencies would contain a cycle.'],TICKET_HAS_CHILDREN:['子チケットを移動・削除してから削除してください。','Move or remove child tickets first.'],INITIAL_STATUS_REQUIRED:['種別ごとに初期状態を1つ設定してください。','Choose one initial status for each type.'],INITIAL_STATUS_MUST_BE_OPEN:['初期状態には未完了の状態を選択してください。','The initial status must be unfinished.'],INVALID_ATTACHMENT:['添付形式・圧縮内容・サイズを確認してください。','Check the attachment format, archive content and size.'],ATTACHMENT_LIMIT:['添付は1件10MiB、20件・合計50MiBまでです。','Attachments allow 10MiB each, 20 files and 50MiB total.'],PROJECT_ARCHIVED:['アーカイブ中は編集できません。','Archived projects are read only.'],PROJECT_ACCESS_REQUIRED:['このプロジェクトへのアクセス権がありません。','You do not have access to this project.'],PROJECT_EDIT_REQUIRED:['この操作を行う参加者権限がありません。','Your project role does not allow this operation.']};
+ return messages[code]?.[ja?0:1]??(ja?'操作できませんでした。入力・権限を確認してください。':'Unable to complete the operation. Check your input and permissions.')+` (${code})`;
+}
+export function canProject(p:Project,operation:string,manager=false){return p.operations.includes('projects.'+operation)&&p.role!=='reader'&&p.role!=='viewer'&&(!manager||p.role==='manager');}
+export function ticketOrder(items:Ticket[]){
+ const ids=new Set(items.map(t=>t.id));const output:Array<{ticket:Ticket;depth:number}>=[],seen=new Set<number>();
+ const visit=(parent:number|null,depth:number)=>{for(const t of items.filter(t=>(t.parentId!==null&&ids.has(t.parentId)?t.parentId:null)===parent).sort((a,b)=>a.position-b.position||a.number-b.number)){if(seen.has(t.id))continue;seen.add(t.id);output.push({ticket:t,depth});visit(t.id,depth+1);}};visit(null,0);return output;
+}

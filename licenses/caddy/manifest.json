@@ -441,21 +441,6 @@
     ]
   },
   {
-    "name": "github.com/go-jose/go-jose/v4",
-    "version": "4.1.5",
-    "source": "https://proxy.golang.org/github.com/go-jose/go-jose/v4/@v/v4.1.5.zip",
-    "files": [
-      {
-        "name": "caddy-license-audit\\github.com__go-jose__go-jose__v4@4.1.5__LICENSE",
-        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
-      },
-      {
-        "name": "caddy-license-audit\\github.com__go-jose__go-jose__v4@4.1.5__json__LICENSE",
-        "sha256": "dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d"
-      }
-    ]
-  },
-  {
     "name": "github.com/go-logr/logr",
     "version": "1.4.4",
     "source": "https://proxy.golang.org/github.com/go-logr/logr/@v/v1.4.4.zip",
@@ -1857,6 +1842,22 @@
       {
         "name": "go-time-README",
         "sha256": "0746c930fbd8f0237c008313f1c37561735487d5d59a8f658ebd01ede3dc6b66"
+      }
+    ]
+  },
+  {
+    "name": "github.com/go-jose/go-jose/v4",
+    "version": "4.1.6",
+    "source": "https://proxy.golang.org/github.com/go-jose/go-jose/v4/@v/v4.1.6.zip",
+    "archiveSha256": "62506f3369fc124682356bbe8eb442f982422401dda99ace200694efc962da76",
+    "files": [
+      {
+        "name": "github.com/go-jose/go-jose/v4@v4.1.6/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "name": "github.com/go-jose/go-jose/v4@v4.1.6/json/LICENSE",
+        "sha256": "dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d"
       }
     ]
   }

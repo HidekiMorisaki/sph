@@ -4,8 +4,8 @@
  .mobile-record-table>table{display:block;width:100%;min-width:0!important;table-layout:auto}
  .mobile-record-table>table>colgroup,.mobile-record-table>table>thead{display:none}
  .mobile-record-table>table>tbody{display:block}
- .mobile-record-table>table>tbody>tr{display:block;padding:10px 12px;border-bottom:1px solid var(--border)}
- .mobile-record-table>table>tbody>tr>td,.mobile-record-table>table>tbody>tr>th{display:block;width:auto!important;padding:4px 0;border:0;text-align:left;overflow-wrap:anywhere;white-space:normal}
- .mobile-record-table [data-label]:not([data-label=''])::before{content:attr(data-label) ': ';color:var(--muted);font-size:var(--font-size-support);font-weight:400}
+ .mobile-record-table>table>tbody>tr{display:block;padding:var(--sph-space-10px) var(--sph-space-12px);border-bottom:1px solid var(--border)}
+ .mobile-record-table>table>tbody>tr>td,.mobile-record-table>table>tbody>tr>th{display:block;width:auto!important;padding:var(--sph-space-4px) 0;border:0;text-align:left;overflow-wrap:anywhere;white-space:normal}
+ .mobile-record-table [data-label]:not([data-label=''])::before{content:attr(data-label) ': ';color:var(--muted);font-size:var(--font-size-support);font-weight:var(--sph-weight-400)}
  .mobile-record-table button{min-height:44px;max-width:100%;white-space:normal}
 }

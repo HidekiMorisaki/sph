@@ -9,6 +9,22 @@ menu_color=''
 if [[ -t 1 && "${TERM:-dumb}" != dumb && -z "${NO_COLOR+x}" ]]; then menu_color=1; fi
 option_color=94; question_color=96; default_color=95
 if [[ -n "$light_color" ]]; then option_color=34; question_color=36; default_color=35; fi
+color=$menu_color
+show_installer_banner() {
+	local columns=${COLUMNS:-0} row tone=94 width=0
+	if [[ -z "$color" || ! -r scripts/installer-banner.txt ]]; then printf 'SPH Installer\n'; return; fi
+	if [[ ! "$columns" =~ ^[1-9][0-9]*$ ]]; then columns=$(tput cols 2>/dev/null || printf 0); fi
+	while IFS= read -r row || [[ -n "$row" ]]; do ((${#row} <= width)) || width=${#row}; done < scripts/installer-banner.txt
+	if ((columns < width)); then printf 'SPH Installer\n'; return; fi
+	[[ -z "$light_color" ]] || tone=34
+	printf '\n'
+	while IFS= read -r row || [[ -n "$row" ]]; do
+		if [[ -z "$row" ]]; then tone=97; [[ -z "$light_color" ]] || tone=30; fi
+		printf '\033[%sm%s\033[0m\n' "$tone" "$row"
+	done < scripts/installer-banner.txt
+	printf '\n'
+}
+show_installer_banner
 language=''
 while true; do
 	if [[ -n "$menu_color" ]]; then
@@ -110,9 +126,7 @@ progress() {
 	if wait "$active"; then active=''; else active=''; return 1; fi
 	advance_step
 }
-line 36 'frame.separator'
-line 36 'title.banner'
-line 36 'frame.separator'
+
 line 0 'progress.notice'
 begin_step 'stage.environment' 14
 [[ -t 0 && -t 1 ]] || { failure_key='error.terminal'; failure; }

@@ -16,7 +16,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 	if (!(resource in masterHistoryFields)) return failure(404, 'NOT_FOUND', 'Not found.');
 	if (resource === 'role' && locals.user && hasOwnBranchPermissionOperation(locals.user, permissionOperations.roleRead) && !hasPermissionOperation(locals.user, permissionOperations.systemManagement)) return failure(403, 'PERMISSION_REQUIRED', 'Permission is required.');
 	if (resource !== 'role' || !locals.user || !hasPermissionOperation(locals.user, permissionOperations.systemManagement)) {
-		requireOperationApi(locals.user, resource === 'role' ? permissionOperations.roleRead : resource === 'clients' || resource === 'projects' ? resource+'.read' : permissionOperations.masterRead);
+		requireOperationApi(locals.user, resource === 'role' ? permissionOperations.roleRead : resource === 'clients' || resource === 'engagements' ? resource+'.read' : permissionOperations.masterRead);
 	}
 	const id = parseId(params.id);
 	if (!id) return failure(404, 'NOT_FOUND', 'Not found.');
@@ -26,7 +26,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 	const active = await db.$transaction(async (tx) => {
 		switch (resource) {
 			case 'clients': return tx.client.count({where:{id,deletedAt:null}});
-            case 'projects': return tx.project.count({where:{id,deletedAt:null}});
+            case 'engagements': return tx.engagement.count({where:{id,deletedAt:null}});
             case 'departments': return tx.department.count({ where: { id, deletedAt: null } });
 			case 'employee-groups': return tx.employeeGroup.count({ where: { id, deletedAt: null } });
 			case 'positions': return tx.position.count({ where: { id, deletedAt: null } });
@@ -46,7 +46,7 @@ export async function GET({ params, locals, url }: import('./$types').RequestEve
 		}
 	});
 	if (!active) return failure(404, 'NOT_FOUND', 'Not found.');
-	const where = { resource, resourceId: id, deletedAt: null };
+	const where = { resource: resource === 'engagements' ? { in: ['engagements','projects'] } : resource, resourceId: id, deletedAt: null };
 	const [total, items] = await db.$transaction([
 		db.masterChangeHistory.count({ where }),
 		db.masterChangeHistory.findMany({ where, select: { id: true, action: true, changes: true, changedAt: true, actor: { select: { firstName: true, middleName: true, lastName: true } } }, orderBy: [{ [query.sortBy]: query.sortOrder }, { id: 'desc' }], skip: query.offset, take: query.limit })

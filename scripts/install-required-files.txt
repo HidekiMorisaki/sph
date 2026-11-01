@@ -3,6 +3,7 @@ release-metadata.json
 docker-compose.local.yml
 scripts/install-config.mjs
 scripts/install-display.mjs
+scripts/installer-banner.txt
 scripts/install-preflight.mjs
 scripts/install-maintenance.mjs
 scripts/install-i18n.mjs
@@ -24,3 +25,18 @@ gateway/go.sum
 gateway/main.go
 scripts/install-progress.ps1
 scripts/install-progress.sh
+LICENSE
+api/.npmrc
+frontend/.npmrc
+api/scripts/migrate-and-initialize.mjs
+vendor/npm/prepare.mjs
+vendor/npm/verify.mjs
+vendor/npm/helpers.cjs
+vendor/npm/manifest.json
+gateway/patches/go-jose-v3-jwk.go
+gateway/patches/go-jose-v3.json
+db/patches/CVE-2026-6732.patch
+db/patches/CVE-2026-86140.patch
+vendor/npm/archive.mjs
+vendor/npm/install.mjs
+vendor/npm/run.mjs

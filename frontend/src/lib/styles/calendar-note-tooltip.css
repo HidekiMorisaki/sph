@@ -6,15 +6,15 @@
 	max-height: min(360px, calc(100vh - 16px));
 	overflow: auto;
 	overscroll-behavior: contain;
-	padding: 10px 12px;
+	padding: var(--sph-space-10px) var(--sph-space-12px);
 	border: 1px solid var(--border);
-	border-radius: 4px;
+	border-radius: var(--sph-radius-4px);
 	background: var(--surface-secondary);
 	box-shadow: var(--shadow);
 	color: var(--text);
 	font-size:var(--font-size-support);
-	line-height: 1.6;
+	line-height: var(--sph-leading-1-6);
 	overflow-wrap: anywhere;
 }
-.calendar-note-tooltip strong { display: block; margin-bottom: 4px; font-weight: 600; }
+.calendar-note-tooltip strong { display: block; margin-bottom: var(--sph-space-4px); font-weight: var(--sph-weight-600); }
 .calendar-note-tooltip > div { white-space: pre-wrap; }

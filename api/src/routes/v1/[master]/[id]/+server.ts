@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
 import { requireBranchAccess } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -13,6 +14,7 @@ function resource(value: string) {
 }
 
 export async function PATCH({ params, request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const selected = resource(params.master);
 	const id = parseId(params.id);
 	const actor = selected === 'branches' && id ? requireBranchAccess(locals.user, permissionOperations.branchManagement, id) : requireOperationApi(locals.user, permissionOperations.masterManagement);
@@ -41,6 +43,7 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 }
 
 export async function DELETE({ params, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const selected = resource(params.master);
 	const id = parseId(params.id);
 	const actor = selected === 'branches' && id ? requireBranchAccess(locals.user, permissionOperations.branchManagement, id) : requireOperationApi(locals.user, permissionOperations.masterManagement);

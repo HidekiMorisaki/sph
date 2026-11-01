@@ -1,4 +1,5 @@
 import { isSystemAdministratorEmployee, lockSystemAdministrators, protectSystemAdministrator, preserveSystemAdministrator } from '$lib/server/api/system-administrator-protection';
+import { returnDepartureAssets, ensureAssetsReturned, deleteEmployeeRecord } from '$lib/server/api/employee-offboarding';
 import { isHttpError } from '@sveltejs/kit';
 import { syncEmployeeTeams } from '$lib/server/api/teams';
 import { writeAuditLog } from '$lib/server/api/admin';
@@ -34,19 +35,23 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 	if (!id) return failure(400, 'INVALID_REQUEST', 'Invalid request.');
 	const current = await getPrisma().employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { countryCode: true } });
 	if (!current) return failure(404, 'NOT_FOUND', 'Not found.');
-	const parsed = parseEmployeeInput(await request.json().catch(() => null), current.countryCode === 'US' ? 'US' : 'JP');
+	const body = await request.json().catch(() => null);
+	const parsed = parseEmployeeInput(body, current.countryCode === 'US' ? 'US' : 'JP');
 	if (!parsed.success) return failure(400, 'VALIDATION_ERROR', 'One or more fields are invalid.', parsed.errors);
 	const input = parsed.data;
 	if (writerBranchId !== null && input.employee.branchId !== writerBranchId) return failure(403, 'BRANCH_ACCESS_DENIED', 'Branch access is required.');
 	try {
 		const result = await getPrisma().$transaction(async (tx) => {
 			await lockSystemAdministrators(tx);
+			await tx.$queryRaw`SELECT id FROM employees WHERE id = ${id} FOR UPDATE`;
 			await protectSystemAdministrator(tx, actor, id);
 			const referenceErrors = await employeeReferenceErrors(tx, { ...input.employee, departmentIds: input.departmentIds, primaryDepartmentId: input.primaryDepartmentId, positionIds: input.positionIds });
 			if (referenceErrors.length) return { status: 'invalid_reference' as const, errors: referenceErrors };
-			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { email: true } });
+			const previous = await tx.employee.findFirst({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, select: { email: true, retiredAt: true, deletionScheduledOn: true } });
 			if (!previous) return { status: 'not_found' as const };
 			if (writerBranchId !== null && await tx.employeeRole.count({ where: { employeeId: id, deletedAt: null, scopeType: 'global', role: { deletedAt: null, permissions: { some: { deletedAt: null, permission: { deletedAt: null, operations: { some: { operation: permissionOperations.systemManagement, deletedAt: null } } } } } } } })) return { status: 'system_role_forbidden' as const };
+			const retirementChanged = input.employee.retiredAt && input.employee.retiredAt.getTime() !== previous.retiredAt?.getTime();
+			if (retirementChanged) await preserveSystemAdministrator(tx,id,input.employee.retiredAt!);
 			const before = await readEmployeeFields(tx, id);
 			let roleResult: Awaited<ReturnType<typeof syncGlobalRoleGrants>> = 'updated';
 			if (writerBranchId === null) roleResult = await syncGlobalRoleGrants(tx, actor, id, input.roleIds);
@@ -55,9 +60,10 @@ export async function PATCH({ params, request, locals }: import('./$types').Requ
 				if (current.length !== input.roleIds.length || current.some(({ roleId }) => !input.roleIds.includes(roleId))) roleResult = 'system_role_forbidden';
 			}
 			if (roleResult !== 'updated') return { status: roleResult };
+			if (retirementChanged) await returnDepartureAssets(tx,id,actor,(body as Record<string,unknown>)?.departureConfirmation,input.employee.retiredAt!);
 			await syncEmployeeTeams(tx, actor, id, input.teamIds);
 			if (input.employee.retiredAt) await preserveSystemAdministrator(tx, id, input.employee.retiredAt > new Date() ? input.employee.retiredAt : new Date());
-			await tx.employee.update({ where: { id }, data: input.employee });
+			await tx.employee.update({ where: { id }, data: { ...input.employee, ...(!input.employee.retiredAt && !previous.deletionScheduledOn ? {assetReturnCompletedAt:null} : {}) } });
 			await syncEmployeeDepartments(tx, id, input.departmentIds, input.primaryDepartmentId);
 			await syncEmployeePositions(tx, id, input.positionIds, input.primaryPositionId);
 			if (previous.email !== input.employee.email) await tx.accountInvitation.updateMany({ where: { employeeId: id, usedAt: null, deletedAt: null }, data: { deletedAt: new Date() } });
@@ -84,34 +90,12 @@ export async function DELETE({ params, locals }: import('./$types').RequestEvent
 	const result = await getPrisma().$transaction(async (tx) => {
 		if (!await tx.employee.count({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) } })) return 'not_found';
 		await lockSystemAdministrators(tx);
-		await protectSystemAdministrator(tx, actor, id);
+		await tx.$queryRaw`SELECT id FROM employees WHERE id = ${id} FOR UPDATE`;
+			await protectSystemAdministrator(tx, actor, id);
 		await preserveSystemAdministrator(tx, id);
-		const references = await Promise.all([
-			tx.itAssetAssignment.count({ where: { employeeId: id, returnedAt: null, deletedAt: null } }),
-			tx.branch.count({ where: { deletedAt: null, OR: [{ managerEmployeeId: id }, { deputyManagerEmployeeId: id }] } })
-		]);
-		if (references[0] > 0) return 'referenced';
-		if (references[1] > 0) return 'branch_responsibility';
-		const before = await readEmployeeFields(tx, id);
-		const deletedAt = new Date();
-		const changed = await tx.employee.updateMany({ where: { id, deletedAt: null, ...(writerBranchId === null ? {} : { branchId: writerBranchId }) }, data: { deletedAt } });
-		if (!changed.count) return 'not_found';
-		await tx.employeeRole.updateMany({
-			where: { deletedAt: null, OR: [{ employeeId: id }, { scopeEmployeeId: id }] },
-			data: { deletedAt }
-		});
-		await tx.savedSearchFilter.updateMany({where:{ownerEmployeeId:id,deletedAt:null},data:{deletedAt,revision:{increment:1}}});
-		await tx.employeeTeam.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
-		await tx.employeePosition.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
-		await tx.employeeDepartment.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt, isPrimary: false } });
-		await tx.employeeSocialLink.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
-		await tx.session.updateMany({ where: { employeeId: id, deletedAt: null }, data: { deletedAt } });
-		await tx.accountInvitation.updateMany({ where: { employeeId: id, usedAt: null, deletedAt: null }, data: { deletedAt } });
-		await recordEmployeeChange(tx, id, actor.id, 'delete', before, null);
-		await writeAuditLog(tx, actor.id, 'delete', 'employee', id); return 'deleted';
+		await ensureAssetsReturned(tx,id);
+		await deleteEmployeeRecord(tx,id,actor.id);return 'deleted';
 	}, { isolationLevel: 'Serializable' });
-	if (result === 'referenced') return failure(409, 'RESOURCE_IN_USE', 'The employee has an active assignment.');
-	if (result === 'branch_responsibility') return failure(409, 'RESOURCE_IN_USE', 'The employee is assigned as a branch manager or deputy manager.');
 	return result === 'deleted' ? success({ id, deleted: true }) : failure(404, 'NOT_FOUND', 'Not found.');
 	} catch (error) {
 		if (isHttpError(error)) throw error;

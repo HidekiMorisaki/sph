@@ -6,7 +6,7 @@ export type Capabilities = {
  canReadWidgetDrafts?:boolean;
  widgetDraftOperations?:string[];
  canReadSkills: boolean;
- canReadProjects: boolean;
+ canReadEngagements: boolean;
  canReadClients: boolean;
  workforceOperations: string[];
  canReadTeams: boolean;

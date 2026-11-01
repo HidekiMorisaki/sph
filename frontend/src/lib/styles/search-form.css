@@ -1,8 +1,8 @@
 .search-form {
-	--search-placeholder: #c0c7cf;
+	--search-placeholder: var(--sph-color-placeholder-light);
 }
 html[data-theme='dark'] .search-form {
-	--search-placeholder: #5a6473;
+	--search-placeholder: var(--sph-color-placeholder-dark);
 }
 
 /* Match the visible Skill/Team filter labels throughout the search form. */
@@ -14,14 +14,14 @@ html[data-theme='dark'] .search-form {
 .search-form .keyword-control > span {
 	color: var(--text-secondary);
 	font-size: var(--font-size-support);
-	font-weight: 400;
+	font-weight: var(--sph-weight-400);
 }
 
 .search-form .form-input-field input,
 .search-form .search-box input,
 .search-form :is(.form-select-trigger, .form-multi-select-trigger, .date-trigger) {
 	color: var(--text) !important;
-	font-weight: 400;
+	font-weight: var(--sph-weight-400);
 }
 .search-form .form-input-field input::placeholder,
 .search-form .search-box input::placeholder,
@@ -37,12 +37,12 @@ html[data-theme='dark'] .search-form {
 /* Single and multiple quick-filter selectors share the participation selector's states. */
 .search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger) {
 	height: 32px;
-	padding: 0 12px;
+	padding: 0 var(--sph-space-12px);
 	border: 1px solid var(--border);
-	border-radius: 4px;
+	border-radius: var(--sph-radius-4px);
 	background: var(--surface) !important;
 	font-size: var(--font-size-body);
-	font-weight: 400;
+	font-weight: var(--sph-weight-400);
 	transition: border-color 150ms, box-shadow 150ms;
 }
 .search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger):hover:not(:focus):not(:disabled) {
@@ -50,19 +50,19 @@ html[data-theme='dark'] .search-form {
 }
 .search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger):focus-visible,
 .search-form .employee-workforce-filters :is(.form-select-trigger, .form-multi-select-trigger)[aria-expanded='true'] {
-	border-color: #1abb9c;
+	border-color: var(--sph-color-accent);
 	outline: 0;
-	box-shadow: 0 0 0 3px rgba(26,187,156,.14);
+	box-shadow:var(--sph-shadow-focus);
 }
 .search-form .employee-workforce-filters :is(.form-select-options, .form-multi-select-options) {
 	z-index: 1400;
 	max-height: calc(100dvh - 16px);
-	padding: 3px;
+	padding: var(--sph-space-3px);
 	overflow: hidden;
 	background: var(--surface);
 	border: 1px solid var(--border);
-	border-radius: 6px;
-	box-shadow: 0 8px 18px rgba(15,23,42,.18);
+	border-radius: var(--sph-radius-6px);
+	box-shadow:var(--sph-shadow-select);
 }
 .search-form .employee-workforce-filters :is(.form-select-search, .form-multi-select-search)::placeholder {
 	color: var(--search-placeholder);

@@ -1,4 +1,12 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import type { Snippet } from 'svelte';
+ import EmployeeDepartureModal, { type ReturnConfirmation } from './EmployeeDepartureModal.svelte';
+ import EmployeeWorkforceSection from './EmployeeWorkforceSection.svelte';
+ import WorkforceRecordModal from './WorkforceRecordModal.svelte';
+ import type { RecordContext } from '$lib/workforce';
+ import FormTabs from '$lib/components/FormTabs.svelte';
 	import { localeMessages } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
 	import { employeeFieldError, employeeSaveError } from '$lib/employee-messages';
@@ -39,6 +47,7 @@
 		teamsReady = false,
 		canManageSystemSettings = false,
 		canAssignEmployeeRoles = true,
+		onDelete, extraActions, canEditEmployee = true, deleteError = '',
 		returnFocus = null,
 		onClose,
 		onSaved
@@ -52,11 +61,18 @@
 		teamsReady?: boolean;
 		canManageSystemSettings?: boolean;
 		canAssignEmployeeRoles?: boolean;
+		onDelete?: () => void;
+		canEditEmployee?: boolean; deleteError?: string;
+		extraActions?: Snippet;
 		returnFocus?: HTMLElement | null;
 		onClose: () => void;
 		onSaved: (employee: SavedEmployee) => void | Promise<void>;
 	} = $props();
 
+	let workforceContext = $state<RecordContext | null>(null);
+ let departureOpen=$state(false);
+	let skillsEditor = $state<EmployeeWorkforceSection>();
+	let participationEditor = $state<EmployeeWorkforceSection>();
 	const bloodTypes = ['A', 'B', 'AB', 'O'];
 	const blank = () => ({
 		employeeCode: '', firstName: '', middleName: '', lastName: '', nameKana: '', birthDate: '', gender: '', bloodType: '',
@@ -146,16 +162,18 @@
 		dialogElement?.querySelector<HTMLElement>(selector)?.focus();
 	}
 	function adminPayload() { const { teamIds, ...fields } = form; return { ...fields, ...(teamsReady && canManageTeamMemberships ? { teamIds } : {}), primaryDepartmentId: form.primaryDepartmentId || null, primaryPositionId: form.positionIds[0] ?? null }; }
-	async function save() {
+	async function save(departureConfirmation?:ReturnConfirmation) {
+		if(mode!=='create'&&!canEditEmployee)return;
 		formError = null; fieldErrors = {};
 		const pickerFields = ['birthDate', 'gender', 'hiredAt', 'employmentTypeId', 'branchId'];
 		missingFields = [...pickerFields.filter((field) => !form[field as keyof Form]), ...(!form.roleIds.length ? ['roleIds'] : [])];
 		if (missingFields.length) { focusFormField(missingFields[0]); return; }
 		if (form.postalCode.trim() && !validPostalCode(form.countryCode, form.postalCode)) { fieldErrors.postalCode = 'postal_invalid'; focusFormField('postalCode'); return; }
+		if(employee && form.retiredAt && form.retiredAt!==iso(employee.retiredAt) && !departureConfirmation){departureOpen=true;return;}
 		const endpoint = mode === 'admin-edit' && employee ? `/v1/employees/${employee.id}` : '/v1/employees';
 		saving = true;
 		try {
-			const response = await fetch(endpoint, { method: mode === 'create' ? 'POST' : 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(adminPayload()) });
+			const response = await fetch(endpoint, { method: mode === 'create' ? 'POST' : 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({...adminPayload(),...(departureConfirmation?{departureConfirmation}:{})}) });
 			if (!response.ok) {
 				const body = await response.json().catch(() => null) as ApiErrorPayload | null;
 				const details = body?.error?.details ?? [];
@@ -173,7 +191,8 @@
 		finally { saving = false; }
 	}
 	function windowKeydown(event: KeyboardEvent) {
-		if (event.defaultPrevented || confirmingDiscard || event.key !== 'Escape') return;
+		if(!dialogElement?.checkVisibility())return;
+		if (departureOpen || workforceContext || event.defaultPrevented || confirmingDiscard || event.key !== 'Escape') return;
 		if (activeDateField) { const field = activeDateField; activeDateField = null; void tick().then(() => focusFormField(field)); return; }
 		if (mode === 'create' && hasDraftChanges && !saving) confirmingDiscard = true;
 		else requestClose();
@@ -198,43 +217,52 @@
 	<label><span>{label}{#if required} <span class="required" aria-hidden="true">*</span>{/if}</span><input name={field} value={form[field]} {required} {type} maxlength={maximum} minlength={minimum} {pattern} class:invalid={Boolean(fieldError(field))} aria-describedby={fieldError(field) ? `${field}-error` : undefined} aria-invalid={Boolean(fieldError(field))} {placeholder} oninput={(event) => updateTextField(field, event.currentTarget.value)} />{#if fieldError(field)}<span id={`${field}-error`} class="field-error" role="alert">{fieldError(field)}</span>{/if}</label>
 {/snippet}
 
-<ModalBackdrop>
+<div hidden={Boolean(workforceContext)||departureOpen} inert={Boolean(workforceContext)||departureOpen}><ModalBackdrop>
 	<dialog bind:this={dialogElement} class="employee-dialog app-modal" open aria-modal="true" aria-labelledby="employee-form-title">
-		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><button class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="employee-form-title">{mode === 'create' ? text.add : text.edit}</h2><IconActionButton class="app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestClose} data-button-scope="button-c8a55f4239"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 		<form class="employee-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-			<div class="app-modal-form-body">
+			<div class="app-modal-form-body">{#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={()=>deleteError=''} />{/if}<FormTabs label={text.edit} kind="employee">
 				{#if formError}<StatusNotice title={text.saveHeading} message={typeof formError === 'string' ? text[formError] : employeeSaveError(formError.code, formError.status, $localization.displayLanguage)} tone="error" onDismiss={() => formError = null} />{/if}
-				<FormSection title={text.basic} framed>
+				<div data-form-panel="basic"><fieldset class="editor-fields" disabled={mode!=='create'&&!canEditEmployee}>
+<FormSection title={text.basic} framed>
 					{@render textInput(text.employeeCode, 'employeeCode', text.examples.employeeCode, 64, true, 'text', '[A-Za-z0-9]{10,64}', 10)}
 					{#each nameFields as field (field)}
 						{@render textInput(text[field], field, text.examples[field], 128, field !== 'middleName')}
 					{/each}
 					{@render textInput(text.nameKana, 'nameKana', localeMessages[$localization.displayLanguage].employeeForm.nameKanaExample, 255)}{@render dateInput(text.birthDate, 'birthDate', form.birthDate, false, true)}{@render formSelect(text.gender, 'gender', [{ value: '', label: '-' }, ...genders], true)}{@render formSelect(text.bloodType, 'bloodType', [{ value: '', label: '-' }, ...bloodTypes.map((type) => ({ value: type, label: type }))])}
 				</FormSection>
-				<FormSection title={text.contact} framed>
+<FormSection title={text.contact} framed>
 					<SearchSelect label={addressText.country} field="countryCode" name="countryCode" value={form.countryCode} options={[{ value: 'JP', label: $localization.displayLanguage === 'ja' ? '日本' : 'Japan' }, { value: 'US', label: $localization.displayLanguage === 'ja' ? '米国' : 'United States' }]} error={fieldError('countryCode')} onSelect={(value) => selectCountry(value as AddressCountry)} />
 					{@render textInput(addressText.postal, 'postalCode', addressText.postalExample, 10, false, 'text', form.countryCode === 'JP' ? '\\d{3}-?\\d{4}' : '\\d{5}(-\\d{4})?')}
 					<PostalLookup countryCode={form.countryCode} postalCode={form.postalCode} language={$localization.displayLanguage} onSelect={selectAddress} />
 					{@render textInput(addressText.region, 'prefecture', addressText.regionExample, 64)}{@render textInput(text.city, 'city', text.examples.city, 128)}{@render textInput(text.streetAddress, 'streetAddress', text.examples.streetAddress, 255)}{@render textInput(text.buildingName, 'buildingName', text.examples.buildingName, 255)}{@render textInput(text.mobilePhone, 'mobilePhone', text.examples.mobilePhone, 32, false, 'tel', '[+0-9][0-9 ()-]{6,31}')}{@render textInput(text.email, 'email', text.examples.email, 254, true, 'email')}
 				</FormSection>
-					<FormSection title={text.employment} framed>
+</fieldset></div><div data-form-panel="employment">{#if employee?.deletionScheduledOn}<p>{text.departure.scheduled}: {employee.deletionScheduledOn.slice(0,10)}</p>{/if}<fieldset class="editor-fields" disabled={mode!=='create'&&!canEditEmployee}>
+<FormSection title={text.employment} framed>
 						{@render dateInput(text.hiredAt, 'hiredAt', form.hiredAt, false, true)}<SearchMultiSelect label={text.departments} field="departmentIds" values={form.departmentIds} options={(masters.departments ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('departmentIds')} onOpen={() => activeDateField = null} onChange={chooseDepartments} />{@render formSelect(text.primaryDepartmentId, 'primaryDepartmentId', [{ value: '', label: '-' }, ...selectedDepartmentOptions], false, !form.departmentIds.length)}{@render formSelect(text.groupId, 'groupId', [{ value: '', label: '-' }, ...availableGroups.map((item) => ({ value: String(item.id), label: item.name }))], false, !form.primaryDepartmentId)}<SearchMultiSelect label={text.positions} field="positionIds" values={form.positionIds} options={(masters.positions ?? []).map((item) => ({ value: String(item.id), label: item.name }))} error={fieldError('positionIds') || fieldError('primaryPositionId')} onOpen={() => activeDateField = null} onChange={choosePositions} />{@render formSelect(text.employmentTypeId, 'employmentTypeId', [{ value: '', label: '-' }, ...(masters['employment-types'] ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render formSelect(text.branchId, 'branchId', [{ value: '', label: '-' }, ...(masters.branches ?? []).map((item) => ({ value: String(item.id), label: item.name }))], true)}{@render dateInput(text.retiredAt, 'retiredAt', form.retiredAt, true)}
 					</FormSection>
-					<FormSection title={text.additional} framed>
+<FormSection title={text.additional} framed>
 						{#if teamsReady}<SearchMultiSelect label={text.teams} field="teamIds" values={form.teamIds} options={teamOptions.map(team => ({ value: String(team.id), label: team.name }))} disabled={!canManageTeamMemberships} error={fieldError('teamIds')} onChange={values => { form.teamIds = values; clearFieldError('teamIds'); }} />{/if}
 						<label class="wide">{text.notes}<textarea name="notes" value={form.notes} maxlength="5000" class:invalid={Boolean(fieldError('notes'))} aria-describedby={fieldError('notes') ? 'notes-error' : undefined} aria-invalid={Boolean(fieldError('notes'))} placeholder={text.examples.notes} oninput={(event) => updateTextField('notes', event.currentTarget.value)}></textarea>{#if fieldError('notes')}<span id="notes-error" class="field-error" role="alert">{fieldError('notes')}</span>{/if}</label>
 					</FormSection>
-					<FormSection title={text.access} framed>
+</fieldset></div><div data-form-panel="participations">{#if employee}<p class="related-save-notice">{commonText.relatedSaveNotice}</p><EmployeeWorkforceSection bind:this={participationEditor} employeeId={employee.id} activeTab="participations" panelPrefix="employee-editor-participations" historyContent={emptyHistory} readOnly={false} only="participations" embedded onEdit={context => workforceContext = context} />{:else}<p>{commonText.relatedAfterCreate}</p>{/if}</div>
+<div data-form-panel="skills">{#if employee}<p class="related-save-notice">{commonText.relatedSaveNotice}</p><EmployeeWorkforceSection bind:this={skillsEditor} employeeId={employee.id} activeTab="skills" panelPrefix="employee-editor-skills" historyContent={emptyHistory} readOnly={false} only="skills" embedded onEdit={context => workforceContext = context} />{:else}<p>{commonText.relatedAfterCreate}</p>{/if}</div>
+<div data-form-panel="system"><fieldset class="editor-fields" disabled={mode!=='create'&&!canEditEmployee}>
+<FormSection title={text.access} framed>
 						<fieldset class="roles-field wide" class:invalid={Boolean(fieldError('roleIds'))}><legend>{text.roles} <span class="required" aria-hidden="true">*</span></legend><div class="role-options">{#each roles as role}<label class:locked={roleIsLocked(role)}><input type="radio" name="employee-role" checked={form.roleIds.includes(String(role.id))} disabled={roleIsLocked(role)} onchange={() => toggleRole(role)} /><span>{role.name}</span></label>{/each}</div>{#if fieldError('roleIds')}<span class="field-error" role="alert">{fieldError('roleIds')}</span>{/if}{#if !canManageSystemSettings}<small>{text.roleHelp}</small>{/if}</fieldset>
 					</FormSection>
-			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{commonText.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (mode !== 'create' && !hasUnsavedChanges)}>{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</button></footer>
+</fieldset></div></FormTabs></div>
+			<footer class="app-modal-footer">{#if onDelete}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={onDelete} variant="danger" data-button-scope="button-c8a55f4239">{commonText.delete}</ModalActionButton>{/if}{#if extraActions}{@render extraActions()}{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestClose} variant="secondary" data-button-scope="button-c8a55f4239">{commonText.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || (mode!=='create'&&!canEditEmployee) || (mode !== 'create' && !hasUnsavedChanges)} variant="primary" data-button-scope="button-c8a55f4239">{saving ? commonText.saving : mode === 'create' ? text.add : commonText.saveChanges}</ModalActionButton></footer>
 		</form>
 	</dialog>
-</ModalBackdrop>
+</ModalBackdrop></div>
+{#snippet emptyHistory()}{/snippet}
+{#if departureOpen && employee}<EmployeeDepartureModal {employee} mode="retire" retirementOn={form.retiredAt} onClose={()=>departureOpen=false} onRetireConfirm={save} errorMessage={typeof formError==='object'&&formError?employeeSaveError(formError.code,formError.status,$localization.displayLanguage):''}/>{/if}
+{#if workforceContext && employee}<WorkforceRecordModal employeeId={employee.id} context={workforceContext} onClose={() => workforceContext = null} onSaved={async () => { await skillsEditor?.refresh(); await participationEditor?.refresh(); }} />{/if}
 {#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeImmediately} />{/if}
 
 <style>
+ .editor-fields{display:grid;gap:var(--sph-space-16px);min-width:0;border:0;padding:0;margin:0}
 	.wide{grid-column:1/-1}
-	.roles-field{display:grid;gap:8px;margin:0;padding:12px;border:1px solid var(--border);border-radius:5px}.roles-field.invalid{border-color:var(--danger)}.roles-field legend{padding:0 4px;color:var(--text);font-size:var(--font-size-support);font-weight:500}.roles-field>small{color:var(--muted);font-size:var(--font-size-support)}.role-options{display:flex;flex-wrap:wrap;gap:8px 18px}.role-options label{display:flex;align-items:center;gap:7px;color:var(--text-secondary);font-size:var(--font-size-support);font-weight:400}.role-options label.locked{color:var(--muted)}.role-options input{width:15px;height:15px;margin:0;accent-color:#1abb9c}.role-options input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}
+	.roles-field{display:grid;gap:var(--sph-space-8px);margin:0;padding:var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-5px)}.roles-field.invalid{border-color:var(--danger)}.roles-field legend{padding:0 var(--sph-space-4px);color:var(--text);font-size:var(--font-size-support);font-weight:var(--sph-weight-500)}.roles-field>small{color:var(--muted);font-size:var(--font-size-support)}.role-options{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px) var(--sph-space-18px)}.role-options label{display:flex;align-items:center;gap:var(--sph-space-7px);color:var(--text-secondary);font-size:var(--font-size-support);font-weight:var(--sph-weight-400)}.role-options label.locked{color:var(--muted)}.role-options input{width:15px;height:15px;margin:0;accent-color:var(--sph-color-accent)}.role-options input:focus-visible{outline:2px solid var(--sph-color-accent);outline-offset:2px}
 </style>

@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { strongPassword, validDate } from './install-config.mjs';
 import { blitzText } from './install-blitz-i18n.mjs';
+import { installerBanner } from './install-display.mjs';
 
 const ENDPOINT = 'https://mcp.blitz.cloud/cli';
 const REPOSITORY = 'HidekiMorisaki/sph';
@@ -32,7 +33,7 @@ const parse = (body, id, text) => {
   throw new Error(text('unreadable'));
 };
 
-class Blitz {
+export class Blitz {
   constructor(key, text) { this.key = key; this.text = text; this.id = 0; this.session = ''; }
   async request(method, params) {
     const id = ++this.id;
@@ -269,6 +270,7 @@ async function main() {
     activeLanguage = await selectLanguage(prompt);
     prompt.setLanguage(activeLanguage);
     const text = blitzText(activeLanguage);
+    process.stdout.write(installerBanner({ color: !!process.stdout.isTTY && !Object.hasOwn(process.env, 'NO_COLOR') && process.env.TERM !== 'dumb', columns: process.stdout.columns ?? 0 }));
     process.stdout.write(`${text('intro')}\n`);
     const key = await prompt.ask(text('apiKey'), { secret: true });
     client = new Blitz(key, text);

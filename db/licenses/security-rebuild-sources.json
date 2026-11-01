@@ -1,0 +1,30 @@
+[
+  {
+    "source": "https://download.gnome.org/sources/libxml2/2.13/libxml2-2.13.9.tar.xz",
+    "sha256": "a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a",
+    "modifiedSourceSha256": {
+      "parser.c": "b8a6c6a58be267f131129dc2458c796166db483b3538cecfb003df49f8e13098",
+      "valid.c": "f3e1e845441670751c183cc626ede221cb2011f442d6e3d13c70cc302d109182"
+    }
+  },
+  {
+    "source": "https://raw.githubusercontent.com/alpinelinux/aports/3.24-stable/main/libxml2/CVE-2026-6732.patch",
+    "sha256": "42d45b35f36bf29229e39a9e5349d7347e51d92099573b5a509f448dbf0e34d7"
+  },
+  {
+    "source": "https://github.com/GNOME/libxml2/commit/d1686f91dbda141a752200419d35639fd6b38340.diff",
+    "sha256": "482e22abaf6ed454608e69f16e82553f0b2c12074e4d054f460974da00b01266"
+  },
+  {
+    "source": "https://github.com/tianon/gosu/archive/refs/tags/1.19.tar.gz",
+    "sha256": "cd9719b775dbfedae53923c9b0dc792b66d42c51e0b36652ed6f747fbadc0164"
+  },
+  {
+    "source": "https://proxy.golang.org/github.com/moby/sys/user/@v/v0.1.0.zip",
+    "sha256": "85178932dc13b1c404c32e1b9f68fe88bf0b43e57dda39f24c45113e0bcf00ee"
+  },
+  {
+    "source": "https://proxy.golang.org/golang.org/x/sys/@v/v0.1.0.zip",
+    "sha256": "e7cbe58ed3745ba63d482fe82603119bd635f9a5dd914ed95a4c1826fdcf54a7"
+  }
+]

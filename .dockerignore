@@ -17,3 +17,5 @@ api/scripts/generated-book-sources
 **/npm-debug.log
 
 .sph-preflight-*/
+
+vendor/npm/generated/

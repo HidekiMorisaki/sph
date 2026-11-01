@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount, untrack } from 'svelte';
 	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
@@ -108,10 +109,10 @@
 </script>
 
 {#snippet pdfActions()}
-	<button type="button" class="app-primary-action pdf-download" disabled={!pdfReady} onclick={downloadPdf}>
+	<ModalActionButton type="button" class="app-primary-action pdf-download" disabled={!pdfReady} onclick={downloadPdf} variant="primary" data-button-scope="button-5b3b1da0ef">
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4" /></svg>
 		{pdfBusy ? text.pdfGenerating : text.pdfDownload}
-	</button>
+	</ModalActionButton>
 {/snippet}
 <AssetManagementShell {title}>
 	<div class="trends-page">
@@ -147,8 +148,8 @@
 </AssetManagementShell>
 
 <style>
-	.trends-page{display:grid;gap:16px;min-width:0}.branch-heading{margin:12px 0 0;font-size:1.25rem}.panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow)}.toolbar{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:18px 20px;border-bottom:1px solid var(--border)}h2{margin:0 0 4px;font-size:1.13rem}.toolbar p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px}.controls :global(.custom-date){width:130px}.content{padding:20px}.state{margin:8px 0;color:var(--text-secondary)}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.toolbar{align-items:stretch;flex-direction:column}.controls :global(.custom-date){flex:1;width:auto}}
-	.pdf-download{display:inline-flex;align-items:center;justify-content:center;gap:6px}.pdf-download svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.pdf-download{width:100%}}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.toolbar,.content{padding:12px}.controls{gap:8px}.controls :global(button),.pdf-download{min-height:44px}}
+	.trends-page{display:grid;gap:var(--sph-space-16px);min-width:0}.branch-heading{margin:var(--sph-space-12px) 0 0;font-size:var(--sph-type-1-25rem)}.panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);box-shadow:var(--shadow)}.toolbar{display:flex;justify-content:space-between;align-items:end;gap:var(--sph-space-20px);padding:var(--sph-space-18px) var(--sph-space-20px);border-bottom:1px solid var(--border)}h2{margin:0 0 var(--sph-space-4px);font-size:var(--sph-type-1-13rem)}.toolbar p{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}.controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:var(--sph-space-12px)}.controls :global(.custom-date){width:130px}.content{padding:var(--sph-space-20px)}.state{margin:var(--sph-space-8px) 0;color:var(--text-secondary)}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.toolbar{align-items:stretch;flex-direction:column}.controls :global(.custom-date){flex:1;width:auto}}
+	:global(.pdf-download[data-button-scope="button-5b3b1da0ef"]){display:inline-flex;align-items:center;justify-content:center;gap:var(--sph-space-6px)}:global(.pdf-download[data-button-scope="button-5b3b1da0ef"] svg){width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){:global(.pdf-download[data-button-scope="button-5b3b1da0ef"]){width:100%}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.toolbar,.content{padding:var(--sph-space-12px)}.controls{gap:var(--sph-space-8px)}.controls :global(button),:global(.pdf-download[data-button-scope="button-5b3b1da0ef"]){min-height:44px}}
 </style>

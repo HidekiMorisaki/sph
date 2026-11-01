@@ -20,7 +20,7 @@ export async function GET({ locals, params }: import('./$types').RequestEvent) {
 			copies: {
 				where: { deletedAt: null },
 				select: {
-					id: true, copyCode: true, status: true, storageId: true,
+					id: true, copyCode: true, status: true, storageId: true, purchaseAmount: true, purchaseCurrency: true,
 					storage: {
 						select: { name: true, branchId: true, room: { select: { name: true, branch: { select: { name: true } } } } }
 					}

@@ -1,0 +1,13 @@
+import {readFileSync,existsSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const root=new URL('../',import.meta.url),hash=value=>createHash('sha256').update(value).digest('hex');
+if(existsSync(new URL('node_modules/fast-uri/package.json',root)) && JSON.parse(readFileSync(new URL('node_modules/fast-uri/package.json',root),'utf8')).version!=='3.1.9')throw Error('Install the reviewed fast-uri security version before building.');
+const record=JSON.parse(readFileSync(new URL('licenses/fflate-0.8.3.json',root),'utf8'));
+const lock=JSON.parse(readFileSync(new URL('package-lock.json',root),'utf8'));
+if(lock.packages['node_modules/fflate']?.version!=='0.8.3')throw Error('Review the adopted fflate version and embedded sources before changing it.');
+if(hash(readFileSync(new URL('node_modules/fflate/LICENSE',root)))!==record.licenseSha256)throw Error('fflate original license differs.');
+for(const entry of record.embeddedSources)if(hash(readFileSync(new URL('licenses/'+entry.file,root)))!==entry.licenseSha256)throw Error('Embedded original license differs: '+entry.name);
+console.log('fflate original and embedded UZIP.js MIT notices verified.');
+const markedHash='8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c';
+if(lock.packages['node_modules/marked']?.version!=='18.1.2')throw Error('Review the adopted Markdown parser before changing it.');
+for(const path of ['node_modules/marked/LICENSE','licenses/marked-18.1.2.txt'])if(hash(readFileSync(new URL(path,root)))!==markedHash)throw Error('Marked and inherited Markdown notices differ.');

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import {unsetSelection,readSelection,replaceSelection} from '$lib/search-selection';
 	import { onMount, tick, type Snippet } from 'svelte';
 	import { localization } from '$lib/localization';
 	import { emptyGroup, localDateTime, zonedDateTime, searchMessages, searchChoiceLabel, type SearchContext, type SearchGroup } from '$lib/search';
@@ -14,8 +15,8 @@
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
 	import { sharedSearchOptions, hasSelectionCondition } from '$lib/shared-search-options';
 	let { configuration, storageKey, contexts, conditions, onChange, quickFilters, quickCount = 0, userId = null, options = {}, onOptionsChange }: { configuration: SearchFieldsConfiguration; storageKey: string; contexts: SearchContext[]; conditions: SearchGroup; onChange: (value: SearchGroup) => void; quickFilters?: Snippet; quickCount?: number; userId?: number | null; options?: Record<string,string|boolean>; onOptionsChange?: (options:Record<string,string|boolean>)=>void } = $props();
-	const sharedKey = (item:SearchInputField) => storageKey === 'employees' && item.field.code === 'selection' && onOptionsChange ? sharedSearchOptions[item.context] : undefined;
-	function sharedValues(key:string):string[] { return typeof options[key] === 'string' ? options[key].split(',') : []; }
+	const sharedKey = (item:SearchInputField) => !onOptionsChange ? undefined : storageKey.startsWith('project-tickets-v1') && item.field.code === 'assignee' ? 'assigneeIds' : storageKey === 'employees' && item.field.code === 'selection' ? sharedSearchOptions[item.context] : undefined;
+	function sharedValues(key:string):string[] { return typeof options[key] === 'string' ? options[key].split(',').map(value=>key==='assigneeIds'&&value==='unassigned'?unsetSelection:value) : []; }
 	function changeShared(key:string,values:string[]) { const next={...options}; if(values.length)next[key]=values.join(',');else delete next[key];onOptionsChange?.(next); }
 	const id = $props.id();
 	let language = $derived($localization.displayLanguage);
@@ -96,8 +97,8 @@
 						{@const value = searchFieldValue(split.represented.get(item), item)}
 						<div class="employee-search-field" data-search-field={`${item.context}.${field.code}`} style:--field-width={fieldWidth(field)}>
 							{#if sharedKey(item)}
-								<SearchMultiSelect {label} field={`${id}-${item.context}-${field.code}`} values={sharedValues(sharedKey(item)!)} options={field.options ?? []} onChange={values=>changeShared(sharedKey(item)!,values)}/>
-								{#if hasSelectionCondition(conditions,item.context)}<p class="additional-condition">{language==='ja'?'保存済みの追加条件も適用されています。この選択を変更しても追加条件は維持されます。':'Additional saved conditions also apply and are retained when this selection changes.'}</p>{/if}
+								<SearchMultiSelect {label} field={`${id}-${item.context}-${field.code}`} values={field.unsetMode?readSelection(conditions,item,sharedValues(sharedKey(item)!)):sharedValues(sharedKey(item)!)} placeholder={t.notSpecified} options={[...(field.unsetMode?[{value:unsetSelection,label:t.notSet}]:[]),...(field.options ?? [])]} onChange={values=>{if(!field.unsetMode){changeShared(sharedKey(item)!,values);return;}changeShared(sharedKey(item)!,[]);onChange(replaceSelection(conditions,item,values));}}/>
+								{#if hasSelectionCondition(field.unsetMode?split.remaining:conditions,item.context)}<p class="additional-condition">{language==='ja'?'保存済みの追加条件も適用されています。この選択を変更しても追加条件は維持されます。':'Additional saved conditions also apply and are retained when this selection changes.'}</p>{/if}
 							{:else if field.type === 'number' && item.numericRange}
 								<span class="range-label">{label}</span><div class="age-range-inputs">
 									{#each [0, 1] as part}
@@ -115,7 +116,9 @@
 									{/each}
 								</div>
 							{:else if field.type === 'choice' || field.type === 'boolean'}
-								<SearchSelect {label} field={`${id}-${item.context}-${field.code}`} value={value[0]} options={[{value: '', label: t.notSpecified}, ...(field.type === 'boolean' ? [{value: 'true', label: t.yes}, {value: 'false', label: t.no}] : field.options ?? field.choices?.map(v => ({ value: v, label: searchChoiceLabel(v, item.context, language) })) ?? [])]} onSelect={v => update(item, v)} />
+								{#if field.type==='choice'&&field.unsetMode}
+         <SearchMultiSelect {label} field={`${id}-${item.context}-${field.code}`} values={value[0]?value[0].split(','):[]} placeholder={t.notSpecified} options={[{value:unsetSelection,label:t.notSet},...(field.options??field.choices?.map(v=>({value:v,label:searchChoiceLabel(v,item.context,language)}))??[])]} onChange={values=>update(item,values.join(','))}/>
+        {:else}<SearchSelect {label} field={`${id}-${item.context}-${field.code}`} value={value[0]} options={[{value: '', label: t.notSpecified}, ...(field.type === 'boolean' ? [{value: 'true', label: t.yes}, {value: 'false', label: t.no}] : field.options ?? field.choices?.map(v => ({ value: v, label: searchChoiceLabel(v, item.context, language) })) ?? [])]} onSelect={v => update(item, v)} />{/if}
 							{:else}<FormInput {label} field={`${id}-${item.context}-${field.code}`} placeholder={searchInputExample({...field, code: item.exampleCode ?? field.code}, language)} type={field.type === 'number' ? 'number' : 'text'} step="any" maxlength={Math.min(field.maxLength, 500)} value={value[0]} onValueChange={v => update(item, v)} />{/if}
 						</div>
 					{/each}
@@ -135,9 +138,9 @@
 </div>
 
 <style>
-	.additional-condition{font-size:var(--font-size-support);color:var(--muted);margin:6px 0 0;line-height:1.6}
- .related-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.related-actions button{min-height:32px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}
-	.category-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--border);margin-top:12px}.category-tabs button{display:flex;align-items:center;gap:6px;flex:none;min-height:36px;padding:8px 10px;border:0;border-radius:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:var(--font-size-support);white-space:nowrap;cursor:pointer}.category-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--action-primary);font-weight:600}.category-tabs button:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.condition-count{border-radius:10px;padding:1px 6px;background:var(--bg);font-size:var(--font-size-support)}.category-panel{padding:12px 4px 4px 0}.category-panel[hidden]{display:none}.category-panel:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}
-	.field-grid{display:flex;flex-wrap:wrap;gap:12px}.employee-search-field{flex:0 0 auto;width:var(--field-width);max-width:100%;min-width:0}.age-range-inputs{display:flex;align-items:center;gap:6px}.age-bound{display:flex;flex:1;align-items:center;gap:4px;min-width:0}.age-bound :global(.form-input-field){flex:1;min-width:0}.age-bound span{flex:none;white-space:nowrap}
-	.search-section{min-width:0;margin:0;padding:0}.range-label{display:block;font-size:var(--font-size-support);font-weight:500;margin-bottom:6px}.range-inputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px}.range-separator{color:var(--muted)}
+	.additional-condition{font-size:var(--font-size-support);color:var(--muted);margin:var(--sph-space-6px) 0 0;line-height:var(--sph-leading-1-6)}
+ .related-actions{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px);margin-top:var(--sph-space-12px)}.related-actions button{min-height:32px;padding:var(--sph-space-5px) var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-body);cursor:pointer}
+	.category-tabs{display:flex;gap:var(--sph-space-4px);overflow-x:auto;border-bottom:1px solid var(--border);margin-top:var(--sph-space-12px)}.category-tabs button{display:flex;align-items:center;gap:var(--sph-space-6px);flex:none;min-height:36px;padding:var(--sph-space-8px) var(--sph-space-10px);border:0;border-radius:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:var(--font-size-body);white-space:nowrap;cursor:pointer}.category-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--action-primary);font-weight:var(--sph-weight-600)}.category-tabs button:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.condition-count{border-radius:var(--sph-radius-10px);padding:var(--sph-space-1px) var(--sph-space-6px);background:var(--bg);font-size:var(--font-size-support)}.category-panel{padding:var(--sph-space-12px) var(--sph-space-4px) var(--sph-space-4px) 0}.category-panel[hidden]{display:none}.category-panel:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}
+	.field-grid{display:flex;flex-wrap:wrap;gap:var(--sph-space-12px)}.employee-search-field{flex:0 0 auto;width:var(--field-width);max-width:100%;min-width:0}.age-range-inputs{display:flex;align-items:center;gap:var(--sph-space-6px)}.age-bound{display:flex;flex:1;align-items:center;gap:var(--sph-space-4px);min-width:0}.age-bound :global(.form-input-field){flex:1;min-width:0}.age-bound span{flex:none;white-space:nowrap}
+	.search-section{min-width:0;margin:0;padding:0}.range-label{display:block;font-size:var(--font-size-support);font-weight:var(--sph-weight-500);margin-bottom:var(--sph-space-6px)}.range-inputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--sph-space-6px)}.range-separator{color:var(--muted)}
 </style>

@@ -1,11 +1,19 @@
 # Gateway runtime license record
 
-The gateway builds the unchanged official Caddy v2.11.7 `cmd/caddy/main.go`
-entry point with Go 1.26.10 and the existing 147 runtime modules. Only x/net
-changes from v0.59.0 to v0.60.0. `gateway/go.mod` and `gateway/go.sum` retain
-exact selections and source checksums; the static build keeps the upstream
-`nobadger,nomysql,nopgx` tags and `time/tzdata` import. The Go builder image is
-pinned by digest, and automatic toolchain replacement is disabled.
+The gateway builds the official Caddy v2.11.7 entry point with Go 1.26.10.
+`gateway/go.mod` and `gateway/go.sum` pin the selected sources. go-jose/v4 is
+updated to v4.1.6. Because upstream has no v3 release fixing CVE-2026-116587,
+`gateway/patches/go-jose-v3-jwk.go` backports the v4.1.6 private RSA modulus and
+prime-size/product checks into v3.0.5. The changed file carries a modification
+notice. Its original and modified SHA-256 values, upstream URL and advisory are
+in the adjacent JSON record; Docker rejects either unexpected input or output.
+The original v3 Apache 2.0 and embedded Go JSON BSD notices remain in the notice
+bundle. The added v4.1.6 originals are recorded separately in the manifest.
+
+The build keeps `nobadger,nomysql,nopgx`, `time/tzdata`, pinned Go, and disabled
+automatic toolchain upgrades. A version-only scanner still identifies v3.0.5;
+that warning is not hidden. The downstream RSA checks are verified against
+valid 2048-bit private keys and oversized modulus/prime inputs in both versions.
 
 The CA certificate bundle still comes from the exact official Alpine image
 pinned in `gateway/Dockerfile`. Alpine utilities and shared libraries are not

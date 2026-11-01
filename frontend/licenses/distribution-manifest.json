@@ -3,14 +3,51 @@
   "packagesWithoutRootNotice": [
     "node_modules/@esbuild/win32-x64@0.28.2",
     "node_modules/@polka/url@1.0.0-next.29",
-    "node_modules/@rollup/plugin-commonjs/node_modules/is-reference@1.2.1",
     "node_modules/@rollup/rollup-win32-x64-gnu@4.60.1",
     "node_modules/@rollup/rollup-win32-x64-msvc@4.60.1",
-    "node_modules/is-reference@3.0.3",
-    "node_modules/locate-character@3.0.0",
     "node_modules/sirv@3.0.2"
   ],
   "entries": [
+    {
+      "package": "node_modules/@fullcalendar/core",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/core/-/core-6.1.22.tgz",
+      "integrity": "sha512-ju5PJUE++zr8XXCGtlXlrodF6doUy9BDfzx+VmE0B+XDBM2A5cUi/aU3M1ANfw/StmKhwqew7Ps7bXMiv/JREg==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/daygrid",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/daygrid/-/daygrid-6.1.22.tgz",
+      "integrity": "sha512-cpom5+bAvsGG5nX+snsCtpMIyyhAr+QlseD9mhz5Vq7rMBTzx43mSkz6IBvQ3vz5h2idbDmT1cggEn/dzZwt9Q==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/interaction",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/interaction/-/interaction-6.1.22.tgz",
+      "integrity": "sha512-r8Njw8aPNFGRwDjVAh9NTh3ZJib5tcUoLi/BM4uYJt5Cs9tDiirmImaqxhx56hclVFX7ktd5CdaMX0+ArSbm5A==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/luxon3",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/luxon3/-/luxon3-6.1.22.tgz",
+      "integrity": "sha512-or43T5SQAzb3d8U6Th6Q3vclas8rGEYSsJsUohC+jySJyJuqCLcqgW+NnbrSYIYXx3MUUk32h8au+BEjfjuo1A==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
+    {
+      "package": "node_modules/@fullcalendar/timegrid",
+      "version": "6.1.22",
+      "source": "https://registry.npmjs.org/@fullcalendar/timegrid/-/timegrid-6.1.22.tgz",
+      "integrity": "sha512-gNMtkXrkfN3iszXty+pYbJwGxcozL0xBVKYmEd1lm0DMEbrffpVJyV+vifmtl/eIbWCNRWrMWUtGLbYy/ukykA==",
+      "file": "LICENSE.md",
+      "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209"
+    },
     {
       "package": "node_modules/@jridgewell/gen-mapping",
       "version": "0.3.13",
@@ -54,10 +91,16 @@
     {
       "package": "node_modules/@rollup/plugin-commonjs",
       "version": "29.0.3",
-      "source": "https://registry.npmjs.org/@rollup/plugin-commonjs/-/plugin-commonjs-29.0.3.tgz",
-      "integrity": "sha512-ZaOxZceP7SOUW7Lqw5IRVweSQYWaeIPnXIGLiB690EBA3FGJTO40EEr2L5yZplJWsgTCogILRSpcAe7+U0Otdg==",
+      "source": "file:../vendor/npm/generated/plugin-commonjs-29.0.3",
       "file": "LICENSE",
       "sha256": "7b8136f76c483d03597500bfa991aae9be68d4629e1121cbf9b93aa727efe305"
+    },
+    {
+      "package": "node_modules/@rollup/plugin-commonjs",
+      "version": "29.0.3",
+      "source": "file:../vendor/npm/generated/plugin-commonjs-29.0.3",
+      "file": "LICENSE-SPH",
+      "sha256": "27afbe928c38fab87773a110d35e17bd05a40b21c8c4cd468e437a32e0ca7975"
     },
     {
       "package": "node_modules/@rollup/plugin-json",
@@ -152,6 +195,14 @@
       "version": "1.0.8",
       "source": "https://registry.npmjs.org/@types/estree/-/estree-1.0.8.tgz",
       "integrity": "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==",
+      "file": "LICENSE",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "package": "node_modules/@types/luxon",
+      "version": "3.7.1",
+      "source": "https://registry.npmjs.org/@types/luxon/-/luxon-3.7.1.tgz",
+      "integrity": "sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==",
       "file": "LICENSE",
       "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
     },
@@ -340,12 +391,28 @@
       "sha256": "306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae"
     },
     {
+      "package": "node_modules/luxon",
+      "version": "3.7.2",
+      "source": "https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz",
+      "integrity": "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==",
+      "file": "LICENSE.md",
+      "sha256": "6cb2f2bf697ee9c6fa9eb8f227c63ee6e7a3cba42d4717f14c745ef9b6cbc006"
+    },
+    {
       "package": "node_modules/magic-string",
       "version": "0.30.21",
       "source": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
       "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
       "file": "LICENSE",
       "sha256": "1cbe51b907662f6cb1492b16c359384a595180bf0e4d101603ed525e75c4e484"
+    },
+    {
+      "package": "node_modules/marked",
+      "version": "18.1.2",
+      "source": "https://registry.npmjs.org/marked/-/marked-18.1.2.tgz",
+      "integrity": "sha512-DfOnvLAQ6WYeWxWO1u4RyFOeqyHup6dks5PPqnoFiooU7ipRvidO/2j8plhAHIiZg574E9ZlzSjUiPMLAzFkgg==",
+      "file": "LICENSE",
+      "sha256": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
     },
     {
       "package": "node_modules/mri",
@@ -412,6 +479,14 @@
       "sha256": "5be1f3465bba68a626777f984878814aaf35e7ef8e9fd314d469bcf887050fb8"
     },
     {
+      "package": "node_modules/preact",
+      "version": "10.12.1",
+      "source": "https://registry.npmjs.org/preact/-/preact-10.12.1.tgz",
+      "integrity": "sha512-l8386ixSsBdbreOAkqtrwqHwdvR35ID8c3rKPa8lCWuO86dBi32QWHV4vfsZK1utLLFMvw+Z5Ad4XLkZzchscg==",
+      "file": "LICENSE",
+      "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
+    },
+    {
       "package": "node_modules/readdirp",
       "version": "4.1.2",
       "source": "https://registry.npmjs.org/readdirp/-/readdirp-4.1.2.tgz",
@@ -470,18 +545,30 @@
     {
       "package": "node_modules/svelte",
       "version": "5.57.2",
-      "source": "https://registry.npmjs.org/svelte/-/svelte-5.57.2.tgz",
-      "integrity": "sha512-1YiPCAXT0Ct6g1vOMmSLa0Nsc3QRMvtDF32ihgglGVrugIuIK38RyDiFNXVDhtQ81TJjSO57NdMw6DyYLqSGDQ==",
+      "source": "file:../vendor/npm/generated/svelte-5.57.2",
+      "file": "LICENSE-SPH",
+      "sha256": "27afbe928c38fab87773a110d35e17bd05a40b21c8c4cd468e437a32e0ca7975"
+    },
+    {
+      "package": "node_modules/svelte",
+      "version": "5.57.2",
+      "source": "file:../vendor/npm/generated/svelte-5.57.2",
       "file": "LICENSE.md",
       "sha256": "06257f4847b13a49a039efb17b944c141e71b12fd8d231b362d86919067d77a3"
     },
     {
       "package": "node_modules/svelte-check",
       "version": "4.4.6",
-      "source": "https://registry.npmjs.org/svelte-check/-/svelte-check-4.4.6.tgz",
-      "integrity": "sha512-kP1zG81EWaFe9ZyTv4ZXv44Csi6Pkdpb7S3oj6m+K2ec/IcDg/a8LsFsnVLqm2nxtkSwsd5xPj/qFkTBgXHXjg==",
+      "source": "file:../vendor/npm/generated/svelte-check-4.4.6",
       "file": "LICENSE",
       "sha256": "ada595bb2ec8d71616dde1b956edb8fbad63eadab32b8d9ab9310a1aef08e5c5"
+    },
+    {
+      "package": "node_modules/svelte-check",
+      "version": "4.4.6",
+      "source": "file:../vendor/npm/generated/svelte-check-4.4.6",
+      "file": "LICENSE-SPH",
+      "sha256": "27afbe928c38fab87773a110d35e17bd05a40b21c8c4cd468e437a32e0ca7975"
     },
     {
       "package": "node_modules/svelte/node_modules/@types/estree",

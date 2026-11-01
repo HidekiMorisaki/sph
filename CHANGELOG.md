@@ -4,6 +4,37 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.7.0] - 2026-11-01
+
+### New features
+
+- Added project management with hierarchical ticket management, ticket panel and Gantt views, time tracking, history and other features. Project descriptions, ticket descriptions and comments support Markdown editing and live previews, with pasted and stored images, 193 code formats, language selection and copying, and automatic links to accessible project and ticket IDs.
+- Added shared header notifications with unread counts, read controls and links to the relevant event. Private details are resolved using current access permissions.
+- Added schedule management with meeting invitations, recurring events, per-occurrence changes and copying events into new drafts.
+- Added workflow management with a designer for creating templates (application forms) using drag-and-drop components and grouping, sequential approvals, returns, comments, attachments, linked notifications and immutable submitted versions. Create templates from System settings.
+
+### Existing feature improvements
+
+- Standardized empty search selections as Any and added Not set for optional selections.
+- Moved the account menu from the sidebar footer to the right of the header theme toggle. A profile image or person icon replaces the visible name and role, with access to My Page, Personal settings and Sign out.
+- Unified drag-and-drop handles with six-dot icons arranged in two columns of three, clearly distinguishing reordering from the hamburger icons used to collapse menus.
+- Added tax-inclusive purchase amount entry for IT assets, individual book copies and license contracts. Zero is allowed for free transfers. Book forms prefill available prices and estimate domestic tax-exclusive JPY prices at 10% tax. Amounts can be edited manually.
+- Remember the selected saved filter for employees, books and IT assets per user in the same browser, and restore its latest conditions on the next visit.
+- Added confirmation and bulk returns of IT assets and books when retiring or deleting employees, with date selection and future deletion scheduling, changes and cancellation. Retirement or deletion is blocked while assets remain unreturned.
+- Added tabs to some modals to make information easier to review.
+- Organized license contract, IT asset, book, role, branch, team and client detail modals into tabs.
+- Renamed the English label for client engagements from Projects to Engagements as part of introducing the Projects group.
+
+### Bug fixes
+
+- Fixed the widget review preview so display size selections change its width and height while retaining the chosen design.
+- Standardized text sizes in shared search dates, tickets, schedules, notifications and financial charts so inputs and event text remain readable on phones.
+- Fixed excess space below the book editor footer when selecting Purchase requests or Copies and loans tabs.
+- Fixed the lower edges of Change cover and Refresh openBD details buttons being obscured in the book editor.
+- Fixed notification borders being obscured by sticky tab backgrounds in detail and edit modals.
+- Fixed an issue where clicking Home in the hamburger menu briefly displayed the system startup screen.
+- Enabled system administrators to edit the branch administrator role's name, notes and permissions, and delete it when unassigned. Branch operation scopes and system administrator role protection are preserved.
+
 ## [v0.6.0] - 2026-10-23
 
 ### New features

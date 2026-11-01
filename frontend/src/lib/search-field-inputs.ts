@@ -1,3 +1,4 @@
+import {selectionNode,selectionValues} from './search-selection';
 import { emptyGroup, type SearchField, type SearchGroup, type SearchNode, type SearchRule } from './search';
 
 export type SearchInputField = {
@@ -25,6 +26,7 @@ export function searchFieldRange(field: SearchField): boolean {
 }
 
 function supported(rule: SearchRule, item: SearchInputField): boolean {
+	if(rule.operator==='unset'&&item.field.unsetMode==='value')return true;
 	return (searchFieldRange(item.field) || item.numericRange ? ['between', 'gte', 'lte', ...(item.numericRange ? ['eq'] : [])] : item.field.type === 'string' ? ['contains'] : ['eq']).includes(rule.operator);
 }
 
@@ -33,7 +35,7 @@ export function splitSearchFields(group: SearchGroup, fields: SearchInputField[]
 	const remaining: SearchNode[] = [];
 	if (group.mode !== 'all' || group.context) return { represented, remaining: { ...emptyGroup(), children: [group] } };
 	for (const node of group.children) {
-		const item = fields.find(item => { const rule = fieldRule(node, item); return rule && supported(rule, item); });
+		const item = fields.find(item => { if(item.field.type==='choice'&&item.field.unsetMode&&selectionValues(node,item)!==undefined)return true;const rule = fieldRule(node, item); return rule && supported(rule, item); });
 		if (item && !represented.has(item)) represented.set(item, node);
 		else remaining.push(node);
 	}
@@ -41,6 +43,7 @@ export function splitSearchFields(group: SearchGroup, fields: SearchInputField[]
 }
 
 export function searchFieldValue(node: SearchNode | undefined, item: SearchInputField): [string, string] {
+	if(item.field.type==='choice'&&item.field.unsetMode){const values=selectionValues(node,item);if(values)return [values.join(','),''];}
 	const rule = node && fieldRule(node, item);
 	if (!rule) return ['', ''];
 	if (rule.operator === 'between') return Array.isArray(rule.value) ? [String(rule.value[0]), String(rule.value[1])] : ['', ''];
@@ -50,6 +53,7 @@ export function searchFieldValue(node: SearchNode | undefined, item: SearchInput
 
 export function searchFieldNode(item: SearchInputField, values: [string, string]): SearchNode | undefined {
 	const [from, to] = values;
+	if(item.field.type==='choice'&&item.field.unsetMode)return selectionNode(item,from?from.split(','):[]);
 	if (!from && !to) return;
 	const range = searchFieldRange(item.field) || item.numericRange;
 	const scalar = (value: string) => item.field.type === 'number' ? Number(value) : value;

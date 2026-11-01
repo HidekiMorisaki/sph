@@ -1,4 +1,4 @@
-type ReturnState = { scrollTop: number; scrollLeft: number; selector: string };
+type ReturnState = { scrollTop: number; scrollLeft: number; selector: string; tab?: string };
 
 // Scope snapshots to the actual originating row/control, rather than a global
 // title ID. Detached/replaced rows do not retain state for another record.
@@ -9,7 +9,7 @@ export function rememberDetailReturn(origin: HTMLElement | null, id: string, dia
 	const body = dialog.querySelector<HTMLElement>('.app-detail-body');
 	if (!body) return;
 	const states = pending.get(origin) ?? new Map<string, ReturnState>();
-	states.set(id, { scrollTop: body.scrollTop, scrollLeft: body.scrollLeft, selector });
+	states.set(id, { scrollTop: body.scrollTop, scrollLeft: body.scrollLeft, selector, tab: dialog.querySelector<HTMLElement>('[data-detail-tabs-root]')?.dataset.active });
 	pending.set(origin, states);
 }
 

@@ -69,7 +69,6 @@ export async function configuration(language, ask, say, hostDetails = {}, presen
 		const answer = await input('input.selectNumber', '1', value => /^[1-9]\d*$/.test(value) && Number(value) <= options.length);
 		return options[Number(answer) - 1].value;
 	};
-	say(text('input.defaultsNotice'));
 	const values = {
 		COMPOSE_FILE: 'docker-compose.local.yml',
 		POSTGRES_DB: 'sph', POSTGRES_USER: 'appuser', POSTGRES_PASSWORD: randomBytes(32).toString('base64url'),
@@ -131,6 +130,7 @@ export async function configuration(language, ask, say, hostDetails = {}, presen
 		} else say(text('connection.internalTrustNotice'));
 	}
 	values.CORS_ALLOWED_ORIGINS = values.APP_ORIGIN;
+	say(text('input.defaultsNotice'));
 	values.INITIAL_ADMIN_USERNAME = await input('account.username', 'admin', limited(64));
 	say(text('password.notice'));
 	while (true) {

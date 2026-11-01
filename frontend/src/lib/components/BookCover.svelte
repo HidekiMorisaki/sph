@@ -26,6 +26,6 @@
 <img class:large src={source} {alt} onerror={() => source = '/images/book-cover-none.svg'} />
 
 <style>
-	img{display:block;width:44px;height:59px;object-fit:contain;border-radius:5px;border:1px solid var(--border);background:var(--surface)}
+	img{display:block;width:44px;height:59px;object-fit:contain;border-radius:var(--sph-radius-5px);border:1px solid var(--border);background:var(--surface)}
 	img.large{width:120px;height:160px}
 </style>

@@ -1,4 +1,8 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import TeamMembersSection from './TeamMembersSection.svelte';
+ import type { SessionUser } from '$lib/auth';
+ import FormTabs from '$lib/components/FormTabs.svelte';
  import { tick, untrack } from 'svelte';
  import { apiData } from '$lib/api';
  import { localeMessages } from '$lib/locale-messages';
@@ -9,7 +13,7 @@
  import FormSection from './FormSection.svelte';
  import StatusNotice from './StatusNotice.svelte';
 
- let { team = null, returnFocus = null, onClose, onSaved }: { team?: Team | null; returnFocus?: HTMLElement | null; onClose: () => void; onSaved: (team: Team) => void | Promise<void> } = $props();
+ let { team = null, user = null, onDelete, deleteError = '', returnFocus = null, onClose, onSaved }: { team?: Team | null; user?: SessionUser | null; onDelete?: (trigger: HTMLElement) => void; deleteError?: string; returnFocus?: HTMLElement | null; onClose: () => void; onSaved: (team: Team) => void | Promise<void> } = $props();
  let text = $derived(localeMessages[$localization.displayLanguage].teams);
  let common = $derived(localeMessages[$localization.displayLanguage].common);
  let name = $state(untrack(() => team?.name ?? ''));
@@ -51,15 +55,17 @@
 </script>
 
 <DetailModal title={team ? text.edit : text.add} titleId="team-form-title" closeLabel={common.cancel} {returnFocus} initialFocusSelector="[name=teamName]" onClose={close}>
- <form bind:this={formElement} id="team-form" class="team-form app-modal-form app-modal-form--stacked" novalidate onsubmit={save}>
+ {#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={()=>deleteError=''} />{/if}<form bind:this={formElement} id="team-form" class="team-form app-modal-form app-modal-form--stacked" novalidate onsubmit={save}>
   {#if savedNotice}<StatusNotice message={text.saved} tone="success" onDismiss={() => savedNotice = false} />{/if}
   {#if error}<StatusNotice message={text[error]} tone="error" onDismiss={() => error = ''} />{/if}
+<FormTabs label={text.information} kind="team"><div data-form-panel="basic">
   <FormSection title={text.information} framed columns={2}>
    <label class="wide"><span>{text.name} <span class="required">*</span></span><input name="teamName" bind:value={name} placeholder={text.nameExample} maxlength="128" required disabled={saving} class:invalid={error === 'invalidName' || error === 'nameConflict'} aria-invalid={error === 'invalidName' || error === 'nameConflict'} aria-describedby={error === 'invalidName' || error === 'nameConflict' ? 'team-name-error' : undefined} />{#if error === 'invalidName' || error === 'nameConflict'}<small id="team-name-error">{text[error]}</small>{/if}</label>
-   <label class="wide"><span>{text.description}</span><textarea name="teamDescription" bind:value={description} placeholder={text.descriptionExample} maxlength="5000" disabled={saving}></textarea></label>
+</FormSection><FormSection title={text.description} framed>   <label class="wide"><span>{text.description}</span><textarea name="teamDescription" bind:value={description} placeholder={text.descriptionExample} maxlength="5000" disabled={saving}></textarea></label>
   </FormSection>
+</div><div data-form-panel="members">{#if team && user}<p>{common.relatedSaveNotice}</p><TeamMembersSection {team} {user} editable onChanged={() => { void (async () => { const response=await fetch(`/v1/teams/${team!.id}`); if(response.ok)await onSaved(await apiData<Team>(response)); })(); }}/>{:else}<p>{common.relatedAfterCreate}</p>{/if}</div></FormTabs>
  </form>
- {#snippet actions()}<button class="secondary" type="button" disabled={saving} onclick={close}>{common.cancel}</button><button class="app-primary-action" form="team-form" type="submit" disabled={saving || (Boolean(team) && !dirty)}>{saving ? common.saving : team ? common.saveChanges : text.add}</button>{/snippet}
+ {#snippet actions()}{#if onDelete && team?.allowedOperations?.delete}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={event=>onDelete?.(event.currentTarget)} variant="danger" data-button-scope="button-8adf269538">{common.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={close} variant="secondary" data-button-scope="button-8adf269538">{common.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" form="team-form" type="submit" disabled={saving || (team ? !user?.capabilities.canUpdateTeams : !user?.capabilities.canCreateTeams) || (Boolean(team) && !dirty)} variant="primary" data-button-scope="button-8adf269538">{saving ? common.saving : team ? common.saveChanges : text.add}</ModalActionButton>{/snippet}
 </DetailModal>
 {#if discard}<DiscardChangesDialog onContinue={() => discard = false} onDiscard={closeNow} />{/if}
 

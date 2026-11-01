@@ -28,10 +28,10 @@
 	.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 	.search-box{position:relative;display:flex;align-items:center;width:220px}
 	.search-box svg{position:absolute;top:50%;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none;transform:translateY(-50%)}
-	.search-box input{width:100%;height:32px;padding:0 10px 0 32px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-body);outline:none}
-	.search-box input:focus{border-color:#1abb9c;box-shadow:0 0 0 3px rgba(26,187,156,.14)}
-	.search-box input::placeholder{color:#c0c7cf}
-	:global(html[data-theme='dark']) .search-box input::placeholder{color:#5a6473}
+	.search-box input{width:100%;height:32px;padding:0 var(--sph-space-10px) 0 var(--sph-space-32px);background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--sph-radius-4px);font-size:var(--font-size-body);outline:none}
+	.search-box input:focus{border-color:var(--sph-color-accent);box-shadow:var(--sph-shadow-focus)}
+	.search-box input::placeholder{color:var(--sph-color-placeholder-light)}
+	:global(html[data-theme='dark']) .search-box input::placeholder{color:var(--sph-color-placeholder-dark)}
 	.search-box input:disabled{cursor:not-allowed;opacity:.7}
 	@media(max-width:700px){.search-box{width:100%}}
 </style>

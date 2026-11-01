@@ -27,5 +27,5 @@
 </DetailModal>
 
 <style>
- .description{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin:0}
+ .description{white-space:pre-wrap;overflow-wrap:anywhere;line-height:var(--sph-leading-1-6);margin:0}
 </style>

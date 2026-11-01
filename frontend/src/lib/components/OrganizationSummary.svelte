@@ -1,4 +1,6 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { localization, formatDate } from '$lib/localization';
@@ -46,7 +48,7 @@
 	<h2>{ja?'現在の所属・現在の在籍者':'Current organization and employees'}</h2>
 	{#if loading}<LoadingSpinner label={ja?'読み込み中…':'Loading…'} compact />
 	{:else if error}{#if !errorDismissed}<StatusNotice tone="error" onDismiss={()=>errorDismissed=true} message={forbidden?(ja?'この集計を閲覧する権限がありません。':'You do not have permission to view this summary.'):(ja?'集計を取得できませんでした。':'Unable to load the summary.')} />{/if}
-		{#if !forbidden}<button class="app-primary-action" onclick={load}>{ja?'再試行':'Retry'}</button>{/if}
+		{#if !forbidden}<ModalActionButton class="app-primary-action" onclick={load} variant="primary" data-button-scope="button-a710678261">{ja?'再試行':'Retry'}</ModalActionButton>{/if}
 	{:else if data}
 		<p>{formatDate(data.asOf,$localization)} · {ja?'在籍者':'Current employees'} {number(data.total)}{ja?'人':''} · {data.scope==='own_branch'?(ja?'所属拠点のみ':'Own branch'):(ja?'全拠点':'All branches')}</p>
 		<p>{ja?'現在の所属情報を使用しています。上の基準日・期間選択とは独立した集計です。':'Uses current assignments, independently of the reference date and period above.'}</p>
@@ -55,7 +57,7 @@
 				{@const kind=key as 'branches'|'departments'}
 				<section class="organization-card"><h3>{kind==='branches'?(ja?'拠点別':'By branch'):(ja?'部門別':'By department')}</h3>
 					{#if kind==='departments'}<p>{ja?'複数部門に所属する社員は各部門に計上するため、合計は全体人数と一致しない場合があります。':'Employees in multiple departments count in each; department totals may differ from the overall total.'}</p>{/if}
-					<ul>{#each data[kind] as item}<li><button onclick={()=>openEmployees(kind,item)}><span>{item.name ?? (ja?'所属なし':'Unassigned')}</span><strong>{number(item.count)}{ja?'人':''}</strong></button></li>{/each}</ul>
+					<ul>{#each data[kind] as item}<li><ActionButton onclick={()=>openEmployees(kind,item)} variant="secondary" data-button-scope="button-a710678261"><span>{item.name ?? (ja?'所属なし':'Unassigned')}</span><strong>{number(item.count)}{ja?'人':''}</strong></ActionButton></li>{/each}</ul>
 				</section>
 			{/each}
 		</div>
@@ -64,5 +66,5 @@
 
 <style>
 	.organization-summary h2{font-size:var(--font-size-section)}.organization-summary h3{font-size:var(--font-size-subsection)}
-	.organization-summary{margin:24px 0;color:var(--text)}h2{font-size:var(--font-size-section-title,1.1rem);margin:0 0 12px}h3{font-size:var(--font-size-body);margin:0 0 12px}p{font-size:var(--font-size-support);color:var(--muted);margin:8px 0;overflow-wrap:anywhere}.organization-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:16px}.organization-card{padding:24px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);min-width:0}ul{list-style:none;padding:0;margin:0}li button{display:flex;width:100%;justify-content:space-between;gap:16px;text-align:left;padding:10px 8px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font:inherit;cursor:pointer}li button:hover{background:var(--surface-hover)}li button:focus-visible{outline:2px solid var(--action-primary)}li span{overflow-wrap:anywhere}li strong{white-space:nowrap;font-weight:600}@media(max-width:900px){.organization-cards{grid-template-columns:minmax(0,1fr)}}@media(max-width:500px){.organization-card{padding:16px}}
+	.organization-summary{margin:var(--sph-space-24px) 0;color:var(--text)}h2{font-size:var(--font-size-section-title,var(--sph-type-1-1rem));margin:0 0 var(--sph-space-12px)}h3{font-size:var(--font-size-body);margin:0 0 var(--sph-space-12px)}p{font-size:var(--font-size-support);color:var(--muted);margin:var(--sph-space-8px) 0;overflow-wrap:anywhere}.organization-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sph-space-20px);margin-top:var(--sph-space-16px)}.organization-card{padding:var(--sph-space-24px);border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);min-width:0}ul{list-style:none;padding:0;margin:0}li :global(button[data-button-scope="button-a710678261"]){display:flex;width:100%;justify-content:space-between;gap:var(--sph-space-16px);text-align:left;padding:var(--sph-space-10px) var(--sph-space-8px);border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font:inherit;cursor:pointer}li :global(button:hover[data-button-scope="button-a710678261"]){background:var(--surface-hover)}li :global(button:focus-visible[data-button-scope="button-a710678261"]){outline:2px solid var(--action-primary)}li span{overflow-wrap:anywhere}li strong{white-space:nowrap;font-weight:var(--sph-weight-600)}@media(max-width:900px){.organization-cards{grid-template-columns:minmax(0,1fr)}}@media(max-width:500px){.organization-card{padding:var(--sph-space-16px)}}
 </style>

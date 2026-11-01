@@ -1,0 +1,1187 @@
+{
+  "name": "highlight.js",
+  "version": "11.12.0",
+  "source": "https://registry.npmjs.org/highlight.js/-/highlight.js-11.12.0.tgz",
+  "integrity": "sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg==",
+  "archiveSha256": "accbfaaab745088609b4eea2bdca2ad62f1f1dd27304e0f8df65cfe0fe042143",
+  "license": "BSD-3-Clause",
+  "languageCount": 193,
+  "modification": "Replace the sole module.exports = highlight assignment in core.js with export default highlight, preserving all other source bytes and notices.",
+  "excluded": [
+    "All CSS themes and base16 assets",
+    "Third-party language plugins"
+  ],
+  "files": [
+    {
+      "path": "LICENSE",
+      "upstreamPath": "package/LICENSE",
+      "sourceSha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490",
+      "sha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490"
+    },
+    {
+      "path": "languages/1c.js",
+      "upstreamPath": "package/es/languages/1c.js",
+      "sourceSha256": "e124959a60a301a53ebfb51883f915ed89bda261545bcb7de0d3aa51f448c1c6",
+      "sha256": "e124959a60a301a53ebfb51883f915ed89bda261545bcb7de0d3aa51f448c1c6"
+    },
+    {
+      "path": "languages/abnf.js",
+      "upstreamPath": "package/es/languages/abnf.js",
+      "sourceSha256": "f7fd358af1095ff1cd20780f886048b10bbe11603e1af457036f4dbf5144d1c1",
+      "sha256": "f7fd358af1095ff1cd20780f886048b10bbe11603e1af457036f4dbf5144d1c1"
+    },
+    {
+      "path": "languages/accesslog.js",
+      "upstreamPath": "package/es/languages/accesslog.js",
+      "sourceSha256": "badc3d5a7a9fa68003262f8230152a3afe7403a82241d0753cfabfc5aeca8291",
+      "sha256": "badc3d5a7a9fa68003262f8230152a3afe7403a82241d0753cfabfc5aeca8291"
+    },
+    {
+      "path": "languages/actionscript.js",
+      "upstreamPath": "package/es/languages/actionscript.js",
+      "sourceSha256": "b6d5c3df6d1344f01c566ffebcea5496cfc31e7345cdb0f3018dcd285544bb05",
+      "sha256": "b6d5c3df6d1344f01c566ffebcea5496cfc31e7345cdb0f3018dcd285544bb05"
+    },
+    {
+      "path": "languages/ada.js",
+      "upstreamPath": "package/es/languages/ada.js",
+      "sourceSha256": "978a55a496e9356777ff8a7a26d60f26f8ab7e3cbb4f13cb5283df179ed881ef",
+      "sha256": "978a55a496e9356777ff8a7a26d60f26f8ab7e3cbb4f13cb5283df179ed881ef"
+    },
+    {
+      "path": "languages/angelscript.js",
+      "upstreamPath": "package/es/languages/angelscript.js",
+      "sourceSha256": "fc733ab349a708fd0dc0f6617e6095d2df26a3dc7485d6d3381019554d9674c4",
+      "sha256": "fc733ab349a708fd0dc0f6617e6095d2df26a3dc7485d6d3381019554d9674c4"
+    },
+    {
+      "path": "languages/apache.js",
+      "upstreamPath": "package/es/languages/apache.js",
+      "sourceSha256": "b1c49820f30abd7b64728c46fe93d4d0968303fc39beaf2c4affa494a0c0940e",
+      "sha256": "b1c49820f30abd7b64728c46fe93d4d0968303fc39beaf2c4affa494a0c0940e"
+    },
+    {
+      "path": "languages/applescript.js",
+      "upstreamPath": "package/es/languages/applescript.js",
+      "sourceSha256": "75a8e788d74a890d8f6acc42bf09f86225f59c639480fcba1ffa6782efbf2ac7",
+      "sha256": "75a8e788d74a890d8f6acc42bf09f86225f59c639480fcba1ffa6782efbf2ac7"
+    },
+    {
+      "path": "languages/arcade.js",
+      "upstreamPath": "package/es/languages/arcade.js",
+      "sourceSha256": "7278f98b0a0d4ca20e715983e76efcfa4f65b5d611579719fb0df4f346ebd916",
+      "sha256": "7278f98b0a0d4ca20e715983e76efcfa4f65b5d611579719fb0df4f346ebd916"
+    },
+    {
+      "path": "languages/arduino.js",
+      "upstreamPath": "package/es/languages/arduino.js",
+      "sourceSha256": "8e31024b8f1ddb3213b23260667ffa5f6b85a762f0adf0c59b245961607bacc9",
+      "sha256": "8e31024b8f1ddb3213b23260667ffa5f6b85a762f0adf0c59b245961607bacc9"
+    },
+    {
+      "path": "languages/armasm.js",
+      "upstreamPath": "package/es/languages/armasm.js",
+      "sourceSha256": "959f1e52de2ce081d470ff8a3cda0c0eab88a35fd104abf1deb133b2f91f84c4",
+      "sha256": "959f1e52de2ce081d470ff8a3cda0c0eab88a35fd104abf1deb133b2f91f84c4"
+    },
+    {
+      "path": "languages/asciidoc.js",
+      "upstreamPath": "package/es/languages/asciidoc.js",
+      "sourceSha256": "1ef46786f426ed551542fe3988f24fde373c5a40ebd30f3cc08483747300c591",
+      "sha256": "1ef46786f426ed551542fe3988f24fde373c5a40ebd30f3cc08483747300c591"
+    },
+    {
+      "path": "languages/aspectj.js",
+      "upstreamPath": "package/es/languages/aspectj.js",
+      "sourceSha256": "483fc6546965f612cb21a0b7d04c779489cbf79330539aa48efb03e56117e00e",
+      "sha256": "483fc6546965f612cb21a0b7d04c779489cbf79330539aa48efb03e56117e00e"
+    },
+    {
+      "path": "languages/autohotkey.js",
+      "upstreamPath": "package/es/languages/autohotkey.js",
+      "sourceSha256": "82a24f168d853af304eed680d79f8e3a7dbc721ee38c2a10a34f63b082da5e50",
+      "sha256": "82a24f168d853af304eed680d79f8e3a7dbc721ee38c2a10a34f63b082da5e50"
+    },
+    {
+      "path": "languages/autoit.js",
+      "upstreamPath": "package/es/languages/autoit.js",
+      "sourceSha256": "aef2154e3b5e7d1c39b8b21ac4a0bedaf448b7a5517cd6316198aadf37eb1eb0",
+      "sha256": "aef2154e3b5e7d1c39b8b21ac4a0bedaf448b7a5517cd6316198aadf37eb1eb0"
+    },
+    {
+      "path": "languages/avrasm.js",
+      "upstreamPath": "package/es/languages/avrasm.js",
+      "sourceSha256": "5538b5ab25f1ef31ac94de469d94565ed9b5ba11b6218caf978aacb5c99cf4a7",
+      "sha256": "5538b5ab25f1ef31ac94de469d94565ed9b5ba11b6218caf978aacb5c99cf4a7"
+    },
+    {
+      "path": "languages/awk.js",
+      "upstreamPath": "package/es/languages/awk.js",
+      "sourceSha256": "65c3421fade341147bf56bdbfc5116fe59e55e6113261d31568f029a38903a95",
+      "sha256": "65c3421fade341147bf56bdbfc5116fe59e55e6113261d31568f029a38903a95"
+    },
+    {
+      "path": "languages/axapta.js",
+      "upstreamPath": "package/es/languages/axapta.js",
+      "sourceSha256": "e15a093ccf96a4785eb504da76d71cac2a473c510f53391ee887721de0f29458",
+      "sha256": "e15a093ccf96a4785eb504da76d71cac2a473c510f53391ee887721de0f29458"
+    },
+    {
+      "path": "languages/bash.js",
+      "upstreamPath": "package/es/languages/bash.js",
+      "sourceSha256": "a87e45ea33984110330c418791d33a6646ffd0ef3697183ee77d6d7e19a8040c",
+      "sha256": "a87e45ea33984110330c418791d33a6646ffd0ef3697183ee77d6d7e19a8040c"
+    },
+    {
+      "path": "languages/basic.js",
+      "upstreamPath": "package/es/languages/basic.js",
+      "sourceSha256": "d5e950530ecc60d64902962bde11a9f3e5330b196df27becd13b2d29c58fbb6f",
+      "sha256": "d5e950530ecc60d64902962bde11a9f3e5330b196df27becd13b2d29c58fbb6f"
+    },
+    {
+      "path": "languages/bnf.js",
+      "upstreamPath": "package/es/languages/bnf.js",
+      "sourceSha256": "b2ed7a6656723d8537eee78354aa71ac5b79c25f8edffecabcc47ef50446a6cf",
+      "sha256": "b2ed7a6656723d8537eee78354aa71ac5b79c25f8edffecabcc47ef50446a6cf"
+    },
+    {
+      "path": "languages/brainfuck.js",
+      "upstreamPath": "package/es/languages/brainfuck.js",
+      "sourceSha256": "08c45a013105e2a6f2f95ca4d7da6fb1037a00ef903303b6898b3c88262db5c8",
+      "sha256": "08c45a013105e2a6f2f95ca4d7da6fb1037a00ef903303b6898b3c88262db5c8"
+    },
+    {
+      "path": "languages/c.js",
+      "upstreamPath": "package/es/languages/c.js",
+      "sourceSha256": "c0b7c4b6977d933e226367cbf630f9649eb5456b2d755609cd0e19b741b2bb04",
+      "sha256": "c0b7c4b6977d933e226367cbf630f9649eb5456b2d755609cd0e19b741b2bb04"
+    },
+    {
+      "path": "languages/cal.js",
+      "upstreamPath": "package/es/languages/cal.js",
+      "sourceSha256": "09a8cf1aeba1bc5ee87a55a7d7f1309698191be90ae5bbd575e06eab1e2c6ce6",
+      "sha256": "09a8cf1aeba1bc5ee87a55a7d7f1309698191be90ae5bbd575e06eab1e2c6ce6"
+    },
+    {
+      "path": "languages/capnproto.js",
+      "upstreamPath": "package/es/languages/capnproto.js",
+      "sourceSha256": "124d7061fea46a65f08c15f47d14da5e4b703b92f7e83006223ae0129caae2c0",
+      "sha256": "124d7061fea46a65f08c15f47d14da5e4b703b92f7e83006223ae0129caae2c0"
+    },
+    {
+      "path": "languages/ceylon.js",
+      "upstreamPath": "package/es/languages/ceylon.js",
+      "sourceSha256": "a8dd1469f15d13af8c3e9fca6c6b518ab3a9df1429961f3dafc239bc5fe2d554",
+      "sha256": "a8dd1469f15d13af8c3e9fca6c6b518ab3a9df1429961f3dafc239bc5fe2d554"
+    },
+    {
+      "path": "languages/clean.js",
+      "upstreamPath": "package/es/languages/clean.js",
+      "sourceSha256": "ddaa05d3d876f1528a1b75bdde397546d0699dee8b245b1a11b2c2298f656816",
+      "sha256": "ddaa05d3d876f1528a1b75bdde397546d0699dee8b245b1a11b2c2298f656816"
+    },
+    {
+      "path": "languages/clojure-repl.js",
+      "upstreamPath": "package/es/languages/clojure-repl.js",
+      "sourceSha256": "4d5c282234e3b725d5b0aab2299b83c32692c1be9d1e04b4951a1c55ff8cd10b",
+      "sha256": "4d5c282234e3b725d5b0aab2299b83c32692c1be9d1e04b4951a1c55ff8cd10b"
+    },
+    {
+      "path": "languages/clojure.js",
+      "upstreamPath": "package/es/languages/clojure.js",
+      "sourceSha256": "7b23fd6011ef764203aa7a84bcdcc1daaa192c3258f668e8df00b6b7a7d346d9",
+      "sha256": "7b23fd6011ef764203aa7a84bcdcc1daaa192c3258f668e8df00b6b7a7d346d9"
+    },
+    {
+      "path": "languages/cmake.js",
+      "upstreamPath": "package/es/languages/cmake.js",
+      "sourceSha256": "e75ed672ab962228956f7973ad9a1b021e95a7db62b45e17cb52483fc1c6053d",
+      "sha256": "e75ed672ab962228956f7973ad9a1b021e95a7db62b45e17cb52483fc1c6053d"
+    },
+    {
+      "path": "languages/coffeescript.js",
+      "upstreamPath": "package/es/languages/coffeescript.js",
+      "sourceSha256": "a6a678667c207558d5d32c7918fc82e96de2003390f541edfa6d1a2182472be2",
+      "sha256": "a6a678667c207558d5d32c7918fc82e96de2003390f541edfa6d1a2182472be2"
+    },
+    {
+      "path": "languages/coq.js",
+      "upstreamPath": "package/es/languages/coq.js",
+      "sourceSha256": "54e8d0bd38a75ab95c81d6898ee44bd2f6990ed6dbf264a2eddd2062bf7f4f57",
+      "sha256": "54e8d0bd38a75ab95c81d6898ee44bd2f6990ed6dbf264a2eddd2062bf7f4f57"
+    },
+    {
+      "path": "core.mjs",
+      "upstreamPath": "package/lib/core.js",
+      "sourceSha256": "d67da7c32959fa3391fe148feee926fcffbb0b4d46bf9364b44adbf3c55c3e30",
+      "sha256": "3f62110935ae4941faa812e24d8cac187149d4df4e094452a45f1a43310d7cd4"
+    },
+    {
+      "path": "languages/cos.js",
+      "upstreamPath": "package/es/languages/cos.js",
+      "sourceSha256": "5c3ac0bda4168c03776fcb056804ac96c13fc414cdcc873fa7e0b9738d97713a",
+      "sha256": "5c3ac0bda4168c03776fcb056804ac96c13fc414cdcc873fa7e0b9738d97713a"
+    },
+    {
+      "path": "languages/cpp.js",
+      "upstreamPath": "package/es/languages/cpp.js",
+      "sourceSha256": "9707d80084ff1059340136e7bf632862e1470ec2b676ae09b9e9d424c60332d0",
+      "sha256": "9707d80084ff1059340136e7bf632862e1470ec2b676ae09b9e9d424c60332d0"
+    },
+    {
+      "path": "languages/crmsh.js",
+      "upstreamPath": "package/es/languages/crmsh.js",
+      "sourceSha256": "fe6609464124042843c5ffea5f80338f717d3c02a19ea0d0f284ff1c2c73a853",
+      "sha256": "fe6609464124042843c5ffea5f80338f717d3c02a19ea0d0f284ff1c2c73a853"
+    },
+    {
+      "path": "languages/crystal.js",
+      "upstreamPath": "package/es/languages/crystal.js",
+      "sourceSha256": "ccea0ecd097412445e0436d1b2562e36f57cce09abb1458db7e04820a23a4610",
+      "sha256": "ccea0ecd097412445e0436d1b2562e36f57cce09abb1458db7e04820a23a4610"
+    },
+    {
+      "path": "languages/csharp.js",
+      "upstreamPath": "package/es/languages/csharp.js",
+      "sourceSha256": "c4cf3da5851d07e82f3301fdf499d14a4d28ebf955f60e26c94731ff7078dca1",
+      "sha256": "c4cf3da5851d07e82f3301fdf499d14a4d28ebf955f60e26c94731ff7078dca1"
+    },
+    {
+      "path": "languages/csp.js",
+      "upstreamPath": "package/es/languages/csp.js",
+      "sourceSha256": "2de9056064753b6b7096ca51c9475e34d1db311c855b0a1075fc8aed5f08e7b7",
+      "sha256": "2de9056064753b6b7096ca51c9475e34d1db311c855b0a1075fc8aed5f08e7b7"
+    },
+    {
+      "path": "languages/css.js",
+      "upstreamPath": "package/es/languages/css.js",
+      "sourceSha256": "dfc16ac6b8fe22b584b568fd1673e033908a22b1b915b4adb8103925cc9c776e",
+      "sha256": "dfc16ac6b8fe22b584b568fd1673e033908a22b1b915b4adb8103925cc9c776e"
+    },
+    {
+      "path": "languages/d.js",
+      "upstreamPath": "package/es/languages/d.js",
+      "sourceSha256": "aaf2221dfc482e24c7535a837789b3c38eb9c367cd049d0000c094ade386dd11",
+      "sha256": "aaf2221dfc482e24c7535a837789b3c38eb9c367cd049d0000c094ade386dd11"
+    },
+    {
+      "path": "languages/dart.js",
+      "upstreamPath": "package/es/languages/dart.js",
+      "sourceSha256": "6109477ed5e7271874a0c44dde78559487dc5a592b418704b22fe19fe071c722",
+      "sha256": "6109477ed5e7271874a0c44dde78559487dc5a592b418704b22fe19fe071c722"
+    },
+    {
+      "path": "languages/delphi.js",
+      "upstreamPath": "package/es/languages/delphi.js",
+      "sourceSha256": "7f07983be44d4d989c6a8515f1d18e090cfae1afbca88bf1c6091f94ba614b18",
+      "sha256": "7f07983be44d4d989c6a8515f1d18e090cfae1afbca88bf1c6091f94ba614b18"
+    },
+    {
+      "path": "languages/diff.js",
+      "upstreamPath": "package/es/languages/diff.js",
+      "sourceSha256": "01122ec2f2382616706d5aed311cb9f56fbe6ba8b4456933c1a5263b2183b342",
+      "sha256": "01122ec2f2382616706d5aed311cb9f56fbe6ba8b4456933c1a5263b2183b342"
+    },
+    {
+      "path": "languages/django.js",
+      "upstreamPath": "package/es/languages/django.js",
+      "sourceSha256": "da738344e83c9d4b3969b74eb949783ea2d9efdfe575aa0b4fb3991e4d5f5a06",
+      "sha256": "da738344e83c9d4b3969b74eb949783ea2d9efdfe575aa0b4fb3991e4d5f5a06"
+    },
+    {
+      "path": "languages/dns.js",
+      "upstreamPath": "package/es/languages/dns.js",
+      "sourceSha256": "466e065843338f6805502d40a42f998a098dc4844b68c16650134e9ae288a238",
+      "sha256": "466e065843338f6805502d40a42f998a098dc4844b68c16650134e9ae288a238"
+    },
+    {
+      "path": "languages/dockerfile.js",
+      "upstreamPath": "package/es/languages/dockerfile.js",
+      "sourceSha256": "6408db2161448d6e7d9cb19c8c3c41426ef6a6fd7bb014b1735b6776fc800fcc",
+      "sha256": "6408db2161448d6e7d9cb19c8c3c41426ef6a6fd7bb014b1735b6776fc800fcc"
+    },
+    {
+      "path": "languages/dos.js",
+      "upstreamPath": "package/es/languages/dos.js",
+      "sourceSha256": "552f0bf1c4f3d97cb9246ff1c8b6aee0f4e2bcc4cf73df26917d0291fddc0278",
+      "sha256": "552f0bf1c4f3d97cb9246ff1c8b6aee0f4e2bcc4cf73df26917d0291fddc0278"
+    },
+    {
+      "path": "languages/dsconfig.js",
+      "upstreamPath": "package/es/languages/dsconfig.js",
+      "sourceSha256": "4f551543673ae5f87cd8f229bcf84b99c5dde83527520bc1c3db7c2ef839f0fd",
+      "sha256": "4f551543673ae5f87cd8f229bcf84b99c5dde83527520bc1c3db7c2ef839f0fd"
+    },
+    {
+      "path": "languages/dts.js",
+      "upstreamPath": "package/es/languages/dts.js",
+      "sourceSha256": "6232a923ee98bd88946c60b03bb976c6deee849ab50dee8233bbd525ecec4057",
+      "sha256": "6232a923ee98bd88946c60b03bb976c6deee849ab50dee8233bbd525ecec4057"
+    },
+    {
+      "path": "languages/dust.js",
+      "upstreamPath": "package/es/languages/dust.js",
+      "sourceSha256": "9398bc2fcd0529600e6b5a314dd8676919dc7b8646a80825305f900341844fe1",
+      "sha256": "9398bc2fcd0529600e6b5a314dd8676919dc7b8646a80825305f900341844fe1"
+    },
+    {
+      "path": "languages/ebnf.js",
+      "upstreamPath": "package/es/languages/ebnf.js",
+      "sourceSha256": "a722db8db9d41787daa61438866b7132cb4aa8fa1eb47aed254448dcc19b9682",
+      "sha256": "a722db8db9d41787daa61438866b7132cb4aa8fa1eb47aed254448dcc19b9682"
+    },
+    {
+      "path": "languages/elixir.js",
+      "upstreamPath": "package/es/languages/elixir.js",
+      "sourceSha256": "aed9d2bf34a9d1e27ec4c4b8d455404060a1a1da7fc632c39e04a4581269deb0",
+      "sha256": "aed9d2bf34a9d1e27ec4c4b8d455404060a1a1da7fc632c39e04a4581269deb0"
+    },
+    {
+      "path": "languages/elm.js",
+      "upstreamPath": "package/es/languages/elm.js",
+      "sourceSha256": "ddf544977a5231b8d88a83143024eb439ab83f360a65b77f3a48bf1749ad8738",
+      "sha256": "ddf544977a5231b8d88a83143024eb439ab83f360a65b77f3a48bf1749ad8738"
+    },
+    {
+      "path": "languages/erb.js",
+      "upstreamPath": "package/es/languages/erb.js",
+      "sourceSha256": "17a88c780a1032b2ed9c152cfcb6502ec91a40e79cb2b95415e6ac0d83c1359f",
+      "sha256": "17a88c780a1032b2ed9c152cfcb6502ec91a40e79cb2b95415e6ac0d83c1359f"
+    },
+    {
+      "path": "languages/erlang-repl.js",
+      "upstreamPath": "package/es/languages/erlang-repl.js",
+      "sourceSha256": "8914b38240cb64bf4db1c0b3c6a0dafa928fe54402addb6d847075e3e5e6ab8e",
+      "sha256": "8914b38240cb64bf4db1c0b3c6a0dafa928fe54402addb6d847075e3e5e6ab8e"
+    },
+    {
+      "path": "languages/erlang.js",
+      "upstreamPath": "package/es/languages/erlang.js",
+      "sourceSha256": "8b3c25e28f40e617e079ad13c1ccc5cfc0005b2eb1453ae732a21d65147021bb",
+      "sha256": "8b3c25e28f40e617e079ad13c1ccc5cfc0005b2eb1453ae732a21d65147021bb"
+    },
+    {
+      "path": "languages/excel.js",
+      "upstreamPath": "package/es/languages/excel.js",
+      "sourceSha256": "f1ac7ac9a2613817f6b552e25e300d47a47838f410bf3cdd428f886de13ef315",
+      "sha256": "f1ac7ac9a2613817f6b552e25e300d47a47838f410bf3cdd428f886de13ef315"
+    },
+    {
+      "path": "languages/fix.js",
+      "upstreamPath": "package/es/languages/fix.js",
+      "sourceSha256": "8a5d5a87a68f166331591165a2e8a1c355c4ba0c3f87346158543513f378a739",
+      "sha256": "8a5d5a87a68f166331591165a2e8a1c355c4ba0c3f87346158543513f378a739"
+    },
+    {
+      "path": "languages/flix.js",
+      "upstreamPath": "package/es/languages/flix.js",
+      "sourceSha256": "492ca66febaabccec41f66b832888e298c3ac1093f17a26aae7626719eebcac5",
+      "sha256": "492ca66febaabccec41f66b832888e298c3ac1093f17a26aae7626719eebcac5"
+    },
+    {
+      "path": "languages/fortran.js",
+      "upstreamPath": "package/es/languages/fortran.js",
+      "sourceSha256": "e7f11c2296103a89f5eb901691bf419e5f0a248db49bb1aca283cd8f19e2e9b8",
+      "sha256": "e7f11c2296103a89f5eb901691bf419e5f0a248db49bb1aca283cd8f19e2e9b8"
+    },
+    {
+      "path": "languages/freedesktop.js",
+      "upstreamPath": "package/es/languages/freedesktop.js",
+      "sourceSha256": "9770448d894c5425535772a1ddb38e963e197c71f884cfd70faea366800413ac",
+      "sha256": "9770448d894c5425535772a1ddb38e963e197c71f884cfd70faea366800413ac"
+    },
+    {
+      "path": "languages/fsharp.js",
+      "upstreamPath": "package/es/languages/fsharp.js",
+      "sourceSha256": "087c52ffd0268b1a0134123e8dc5184baeec38bbd59e73a41ce828035b912917",
+      "sha256": "087c52ffd0268b1a0134123e8dc5184baeec38bbd59e73a41ce828035b912917"
+    },
+    {
+      "path": "languages/gams.js",
+      "upstreamPath": "package/es/languages/gams.js",
+      "sourceSha256": "a93f563a4e577591b185ea8f558439df7a83b0404d93bda4955edce16928f3a1",
+      "sha256": "a93f563a4e577591b185ea8f558439df7a83b0404d93bda4955edce16928f3a1"
+    },
+    {
+      "path": "languages/gauss.js",
+      "upstreamPath": "package/es/languages/gauss.js",
+      "sourceSha256": "43d08cc088c2e293b84926228d0e5171602d98e8fd2ae682432c7f7f8d80b94b",
+      "sha256": "43d08cc088c2e293b84926228d0e5171602d98e8fd2ae682432c7f7f8d80b94b"
+    },
+    {
+      "path": "languages/gcode.js",
+      "upstreamPath": "package/es/languages/gcode.js",
+      "sourceSha256": "4f977c2fa07d8e74147b0ae46278b49145357e59d80b7c9e88a0a9eb6aec77ed",
+      "sha256": "4f977c2fa07d8e74147b0ae46278b49145357e59d80b7c9e88a0a9eb6aec77ed"
+    },
+    {
+      "path": "languages/gherkin.js",
+      "upstreamPath": "package/es/languages/gherkin.js",
+      "sourceSha256": "d925eb52debb3e0d9afd0e2384d996b060388ef6b4838036c360dc00952995df",
+      "sha256": "d925eb52debb3e0d9afd0e2384d996b060388ef6b4838036c360dc00952995df"
+    },
+    {
+      "path": "languages/glsl.js",
+      "upstreamPath": "package/es/languages/glsl.js",
+      "sourceSha256": "e5305fec457759432db96a328f7f08c750379f67ca36e9854b7de80232634e35",
+      "sha256": "e5305fec457759432db96a328f7f08c750379f67ca36e9854b7de80232634e35"
+    },
+    {
+      "path": "languages/gml.js",
+      "upstreamPath": "package/es/languages/gml.js",
+      "sourceSha256": "de264b350c6ebcb2e2a4b2b84f929574fd97f0a9ff85c71f3cac722f4daf4e68",
+      "sha256": "de264b350c6ebcb2e2a4b2b84f929574fd97f0a9ff85c71f3cac722f4daf4e68"
+    },
+    {
+      "path": "languages/go.js",
+      "upstreamPath": "package/es/languages/go.js",
+      "sourceSha256": "ffdabb3c84c5f98c7d3efec1e7794a7bc6802ba0eee388e16588932618acfcd8",
+      "sha256": "ffdabb3c84c5f98c7d3efec1e7794a7bc6802ba0eee388e16588932618acfcd8"
+    },
+    {
+      "path": "languages/golo.js",
+      "upstreamPath": "package/es/languages/golo.js",
+      "sourceSha256": "e42673477a5bd46538a5f891cd5ef58c63d053825d613b108e7565ceff23462d",
+      "sha256": "e42673477a5bd46538a5f891cd5ef58c63d053825d613b108e7565ceff23462d"
+    },
+    {
+      "path": "languages/gradle.js",
+      "upstreamPath": "package/es/languages/gradle.js",
+      "sourceSha256": "2a6af4d79381a565352dfc6d8bdcc73e3889076774dce4902c016364d038daf5",
+      "sha256": "2a6af4d79381a565352dfc6d8bdcc73e3889076774dce4902c016364d038daf5"
+    },
+    {
+      "path": "languages/graphql.js",
+      "upstreamPath": "package/es/languages/graphql.js",
+      "sourceSha256": "2843ced97ca7c0c65b4d600440f5dfa2d412a6ed37bf8b8450f25ba239019d86",
+      "sha256": "2843ced97ca7c0c65b4d600440f5dfa2d412a6ed37bf8b8450f25ba239019d86"
+    },
+    {
+      "path": "languages/groovy.js",
+      "upstreamPath": "package/es/languages/groovy.js",
+      "sourceSha256": "8f4f4fcf2658d447ce17f7f3fdf258795ceed219d4656a63626eaa3fac0eb887",
+      "sha256": "8f4f4fcf2658d447ce17f7f3fdf258795ceed219d4656a63626eaa3fac0eb887"
+    },
+    {
+      "path": "languages/haml.js",
+      "upstreamPath": "package/es/languages/haml.js",
+      "sourceSha256": "4c617a99533d01cc35a783bcc1fe98293edf2d447629e5745535a024653623fe",
+      "sha256": "4c617a99533d01cc35a783bcc1fe98293edf2d447629e5745535a024653623fe"
+    },
+    {
+      "path": "languages/handlebars.js",
+      "upstreamPath": "package/es/languages/handlebars.js",
+      "sourceSha256": "da120414cdcb2933742ef332993af454ce0a388b32cd238f2127aadf59e1a197",
+      "sha256": "da120414cdcb2933742ef332993af454ce0a388b32cd238f2127aadf59e1a197"
+    },
+    {
+      "path": "languages/haskell.js",
+      "upstreamPath": "package/es/languages/haskell.js",
+      "sourceSha256": "b7de82e11ef886ac7fbd471fef821f3c392f8a99e3033d6492d9e56470eeb036",
+      "sha256": "b7de82e11ef886ac7fbd471fef821f3c392f8a99e3033d6492d9e56470eeb036"
+    },
+    {
+      "path": "languages/haxe.js",
+      "upstreamPath": "package/es/languages/haxe.js",
+      "sourceSha256": "95f04ea3b4838ac23deb02af475159f142e889bb490a22c1e52955b2d909cb09",
+      "sha256": "95f04ea3b4838ac23deb02af475159f142e889bb490a22c1e52955b2d909cb09"
+    },
+    {
+      "path": "languages/hsp.js",
+      "upstreamPath": "package/es/languages/hsp.js",
+      "sourceSha256": "1b5b85a17a78ebb49b1c7b746f3d7b301536c8cfe1a13f07f27e8382bb56f989",
+      "sha256": "1b5b85a17a78ebb49b1c7b746f3d7b301536c8cfe1a13f07f27e8382bb56f989"
+    },
+    {
+      "path": "languages/http.js",
+      "upstreamPath": "package/es/languages/http.js",
+      "sourceSha256": "4673718ead2818ddd0d214306fa766cba90709bc1a4480da265040a6ec78e3e0",
+      "sha256": "4673718ead2818ddd0d214306fa766cba90709bc1a4480da265040a6ec78e3e0"
+    },
+    {
+      "path": "languages/hy.js",
+      "upstreamPath": "package/es/languages/hy.js",
+      "sourceSha256": "dbba185d5cdad82348240b58318b6646b43651391b2ffe285e23c0d551140c69",
+      "sha256": "dbba185d5cdad82348240b58318b6646b43651391b2ffe285e23c0d551140c69"
+    },
+    {
+      "path": "languages/inform7.js",
+      "upstreamPath": "package/es/languages/inform7.js",
+      "sourceSha256": "96575d477a7c2354a77ecafe64ed0c84ea44317f99f65715bc77cb271e4bc22b",
+      "sha256": "96575d477a7c2354a77ecafe64ed0c84ea44317f99f65715bc77cb271e4bc22b"
+    },
+    {
+      "path": "languages/ini.js",
+      "upstreamPath": "package/es/languages/ini.js",
+      "sourceSha256": "b01f2f7c70173605b5b70aa564de245d0f77b4f40d942eb526258e68ce8ef7ab",
+      "sha256": "b01f2f7c70173605b5b70aa564de245d0f77b4f40d942eb526258e68ce8ef7ab"
+    },
+    {
+      "path": "languages/irpf90.js",
+      "upstreamPath": "package/es/languages/irpf90.js",
+      "sourceSha256": "d579f7a21bda25311489749bde3c98a500add4f83839e5acddefe4a5cf05b805",
+      "sha256": "d579f7a21bda25311489749bde3c98a500add4f83839e5acddefe4a5cf05b805"
+    },
+    {
+      "path": "languages/isbl.js",
+      "upstreamPath": "package/es/languages/isbl.js",
+      "sourceSha256": "5ed24492d407a31855551f616243d1caea2c772c61b4742293305dfdb7fad362",
+      "sha256": "5ed24492d407a31855551f616243d1caea2c772c61b4742293305dfdb7fad362"
+    },
+    {
+      "path": "languages/java.js",
+      "upstreamPath": "package/es/languages/java.js",
+      "sourceSha256": "23b0646ab4b14a7452edb5a7264358c53f7f6a770e00edb57ca614c6d3ecee71",
+      "sha256": "23b0646ab4b14a7452edb5a7264358c53f7f6a770e00edb57ca614c6d3ecee71"
+    },
+    {
+      "path": "languages/javascript.js",
+      "upstreamPath": "package/es/languages/javascript.js",
+      "sourceSha256": "d4246bd422c05dc9b566ec261bac50d91ada1cc3987169f7d3f2e583228e436e",
+      "sha256": "d4246bd422c05dc9b566ec261bac50d91ada1cc3987169f7d3f2e583228e436e"
+    },
+    {
+      "path": "languages/jboss-cli.js",
+      "upstreamPath": "package/es/languages/jboss-cli.js",
+      "sourceSha256": "7a3ccd2cbd7537dcf93fcc2c37babacbfbbca5c44c2032416f4b0a830047ee9c",
+      "sha256": "7a3ccd2cbd7537dcf93fcc2c37babacbfbbca5c44c2032416f4b0a830047ee9c"
+    },
+    {
+      "path": "languages/json.js",
+      "upstreamPath": "package/es/languages/json.js",
+      "sourceSha256": "e279b6b818cc32b4493b4796a7c705952a852df06ab3b8c5b8ae184f4bb21a08",
+      "sha256": "e279b6b818cc32b4493b4796a7c705952a852df06ab3b8c5b8ae184f4bb21a08"
+    },
+    {
+      "path": "languages/julia-repl.js",
+      "upstreamPath": "package/es/languages/julia-repl.js",
+      "sourceSha256": "1ad887738bc9379876c92eed6b0c1cda7784013ceeceaa44f4470b8d7561cb9d",
+      "sha256": "1ad887738bc9379876c92eed6b0c1cda7784013ceeceaa44f4470b8d7561cb9d"
+    },
+    {
+      "path": "languages/julia.js",
+      "upstreamPath": "package/es/languages/julia.js",
+      "sourceSha256": "a06f7689f983855b2e92a6e32ff8c61b91a547cd20d8598d08a73aa0a2882789",
+      "sha256": "a06f7689f983855b2e92a6e32ff8c61b91a547cd20d8598d08a73aa0a2882789"
+    },
+    {
+      "path": "languages/kotlin.js",
+      "upstreamPath": "package/es/languages/kotlin.js",
+      "sourceSha256": "10ee3610a69e6f5da7d62aaaedde85061fba372c724d8a5b20987fd35bd8f66b",
+      "sha256": "10ee3610a69e6f5da7d62aaaedde85061fba372c724d8a5b20987fd35bd8f66b"
+    },
+    {
+      "path": "languages/lasso.js",
+      "upstreamPath": "package/es/languages/lasso.js",
+      "sourceSha256": "0052c307f2152c2f18b68f1ba4fd341eac5f6c54ea8024cb567f805f37ebd54f",
+      "sha256": "0052c307f2152c2f18b68f1ba4fd341eac5f6c54ea8024cb567f805f37ebd54f"
+    },
+    {
+      "path": "languages/latex.js",
+      "upstreamPath": "package/es/languages/latex.js",
+      "sourceSha256": "ac8ebb3f5020a3d730c1550eff57b24c08264d95edf4ece0c627e0a58168f7fa",
+      "sha256": "ac8ebb3f5020a3d730c1550eff57b24c08264d95edf4ece0c627e0a58168f7fa"
+    },
+    {
+      "path": "languages/ldif.js",
+      "upstreamPath": "package/es/languages/ldif.js",
+      "sourceSha256": "f66202cd0a54d4210c4843dbb59c87e19ffc8bfee5f62b4ff4611776d74f08e9",
+      "sha256": "f66202cd0a54d4210c4843dbb59c87e19ffc8bfee5f62b4ff4611776d74f08e9"
+    },
+    {
+      "path": "languages/leaf.js",
+      "upstreamPath": "package/es/languages/leaf.js",
+      "sourceSha256": "095875b450876b20efd5696da411ee92d1df8c8b7d8c823d5dc01d8e4e68b209",
+      "sha256": "095875b450876b20efd5696da411ee92d1df8c8b7d8c823d5dc01d8e4e68b209"
+    },
+    {
+      "path": "languages/less.js",
+      "upstreamPath": "package/es/languages/less.js",
+      "sourceSha256": "b1da2e3393ab7ea9ab1c5da7863bac9e12b4ae8396de2e2e7f5fc2999454063c",
+      "sha256": "b1da2e3393ab7ea9ab1c5da7863bac9e12b4ae8396de2e2e7f5fc2999454063c"
+    },
+    {
+      "path": "languages/lisp.js",
+      "upstreamPath": "package/es/languages/lisp.js",
+      "sourceSha256": "3683601de350d6cae8b28bbe512445a5b9c53f0a18af344d6af002b993ce2dfc",
+      "sha256": "3683601de350d6cae8b28bbe512445a5b9c53f0a18af344d6af002b993ce2dfc"
+    },
+    {
+      "path": "languages/livecodeserver.js",
+      "upstreamPath": "package/es/languages/livecodeserver.js",
+      "sourceSha256": "e24628c4c8b9d9edbb5099664e02ea2ae315cd01e3a1da9b132a97a19fa5c142",
+      "sha256": "e24628c4c8b9d9edbb5099664e02ea2ae315cd01e3a1da9b132a97a19fa5c142"
+    },
+    {
+      "path": "languages/livescript.js",
+      "upstreamPath": "package/es/languages/livescript.js",
+      "sourceSha256": "87878741225348109c45b4e958cd1ec954764be3b9349d79ba138c989781fefd",
+      "sha256": "87878741225348109c45b4e958cd1ec954764be3b9349d79ba138c989781fefd"
+    },
+    {
+      "path": "languages/llvm.js",
+      "upstreamPath": "package/es/languages/llvm.js",
+      "sourceSha256": "835e1f5490a7d9a47f8413a89391f50644af80f0b3d31a7f0461c813a73b686d",
+      "sha256": "835e1f5490a7d9a47f8413a89391f50644af80f0b3d31a7f0461c813a73b686d"
+    },
+    {
+      "path": "languages/lsl.js",
+      "upstreamPath": "package/es/languages/lsl.js",
+      "sourceSha256": "e2f6e36841cc30ecddda163c2ff1df977a6d6f8e025d4c03101acf9a1a0d49ee",
+      "sha256": "e2f6e36841cc30ecddda163c2ff1df977a6d6f8e025d4c03101acf9a1a0d49ee"
+    },
+    {
+      "path": "languages/lua.js",
+      "upstreamPath": "package/es/languages/lua.js",
+      "sourceSha256": "cd731d02d6260f805a8930e324977968c7a4110a4078123b67d157c459576714",
+      "sha256": "cd731d02d6260f805a8930e324977968c7a4110a4078123b67d157c459576714"
+    },
+    {
+      "path": "languages/makefile.js",
+      "upstreamPath": "package/es/languages/makefile.js",
+      "sourceSha256": "f4bf49ef1cc3c398cd5250c0050b8293bec42c6e7a77604acfc18e16322aa117",
+      "sha256": "f4bf49ef1cc3c398cd5250c0050b8293bec42c6e7a77604acfc18e16322aa117"
+    },
+    {
+      "path": "languages/markdown.js",
+      "upstreamPath": "package/es/languages/markdown.js",
+      "sourceSha256": "a3530f9c8c6f44f48c79c83244d3935396504ed459293b38e44079f783d23f04",
+      "sha256": "a3530f9c8c6f44f48c79c83244d3935396504ed459293b38e44079f783d23f04"
+    },
+    {
+      "path": "languages/mathematica.js",
+      "upstreamPath": "package/es/languages/mathematica.js",
+      "sourceSha256": "d092e83266c58dec80a5d68c2664980a979be31742112a1978aed58fac84f454",
+      "sha256": "d092e83266c58dec80a5d68c2664980a979be31742112a1978aed58fac84f454"
+    },
+    {
+      "path": "languages/matlab.js",
+      "upstreamPath": "package/es/languages/matlab.js",
+      "sourceSha256": "ed286a615bd08fd5fb36e5acf7b30b966b4bcfb25a056348830900a1c7c6e822",
+      "sha256": "ed286a615bd08fd5fb36e5acf7b30b966b4bcfb25a056348830900a1c7c6e822"
+    },
+    {
+      "path": "languages/maxima.js",
+      "upstreamPath": "package/es/languages/maxima.js",
+      "sourceSha256": "e18bc68cae45e61e19a8bf39e4ed13284320ce844fcfd0a0eb443e7b3e440d15",
+      "sha256": "e18bc68cae45e61e19a8bf39e4ed13284320ce844fcfd0a0eb443e7b3e440d15"
+    },
+    {
+      "path": "languages/mel.js",
+      "upstreamPath": "package/es/languages/mel.js",
+      "sourceSha256": "9bcac12e5fefc4f12ccb9902ec9198285a785e45ea818f408ad49d93e305d517",
+      "sha256": "9bcac12e5fefc4f12ccb9902ec9198285a785e45ea818f408ad49d93e305d517"
+    },
+    {
+      "path": "languages/mercury.js",
+      "upstreamPath": "package/es/languages/mercury.js",
+      "sourceSha256": "ce557c1b5aa969a526989a6d3067ad282277e54ecb57c6d0b942b7c8e881c1c5",
+      "sha256": "ce557c1b5aa969a526989a6d3067ad282277e54ecb57c6d0b942b7c8e881c1c5"
+    },
+    {
+      "path": "languages/mipsasm.js",
+      "upstreamPath": "package/es/languages/mipsasm.js",
+      "sourceSha256": "5cdc69a1b1463058f890d849a7a4efd0f2496131e57f4936379c8b2a5d61a236",
+      "sha256": "5cdc69a1b1463058f890d849a7a4efd0f2496131e57f4936379c8b2a5d61a236"
+    },
+    {
+      "path": "languages/mizar.js",
+      "upstreamPath": "package/es/languages/mizar.js",
+      "sourceSha256": "5e1ecd90907abedb247c5d4b49db1530e2510e83ffcbbbe332da59cd61bdf1f1",
+      "sha256": "5e1ecd90907abedb247c5d4b49db1530e2510e83ffcbbbe332da59cd61bdf1f1"
+    },
+    {
+      "path": "languages/mojolicious.js",
+      "upstreamPath": "package/es/languages/mojolicious.js",
+      "sourceSha256": "654308818c6ded4e477c1eb60313c2256da64a6608c05589a2d14a3aeee6d39a",
+      "sha256": "654308818c6ded4e477c1eb60313c2256da64a6608c05589a2d14a3aeee6d39a"
+    },
+    {
+      "path": "languages/monkey.js",
+      "upstreamPath": "package/es/languages/monkey.js",
+      "sourceSha256": "dd76e725152060953951f8772a8a1e41d6e2c49a3c17d1ecb414f5d1d208ab4c",
+      "sha256": "dd76e725152060953951f8772a8a1e41d6e2c49a3c17d1ecb414f5d1d208ab4c"
+    },
+    {
+      "path": "languages/moonscript.js",
+      "upstreamPath": "package/es/languages/moonscript.js",
+      "sourceSha256": "00e827c5666e94d58ea175367257816eab76d81f00d4656f698a35b927e2a56f",
+      "sha256": "00e827c5666e94d58ea175367257816eab76d81f00d4656f698a35b927e2a56f"
+    },
+    {
+      "path": "languages/n1ql.js",
+      "upstreamPath": "package/es/languages/n1ql.js",
+      "sourceSha256": "02f2e9c6af1e977ca7eef60061ec9fee7f4086cd8a6ec8fd45743c1d8c9fd74f",
+      "sha256": "02f2e9c6af1e977ca7eef60061ec9fee7f4086cd8a6ec8fd45743c1d8c9fd74f"
+    },
+    {
+      "path": "languages/nestedtext.js",
+      "upstreamPath": "package/es/languages/nestedtext.js",
+      "sourceSha256": "a8c2f268775aecdd8e0b108018765af24985197c4592beb699ad1eca0b2afe49",
+      "sha256": "a8c2f268775aecdd8e0b108018765af24985197c4592beb699ad1eca0b2afe49"
+    },
+    {
+      "path": "languages/nginx.js",
+      "upstreamPath": "package/es/languages/nginx.js",
+      "sourceSha256": "a87c6d8f74644a71c8d787c6d206e13b7df957ccdd5181eba00070233cd56df4",
+      "sha256": "a87c6d8f74644a71c8d787c6d206e13b7df957ccdd5181eba00070233cd56df4"
+    },
+    {
+      "path": "languages/nim.js",
+      "upstreamPath": "package/es/languages/nim.js",
+      "sourceSha256": "e8337d66730d405061c44dd6938885f9e12a9a19cac3a9866e4351c4df897a95",
+      "sha256": "e8337d66730d405061c44dd6938885f9e12a9a19cac3a9866e4351c4df897a95"
+    },
+    {
+      "path": "languages/nix.js",
+      "upstreamPath": "package/es/languages/nix.js",
+      "sourceSha256": "f6b0c1be1a92f8c2d7e708c6042477ac8163462531ce2c7975823d8a5570a531",
+      "sha256": "f6b0c1be1a92f8c2d7e708c6042477ac8163462531ce2c7975823d8a5570a531"
+    },
+    {
+      "path": "languages/node-repl.js",
+      "upstreamPath": "package/es/languages/node-repl.js",
+      "sourceSha256": "7e7e1a85821ab9a3a5746c0353076d36ee65a5a93c79cd111432e570d58c34e4",
+      "sha256": "7e7e1a85821ab9a3a5746c0353076d36ee65a5a93c79cd111432e570d58c34e4"
+    },
+    {
+      "path": "languages/nsis.js",
+      "upstreamPath": "package/es/languages/nsis.js",
+      "sourceSha256": "5e2130b0ea5d819c5699140e01c27abf88b6d0a0af235b40f23286679c115d59",
+      "sha256": "5e2130b0ea5d819c5699140e01c27abf88b6d0a0af235b40f23286679c115d59"
+    },
+    {
+      "path": "languages/objectivec.js",
+      "upstreamPath": "package/es/languages/objectivec.js",
+      "sourceSha256": "03340d47bc71f4dbc420257c4cb5e63635cae55def137c9e1d7bd536cc3ea3dd",
+      "sha256": "03340d47bc71f4dbc420257c4cb5e63635cae55def137c9e1d7bd536cc3ea3dd"
+    },
+    {
+      "path": "languages/ocaml.js",
+      "upstreamPath": "package/es/languages/ocaml.js",
+      "sourceSha256": "038d65a19a7ea580828b9570f75270f80500d37dd80593b6ead0a6e0de6ff03d",
+      "sha256": "038d65a19a7ea580828b9570f75270f80500d37dd80593b6ead0a6e0de6ff03d"
+    },
+    {
+      "path": "languages/openscad.js",
+      "upstreamPath": "package/es/languages/openscad.js",
+      "sourceSha256": "251a212252118a76547ee98e40529f5a00002728d799eeab58c285d1d0c2abcd",
+      "sha256": "251a212252118a76547ee98e40529f5a00002728d799eeab58c285d1d0c2abcd"
+    },
+    {
+      "path": "languages/oxygene.js",
+      "upstreamPath": "package/es/languages/oxygene.js",
+      "sourceSha256": "104b011b96a9573544095b517e86f6a3473bd008e7de48f2e380ebcd5cac7d4c",
+      "sha256": "104b011b96a9573544095b517e86f6a3473bd008e7de48f2e380ebcd5cac7d4c"
+    },
+    {
+      "path": "languages/parser3.js",
+      "upstreamPath": "package/es/languages/parser3.js",
+      "sourceSha256": "10d4d5ef18b4e0084b1fdf65bd9ea44bd105613233b96aa4c799c5633552ab02",
+      "sha256": "10d4d5ef18b4e0084b1fdf65bd9ea44bd105613233b96aa4c799c5633552ab02"
+    },
+    {
+      "path": "languages/perl.js",
+      "upstreamPath": "package/es/languages/perl.js",
+      "sourceSha256": "9fd74a6c247ebf37ef1592afa2906e05afa324dc95debfbe86935a7213c3620c",
+      "sha256": "9fd74a6c247ebf37ef1592afa2906e05afa324dc95debfbe86935a7213c3620c"
+    },
+    {
+      "path": "languages/pf.js",
+      "upstreamPath": "package/es/languages/pf.js",
+      "sourceSha256": "ec1e7307af02dcde308f3a38da99ad618879980d86181b81586a57e521291ab2",
+      "sha256": "ec1e7307af02dcde308f3a38da99ad618879980d86181b81586a57e521291ab2"
+    },
+    {
+      "path": "languages/pgsql.js",
+      "upstreamPath": "package/es/languages/pgsql.js",
+      "sourceSha256": "67b26c6e355041a4c9bf275d1d1492312c8a78d463b63f12c651cd02beb65988",
+      "sha256": "67b26c6e355041a4c9bf275d1d1492312c8a78d463b63f12c651cd02beb65988"
+    },
+    {
+      "path": "languages/php-template.js",
+      "upstreamPath": "package/es/languages/php-template.js",
+      "sourceSha256": "6fa06536c3669aa3e101339d99a95101e74058723cd1422e66bf742aba137973",
+      "sha256": "6fa06536c3669aa3e101339d99a95101e74058723cd1422e66bf742aba137973"
+    },
+    {
+      "path": "languages/php.js",
+      "upstreamPath": "package/es/languages/php.js",
+      "sourceSha256": "36caa1afabdfa5a80cf13ea30096890d3fe793a7b62f4e3c979ec9ca528e4daf",
+      "sha256": "36caa1afabdfa5a80cf13ea30096890d3fe793a7b62f4e3c979ec9ca528e4daf"
+    },
+    {
+      "path": "languages/plaintext.js",
+      "upstreamPath": "package/es/languages/plaintext.js",
+      "sourceSha256": "9c1a86b4ab27c18e4188dbd859df863049a3cbbca116e2a62da7c5b332ee9a74",
+      "sha256": "9c1a86b4ab27c18e4188dbd859df863049a3cbbca116e2a62da7c5b332ee9a74"
+    },
+    {
+      "path": "languages/pony.js",
+      "upstreamPath": "package/es/languages/pony.js",
+      "sourceSha256": "6f5bd3499c1c7c235f6558fe61d7ca674a062560e0d56b4789baa3884fde3ad0",
+      "sha256": "6f5bd3499c1c7c235f6558fe61d7ca674a062560e0d56b4789baa3884fde3ad0"
+    },
+    {
+      "path": "languages/powershell.js",
+      "upstreamPath": "package/es/languages/powershell.js",
+      "sourceSha256": "177f919a84aaeefc03401104070b9d58a8e466b4ea01d8c5033c76ff62c52ea7",
+      "sha256": "177f919a84aaeefc03401104070b9d58a8e466b4ea01d8c5033c76ff62c52ea7"
+    },
+    {
+      "path": "languages/processing.js",
+      "upstreamPath": "package/es/languages/processing.js",
+      "sourceSha256": "63d51951e1560cad9b11b61c1ec35f600e5a8136e13dbd233a3d7aba7841d52c",
+      "sha256": "63d51951e1560cad9b11b61c1ec35f600e5a8136e13dbd233a3d7aba7841d52c"
+    },
+    {
+      "path": "languages/profile.js",
+      "upstreamPath": "package/es/languages/profile.js",
+      "sourceSha256": "9081398cbce510571650356df82a8242c905a950fa2637786bb5c865f71d4ff2",
+      "sha256": "9081398cbce510571650356df82a8242c905a950fa2637786bb5c865f71d4ff2"
+    },
+    {
+      "path": "languages/prolog.js",
+      "upstreamPath": "package/es/languages/prolog.js",
+      "sourceSha256": "4f1ffe9fedb0a4fb261439b602924f7936bde98d8403082a79ad1c58de4f7528",
+      "sha256": "4f1ffe9fedb0a4fb261439b602924f7936bde98d8403082a79ad1c58de4f7528"
+    },
+    {
+      "path": "languages/properties.js",
+      "upstreamPath": "package/es/languages/properties.js",
+      "sourceSha256": "ea4b98ba8974e86c1d95501548bc4502da46477c440040fec07b24201c51c384",
+      "sha256": "ea4b98ba8974e86c1d95501548bc4502da46477c440040fec07b24201c51c384"
+    },
+    {
+      "path": "languages/protobuf.js",
+      "upstreamPath": "package/es/languages/protobuf.js",
+      "sourceSha256": "b48b69f60ea4e53b55f891aa1786496e22992468a8398f0266aa8afe0488b7ae",
+      "sha256": "b48b69f60ea4e53b55f891aa1786496e22992468a8398f0266aa8afe0488b7ae"
+    },
+    {
+      "path": "languages/puppet.js",
+      "upstreamPath": "package/es/languages/puppet.js",
+      "sourceSha256": "1270ff2e0f7c969e6f33deb3a52b98de09def5e70592bb5298c99f680c7e16b9",
+      "sha256": "1270ff2e0f7c969e6f33deb3a52b98de09def5e70592bb5298c99f680c7e16b9"
+    },
+    {
+      "path": "languages/purebasic.js",
+      "upstreamPath": "package/es/languages/purebasic.js",
+      "sourceSha256": "3e51eb294eef02ca46544f28fa263fd2ed197b9a8e163860305f676e03514643",
+      "sha256": "3e51eb294eef02ca46544f28fa263fd2ed197b9a8e163860305f676e03514643"
+    },
+    {
+      "path": "languages/python-repl.js",
+      "upstreamPath": "package/es/languages/python-repl.js",
+      "sourceSha256": "a287a59f9953d3290f92bf04464302273a788e47ea1ea9fce9b985075b201db4",
+      "sha256": "a287a59f9953d3290f92bf04464302273a788e47ea1ea9fce9b985075b201db4"
+    },
+    {
+      "path": "languages/python.js",
+      "upstreamPath": "package/es/languages/python.js",
+      "sourceSha256": "403d99e7cdb371f9bdff3b64035b789f01df5d9bec3b92841547645107b30f6f",
+      "sha256": "403d99e7cdb371f9bdff3b64035b789f01df5d9bec3b92841547645107b30f6f"
+    },
+    {
+      "path": "languages/q.js",
+      "upstreamPath": "package/es/languages/q.js",
+      "sourceSha256": "a0fca6e8fc18bd58ec03a000534d0609ba53cda6c13e75845fbd81226a1f534b",
+      "sha256": "a0fca6e8fc18bd58ec03a000534d0609ba53cda6c13e75845fbd81226a1f534b"
+    },
+    {
+      "path": "languages/qml.js",
+      "upstreamPath": "package/es/languages/qml.js",
+      "sourceSha256": "d30789dd18f65edec60c4bba838d051a20f4585591320b575e7f7b0fe1e04d2b",
+      "sha256": "d30789dd18f65edec60c4bba838d051a20f4585591320b575e7f7b0fe1e04d2b"
+    },
+    {
+      "path": "languages/r.js",
+      "upstreamPath": "package/es/languages/r.js",
+      "sourceSha256": "08155a5b6b400432d5c6df45d06f41d5194dd582433d04e094b38118a8f8a358",
+      "sha256": "08155a5b6b400432d5c6df45d06f41d5194dd582433d04e094b38118a8f8a358"
+    },
+    {
+      "path": "languages/reasonml.js",
+      "upstreamPath": "package/es/languages/reasonml.js",
+      "sourceSha256": "6de458aa61e46a0c2460be6dbbed00f6b5a429e6d27539441266ba84a0e681eb",
+      "sha256": "6de458aa61e46a0c2460be6dbbed00f6b5a429e6d27539441266ba84a0e681eb"
+    },
+    {
+      "path": "languages/rib.js",
+      "upstreamPath": "package/es/languages/rib.js",
+      "sourceSha256": "4ea9c9ec263b56257f998384ed8cdf8d3dddd361e3429358e888432d31f1f7bf",
+      "sha256": "4ea9c9ec263b56257f998384ed8cdf8d3dddd361e3429358e888432d31f1f7bf"
+    },
+    {
+      "path": "languages/roboconf.js",
+      "upstreamPath": "package/es/languages/roboconf.js",
+      "sourceSha256": "85405e71a100adca70ed669998d8807224dfe81636db1b822b3b43c6c2914a45",
+      "sha256": "85405e71a100adca70ed669998d8807224dfe81636db1b822b3b43c6c2914a45"
+    },
+    {
+      "path": "languages/routeros.js",
+      "upstreamPath": "package/es/languages/routeros.js",
+      "sourceSha256": "f1fd8add409e325ef247a3fbb9cd973f94b1dbd056785ef93ddd117bebd602d4",
+      "sha256": "f1fd8add409e325ef247a3fbb9cd973f94b1dbd056785ef93ddd117bebd602d4"
+    },
+    {
+      "path": "languages/rsl.js",
+      "upstreamPath": "package/es/languages/rsl.js",
+      "sourceSha256": "e52d187b01d0afc30f6589a5fb50af95a8ca3a68c2b390a2a1da8486b4d6795b",
+      "sha256": "e52d187b01d0afc30f6589a5fb50af95a8ca3a68c2b390a2a1da8486b4d6795b"
+    },
+    {
+      "path": "languages/ruby.js",
+      "upstreamPath": "package/es/languages/ruby.js",
+      "sourceSha256": "87f4fdf449625a612bc329d85540b96ba2d22b2f7a4efea301ec3beb66a0e9be",
+      "sha256": "87f4fdf449625a612bc329d85540b96ba2d22b2f7a4efea301ec3beb66a0e9be"
+    },
+    {
+      "path": "languages/ruleslanguage.js",
+      "upstreamPath": "package/es/languages/ruleslanguage.js",
+      "sourceSha256": "f039cd69daeb90944e4074be2c7a3d336b153f9b59ab00887057044207b14d7b",
+      "sha256": "f039cd69daeb90944e4074be2c7a3d336b153f9b59ab00887057044207b14d7b"
+    },
+    {
+      "path": "languages/rust.js",
+      "upstreamPath": "package/es/languages/rust.js",
+      "sourceSha256": "3008746ddd4105c3ca8f7bb0d1f8ef80d8e0eda78cf67a234448f629182e90fb",
+      "sha256": "3008746ddd4105c3ca8f7bb0d1f8ef80d8e0eda78cf67a234448f629182e90fb"
+    },
+    {
+      "path": "languages/sas.js",
+      "upstreamPath": "package/es/languages/sas.js",
+      "sourceSha256": "7d36ab432bb54df25ea7907f2dbd1136f90dfd45bd5dca0cd4dbf8f0c076add4",
+      "sha256": "7d36ab432bb54df25ea7907f2dbd1136f90dfd45bd5dca0cd4dbf8f0c076add4"
+    },
+    {
+      "path": "languages/scala.js",
+      "upstreamPath": "package/es/languages/scala.js",
+      "sourceSha256": "8c847b3240931a36a87cc593c90b717747e022b3ea5649fddb5125b249e74c2e",
+      "sha256": "8c847b3240931a36a87cc593c90b717747e022b3ea5649fddb5125b249e74c2e"
+    },
+    {
+      "path": "languages/scheme.js",
+      "upstreamPath": "package/es/languages/scheme.js",
+      "sourceSha256": "c827f896fbd4d2aee0c23aaabc01de7c4a981c18917c6db74b1a51af6c605d17",
+      "sha256": "c827f896fbd4d2aee0c23aaabc01de7c4a981c18917c6db74b1a51af6c605d17"
+    },
+    {
+      "path": "languages/scilab.js",
+      "upstreamPath": "package/es/languages/scilab.js",
+      "sourceSha256": "0658a720f2358c3e7b07917252c766da1431ac92578fa42c2fd4b6c3f1614a91",
+      "sha256": "0658a720f2358c3e7b07917252c766da1431ac92578fa42c2fd4b6c3f1614a91"
+    },
+    {
+      "path": "languages/scss.js",
+      "upstreamPath": "package/es/languages/scss.js",
+      "sourceSha256": "24a808264b3d03609efd6dcf2378fa1a6d165d98fc8af592c51bdd7b4a7cff03",
+      "sha256": "24a808264b3d03609efd6dcf2378fa1a6d165d98fc8af592c51bdd7b4a7cff03"
+    },
+    {
+      "path": "languages/shell.js",
+      "upstreamPath": "package/es/languages/shell.js",
+      "sourceSha256": "513ff9c865fa6c184fefcbcee39ce82a22ac0118e1f2c585ecdb023888f5c2b6",
+      "sha256": "513ff9c865fa6c184fefcbcee39ce82a22ac0118e1f2c585ecdb023888f5c2b6"
+    },
+    {
+      "path": "languages/smali.js",
+      "upstreamPath": "package/es/languages/smali.js",
+      "sourceSha256": "7fc54f0094606da258323c4d07f6fa73d4f1880f8a642207319e065f1288b766",
+      "sha256": "7fc54f0094606da258323c4d07f6fa73d4f1880f8a642207319e065f1288b766"
+    },
+    {
+      "path": "languages/smalltalk.js",
+      "upstreamPath": "package/es/languages/smalltalk.js",
+      "sourceSha256": "9816357b89858d35784298b7c7bc9a9a30f8e0d81b22a96313383c4b68232888",
+      "sha256": "9816357b89858d35784298b7c7bc9a9a30f8e0d81b22a96313383c4b68232888"
+    },
+    {
+      "path": "languages/sml.js",
+      "upstreamPath": "package/es/languages/sml.js",
+      "sourceSha256": "a9f60598b17d0d2b84754e11f073834fae62a74492b723b9fa2e75a5c33905f9",
+      "sha256": "a9f60598b17d0d2b84754e11f073834fae62a74492b723b9fa2e75a5c33905f9"
+    },
+    {
+      "path": "languages/sqf.js",
+      "upstreamPath": "package/es/languages/sqf.js",
+      "sourceSha256": "606b3172f9d776fb4893fd873311fcb10333dd3ad58534bb5c58a9827b720064",
+      "sha256": "606b3172f9d776fb4893fd873311fcb10333dd3ad58534bb5c58a9827b720064"
+    },
+    {
+      "path": "languages/sql.js",
+      "upstreamPath": "package/es/languages/sql.js",
+      "sourceSha256": "c73d618ec9634aad1374886b5f693e3a9f695232fd1eacf15b3fd6c3e0cd273e",
+      "sha256": "c73d618ec9634aad1374886b5f693e3a9f695232fd1eacf15b3fd6c3e0cd273e"
+    },
+    {
+      "path": "languages/stan.js",
+      "upstreamPath": "package/es/languages/stan.js",
+      "sourceSha256": "363cb68bada3858fb64952578b65e34bb1eeef86df2f8bf82de0bce3dca55969",
+      "sha256": "363cb68bada3858fb64952578b65e34bb1eeef86df2f8bf82de0bce3dca55969"
+    },
+    {
+      "path": "languages/stata.js",
+      "upstreamPath": "package/es/languages/stata.js",
+      "sourceSha256": "2c58b4cb0fb9117c26907c3ce313636512230dba260d4e1fecb0847c6e4d7cfd",
+      "sha256": "2c58b4cb0fb9117c26907c3ce313636512230dba260d4e1fecb0847c6e4d7cfd"
+    },
+    {
+      "path": "languages/step21.js",
+      "upstreamPath": "package/es/languages/step21.js",
+      "sourceSha256": "ee05f8dcb7f2bfaccb6b53f5e84e890b4308a787080e92539f09209588846315",
+      "sha256": "ee05f8dcb7f2bfaccb6b53f5e84e890b4308a787080e92539f09209588846315"
+    },
+    {
+      "path": "languages/stylus.js",
+      "upstreamPath": "package/es/languages/stylus.js",
+      "sourceSha256": "7628380eb995e00d1320cdd8651092dbfcc26c0d9fbace8b700144b4180a3616",
+      "sha256": "7628380eb995e00d1320cdd8651092dbfcc26c0d9fbace8b700144b4180a3616"
+    },
+    {
+      "path": "languages/subunit.js",
+      "upstreamPath": "package/es/languages/subunit.js",
+      "sourceSha256": "08004b16b0b3708b9873de233539e463aa47566428d27f140c1b8f47a2935d9a",
+      "sha256": "08004b16b0b3708b9873de233539e463aa47566428d27f140c1b8f47a2935d9a"
+    },
+    {
+      "path": "languages/swift.js",
+      "upstreamPath": "package/es/languages/swift.js",
+      "sourceSha256": "f6b2d02782a33030ea7a54581599d4b1bf556d09c18b99566af4146eab053ce6",
+      "sha256": "f6b2d02782a33030ea7a54581599d4b1bf556d09c18b99566af4146eab053ce6"
+    },
+    {
+      "path": "languages/taggerscript.js",
+      "upstreamPath": "package/es/languages/taggerscript.js",
+      "sourceSha256": "74de4606bd9eb9db889cd997504994f1c009584f1800aa086daf8792ec2e983c",
+      "sha256": "74de4606bd9eb9db889cd997504994f1c009584f1800aa086daf8792ec2e983c"
+    },
+    {
+      "path": "languages/tap.js",
+      "upstreamPath": "package/es/languages/tap.js",
+      "sourceSha256": "d2607d0655d09336b5bb113fa77b65f4e3f6ecc544db09596704548789ff9ee1",
+      "sha256": "d2607d0655d09336b5bb113fa77b65f4e3f6ecc544db09596704548789ff9ee1"
+    },
+    {
+      "path": "languages/tcl.js",
+      "upstreamPath": "package/es/languages/tcl.js",
+      "sourceSha256": "374577b380521b1272fae7cac86edc1339058146e813ced4d0b57e6d2102c52f",
+      "sha256": "374577b380521b1272fae7cac86edc1339058146e813ced4d0b57e6d2102c52f"
+    },
+    {
+      "path": "languages/thrift.js",
+      "upstreamPath": "package/es/languages/thrift.js",
+      "sourceSha256": "554e53423ed386da4d12cc1f22ccfd3a558dfd4ab065614c3fc112d081da2705",
+      "sha256": "554e53423ed386da4d12cc1f22ccfd3a558dfd4ab065614c3fc112d081da2705"
+    },
+    {
+      "path": "languages/tp.js",
+      "upstreamPath": "package/es/languages/tp.js",
+      "sourceSha256": "2c28ab3b4d80fb16680ddba16afa6d3e18241b1c14d54cc36818bdb1c7eb650f",
+      "sha256": "2c28ab3b4d80fb16680ddba16afa6d3e18241b1c14d54cc36818bdb1c7eb650f"
+    },
+    {
+      "path": "languages/twig.js",
+      "upstreamPath": "package/es/languages/twig.js",
+      "sourceSha256": "c5e576b414dba23103b77e3c35269a9dfbf7f077a76f5aaa1318c55e0924797e",
+      "sha256": "c5e576b414dba23103b77e3c35269a9dfbf7f077a76f5aaa1318c55e0924797e"
+    },
+    {
+      "path": "languages/typescript.js",
+      "upstreamPath": "package/es/languages/typescript.js",
+      "sourceSha256": "780e8ab6ec8f1b2ea17ee40c9da9d5ff6aa9440864eb0317bc430646df2b1d55",
+      "sha256": "780e8ab6ec8f1b2ea17ee40c9da9d5ff6aa9440864eb0317bc430646df2b1d55"
+    },
+    {
+      "path": "languages/vala.js",
+      "upstreamPath": "package/es/languages/vala.js",
+      "sourceSha256": "d242ad54cf121d9a18ac80aeab316d9384b64e923fcca461f8bae939162e740a",
+      "sha256": "d242ad54cf121d9a18ac80aeab316d9384b64e923fcca461f8bae939162e740a"
+    },
+    {
+      "path": "languages/vbnet.js",
+      "upstreamPath": "package/es/languages/vbnet.js",
+      "sourceSha256": "6b623c3e31b5f9b456072417181a3e9d305f0204bec4e8e27a5b7bdfbbd58409",
+      "sha256": "6b623c3e31b5f9b456072417181a3e9d305f0204bec4e8e27a5b7bdfbbd58409"
+    },
+    {
+      "path": "languages/vbscript-html.js",
+      "upstreamPath": "package/es/languages/vbscript-html.js",
+      "sourceSha256": "9028aeafa13de8ab48110088e65f0ccfba89084d8b5224f8a0bc6c3a8cb1e882",
+      "sha256": "9028aeafa13de8ab48110088e65f0ccfba89084d8b5224f8a0bc6c3a8cb1e882"
+    },
+    {
+      "path": "languages/vbscript.js",
+      "upstreamPath": "package/es/languages/vbscript.js",
+      "sourceSha256": "e19a8c6724f64e22da7de89c4361319a720b13ff9aa46522b7e13de4bc607df0",
+      "sha256": "e19a8c6724f64e22da7de89c4361319a720b13ff9aa46522b7e13de4bc607df0"
+    },
+    {
+      "path": "languages/verilog.js",
+      "upstreamPath": "package/es/languages/verilog.js",
+      "sourceSha256": "2108bbe379e5f7c2896a2a8363333f10bd02363440f9d272ec99980fa7ed33a1",
+      "sha256": "2108bbe379e5f7c2896a2a8363333f10bd02363440f9d272ec99980fa7ed33a1"
+    },
+    {
+      "path": "languages/vhdl.js",
+      "upstreamPath": "package/es/languages/vhdl.js",
+      "sourceSha256": "5267d2ea9cb3ff82df4544817d99ba7d3c18a12deb027694ff2a41c11a356853",
+      "sha256": "5267d2ea9cb3ff82df4544817d99ba7d3c18a12deb027694ff2a41c11a356853"
+    },
+    {
+      "path": "languages/vim.js",
+      "upstreamPath": "package/es/languages/vim.js",
+      "sourceSha256": "2f53a938619364954bffcf35733ddb0f435884cb13820f0296c85b18952a79d8",
+      "sha256": "2f53a938619364954bffcf35733ddb0f435884cb13820f0296c85b18952a79d8"
+    },
+    {
+      "path": "languages/wasm.js",
+      "upstreamPath": "package/es/languages/wasm.js",
+      "sourceSha256": "77b60cfffbdbeff14d7392d24a619f7bb39b5163c1ad538d696d8c587b3d2d37",
+      "sha256": "77b60cfffbdbeff14d7392d24a619f7bb39b5163c1ad538d696d8c587b3d2d37"
+    },
+    {
+      "path": "languages/wren.js",
+      "upstreamPath": "package/es/languages/wren.js",
+      "sourceSha256": "1b53a5cecdcf91c8cad5d1576cae9a9b60514b160b1e4abe9b24861c868de28f",
+      "sha256": "1b53a5cecdcf91c8cad5d1576cae9a9b60514b160b1e4abe9b24861c868de28f"
+    },
+    {
+      "path": "languages/x86asm.js",
+      "upstreamPath": "package/es/languages/x86asm.js",
+      "sourceSha256": "154759836d581fb0f2cfd421e985bbc5a81be91596d10a6e2fe8a1b8fe3b070a",
+      "sha256": "154759836d581fb0f2cfd421e985bbc5a81be91596d10a6e2fe8a1b8fe3b070a"
+    },
+    {
+      "path": "languages/xl.js",
+      "upstreamPath": "package/es/languages/xl.js",
+      "sourceSha256": "a5aeb02360d5f451dd66076586a6ad192f2ff9d5d6b7e8d80539039911b564de",
+      "sha256": "a5aeb02360d5f451dd66076586a6ad192f2ff9d5d6b7e8d80539039911b564de"
+    },
+    {
+      "path": "languages/xml.js",
+      "upstreamPath": "package/es/languages/xml.js",
+      "sourceSha256": "184baf38569e5e0687c8b7fc97f5a7db5ca45363945a291b79099bf17b8acf2b",
+      "sha256": "184baf38569e5e0687c8b7fc97f5a7db5ca45363945a291b79099bf17b8acf2b"
+    },
+    {
+      "path": "languages/xquery.js",
+      "upstreamPath": "package/es/languages/xquery.js",
+      "sourceSha256": "2798d1c584ab88249c4e4b89ab748cc1e11ada37e0469c53c5f7f5cab6df5fab",
+      "sha256": "2798d1c584ab88249c4e4b89ab748cc1e11ada37e0469c53c5f7f5cab6df5fab"
+    },
+    {
+      "path": "languages/yaml.js",
+      "upstreamPath": "package/es/languages/yaml.js",
+      "sourceSha256": "64b7373a189e745e9bf28cb70342acd623574c362aa8d813305db2f5ca96918c",
+      "sha256": "64b7373a189e745e9bf28cb70342acd623574c362aa8d813305db2f5ca96918c"
+    },
+    {
+      "path": "languages/zephir.js",
+      "upstreamPath": "package/es/languages/zephir.js",
+      "sourceSha256": "5c0e62bbbb504535ecf186a1a1835d5fd9cf2fcb6fcf14685791ce32b9344a71",
+      "sha256": "5c0e62bbbb504535ecf186a1a1835d5fd9cf2fcb6fcf14685791ce32b9344a71"
+    }
+  ],
+  "noticeSha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490"
+}

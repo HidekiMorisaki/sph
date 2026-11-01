@@ -8,7 +8,7 @@
 	let { points, labels, currency }: { points: FinancialTrend[]; labels: Labels; currency: 'JPY' | 'USD' } = $props();
 	const series = financialTrendSeries;
 	let visible = $state<Record<FinancialTrendSegment, boolean>>({ variableCost: true, fixedCost: true, profit: true, loss: true });
-	const left = 82, right = 28, top = 48, bottom = 58, plotHeight = 300;
+	const left = 96, right = 32, top = 52, bottom = 64, plotHeight = 300;
 	let containerWidth = $state(0);
 	let chartWidth = $derived(Math.max(720, containerWidth, points.length * 86 + left + right));
 	let plotWidth = $derived(chartWidth - left - right);
@@ -131,15 +131,15 @@
 </div>
 
 <style>
-	.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 14px}
-	.legend-item{display:inline-flex;align-items:center;gap:6px;margin:0;padding:4px 2px;border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}
+	.legend{display:flex;flex-wrap:wrap;gap:var(--sph-space-6px) var(--sph-space-16px);margin:0 0 var(--sph-space-14px)}
+	.legend-item{display:inline-flex;align-items:center;gap:var(--sph-space-6px);margin:0;padding:var(--sph-space-4px) var(--sph-space-2px);border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}
 	.legend-item:hover{color:var(--action-primary)}.legend-item:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}.legend-item.muted{opacity:.55;text-decoration:line-through}
 	.swatch{width:12px;height:12px;flex:none;border-radius:50%}
-	.chart-scroll{max-width:100%;overflow-x:auto}.canvas{position:relative;max-width:none}svg{display:block;width:100%;height:auto;font-family:inherit}text{fill:var(--text-secondary);font-size:12px}.axis-title{fill:var(--text);font-weight:600}.grid{stroke:var(--border);stroke-width:1}.segment-label{fill:#182331;font-size:14px;font-weight:700;pointer-events:none}.profit-label{fill:var(--text);font-size:14px;font-weight:700;pointer-events:none}.profit-label.positive{fill:color-mix(in srgb,var(--primary) 50%,var(--text))}.profit-label.negative{fill:color-mix(in srgb,var(--danger) 75%,var(--text))}
-	.interaction-surface{fill:transparent;pointer-events:all}.hover-band{fill:var(--action-primary);opacity:.09;pointer-events:none}.hover-guide{stroke:var(--action-primary);stroke-width:1.5;stroke-dasharray:4 4;pointer-events:none}.axis-active{fill:var(--text);font-weight:700}rect.active:not(.hover-band){filter:brightness(1.12)}
+	.chart-scroll{max-width:100%;overflow-x:auto}.canvas{position:relative;max-width:none}svg{display:block;width:100%;height:auto;font-family:inherit}text{fill:var(--text-secondary);font-size:var(--font-size-support)}.axis-title{fill:var(--text);font-weight:var(--sph-weight-600)}.grid{stroke:var(--border);stroke-width:1}.segment-label{fill:var(--sph-color-widget-surface-dark);font-size:var(--sph-type-14px);font-weight:var(--sph-weight-700);pointer-events:none}.profit-label{fill:var(--text);font-size:var(--sph-type-14px);font-weight:var(--sph-weight-700);pointer-events:none}.profit-label.positive{fill:color-mix(in srgb,var(--primary) 50%,var(--text))}.profit-label.negative{fill:color-mix(in srgb,var(--danger) 75%,var(--text))}
+	.interaction-surface{fill:transparent;pointer-events:all}.hover-band{fill:var(--action-primary);opacity:.09;pointer-events:none}.hover-guide{stroke:var(--action-primary);stroke-width:1.5;stroke-dasharray:4 4;pointer-events:none}.axis-active{fill:var(--text);font-weight:var(--sph-weight-700)}rect.active:not(.hover-band){filter:brightness(1.12)}
 	.hit-area{fill:transparent}g:focus-visible .hit-area{stroke:var(--action-primary);stroke-width:2;outline:none}
-	.tooltip{position:absolute;z-index:1;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;width:max-content;max-width:350px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.16);color:var(--text);font-size:var(--font-size-support);line-height:1.6;pointer-events:none;overflow-wrap:anywhere;transform:translateX(-50%);transition:left .14s ease-out,top .14s ease-out}
-	.tooltip strong{font-weight:500;color:var(--muted)}.tooltip-grid{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;column-gap:7px;row-gap:3px}.tooltip-row{display:contents}.tooltip-label{min-width:0;color:var(--text-secondary)}.tooltip-amount{margin-left:10px;color:var(--text);font-weight:600;text-align:right;white-space:nowrap}.tooltip-amount.negative{color:color-mix(in srgb,var(--danger) 75%,var(--text))}.color-ball{width:9px;height:9px;border-radius:50%}
+	.tooltip{position:absolute;z-index:1;display:flex;flex-direction:column;gap:var(--sph-space-3px);box-sizing:border-box;width:max-content;max-width:350px;padding:var(--sph-space-10px) var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-8px);background:var(--surface);box-shadow:var(--sph-shadow-tooltip);color:var(--text);font-size:var(--font-size-support);line-height:var(--sph-leading-1-6);pointer-events:none;overflow-wrap:anywhere;transform:translateX(-50%);transition:left .14s ease-out,top .14s ease-out}
+	.tooltip strong{font-weight:var(--sph-weight-500);color:var(--muted)}.tooltip-grid{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;column-gap:var(--sph-space-7px);row-gap:var(--sph-space-3px)}.tooltip-row{display:contents}.tooltip-label{min-width:0;color:var(--text-secondary)}.tooltip-amount{margin-left:var(--sph-space-10px);color:var(--text);font-weight:var(--sph-weight-600);text-align:right;white-space:nowrap}.tooltip-amount.negative{color:color-mix(in srgb,var(--danger) 75%,var(--text))}.color-ball{width:9px;height:9px;border-radius:50%}
 	@media(prefers-reduced-motion:reduce){.tooltip{transition:none}}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.legend-item{min-height:44px}.tooltip{max-width:calc(100vw - 32px)}.tooltip-grid{column-gap:4px}.tooltip-label{overflow-wrap:anywhere}}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.legend-item{min-height:44px}.tooltip{max-width:calc(100vw - 32px)}.tooltip-grid{column-gap:var(--sph-space-4px)}.tooltip-label{overflow-wrap:anywhere}}
 </style>

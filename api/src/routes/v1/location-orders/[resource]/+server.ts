@@ -1,8 +1,10 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireBranchManagementApi, requireMasterManagementApi } from '$lib/server/api/admin';
 import { isLocationOrderResource, parseLocationOrder, reorderLocations, LocationOrderConflictError } from '$lib/server/api/location-order';
 import { failure, success } from '$lib/server/api/response';
 
 export async function PUT({ params, request, locals }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const actor = params.resource === 'branches' ? requireBranchManagementApi(locals.user) : requireMasterManagementApi(locals.user);
 	if (!isLocationOrderResource(params.resource)) return failure(404, 'NOT_FOUND', 'Not found.');
 	const input = parseLocationOrder(await request.json().catch(() => null));

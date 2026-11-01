@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
 	import { tick } from 'svelte';
 	import { apiData } from '$lib/api';
 	import { avatarImage, setAvatar } from '$lib/avatar';
@@ -143,8 +144,8 @@
 		<strong>{text.avatar}</strong>
 		<p>{text.avatarHint}</p>
 		<div class="buttons">
-			<button type="button" class="app-primary-action" onclick={() => input.click()} disabled={saving}>{text.avatarChoose}</button>
-			{#if $avatarImage}<button type="button" class="remove" onclick={remove} disabled={saving}>{text.avatarRemove}</button>{/if}
+			<ModalActionButton type="button" class="app-primary-action" onclick={() => input.click()} disabled={saving} variant="primary" data-button-scope="button-7749b241ea">{text.avatarChoose}</ModalActionButton>
+			{#if $avatarImage}<ActionButton type="button" class="remove" onclick={remove} disabled={saving} variant="secondary" data-button-scope="button-7749b241ea">{text.avatarRemove}</ActionButton>{/if}
 		</div>
 		{#if message}<p class:error role="status">{message}</p>{/if}
 	</div>
@@ -163,12 +164,12 @@
 </dialog>
 
 <style>
-	.avatar-setting{display:flex;align-items:center;gap:18px;margin:18px 0 24px;padding:16px;border:1px solid var(--border);border-radius:6px;background:var(--surface-secondary)}
-	.avatar-current{display:grid;place-items:center;width:72px;height:72px;flex:none;overflow:hidden;border-radius:50%;background:var(--primary);color:#fff;font-size:26px}
+	.avatar-setting{display:flex;align-items:center;gap:var(--sph-space-18px);margin:var(--sph-space-18px) 0 var(--sph-space-24px);padding:var(--sph-space-16px);border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:var(--surface-secondary)}
+	.avatar-current{display:grid;place-items:center;width:72px;height:72px;flex:none;overflow:hidden;border-radius:50%;background:var(--primary);color:var(--sph-color-on-emphasis);font-size:var(--sph-type-26px)}
 	.avatar-current img{width:100%;height:100%;object-fit:cover}
-	.avatar-actions{min-width:0}.avatar-actions strong{font-size:var(--font-size-body)}.avatar-actions p{margin:4px 0 10px;color:var(--text-secondary);font-size:var(--font-size-support)}
-	.avatar-actions p.error{color:var(--danger,#c53030)}.buttons{display:flex;flex-wrap:wrap;gap:8px}.remove{padding:8px 14px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer}.remove{color:var(--danger,#c53030)}
+	.avatar-actions{min-width:0}.avatar-actions strong{font-size:var(--font-size-body)}.avatar-actions p{margin:var(--sph-space-4px) 0 var(--sph-space-10px);color:var(--text-secondary);font-size:var(--font-size-support)}
+	.avatar-actions p.error{color:var(--danger,var(--sph-color-danger-control))}.buttons{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px)}:global(.remove[data-button-scope="button-7749b241ea"]){padding:var(--sph-space-8px) var(--sph-space-14px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text);cursor:pointer}:global(.remove[data-button-scope="button-7749b241ea"]){color:var(--danger,var(--sph-color-danger-control))}
 	.file-input{display:none}
-	dialog{max-width:calc(100vw - 24px);padding:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}dialog::backdrop{background:#0009}.editor{display:grid;gap:12px;width:min(360px,calc(100vw - 48px));padding:20px}.editor h3{margin:0;font-size:var(--font-size-section,18px)}.preview-wrap{position:relative;width:280px;height:280px;max-width:100%;margin:auto;border-radius:50%;overflow:hidden}.preview-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:move}.preview-wrap canvas:focus-visible{outline:3px solid var(--primary);outline-offset:-4px}.editor label{display:grid;gap:4px;font-size:var(--font-size-support)}.editor input[type=range]{width:100%;accent-color:var(--primary)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
-	@media(max-width:560px){.avatar-setting{align-items:flex-start;gap:12px;padding:12px}.avatar-current{width:56px;height:56px}.editor{padding:16px}}
+	dialog{max-width:calc(100vw - 24px);padding:0;border:1px solid var(--border);border-radius:var(--sph-radius-8px);background:var(--surface);color:var(--text);box-shadow:var(--shadow)}dialog::backdrop{background:var(--sph-color-overlay-image)}.editor{display:grid;gap:var(--sph-space-12px);width:min(360px,calc(100vw - 48px));padding:var(--sph-space-20px)}.editor h3{margin:0;font-size:var(--font-size-section,var(--sph-type-18px))}.preview-wrap{position:relative;width:280px;height:280px;max-width:100%;margin:auto;border-radius:50%;overflow:hidden}.preview-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:move}.preview-wrap canvas:focus-visible{outline:3px solid var(--primary);outline-offset:-4px}.editor label{display:grid;gap:var(--sph-space-4px);font-size:var(--font-size-support)}.editor input[type=range]{width:100%;accent-color:var(--primary)}.dialog-actions{display:flex;justify-content:flex-end;gap:var(--sph-space-8px);margin-top:var(--sph-space-8px)}
+	@media(max-width:560px){.avatar-setting{align-items:flex-start;gap:var(--sph-space-12px);padding:var(--sph-space-12px)}.avatar-current{width:56px;height:56px}.editor{padding:var(--sph-space-16px)}}
 </style>

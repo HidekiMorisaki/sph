@@ -24,15 +24,15 @@ export function workforceFilters(url: URL, today: Date) {
  }
  const date = today.toISOString().slice(0,10), lastDate = last.toISOString().slice(0,10);
  if (status || days!==null) {
-  const conditions:Prisma.ProjectParticipationWhereInput[] = [];
+  const conditions:Prisma.EngagementParticipationWhereInput[] = [];
   const clauses:Prisma.Sql[] = [];
   if (status==='planned') { conditions.push({startsOn:{gt:today}}); clauses.push(Prisma.sql`pp.starts_on > CAST(${date} AS DATE)`); }
   if (status==='active' || days!==null) { conditions.push({startsOn:{lte:today},OR:[{endsOn:null},{endsOn:{gte:today}}]}); clauses.push(Prisma.sql`pp.starts_on<=CAST(${date} AS DATE) AND (pp.ends_on IS NULL OR pp.ends_on>=CAST(${date} AS DATE))`); }
   if (status==='ended') { conditions.push({endsOn:{lt:today}}); clauses.push(Prisma.sql`pp.ends_on<CAST(${date} AS DATE)`); }
   if (days!==null) { conditions.push({endsOn:{gte:today,lte:last}}); clauses.push(Prisma.sql`pp.ends_on BETWEEN CAST(${date} AS DATE) AND CAST(${lastDate} AS DATE)`); }
-  const participation = {deletedAt:null,project:{deletedAt:null},AND:conditions};
-  where.push({projectParticipations:status==='none'?{none:participation}:{some:participation}});
-  sql.push(Prisma.sql`${status==='none'?Prisma.sql`NOT`:Prisma.empty} EXISTS (SELECT 1 FROM project_participations pp JOIN projects p ON p.id=pp.project_id AND p.deleted_at IS NULL WHERE pp.employee_id=employee.id AND pp.deleted_at IS NULL ${clauses.length?Prisma.sql`AND ${Prisma.join(clauses,' AND ')}`:Prisma.empty})`);
+  const participation = {deletedAt:null,engagement:{deletedAt:null},AND:conditions};
+  where.push({engagementParticipations:status==='none'?{none:participation}:{some:participation}});
+  sql.push(Prisma.sql`${status==='none'?Prisma.sql`NOT`:Prisma.empty} EXISTS (SELECT 1 FROM engagement_participations pp JOIN engagements p ON p.id=pp.engagement_id AND p.deleted_at IS NULL WHERE pp.employee_id=employee.id AND pp.deleted_at IS NULL ${clauses.length?Prisma.sql`AND ${Prisma.join(clauses,' AND ')}`:Prisma.empty})`);
  }
  if (days!==null && status && status!=='active') invalid('participationStatus');
  return {where:{AND:where} satisfies Prisma.EmployeeWhereInput,sql:sql.length?Prisma.sql`AND ${Prisma.join(sql,' AND ')}`:Prisma.empty};

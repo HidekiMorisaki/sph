@@ -27,4 +27,4 @@
  {:else}
  <FormInput {label} field={fieldId} {disabled} required={field.required} type={field.type==='number'?'number':'text'} maxlength={field.maxLength} min={field.min===undefined?undefined:String(field.min)} max={field.max===undefined?undefined:String(field.max)} step={field.type==='number'?'any':undefined} value={String(value)} placeholder={field.type==='number'?'0':lang==='ja'?`例：${label}`:`e.g. ${label}`} onValueChange={value=>change(key,field.type==='number'?(value===''?emptyTypedValue(key):Number(value)):value)}/>
  {/if}{/each}</div>
-<style>.runtime-fields{display:grid;gap:12px;min-width:0}</style>
+<style>.runtime-fields{display:grid;gap:var(--sph-space-12px);min-width:0}</style>

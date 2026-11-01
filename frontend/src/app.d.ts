@@ -4,6 +4,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
+			canManageDevelopment?: boolean;
 			displayLanguage?: 'en' | 'ja';
 			initialLocalization?: import('$lib/localization').LocalizationSettings;
 		}

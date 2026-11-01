@@ -6,6 +6,7 @@ import {requireOperationApi,writeAuditLog} from '$lib/server/api/admin';
 import {throwApiError} from '$lib/server/api/response';
 import {manifest,settings} from './contract';
 import {isRetiredOfficial} from './retirement';
+import {lockWidgetWrites} from './upgrades';
 import {byteSize,isObject,onlyKeys,recordKey,valuesFor,initialRecordsFor,type Storage} from './storage-contract';
 
 type Tx=Prisma.TransactionClient;
@@ -65,14 +66,16 @@ export async function initializeRecords(tx:Tx,instanceId:number,storage:Storage|
  if(!storage)return;
  for(const row of rows)await tx.widgetRecord.create({data:{instanceId,recordKey:row.recordKey,values:row.values}});
 }
-export async function mutateRecord(user:AuthenticatedUser|null,key:string,operation:'create'|'update'|'delete',body:unknown,rkey?:string){
+export async function mutateRecord(user:AuthenticatedUser|null,key:string,operation:'create'|'update'|'delete',body:unknown,rkey?:string,expectedVersion?:string|null){
  const actor=actorFor(user,operation);
  if(!isObject(body)||!onlyKeys(body,operation==='create'?['recordKey','values']:operation==='update'?['revision','values','presentation']:['revision']))throwApiError(400,'INVALID_RECORD','Invalid record request.');
  if(operation!=='create'&&(!Number.isSafeInteger(body.revision)||Number(body.revision)<1))throwApiError(400,'INVALID_REVISION','A positive revision is required.');
  const selectedKey=operation==='create'?(body.recordKey===undefined?randomUUID():body.recordKey):rkey;
  if(!recordKey(selectedKey))throwApiError(400,'INVALID_RECORD_KEY','Invalid record key.');
  return getPrisma().$transaction(async tx=>{
+  await lockWidgetWrites(tx);
   const {instance,definition,storage}=await target(tx,actor,key,true);
+  if(expectedVersion&&definition.version!==expectedVersion)throwApiError(409,'WIDGET_UPDATED','Widget updated. Reload before saving.');
   if(!storage.operations[operation])throwApiError(403,'STORAGE_OPERATION_DISABLED','This record operation is disabled.');
   const old=await tx.widgetRecord.findUnique({where:{instanceId_recordKey:{instanceId:instance.id,recordKey:selectedKey}}});
   if(operation==='create'&&old)throwApiError(409,'RECORD_KEY_USED','Record key is already used.');

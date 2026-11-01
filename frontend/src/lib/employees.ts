@@ -47,6 +47,7 @@ export type EmployeeProfile = {
 };
 
 export type Employee = EmployeeProfile & {
+	deletionScheduledOn?: string | null;
 	allowedOperations?: { update: boolean; delete: boolean; invite: boolean };
 	teamIds: number[];
 	teams: Array<{ id: number; name: string }>;

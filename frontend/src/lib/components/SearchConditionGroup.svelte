@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {unsetSelection,selectionValues,selectionNode,choiceConditionNode,choiceConditionValues,type SelectionField} from '$lib/search-selection';
  import { localization } from '$lib/localization';
  import { searchMessages, searchChoiceLabel, operatorLabels, emptyGroup, localDateTime, zonedDateTime, type SearchGroup, type SearchNode, type SearchRule, type SearchField, type SearchContext } from '$lib/search';
  import SearchConditionGroup from './SearchConditionGroup.svelte';
@@ -16,6 +17,11 @@
  let nextContext=$state('');
  let dateOpen=$state('');
  let categories=$derived([...new Set(contexts.map(c=>c.category))]);
+ let relationSelection=$derived.by(()=>{
+  for(const context of contexts){const field=context.fields.find(field=>field.unsetMode==='relation');if(!field)continue;const item:SelectionField={context:context.code,field};const values=selectionValues(group,item);if(values)return {item,values,label:context.label};}
+ });
+ const choices=(field:SearchField)=>field.options??field.choices?.map(value=>({value,label:searchChoiceLabel(value,active?.code??contextCode,language)}))??[];
+ function chooseValues(index:number,field:SearchField,values:string[],negative=false){const node=choiceConditionNode(field,values,negative);if(node)update(index,node);else remove(index);}
  function update(index:number,node:SearchNode){onChange({...group,children:group.children.map((child,i)=>i===index?node:child)});}
  function remove(index:number){onChange({...group,children:group.children.filter((_,i)=>i!==index)});}
  function initialRule(field:SearchField):SearchRule{return {kind:'rule',field:field.code,operator:'eq',value:field.type==='boolean'?true:field.type==='number'?0:field.choices?.[0]??''};}
@@ -27,13 +33,20 @@
 
 <fieldset class="condition-group" data-depth={depth}>
  <legend>{active?.label[language]??t.invalid}{#if active?.private} · {t.private}{/if}</legend>
+ {#if relationSelection}
+  <div class="group-heading"><SearchMultiSelect label={relationSelection.label[language]} field={`${id}-selection`} values={relationSelection.values} placeholder={t.notSpecified} options={[...(depth<2||relationSelection.values.length===1&&relationSelection.values[0]===unsetSelection?[{value:unsetSelection,label:t.notSet}]:[]),...choices(relationSelection.item.field)]} onChange={values=>{const node=selectionNode(relationSelection!.item,values);if(node?.kind==='group')onChange(node);else onRemove?.();}}/>{#if group.context && depth<3}<button type="button" onclick={()=>{const field=active?.fields.find(field=>field.code!=='selection');if(field)onChange({...group,children:[...group.children,initialRule(field)]});}}>{t.add}</button>{/if}{#if onRemove}<button class="remove" type="button" onclick={onRemove}>{t.remove}</button>{/if}</div>
+ {:else}
  <div class="group-heading">
   {#if group.context}<SearchSelect label={t.related} field={`${id}-match`} value={group.match??'some'} searchable={false} options={[{value:'some',label:t.some},{value:'none',label:t.noRelated}]} onSelect={match=>onChange({...group,match:match as 'some'|'none'})}/>{/if}
   <SearchSelect label={t.operator} field={`${id}-mode`} value={group.mode} searchable={false} options={[{value:'all',label:t.all},{value:'any',label:t.any}]} onSelect={mode=>onChange({...group,mode:mode as 'all'|'any'})}/>
   {#if onRemove}<button class="remove" type="button" onclick={onRemove}>{t.remove}</button>{/if}
  </div>
  {#each group.children as node,index}
-  {#if node.kind==='group'}<SearchConditionGroup group={node} {contexts} contextCode={active?.code??contextCode} depth={depth+1} onChange={next=>update(index,next)} onRemove={()=>remove(index)}/>
+  {@const combinedField=node.kind==='group'?active?.fields.find(field=>field.unsetMode==='value'&&choiceConditionValues(node,field)):undefined}
+  {#if combinedField}
+   {@const selected=choiceConditionValues(node,combinedField)!}
+   <div class="condition-row"><SearchSelect label={t.field} field={`${id}-${index}-field`} value={combinedField.code} options={active?.fields.map(f=>({value:f.code,label:f.label[language]}))??[]} onSelect={code=>{const f=active?.fields.find(f=>f.code===code);if(f)update(index,initialRule(f));}}/><SearchSelect label={t.operator} field={`${id}-${index}-operator`} value={selected.negative?'notIn':'in'} searchable={false} options={['in','notIn'].map(code=>({value:code,label:operatorLabels[code][language==='ja'?0:1]}))} onSelect={value=>chooseValues(index,combinedField,selected.values,value==='notIn')}/><SearchMultiSelect label={t.value} field={`${id}-${index}-value`} values={selected.values} options={[{value:unsetSelection,label:t.notSet},...choices(combinedField)]} onChange={values=>chooseValues(index,combinedField,values,selected.negative)}/><button class="remove" type="button" onclick={()=>remove(index)}>{t.remove}</button></div>
+  {:else if node.kind==='group'}<SearchConditionGroup group={node} {contexts} contextCode={active?.code??contextCode} depth={depth+1} onChange={next=>update(index,next)} onRemove={()=>remove(index)}/>
   {:else}
    {@const field=active?.fields.find(f=>f.code===node.field)}
    <div class="condition-row">
@@ -42,8 +55,8 @@
      <SearchSelect label={t.operator} field={`${id}-${index}-operator`} value={node.operator} searchable={false} options={field.operators.map(code=>({value:code,label:operatorLabels[code]?.[language==='ja'?0:1]??code}))} onSelect={operator=>changeOperator(index,node,field,operator)}/>
      {#if !['set','unset'].includes(node.operator)}
       {#if field.type==='boolean'}<SearchSelect label={t.value} field={`${id}-${index}-value`} value={String(node.value)} searchable={false} options={[{value:'true',label:t.yes},{value:'false',label:t.no}]} onSelect={v=>update(index,{...node,value:v==='true'})}/>
-      {:else if ['in','notIn'].includes(node.operator)}<SearchMultiSelect label={t.value} field={`${id}-${index}-value`} values={Array.isArray(node.value)?node.value.map(String):[]} options={field.options??field.choices?.map(v=>({value:v,label:searchChoiceLabel(v,active?.code??contextCode,language)}))??[]} placeholder={t.none} onChange={values=>update(index,{...node,value:values})}/>
-      {:else if field.type==='choice'}<SearchSelect label={t.value} field={`${id}-${index}-value`} value={String(node.value??'')} options={field.options??field.choices?.map(v=>({value:v,label:searchChoiceLabel(v,active?.code??contextCode,language)}))??[]} onSelect={value=>update(index,{...node,value})}/>
+      {:else if ['in','notIn'].includes(node.operator)}<SearchMultiSelect label={t.value} field={`${id}-${index}-value`} values={Array.isArray(node.value)?node.value.map(String):[]} options={[...(field.unsetMode==='value'&&depth<2?[{value:unsetSelection,label:t.notSet}]:[]),...choices(field)]} placeholder={t.notSpecified} onChange={values=>field.unsetMode==='value'?chooseValues(index,field,values,node.operator==='notIn'):update(index,{...node,value:values})}/>
+      {:else if field.type==='choice'}<SearchSelect label={t.value} field={`${id}-${index}-value`} value={String(node.value??'')} options={[...(field.unsetMode==='value'?[{value:unsetSelection,label:t.notSet}]:[]),...(field.options??field.choices?.map(v=>({value:v,label:searchChoiceLabel(v,active?.code??contextCode,language)}))??[])]} onSelect={value=>update(index,value===unsetSelection?{kind:'rule',field:node.field,operator:node.operator==='ne'?'set':'unset'}:{...node,value})}/>
       {:else}
        <div class="condition-values" style:--value-width={field.type==='datetime'&&node.operator!=='relative'?'224px':field.type==='date'&&node.operator!=='relative'?'156px':field.type==='number'||node.operator==='relative'?'112px':'208px'}>
         <span class="value-label">{node.operator==='relative'?t.days:t.value}</span>
@@ -71,8 +84,9 @@
    <button type="button" onclick={addGroup}>{t.addGroup}</button>
   {/if}
  </div>
+ {/if}
 </fieldset>
 
 <style>
- .condition-group{min-width:0;margin:12px 0 0;padding:12px;border:1px solid var(--border);border-radius:6px}.condition-group legend{padding:0 6px;font-size:var(--font-size-support);color:var(--muted)}.group-heading,.group-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}.group-heading :global(.form-select-field),.group-actions :global(.form-select-field){flex:0 1 208px;min-width:0;max-width:100%}.condition-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:12px 0}.condition-row>:global(.form-select-field),.condition-row>:global(.form-multi-select-field){flex:0 1 208px;min-width:0;max-width:100%}.condition-row>:global(.form-select-field):nth-child(2){flex-basis:176px}.condition-values{min-width:0;max-width:100%}.value-label{display:block;font-size:var(--font-size-support);font-weight:500;margin-bottom:6px}.value-inputs{display:flex;align-items:center;gap:6px}.value-inputs>:global(.custom-date),.value-inputs>:global(.form-input-field){flex:0 1 var(--value-width);width:var(--value-width);min-width:0}.range-separator{flex:none;color:var(--muted)}button{min-height:32px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-support)}button.remove{color:var(--danger,#dc2626)}@media(max-width:700px){.condition-group{padding:10px}.condition-values{width:fit-content}.group-heading :global(.form-select-field),.group-actions :global(.form-select-field){flex-shrink:1}}
+ .condition-group{min-width:0;margin:var(--sph-space-12px) 0 0;padding:var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-6px)}.condition-group legend{padding:0 var(--sph-space-6px);font-size:var(--font-size-support);color:var(--muted)}.group-heading,.group-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--sph-space-10px)}.group-heading :global(.form-select-field),.group-actions :global(.form-select-field){flex:0 1 208px;min-width:0;max-width:100%}.condition-row{display:flex;flex-wrap:wrap;gap:var(--sph-space-10px);align-items:flex-end;margin:var(--sph-space-12px) 0}.condition-row>:global(.form-select-field),.condition-row>:global(.form-multi-select-field){flex:0 1 208px;min-width:0;max-width:100%}.condition-row>:global(.form-select-field):nth-child(2){flex-basis:176px}.condition-values{min-width:0;max-width:100%}.value-label{display:block;font-size:var(--font-size-support);font-weight:var(--sph-weight-500);margin-bottom:var(--sph-space-6px)}.value-inputs{display:flex;align-items:center;gap:var(--sph-space-6px)}.value-inputs>:global(.custom-date),.value-inputs>:global(.form-input-field){flex:0 1 var(--value-width);width:var(--value-width);min-width:0}.range-separator{flex:none;color:var(--muted)}button{min-height:32px;padding:var(--sph-space-5px) var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-body)}button.remove{color:var(--danger,var(--sph-color-danger-strong))}@media(max-width:700px){.condition-group{padding:var(--sph-space-10px)}.condition-values{width:fit-content}.group-heading :global(.form-select-field),.group-actions :global(.form-select-field){flex-shrink:1}}
 </style>

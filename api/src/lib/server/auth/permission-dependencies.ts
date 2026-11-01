@@ -16,11 +16,12 @@ export function permissionDependencies(code: string, scopeType: PermissionScope[
 	if (code === 'employees.read' || /^assets\.(create|update)$/.test(code) || /^books\.copies\.(create|update)$/.test(code)) add('masters.read');
 	if (code === 'books.loans.create' || code === 'calendars.assign') add('employees.read');
 	if (/^teams\./.test(code) && code !== 'teams.read') add('teams.read', true);
+	if (/^projects\./.test(code) && code !== 'projects.read') add('projects.read', true);
 	if (/^teams\.members\./.test(code)) add('employees.read');
 	if (/^employees\.skills\./.test(code)) add('skills.read', true);
-	if (/^employees\.participations\./.test(code)) add('projects.read', true);
-	if (/^(skills|clients|projects)\./.test(code) && !code.endsWith('.read')) add(code.split('.')[0] + '.read', true);
-	if (/^projects\.(create|update)$/.test(code)) add('clients.read', true);
+	if (/^employees\.participations\./.test(code)) add('engagements.read', true);
+	if (/^(skills|clients|engagements)\./.test(code) && !code.endsWith('.read')) add(code.split('.')[0] + '.read', true);
+	if (/^engagements\.(create|update)$/.test(code)) add('clients.read', true);
 	if (/^(masters|branches|rooms|storage)\./.test(code) && code !== 'masters.read') add('masters.read');
 	if (/^assets\./.test(code) && code !== 'assets.read') add('assets.read');
 	if (/^software\./.test(code) && code !== 'software.read') add('software.read', true);

@@ -1,13 +1,13 @@
-/* The account menu in the shared sidebar. */
-.menu-popover{position:fixed;z-index:1100;display:flex;min-width:160px;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(15,23,42,.16);animation:menu-in 140ms cubic-bezier(.2,0,0,1)}
+/* Shared action and account menus. */
+.menu-popover{position:fixed;z-index:1100;display:flex;min-width:160px;flex-direction:column;padding:var(--sph-space-4px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);box-shadow:var(--sph-shadow-menu);animation:menu-in 140ms cubic-bezier(.2,0,0,1)}
 @keyframes menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.menu-popover > [role='menuitem']{display:flex;box-sizing:border-box;min-height:34px;align-items:center;gap:9px;margin:0;padding:7px 10px;color:var(--text)!important;border-radius:4px;text-align:left;font-size:var(--font-size-body);line-height:1.4286}
+.menu-popover > [role='menuitem']{display:flex;box-sizing:border-box;min-height:34px;align-items:center;gap:var(--sph-space-9px);margin:0;padding:var(--sph-space-7px) var(--sph-space-10px);color:var(--text)!important;border-radius:var(--sph-radius-4px);text-align:left;font-size:var(--font-size-body);line-height:var(--sph-leading-1-4286)}
 .menu-popover > button[role='menuitem']{width:100%;background:transparent!important;border:0}
 .menu-popover > a[role='menuitem']{text-decoration:none}
 .menu-popover > [role='menuitem']:hover,.menu-popover > [role='menuitem']:focus-visible{background:var(--surface-secondary)!important}
 .menu-popover > [role='menuitem']:hover{background:var(--surface-hover,var(--surface-secondary))!important}
 .menu-item-icon{width:16px;height:16px;flex:none}
-.menu-popover > button.delete-item{color:#d63939!important}
+.menu-popover > button.delete-item{color:var(--sph-color-danger)!important}
 .menu-popover > button[role='menuitem']:disabled{cursor:not-allowed;opacity:.5}
 .menu-popover > button[role='menuitem']:disabled:hover{background:transparent!important}
-.menu-separator{height:1px;margin:4px 2px;background:var(--border-light)}
+.menu-separator{height:1px;margin:var(--sph-space-4px) var(--sph-space-2px);background:var(--border-light)}

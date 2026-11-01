@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailTabs from '$lib/components/DetailTabs.svelte';
 	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
 	import { localeMessages } from '$lib/locale-messages';
 	import { localization } from '$lib/localization';
 
-	let { title, titleId, sectionTitle = title, closeLabel, returnFocus = null, endpoint, itemId, fields, dateFields = [], valueFormatters = {}, hiddenHistoryFields = [], details, headerActions, onClose }: {
+	let { title, titleId, sectionTitle = title, closeLabel, returnFocus = null, endpoint, itemId, fields, dateFields = [], valueFormatters = {}, hiddenHistoryFields = [], details, tabbed = true, detailsLabel = '', headerActions, onClose }: {
 		title: string;
 		titleId: string;
 		sectionTitle?: string;
@@ -18,6 +19,8 @@
 		valueFormatters?: Record<string, (value: string) => string>;
 		hiddenHistoryFields?: string[];
 		details?: Snippet;
+		tabbed?: boolean;
+		detailsLabel?: string;
 		headerActions?: Snippet;
 		onClose: () => void;
 	} = $props();
@@ -29,10 +32,14 @@
 	}
 </script>
 
-<DetailModal {title} {titleId} {closeLabel} {returnFocus} {headerActions} compact onClose={onClose}>
+{#snippet recordInformation()}
 	<section class="app-detail-section"><h3>{sectionTitle}</h3><dl class="app-detail-grid">
 		{#each fields as field}<div class:app-detail-wide={field.key === 'notes'}><dt>{field.label}</dt><dd class:app-detail-notes={field.key === 'notes'}>{#if field.key === 'officialUrl' && safeUrl(field.value)}<a class="detail-link" href={safeUrl(field.value) ?? undefined} target="_blank" rel="noopener noreferrer">{field.value}</a>{:else if typeof field.value === 'boolean'}{field.value ? common.yes : common.no}{:else}{field.value === null || field.value === undefined || field.value === '' ? '' : String(field.value)}{/if}</dd></div>{/each}
 	</dl></section>
-	{#if details}{@render details()}{/if}
-	<MasterHistorySection {endpoint} {itemId} {fieldLabels} {dateFields} {valueFormatters} hiddenFields={hiddenHistoryFields} />
+{/snippet}
+{#snippet recordDetails()}{#if details}{@render details()}{/if}{/snippet}
+{#snippet recordHistory()}<MasterHistorySection {endpoint} {itemId} {fieldLabels} {dateFields} {valueFormatters} hiddenFields={hiddenHistoryFields} collapsible={!tabbed} />{/snippet}
+<DetailModal {title} {titleId} {closeLabel} {returnFocus} {headerActions} compact onClose={onClose}>
+	{#if tabbed}<DetailTabs label={title} tabs={[{id:'basic',label:common.basicInformation,content:recordInformation},...(details?[{id:'permissions',label:detailsLabel,content:recordDetails}]:[]),{id:'history',label:common.history,content:recordHistory}]} />
+	{:else}{@render recordInformation()}{@render recordDetails()}{@render recordHistory()}{/if}
 </DetailModal>

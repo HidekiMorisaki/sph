@@ -1,5 +1,6 @@
 import { assetList } from '$lib/server/api/it-asset-list';
 import { itAssetOutput } from '$lib/server/api/it-asset-output';
+import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
 import { writeAuditLog } from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
@@ -23,6 +24,7 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 	if (!data || credentialInput.details.length) return failure(400, 'VALIDATION_ERROR', 'Invalid IT asset input.', [...parsed.details, ...credentialInput.details]);
 	try {
 		const item = await getPrisma().$transaction(async tx => {
+			if(typeof parsed.assigneeId === 'number') await lockEmployeeAllocation(tx,parsed.assigneeId);
 			if (branchScope !== null && (!await tx.storage.count({ where: { id: data.storageId, branchId: branchScope, deletedAt: null } }) || typeof parsed.assigneeId === 'number' && !await tx.employee.count({ where: { id: parsed.assigneeId, branchId: branchScope, deletedAt: null } }))) return null;
 			if (Object.keys(credentialInput.changes).length) await authorizeCredentialChange(tx, actor, null, data.storageId);
 			const details = await itAssetReferenceErrors(tx, data);

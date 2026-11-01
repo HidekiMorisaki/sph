@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createCipheriv, randomBytes } from 'node:crypto';
 import { installBookSamples } from './install-book-samples.mjs';
+import { installProjectSamples } from './install-project-samples.mjs';
 import { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, fetchHolidayData } from './holiday-source.mjs';
 
 export const catalogFor = language => JSON.parse(readFileSync(new URL(`sample-data/${language}.json`, import.meta.url), 'utf8'));
@@ -17,6 +18,9 @@ const branchScopedCodes = new Set([
  'financial.read', 'financial.update', 'financial.preview', 'financial.publish'
 ]);
 const roleCodes = role => [...new Set([...role.permissionCodes, ...granularOperations.filter(operation =>
+ // Workflow defaults are explicit: read access must not grant accounting or
+ // template management operations. Runtime grants remain owned by the database.
+ !operation.code.startsWith('workflows.') &&
  (role.key !== 'branch_administrator' || operation.code !== 'books.covers.update') &&
  (!operation.systemOnly || role.key === 'system_administrator' || (role.key === 'branch_administrator' && operation.code === 'branches.update')) &&
  (Array.isArray(operation.prerequisite) ? operation.prerequisite : [operation.prerequisite]).some(code => role.permissionCodes.includes(code))
@@ -33,6 +37,22 @@ export async function insert(client, table, data) {
  if (![table,...keys].every(k => /^[a-z_]+$/.test(k))) throw new Error('Invalid internal sample field.');
  return (await client.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${keys.map((_,i) => '$'+(i+1)).join(',')}) RETURNING id`, Object.values(data))).rows[0].id;
 }
+
+async function allowInitialOfficialWidgets(client) {
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/catalogue.json', import.meta.url), 'utf8')).widgets;
+ for (const definition of bundled) {
+  const result = await client.query(`
+   UPDATE widget_approvals a SET allowed = true
+   FROM widget_releases r JOIN widget_sources s ON s.id = r.source_id
+   WHERE a.release_id = r.id AND a.deleted_at IS NULL
+    AND r.deleted_at IS NULL AND s.deleted_at IS NULL
+    AND s.source_key = 'sph-official' AND s.url = 'bundled:sph'
+    AND r.widget_code = $1 AND r.version = $2 AND r.definition = $3::jsonb
+   RETURNING a.id`, [definition.id, definition.version, JSON.stringify(definition)]);
+  if (result.rowCount !== 1) throw new Error('The bundled official widget seed is unavailable or modified.');
+ }
+}
+
 export async function initializeRequiredData(client, catalog, input) {
  const roleCount = (await client.query('SELECT count(*)::int AS count FROM roles')).rows[0].count;
  if (roleCount === 0) {
@@ -51,6 +71,7 @@ export async function initializeRequiredData(client, catalog, input) {
    const id = await insert(client,'roles',{name:catalog.roles[i],default_key:role.key});
    for (const code of roleCodes(role)) await insert(client,'role_permissions',{role_id:id,permission_id:permissions.get(code),scope_type:role.key === 'branch_administrator' && branchScopedCodes.has(code) ? 'own_branch' : 'global'});
   }
+  await allowInitialOfficialWidgets(client);
  }
  const name = employmentName(catalog,input.employmentType);
  // Keep the existing English selection when provisioning a legacy database.
@@ -63,9 +84,8 @@ export async function initializeRequiredData(client, catalog, input) {
 
 export async function assertSampleDatabaseEmpty(client) {
 
- // m0032 installs only the reviewed official catalogue before initial setup.
- // Treat precisely that immutable seed as infrastructure, never user content.
- const bundled = JSON.parse(readFileSync(new URL('../widgets/seed-catalogue.json', import.meta.url), 'utf8')).widgets;
+ // Fresh installation accepts only the current seven exact bundled definitions.
+ const bundled = JSON.parse(readFileSync(new URL('../widgets/catalogue.json', import.meta.url), 'utf8')).widgets;
  const source = await client.query("SELECT id FROM widget_sources WHERE source_key='sph-official' AND url='bundled:sph' AND deleted_at IS NULL");
  if (source.rowCount !== 1 || (await client.query('SELECT count(*)::int AS count FROM widget_sources')).rows[0].count !== 1) throw new Error('Unexpected widget sources before sample installation.');
  if ((await client.query('SELECT count(*)::int AS count FROM widget_releases')).rows[0].count !== bundled.length || (await client.query('SELECT count(*)::int AS count FROM widget_approvals')).rows[0].count !== bundled.length) throw new Error('Unexpected widget releases before sample installation.');
@@ -164,7 +184,7 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  for(let financialYear=firstFinancialYear;financialYear<=lastFinancialYear;financialYear++) for(let month=1;month<=12;month++) {
   await insert(client,'financial_exchange_rates',{
    month:date(financialYear,month),base_currency:'USD',quote_currency:'JPY',
-   rate:(105+(financialYear-2016)*3+month*0.25).toFixed(8),source:'SAMPLE_DATA'
+   rate:(105+(financialYear-2016)*3+month*0.25).toFixed(8),source:'INITIAL_DATA'
   });
  }
  for (let b=0;b<branches.length;b++) for (let financialYear=firstFinancialYear;financialYear<=lastFinancialYear;financialYear++) {
@@ -237,7 +257,7 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  const history = async (table,subject,action,changes,at=today) => {
   const key = table === 'employee_change_history' ? 'employee_id':'asset_id';
   const id = await insert(client,table,{[key]:subject,actor_id:adminId,action,changes:JSON.stringify(changes),changed_at:timestamp(at)});
-  await insert(client,'audit_logs',{actor_id:adminId,action:'sample_import',resource:table,resource_id:id,detail:JSON.stringify({sample:true,language:displayLanguage,simulatedAction:action})});
+  await insert(client,'audit_logs',{actor_id:adminId,action:'initial_data_import',resource:table,resource_id:id,detail:JSON.stringify({initialData:true,language:displayLanguage,simulatedAction:action})});
  };
  for (let i=0;i<360;i++) {
   const gender = ['female','male','unspecified'][i%3];
@@ -254,8 +274,8 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   const hire = past(date(Math.max(Number(birth.slice(0,4))+18,hireYear),(i*7)%12+1,1));
   const deleted = i>=342 ? timestamp(today):null;
   const b = Math.floor(i/15)%branches.length, group=Math.floor(i/6)%3, position=Math.floor(i/18)%3, type=Math.floor(i/54)%4;
-  const row = {employee_code:`SAMPLEEMP${String(i+1).padStart(6,'0')}`,first_name:firstName,last_name:lastName,
-   birth_date:birth,gender,blood_type:['A','B','AB','O',null][i%5],email:`sample.employee.${i+1}@example.test`,hired_at:hire,retired_at:retired,
+  const row = {employee_code:`EMP${String(i+1).padStart(6,'0')}`,first_name:firstName,last_name:lastName,
+   birth_date:birth,gender,blood_type:['A','B','AB','O',null][i%5],email:`employee.${i+1}@example.test`,hired_at:hire,retired_at:retired,
    employment_type_id:masterIds.employment_types[type],branch_id:branches[b],group_id:masterIds.employee_groups[group],work_calendar_id:calendar,
    city:catalog.branchCities[b],street_address:`${i+1} ${catalog.street}`,building_name:catalog.building,mobile_phone:displayLanguage==='ja'?`090-0000-${String(i+1).padStart(4,'0')}`:`+1-202-555-${String(100+i%100).padStart(4,'0')}`,
    middle_name:displayLanguage==='en'&&i%5===0 ? (gender==='female'?'Jane':'Lee'):null,
@@ -274,7 +294,7 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   const scope = roleKey === 'branch_administrator' ? 'own_branch' : 'global';
   await insert(client,'employee_roles',{employee_id:id,role_id:roles.get(roleKey),scope_type:scope,scope_key:scope});
   const socialPlatform = ['threads','bluesky','mastodon'][i%3];
-  const socialPath = socialPlatform==='bluesky' ? `/profile/sample${i+1}.example.test` : `/@sample${i+1}`;
+  const socialPath = socialPlatform==='bluesky' ? `/profile/employee${i+1}.example.test` : `/@employee${i+1}`;
   await insert(client,'employee_social_links',{employee_id:id,platform:socialPlatform,url:`https://${socialPlatform}.example.test${socialPath}`});
   const fields = Object.entries({employeeCode:row.employee_code,firstName,lastName,birthDate:birth,gender,bloodType:row.blood_type,email:row.email,hiredAt:hire,branchId:catalog.branches[b],employmentTypeId:catalog.masters.employment_types[type].name,groupId:catalog.group[group],notes:note});
   await history('employee_change_history',id,'create',fields.map(([field,after])=>({field,before:null,after})),hire);
@@ -290,10 +310,10 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   const tag=`${type.management_code_prefix}-${String(Math.floor(i/assetTypeCount)+1).padStart(3,'0')}`;
   const purchased=date(year-3,i%12+1,1), disposed=s===3?past(date(year-1,i%12+1,1)):s===2&&Math.floor(i/32)%2?today:null;
   const row={asset_tag:tag,type_id:masterIds.it_asset_types[t],status_id:masterIds.it_asset_statuses[s],storage_id:loc.id,purchased_on:purchased,disposal_on:disposed,
-   manufacturer_id:masterIds.manufacturers[i%masterIds.manufacturers.length],model_number:`DEMO-${t+1}-${i+1}`,serial_number:`SAMPLESERIAL${i+1}`,hostname:`sample-device-${i+1}`,notes:note,
+   manufacturer_id:masterIds.manufacturers[i%masterIds.manufacturers.length],model_number:`DEMO-${t+1}-${i+1}`,serial_number:`SERIAL${i+1}`,hostname:`device-${i+1}`,notes:note,
    cpu_type_id:type.supports_cpu==='true'?masterIds.cpu_types[i%masterIds.cpu_types.length]:null,ram_gb:type.supports_ram==='true'?[8,16,32,64][Math.floor(i/assetTypeCount)%4]:null,
    operating_system_id:type.supports_os==='true'?masterIds.operating_systems[i%masterIds.operating_systems.length]:null,
-   login_username:type.supports_login_username==='true'?`sample${i+1}`:null,admin_username:`sampleadmin${i+1}`,management_console_url:`https://device-${i+1}.example.test`,management_console_username:`sampleconsole${i+1}`};
+   login_username:type.supports_login_username==='true'?`operator${i+1}`:null,admin_username:`deviceadmin${i+1}`,management_console_url:`https://device-${i+1}.example.test`,management_console_username:`console${i+1}`};
   const id=await insert(client,'it_assets',row);
   await insert(client,'it_asset_management_codes',{code:tag,asset_id:id});
   for (let slot=1;slot<=2;slot++) {
@@ -334,14 +354,14 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   const edition=i%3===0?'Team':i%3===1?'Standard':'Professional';
   const version=`${1+Math.floor(i/30)}.0`;
   const catalogKey=JSON.stringify([manufacturer,name,edition,version].map(part=>part.normalize('NFKC').trim().toLocaleLowerCase('und')));
-  const productId=await insert(client,'software_products',{catalog_key:catalogKey,name,manufacturer,edition,version,product_code:`SAMPLE-SW-${number}`,notes:note});
+  const productId=await insert(client,'software_products',{catalog_key:catalogKey,name,manufacturer,edition,version,product_code:`SW-${number}`,notes:note});
   if (i>=51) continue;
   const licenseType=['user','device','concurrent'][i%3];
   const due=dayFromToday(i%5===0?-15:i%5===1?15:180+i%30);
   const contractId=await insert(client,'software_contracts',{
-   product_id:productId,reference:`SAMPLE-CONTRACT-${number}`,license_type:licenseType,
+   product_id:productId,reference:`CONTRACT-${number}`,license_type:licenseType,
    purchased_quantity:5+(i%8)*5,starts_on:dayFromToday(-365),ends_on:due,renews_on:due,
-   auto_renew:i%4===0,vendor:manufacturer,order_number:`SAMPLE-ORDER-${number}`,
+   auto_renew:i%4===0,vendor:manufacturer,order_number:`ORDER-${number}`,
    notes:note
   });
   await insert(client,'software_license_terms',{
@@ -354,25 +374,25 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
   });
  }
  // Business masters belong to the same initial-configuration transaction. Internal
- // project/team codes are deliberately omitted so PostgreSQL allocates them.
+ // engagement/team codes are deliberately omitted so PostgreSQL allocates them.
  const clientIds = [];
  for (const row of catalog.business.clients) clientIds.push(await insert(client, 'clients', {...row, notes: note}));
- const projects = [], skills = [];
- for (const [index, row] of catalog.business.projects.entries()) {
-  const id = await insert(client, 'projects', {...row, client_id: clientIds[index % clientIds.length], contract_starts_on: dayFromToday(-90 - index * 7), contract_ends_on: index % 3 === 0 ? null : dayFromToday(90 + index * 14)});
-  projects.push({id, name: row.name});
+ const engagements = [], skills = [];
+ for (const [index, row] of catalog.business.engagements.entries()) {
+  const id = await insert(client, 'engagements', {...row, client_id: clientIds[index % clientIds.length], contract_starts_on: dayFromToday(-90 - index * 7), contract_ends_on: index % 3 === 0 ? null : dayFromToday(90 + index * 14)});
+  engagements.push({id, name: row.name});
  }
  for (const row of catalog.business.skills) skills.push({id: await insert(client, 'skills', {...row, name_key: row.name.trim().toLowerCase()}), name: row.name});
  for (const row of catalog.business.teams) await insert(client, 'teams', row);
  // Three out of four active sample employees receive three distinct skills.
  // Across 216 employees, every one of 24 skills has 27 assignments, nine per
  // proficiency level. Each employee also receives all three proficiency levels.
- if (skills.length !== 24 || projects.length !== 12) throw new Error('Unexpected sample workforce catalog size.');
+ if (skills.length !== 24 || engagements.length !== 12) throw new Error('Unexpected sample workforce catalog size.');
  const skilledEmployees = employees.filter(employee => !employee.retired && !employee.deleted).filter((_, index) => index % 4 !== 3);
  const workforceHistory = async (employeeId, resource, resourceId, snapshot) => {
   const changes = Object.entries(snapshot).map(([field, after]) => ({field, before: null, after: after == null ? null : String(after)}));
   const id = await insert(client, 'workforce_change_history', {employee_id: employeeId, actor_id: adminId, resource, resource_id: resourceId, action: 'create', changes: JSON.stringify(changes)});
-  await insert(client, 'audit_logs', {actor_id: adminId, action: 'sample_import', resource: 'workforce_change_history', resource_id: id, detail: JSON.stringify({sample: true, language: displayLanguage, simulatedAction: 'create'})});
+  await insert(client, 'audit_logs', {actor_id: adminId, action: 'initial_data_import', resource: 'workforce_change_history', resource_id: id, detail: JSON.stringify({initialData: true, language: displayLanguage, simulatedAction: 'create'})});
  };
  for (const [index, employee] of skilledEmployees.entries()) {
   employee.skills = [];
@@ -389,19 +409,20 @@ export async function installSamples(client, catalog, {adminId, branchId, displa
  const eligible = skilledEmployees.filter(employee => employee.hire <= dayFromToday(-60));
  const participantCount = Math.floor(skilledEmployees.length / 2);
  if (eligible.length < participantCount) throw new Error('Insufficient sample employees for participation dates.');
- // Reproducible small, medium and large projects, in catalog order.
- const projectSizes = [18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11, 6];
- const participationProjects = projects.flatMap((project, index) => Array(projectSizes[index]).fill(project));
- if (participationProjects.length !== participantCount) throw new Error('Sample project sizes must match the participant count.');
+ // Reproducible small, medium and large engagements, in catalog order.
+ const engagementSizes = [18, 4, 12, 2, 15, 7, 20, 3, 9, 1, 11, 6];
+ const participationEngagements = engagements.flatMap((engagement, index) => Array(engagementSizes[index]).fill(engagement));
+ if (participationEngagements.length !== participantCount) throw new Error('Sample engagement sizes must match the participant count.');
  for (let index = 0; index < participantCount; index++) {
-  const employee = eligible[Math.floor(index * eligible.length / participantCount)], project = participationProjects[index];
+  const employee = eligible[Math.floor(index * eligible.length / participantCount)], engagement = participationEngagements[index];
   const phase = index % 3;
   const startsOn = dayFromToday(phase === 0 ? -60 : phase === 1 ? -30 : 14);
   const endsOn = phase === 0 ? dayFromToday(-10) : phase === 1 ? null : dayFromToday(60);
-  const responsibility = displayLanguage === 'ja' ? `サンプル参画。担当スキル: ${employee.skills.join(' / ')}` : `Sample participation. Assigned skills: ${employee.skills.join(' / ')}`;
-  const id = await insert(client, 'project_participations', {employee_id: employee.id, project_id: project.id, starts_on: startsOn, ends_on: endsOn, responsibility});
-  await workforceHistory(employee.id, 'participations', id, {project: project.name, startsOn, endsOn, responsibility});
+  const responsibility = displayLanguage === 'ja' ? `担当スキル: ${employee.skills.join(' / ')}` : `Assigned skills: ${employee.skills.join(' / ')}`;
+  const id = await insert(client, 'engagement_participations', {employee_id: employee.id, engagement_id: engagement.id, starts_on: startsOn, ends_on: endsOn, responsibility});
+  await workforceHistory(employee.id, 'participations', id, {engagement: engagement.name, startsOn, endsOn, responsibility});
  }
- const failedBooks = await installBookSamples(client, { adminId, note: displayLanguage === 'ja' ? 'インストール時に追加した書籍紹介サンプルです。' : 'Book introduction sample added during installation.', displayLanguage });
+ await installProjectSamples(client,{adminId,displayLanguage});
+ const failedBooks = await installBookSamples(client, { adminId, note: displayLanguage === 'ja' ? 'インストール時に追加した書籍です。' : 'Book added during installation.', displayLanguage });
  return { failedHolidayCountries: ['JP', 'US'].filter((_, index) => holidayImports[index].status === 'failed'), failedBooks };
 }

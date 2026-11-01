@@ -4,7 +4,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/releases) [![License](https://img.shields.io/github/license/HidekiMorisaki/sph)](https://github.com/HidekiMorisaki/sph/blob/main/LICENSE)
 
-![Title Imagepng](./docs/gallery/TitleImage.png)
+![SME Portal Hub](./docs/gallery/TitleImage.png)
 
 SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and medium-sized enterprises to build their own internal portal sites. It is being developed to streamline internal operations and bring company information together in one place through capabilities such as employee management, internal calendar creation and publishing, and various asset management functions.
 
@@ -18,12 +18,18 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Employee analytics                     | Analyze employees using multiple metrics                                        |
 | Financial analytics                    | View charts showing published financial trends by branch and year               |
 | Employee management and access control | Manage employee information and role-based access control                       |
-| Internal calendars                     | Create and publish internal calendars                                           |
+| Project management                     | [Manage hierarchical tickets, ticket panels, Gantt views, time entries and history, with Markdown descriptions and comments](docs/Projects.md) |
+| Schedule and meeting invitations        | Manage personal and shared schedules, invitations, recurring events and changes to individual occurrences |
+| Notifications                          | Check unread notifications and open the related event, request or ticket        |
+| Work calendars                         | Define working days, holidays and working hours, and assign calendars to employees |
+| Workflow forms and approvals           | [Design forms, approve requests and settle cash advances and expenses](docs/Workflows.md) |
+| Teams, skills and engagements           | Manage teams, employee skills, clients and employee participation in engagements |
 | Location management                    | Manage branches, rooms, and storage locations                                   |
 | IT asset management                    | Manage IT asset records, assignments, returns, and change history               |
 | License management                     | Manage software licenses                                                        |
 | Book management                        | Manage bibliographic records, physical copies, reservations, loans, and returns |
 | Master data management                 | Manage employee-related and other master data                                   |
+| My Page and widgets                     | [Arrange clocks, calculators, notes and other widgets; create custom widgets with the SDK](docs/Widget_SDK.md) |
 | Personal settings                      | Set time zone, display language, display currency, and more                     |
 
 ## Installation instructions
@@ -64,7 +70,7 @@ cd sph
 The installer supports English and Japanese. After selecting the display language, follow the interactive prompts to install the system. The installer builds and starts the system, then shows the URL and sign-in instructions.
 
 > [!NOTE]
-> At the "Optional samples (fictional business data and book introductions)" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
+> At the "Sample data" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
 
 <a id="installing-on-blitz-cloud"></a>
 
@@ -73,7 +79,7 @@ The installer supports English and Japanese. After selecting the display languag
 This option runs SPH and PostgreSQL on the blitz.cloud free plan, without Docker on your own computer. Use the free plan for evaluation; a paid plan is recommended if you intend to run SPH in production.
 
 1. Open the [blitz.cloud dashboard](https://dashboard.blitz.cloud/) and create a free account. You can register with email and password, GitHub, or Google. Confirm your email address if you receive a confirmation message, then follow the prompts to claim your `<account-name>.blitz.cloud` address. See the [official getting-started guide](https://blitz.cloud/docs/getting-started/).
-2. Choose **Host something new --> My own code** and enter the URL of the public [`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph) repository. You do not need to connect GitHub or fork the repository to use this public project. In **Advanced settings**, select the `main` branch and check or correct these three parts: `frontend` uses the root `Dockerfile` at `/`; `v1` uses `api/Dockerfile` at `/v1`; `migration` is **Runs before each new version** with `sh -c 'npm run db:deploy && npm run admin:create'`. Do not use `db` or `gateway` if proposed. Leave **Needs a database** off; the installer will create and connect managed PostgreSQL. Choose an unused app address and submit the wizard. The first build may fail before the database and administrator settings exist; do not delete the app or database at this stage.
+2. Choose **Host something new --> My own code** and enter the URL of the public [`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph) repository. You do not need to connect GitHub or fork the repository to use this public project. In **Advanced settings**, select the `main` branch and check or correct these three parts: `frontend` uses the root `Dockerfile` at `/`; `v1` uses `api/Dockerfile` at `/v1`; `migration` is **Runs before each new version** with `node /opt/sph-migration/scripts/migrate-and-initialize.mjs`. Do not use `db` or `gateway` if proposed. Leave **Needs a database** off; the installer will create and connect managed PostgreSQL. Choose an unused app address and submit the wizard. The first build may fail before the database and administrator settings exist; do not delete the app or database at this stage.
 3. Open **AI tools --> Keys --> Make a key**. Name the key something recognizable, such as `SPH installer`, and copy its value to a safe place when it appears. It cannot be shown again. When the installer asks for the API key, paste it into the hidden prompt. If you lose it, issue another key; use **Revoke** on the same page when you no longer need one. See the [official API-key guide](https://blitz.cloud/docs/ai-assistants/).
 4. Install [Node.js 22](https://nodejs.org/) and Git, then download the same branch selected in the wizard and run the installer:
 
@@ -111,48 +117,23 @@ Connection settings are saved in `.env` as `GATEWAY_TLS_MODE`, `GATEWAY_HTTP_PUB
 
 ### The installer stopped
 
-The installer is for new installations only. Existing `.env` files, SPH containers,
-or the `sph-db-data` volume cause it to stop without replacing them. For an existing
-installation, use the normal start, update, or recovery procedures.
+The installer is for new installations only. Existing `.env` files, SPH containers, or the `sph-db-data` volume cause it to stop without replacing them. For an existing installation, use the normal start, update, or recovery procedures.
 
-Installation failures report the stopped stage, the failed
-operation or detected condition, and the next checks to make. Docker's raw output
-is suppressed because it can contain credentials. When the underlying cause is
-unknown, the message says so; suggested checks are not a diagnosis.
+Installation failures report the stopped stage, the failed operation or detected condition, and the next checks to make. Docker's raw output is suppressed because it can contain credentials. When the underlying cause is unknown, the message says so; suggested checks are not a diagnosis.
 
-If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run
-`docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` from the product repository
-root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was
-created, rerun the installer. Never generate a replacement encryption key for
-encrypted data. Keep `.env` protected and back it up separately from the database.
+If a new installation failed after saving `.env`, retain that file, `.runtime/gateway/Caddyfile`, database storage, and the `gateway_data` volume. Resolve the prerequisite or startup problem, then run `docker compose -f docker-compose.local.yml up -d --build --wait --wait-timeout 300` from the repository root and check service status below. If the Caddyfile is missing, regenerate it with `node scripts/install-maintenance.mjs gateway-config` first. In internal mode, export the public CA root again with `docker cp sph-gateway:/data/caddy/pki/authorities/local/root.crt .runtime/ca/root.crt`. If no configuration or SPH storage was created, rerun the installer. Never generate a replacement encryption key for encrypted data. Keep `.env` protected and back it up separately from the database.
 
-After recovering startup, finish the removal of initial setup credentials. Remove
-only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and
-encryption key. Recreate `db` and `api` with
-`docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`,
-then remove the completed migration container with `docker compose -f docker-compose.local.yml rm -f migration`
-and verify the application responses below. If `.env.install-clean` remains,
-keep it protected until recovery is complete, then securely remove this temporary
-file. It may contain credentials.
+After recovering startup, finish the removal of initial setup credentials. Remove only `INITIAL_ADMIN_*` lines from `.env`, retaining the database password and encryption key. Recreate `db` and `api` with `docker compose -f docker-compose.local.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 300 db api`, then remove the completed migration container with `docker compose -f docker-compose.local.yml rm -f migration` and verify the application responses below. If `.env.install-clean` remains, keep it protected until recovery is complete, then securely remove this temporary file. It may contain credentials.
 
 ### Verify the installation
 
-The local startup order is database readiness → successful migration → API
-readiness → frontend → gateway. `GET /v1/health` checks the API process and
-configuration; `GET /v1/readiness` additionally checks the database, authentication
-schema, session write permissions and unfinished migrations. Readiness returns
-only a generic 200/503 JSON result, with caching disabled.
+The local startup order is database readiness → successful migration → API readiness → frontend → gateway. `GET /v1/health` checks the API process and configuration; `GET /v1/readiness` additionally checks the database, authentication schema, session write permissions and unfinished migrations.
+Readiness returns only a generic 200/503 JSON result, with caching disabled.
 
-The production frontend waits for `/v1/readiness` at `API_INTERNAL_ORIGIN` before
-listening. This applies to both Docker images and `npm start`; set that server-only
-origin when running outside Compose. Migration remains a separate job. The sign-in
-page also checks readiness through the public `/v1/readiness` route and validates
-the session before showing the form. It displays a startup message, switches to an
-unavailable message after 30 seconds, and retries automatically. A dependency
-failure during sign-in returns to this waiting state without replaying credentials.
-If services are hosted separately, route `/v1/*` to the API on the same public
-origin and run migrations successfully before releasing the API.
-
+The frontend waits for `/v1/readiness` at `API_INTERNAL_ORIGIN` before listening. This applies to both Docker images and `npm start`; set that server-only origin when running outside Compose. Migration remains a separate job.
+The sign-in page also checks readiness through the public `/v1/readiness` route and validates the session before showing the form. It displays a startup message, switches to an unavailable message after 30 seconds, and retries automatically.
+A dependency failure during sign-in returns to this waiting state without replaying credentials.
+If services are hosted separately, route `/v1/*` to the API on the same public origin and run migrations successfully before releasing the API.
 
 Show all containers, including the one-time migration container:
 
@@ -184,8 +165,7 @@ Windows PowerShell users can run:
 Invoke-RestMethod http://localhost:3000/v1/health
 ```
 
-A successful response reports that the `equipment-api` service is healthy.
-For HTTPS modes, use the configured `https://` application URL instead. In internal mode, first trust `.runtime/ca/root.crt` on the checking device.
+A successful response reports that the `equipment-api` service is healthy. For HTTPS modes, use the configured `https://` application URL instead. In internal mode, first trust `.runtime/ca/root.crt` on the checking device.
 
 ### The web page does not open
 
@@ -216,7 +196,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 ### A port is already in use
 
-Local mode binds the gateway to host loopback port `3000` by default; HTTPS modes bind ports `80` and `443`; internal HTTP binds the selected port on the server's private IPv4 address. PostgreSQL binds only to host loopback port `5432`. Free the required ports before installation. For an existing local installation, change `HTTP_PORT`, `GATEWAY_HTTP_PUBLISH`, `APP_ORIGIN`, and `CORS_ALLOWED_ORIGINS` together, then regenerate the gateway configuration as described above.
+Local mode binds the gateway to host loopback port `3000` by default; HTTPS modes bind ports `80` and `443`; internal HTTP binds the selected port on the server's private IPv4 address. PostgreSQL binds only to host loopback port `5432`.
+Free the required ports before installation. For an existing local installation, change `HTTP_PORT`, `GATEWAY_HTTP_PUBLISH`, `APP_ORIGIN`, and `CORS_ALLOWED_ORIGINS` together, then regenerate the gateway configuration as described above.
 
 ### Bind mounts do not work
 
@@ -263,14 +244,22 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 
 ## Gallery
 
+Screenshots show v0.7.0 with fictional demo data in the dark theme. Financial figures, exchange rates and schedule appointments are illustrative.
+
+### Projects — ticket panel
+![Project ticket panel](./docs/gallery/ProjectTicketPanel_en.png)
+
+### Schedule
+![Schedule](./docs/gallery/Schedule_en.png)
+
 ### Dashboard
 ![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
 ![Financial trends](./docs/gallery/FinancialTrends_en.png)
 
-## Work calendars
+### Work calendars
 ![Work calendars](./docs/gallery/WorkCalendars_en.png)
 
-## Employees
+### Employees
 ![Employees](./docs/gallery/EmployeeList_en.png)
 
 ## Acknowledgements
@@ -302,3 +291,5 @@ We use the following external APIs and public data sources. We thank their provi
 - [Cabinet Office of Japan public holiday data](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html): Supplies the public CSV data imported into Japanese work calendars.
 - [U.S. Office of Personnel Management (OPM) federal holiday data](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/): Supplies the public iCalendar data imported into U.S. work calendars.
 - [GitHub Releases API](https://docs.github.com/en/rest/releases/releases): Checks for newer published versions on the System Information page.
+
+Local source development requires `node vendor/npm/prepare.mjs` before dependency installation. See [reviewed toolchain instructions](vendor/npm/README.md). Docker builds use the committed lockfile extractor and Node tasks without npm.

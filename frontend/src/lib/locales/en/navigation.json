@@ -1,5 +1,6 @@
 {
 	"groups": {
+		"development": "Development",
 		"dashboard": "DASHBOARD",
 		"general": "GENERAL",
 		"businessManagement": "BUSINESS MANAGEMENT",
@@ -9,6 +10,7 @@
 		"otherSystems": "OTHER SYSTEMS"
 	},
 	"items": {
+		"widgets": "Widgets",
 		"assetOverview": "Asset Overview",
 		"employeeAnalytics": "Employee analytics",
 		"financialTrends": "Business performance",
@@ -37,7 +39,7 @@
 		"operatingSystems": "Operating systems",
 		"statuses": "Statuses",
 		"skills": "Skills",
-		"projects": "Projects",
+		"engagements": "Engagements",
 		"teams": "Teams",
 		"clients": "Clients"
 	},

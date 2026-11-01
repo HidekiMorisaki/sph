@@ -56,9 +56,9 @@
 </div>
 
 <style>
-	.postal-lookup{grid-column:1/-1;display:grid;gap:6px;color:var(--muted);font-size:var(--font-size-support)}
-	.postal-options{display:grid;gap:5px;padding:10px;border:1px solid var(--border);border-radius:5px;background:var(--surface)}
-	.postal-options button{text-align:left;padding:7px 9px;border:1px solid var(--border);border-radius:5px;color:var(--text);background:var(--surface);cursor:pointer}
+	.postal-lookup{grid-column:1/-1;display:grid;gap:var(--sph-space-6px);color:var(--muted);font-size:var(--font-size-support)}
+	.postal-options{display:grid;gap:var(--sph-space-5px);padding:var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-5px);background:var(--surface)}
+	.postal-options button{text-align:left;padding:var(--sph-space-7px) var(--sph-space-9px);border:1px solid var(--border);border-radius:var(--sph-radius-5px);color:var(--text);background:var(--surface);cursor:pointer}
 	.postal-options button:hover,.postal-options button:focus-visible{border-color:var(--action-primary);outline:2px solid var(--action-primary);outline-offset:1px}
 	.source a{color:var(--action-primary)}
 </style>

@@ -1,3 +1,4 @@
+import {requireSystemAdminApi} from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { permissionOperations } from '$lib/server/auth/permissions';
 import { convertAmount, financialSettings, monthKey, parseYear, periodMonths, roundedAmount, type Currency } from '$lib/server/api/financial';
@@ -9,6 +10,7 @@ import { getPrisma } from '$lib/server/prisma';
 const sortFields = ['branchName', 'id'] as const;
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.branchManagement);
 	const year = parseYear(url.searchParams.get('year'));
 	if (year === null) return failure(422, 'INVALID_YEAR', 'Select a year between 1980 and 2100.');

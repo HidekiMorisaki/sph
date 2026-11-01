@@ -1,5 +1,52 @@
 # Third-party licenses
 
+## v0.7.0 license exclusions
+
+The four historical missing-grant candidates are excluded before installation,
+including copies embedded in compiler/checker bundles. See
+[`vendor/npm/README.md`](../vendor/npm/README.md) for compatible SPH helpers,
+modified source hashes, preserved originals and the independent PostgreSQL CLI.
+This resolves the adopted-code residuals by exclusion; no upstream grant has
+been invented or inferred. Docker uses the fixed-lock extractor and Node task
+runner described there, so no npm 12 candidate or npm runtime is introduced.
+The source-only distribution boundary remains in force.
+
+
+The SPH security backports for SvelteKit 2.70.3 and deepmerge 4.3.1 preserve
+their original MIT notices and record every original/modified file hash in each
+project's `licenses/security-patches.json`. The complete changes and original
+notices are in `licenses/dependency-security-patches.txt` (also served by the
+frontend under `/licenses/`). Preparation applies only the reviewed changes;
+build/check rejects unpatched or unknown code. Version-based npm audit warnings
+remain visible. These backports do not approve unrelated license residuals.
+
+Projects Markdown uses the explicitly approved `marked@18.1.2` parser in frontend
+and API. Its complete official LICENSE includes both the Marked MIT grant and
+the inherited John Gruber Markdown redistribution conditions. Original texts are
+retained in each project's `licenses/marked-18.1.2.txt`, with a browser copy under
+`frontend/static/licenses/`; `marked-18.1.2.json` records the official source and digest.
+Build/check gates verify the pinned version and all original notice copies.
+
+Code highlighting uses the separately approved code-only Highlight.js 11.12.0
+subset in `frontend/vendor/highlightjs-11.12.0/`. Its manifest records the official
+archive/integrity and each original/output file digest. The only runtime change
+replaces the core CommonJS export with an ES-module export; all other core bytes
+and all 193 language definitions are preserved. Original BSD-3-Clause notices are
+retained in the subset and at `/licenses/highlightjs-11.12.0.txt`, linked from main
+and Worker chunks. SPH provides its own colors; upstream themes/base16 resources
+and external language plugins are excluded. This approval does not introduce
+Shiki, Mermaid, PlantUML, Java, fonts, or their unreviewed embedded materials.
+
+Projects attachment inspection uses the explicitly approved API dependency
+`fflate@0.8.3`, already used by the frontend. Its official MIT text, copyright,
+source URL and digest are retained in [`fflate-0.8.3/`](./fflate-0.8.3/).
+It has no runtime package dependencies, but attributes embedded algorithms to
+UZIP.js. Photopea's original 2018 MIT grant is pinned to its original license
+commit and retained in both API image licenses and browser static licenses;
+the provenance records its digest. The installed package retains its own LICENSE.
+Both production builds verify these additional notices. This addition does not resolve the
+unrelated historical license residuals described below.
+
 Keep each third-party component's applicable license text, copyright notices,
 NOTICE files, and any required source-availability information with its distributed
 copy. A package's SPDX identifier alone is not a replacement for those notices.
@@ -107,9 +154,11 @@ texts at the published version's gitHead are recorded in
 static licenses. Keep these originals with their corresponding components.
 
 A source tag is not approval to redistribute every locally built image. Original
-license texts remain unconfirmed for the toolchain candidates listed in that
-supplemental manifest, including @prisma/dev. A Dockerfile or lockfile reference
+license texts remain unconfirmed for the historical candidates listed in that
+supplemental manifest, including @prisma/dev; current prepared sources exclude them. A Dockerfile or lockfile reference
 is distinct from copying those packages into a distributed archive. Before
 publishing migration/development/cloud images or an archive containing installed
 dependencies, resolve those candidates and the historical embedded-bundle review.
 Do not replace missing original grants with SPDX labels or guessed copyright text.
+
+The scheduler uses the pinned FullCalendar Standard 6.1.22 plugins (no premium plugins), Luxon 3.7.2, rrule 2.8.1 and their reviewed dependencies. Exact archive sources, integrities and original notices, including python-dateutil and the embedded Closure modulo attribution, are in `api/licenses/scheduler.txt`, `frontend/licenses/scheduler.txt` and the browser copy `frontend/static/licenses/scheduler.txt`. Preserve all of these with corresponding builds.

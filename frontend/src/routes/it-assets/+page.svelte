@@ -1,4 +1,13 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import TextActionButton from '$lib/components/TextActionButton.svelte';
+ import PurchaseMoneyFields from "$lib/components/PurchaseMoneyFields.svelte";
+ import { purchaseText, validPurchaseAmount, displayPurchaseMoney } from "$lib/purchase-money";
+ let moneyText=$derived(purchaseText[$localization.displayLanguage]);
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import { forgetDetailReturn } from '$lib/detail-modal-return';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
 	import SearchPanel from '$lib/components/SearchPanel.svelte';
@@ -16,6 +25,7 @@
 	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailTabs from '$lib/components/DetailTabs.svelte';
 	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
@@ -44,18 +54,18 @@
 	type Storage = Named & { branchId: number; roomId: number; room: { id: number; branchId: number; name: string; branch: { id: number; name: string } } };
 	type Assignee = { id: number; employeeCode: string; firstName: string; middleName: string | null; lastName: string };
 	type Assignment = { id: number; employee: Assignee };
-	type Asset = { id: number; assetTag: string; typeId: number; manufacturerId: number | null; modelNumber: string | null; serialNumber: string | null; cpuTypeId: number | null; ramGb: number | null; operatingSystemId: number | null; ipAddress1: string | null; ipAddress2: string | null; hostname: string | null; adminUsername: string | null; loginUsername: string | null; managementConsoleUrl: string | null; managementConsoleUsername: string | null; storageId: number; statusId: number; purchasedOn: string | null; disposalOn: string | null; notes: string | null; type: Named; manufacturer: Named | null; cpuType: Named | null; operatingSystem: OperatingSystem | null; status: Named; storage: Storage; assignments: Assignment[] };
+	type Asset = { id: number; assetTag: string; typeId: number; manufacturerId: number | null; modelNumber: string | null; serialNumber: string | null; cpuTypeId: number | null; ramGb: number | null; operatingSystemId: number | null; ipAddress1: string | null; ipAddress2: string | null; hostname: string | null; adminUsername: string | null; loginUsername: string | null; managementConsoleUrl: string | null; managementConsoleUsername: string | null; storageId: number; statusId: number; purchasedOn: string | null; purchaseAmount: string | null; purchaseCurrency: string | null; disposalOn: string | null; notes: string | null; type: Named; manufacturer: Named | null; cpuType: Named | null; operatingSystem: OperatingSystem | null; status: Named; storage: Storage; assignments: Assignment[] };
 	type CredentialType = 'admin' | 'login' | 'management_console';
 	type CredentialStatus = Record<CredentialType, { configured: boolean }>;
 	let credentialStatusText = $derived(localeMessages[$localization.displayLanguage].assets.credentialStatus);
 	type DateField = 'purchasedOn' | 'disposalOn';
 	type SelectField = 'typeId' | 'statusId' | 'manufacturerId' | 'cpuTypeId' | 'operatingSystemId' | 'branchId' | 'roomId' | 'storageId' | 'assignEmployeeId';
 	type SelectOption = { value: string; label: string; searchTerms?: string[] };
-	let historyFields: Record<string, string> = $derived({ assetTag: text.assetTag, typeId: text.type, manufacturerId: text.manufacturer, modelNumber: text.modelNumber, serialNumber: text.serialNumber, cpuTypeId: text.cpuType, ramGb: text.ramGb, operatingSystemId: text.operatingSystem, ipAddress1: text.ipAddress1, ipAddress2: text.ipAddress2, hostname: text.hostname, adminUsername: text.adminUsername, loginUsername: text.loginUsername, managementConsoleUrl: text.managementConsoleUrl, managementConsoleUsername: text.managementConsoleUsername, storageId: text.storage, statusId: text.status, purchasedOn: text.purchasedOn, disposalOn: text.disposalOn, notes: text.notes, assigneeId: text.employee });
+	let historyFields: Record<string, string> = $derived({ assetTag: text.assetTag, typeId: text.type, manufacturerId: text.manufacturer, modelNumber: text.modelNumber, serialNumber: text.serialNumber, cpuTypeId: text.cpuType, ramGb: text.ramGb, operatingSystemId: text.operatingSystem, ipAddress1: text.ipAddress1, ipAddress2: text.ipAddress2, hostname: text.hostname, adminUsername: text.adminUsername, loginUsername: text.loginUsername, managementConsoleUrl: text.managementConsoleUrl, managementConsoleUsername: text.managementConsoleUsername, storageId: text.storage, statusId: text.status, purchasedOn: text.purchasedOn, purchaseAmount: moneyText.amount, purchaseCurrency: moneyText.currency, disposalOn: text.disposalOn, notes: text.notes, assigneeId: text.employee });
 	let historyActions: Record<string, string> = $derived({ create: common.created, update: common.updated, delete: common.deleted, assign: text.assigned, return: text.returned });
 	type FormField = keyof ReturnType<typeof blank>;
 
-	const blank = () => ({ assetTag: '', typeId: '', manufacturerId: '', modelNumber: '', serialNumber: '', cpuTypeId: '', ramGb: '', operatingSystemId: '', ipAddress1: '', ipAddress2: '', hostname: '', adminUsername: '', loginUsername: '', managementConsoleUrl: '', managementConsoleUsername: '', storageId: '', statusId: '', purchasedOn: '', disposalOn: '', notes: '' });
+	const blank = () => ({ assetTag: '', typeId: '', manufacturerId: '', modelNumber: '', serialNumber: '', cpuTypeId: '', ramGb: '', operatingSystemId: '', ipAddress1: '', ipAddress2: '', hostname: '', adminUsername: '', loginUsername: '', managementConsoleUrl: '', managementConsoleUsername: '', storageId: '', statusId: '', purchasedOn: '', purchaseAmount: '', purchaseCurrency: '', disposalOn: '', notes: '' });
 	const blankCredentialPasswords = (): Record<CredentialType, string> => ({ admin: '', login: '', management_console: '' });
 	const blankCredentialClears = (): Record<CredentialType, boolean> => ({ admin: false, login: false, management_console: false });
 	const blankCredentialStatus = (): CredentialStatus => ({ admin: { configured: false }, login: { configured: false }, management_console: { configured: false } });
@@ -86,7 +96,7 @@
     let typeFilterError = $state(false);
     let typeFilterErrorDismissed = $state(false);
     let currentUserId = $state<number | null>(null);
-    let summaryOrigin = false;
+    let summaryOrigin = $state(false);
     function restoreAssetOptions(options: Record<string,string|boolean>) {
         assetOptions = {...options};
         const url = new URL(page.url);
@@ -287,7 +297,7 @@
 	function edit(item: Asset, focusReturn: HTMLElement | null = null) {
 		returnFocus = focusReturn ?? document.activeElement as HTMLElement;
 		editing = item;
-		form = { assetTag: item.assetTag, typeId: String(item.typeId), manufacturerId: item.manufacturerId ? String(item.manufacturerId) : '', modelNumber: item.modelNumber ?? '', serialNumber: item.serialNumber ?? '', cpuTypeId: item.cpuTypeId ? String(item.cpuTypeId) : '', ramGb: item.ramGb ? String(item.ramGb) : '', operatingSystemId: item.operatingSystemId ? String(item.operatingSystemId) : '', ipAddress1: item.ipAddress1 ?? '', ipAddress2: item.ipAddress2 ?? '', hostname: item.hostname ?? '', adminUsername: item.adminUsername ?? '', loginUsername: item.loginUsername ?? '', managementConsoleUrl: item.managementConsoleUrl ?? '', managementConsoleUsername: item.managementConsoleUsername ?? '', storageId: String(item.storageId), statusId: String(item.statusId), purchasedOn: iso(item.purchasedOn), disposalOn: iso(item.disposalOn), notes: item.notes ?? '' };
+		form = { assetTag: item.assetTag, typeId: String(item.typeId), manufacturerId: item.manufacturerId ? String(item.manufacturerId) : '', modelNumber: item.modelNumber ?? '', serialNumber: item.serialNumber ?? '', cpuTypeId: item.cpuTypeId ? String(item.cpuTypeId) : '', ramGb: item.ramGb ? String(item.ramGb) : '', operatingSystemId: item.operatingSystemId ? String(item.operatingSystemId) : '', ipAddress1: item.ipAddress1 ?? '', ipAddress2: item.ipAddress2 ?? '', hostname: item.hostname ?? '', adminUsername: item.adminUsername ?? '', loginUsername: item.loginUsername ?? '', managementConsoleUrl: item.managementConsoleUrl ?? '', managementConsoleUsername: item.managementConsoleUsername ?? '', storageId: String(item.storageId), statusId: String(item.statusId), purchasedOn: iso(item.purchasedOn), purchaseAmount: item.purchaseAmount ?? '', purchaseCurrency: item.purchaseCurrency ?? '', disposalOn: iso(item.disposalOn), notes: item.notes ?? '' };
 		branchId = String(item.storage.room.branchId);
 		roomId = String(item.storage.room.id);
 		previewRequestId++;
@@ -469,6 +479,8 @@
 		if (!roomId) errors.roomId = text.roomRequired;
 		if (!form.storageId) errors.storageId = text.storageRequired;
 		if (!form.purchasedOn) errors.purchasedOn = text.purchaseRequired;
+        if (!validPurchaseAmount(form.purchaseAmount)) errors.purchaseAmount = moneyText.invalidAmount;
+        if (!/^[A-Z]{3}$/.test(form.purchaseCurrency)) errors.purchaseCurrency = moneyText.invalidCurrency;
 		if (selectedStatus?.disposalDatePolicy === 'required' && !form.disposalOn) errors.disposalOn = text.disposalRequired;
 		if (selectedType?.supportsRam && invalidRam(form.ramGb)) errors.ramGb = text.ramInvalid;
 		if (form.ipAddress1.trim() && form.ipAddress1.trim() === form.ipAddress2.trim()) errors.ipAddress2 = text.differentIp;
@@ -483,7 +495,7 @@
 			const response = await fetch(editing ? `/v1/it-assets/${editing.id}` : '/v1/it-assets', { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
 			if (!response.ok) {
 				const body = await response.json().catch(() => null) as { error?: { code?: string; details?: { field?: string; reason?: string }[] } } | null;
-				if ((body?.error?.code === 'VALIDATION_ERROR' || body?.error?.code === 'IT_ASSET_FIELD_CONFLICT') && body.error.details?.length) {
+				if ((body?.error?.code === 'VALIDATION_ERROR' || body?.error?.code === 'INVALID_FIELD' || body?.error?.code === 'IT_ASSET_FIELD_CONFLICT') && body.error.details?.length) {
 					const next: Record<string, string> = {};
 					for (const detail of body.error.details) if (detail.field && detail.reason) {
 						const mapped = detail.field === 'assigneeId' ? 'assignEmployeeId' : detail.field.startsWith('credentials.') ? `${detail.field.slice('credentials.'.length)}Password` : detail.field;
@@ -515,7 +527,7 @@
 				messageTone = 'error'; message = assetErrorMessage(body?.error?.code, response.status, text, text.deleteFailed);
 				return;
 			}
-			messageTone = 'success'; message = text.deleted;
+			open=false;editing=null;detailBeforeEdit=null;credentialPasswords={admin:'',login:'',management_console:''};messageTone = 'success'; message = text.deleted;
 		} catch { messageTone = 'error'; message = text.deleteFailed; return; }
 		await assetList?.refresh();
 	}
@@ -534,7 +546,8 @@
 	}
 	function updateField(field: FormField, value: string) { form[field] = value; clearFieldError(field); }
 	function focusField(field: string) {
-		const target = dialogElement?.querySelector<HTMLElement>(`.form-select-picker[data-field="${field}"] .form-select-trigger, .form-select-picker[data-field="${field}"] .form-select-search, .custom-date[data-field="${field}"] .date-trigger, [name="${field}"]`);
+		const selector = field === 'purchaseAmount' ? '[name="purchase-amount"]' : field === 'purchaseCurrency' ? '[data-field="purchase-currency"] .form-select-trigger' : `.form-select-picker[data-field="${field}"] .form-select-trigger, .form-select-picker[data-field="${field}"] .form-select-search, .custom-date[data-field="${field}"] .date-trigger, [name="${field}"]`;
+		const target = dialogElement?.querySelector<HTMLElement>(selector);
 		target?.scrollIntoView({ block: 'nearest' });
 		target?.focus();
 	}
@@ -602,7 +615,7 @@
 {/snippet}
 {#snippet assetCodeCell(item: Asset)}<strong class="asset-primary">{item.assetTag}</strong>{#if item.notes?.trim()}<small class="asset-secondary asset-note" title={item.notes}>{item.notes}</small>{/if}{/snippet}
 {#snippet manufacturerCell(item: Asset)}{item.manufacturer?.name ?? ''}<small class="asset-secondary">{item.modelNumber ?? ''}</small>{/snippet}
-{#snippet assigneeCell(item: Asset)}{#if item.assignments[0]}<button class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(item.assignments[0].employee.id, event.currentTarget)}>{assigneeName(item.assignments[0])}</button>{/if}{/snippet}
+{#snippet assigneeCell(item: Asset)}{#if item.assignments[0]}<TextActionButton class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(item.assignments[0].employee.id, event.currentTarget)} data-button-scope="button-e1c0a75c5d">{assigneeName(item.assignments[0])}</TextActionButton>{/if}{/snippet}
 {#snippet statusCell(item: Asset)}<span class="status">{item.status.name}</span>{/snippet}
 {#snippet mobileAsset(item: Asset)}<div class="mobile-asset"><strong>{item.assetTag}</strong><span>{item.type.name} · {item.status.name}</span><span>{item.manufacturer?.name ?? ''} {item.modelNumber ?? ''}</span><span>{item.storage.room.branch.name} / {item.storage.room.name} / {item.storage.name}</span>{#if item.assignments[0]}{@render assigneeCell(item)}{:else}<span>{text.unassigned}</span>{/if}</div>{/snippet}
 {#snippet pageActions()}{#if allowedOperation('assets.create')}<AddButton label={text.add} onclick={create} />{/if}{/snippet}
@@ -613,8 +626,8 @@
 	<MasterPageHeader title={text.title} />
 	{#if message}<StatusNotice message={message} tone={messageTone} onDismiss={() => message = ''} />{/if}
 	{#if employeeDetailError && !detailAsset}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
-	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<button type="button" class="type-filter-retry" onclick={() => void load()}>{text.retryTypeFilter}</button>{/if}
-	{#if typeFilterReady}<SearchPanel target="assets" userId={currentUserId} bind:searchState draftOptions={assetOptions} onRestoreOptions={restoreAssetOptions} filters={typeFilter}/><MasterList mobileItem={mobileAsset} bind:searchState bind:this={assetList} endpoint="/v1/it-asset-searches" title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} headerActions={pageActions} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
+	{#if typeFilterError}{#if !typeFilterErrorDismissed}<StatusNotice message={text.typeFilterLoadFailed} tone="error" onDismiss={() => typeFilterErrorDismissed = true} />{/if}<ActionButton type="button" class="type-filter-retry" onclick={() => void load()} variant="secondary" data-button-scope="button-e1c0a75c5d">{text.retryTypeFilter}</ActionButton>{/if}
+	{#if typeFilterReady}<SearchPanel restoreSelectedFilter={!summaryOrigin} target="assets" userId={currentUserId} bind:searchState draftOptions={assetOptions} onRestoreOptions={restoreAssetOptions} filters={typeFilter}/><MasterList mobileItem={mobileAsset} bind:searchState bind:this={assetList} endpoint="/v1/it-asset-searches" title={text.listTitle} listHeading={text.allAssets} description={text.listDescription} initialSortBy="assetTag" pageSizeStorageKey="it-assets-page-size" minTableWidth={1080} edgePagination canDetail={true} actionLabel={(item) => (item as Asset).assetTag} headerActions={pageActions} loadingLabel={text.loading} emptyLabel={text.empty} columns={[
 		{ key: 'assetTag', label: text.assetTag, width: 15, cell: assetCodeCell, searchKeys: ['assetTag', 'notes'] },
 		{ key: 'type', label: text.type, width: 10, value: (item) => (item as Asset).type.name },
 		{ key: 'manufacturer', label: text.manufacturerModel, width: 17, cell: manufacturerCell, searchKeys: ['manufacturer', 'modelNumber'] },
@@ -623,16 +636,17 @@
 		{ key: 'storage', label: text.storage, width: 12, value: (item) => (item as Asset).storage.name, searchKeys: ['storage'] },
 		{ key: 'user', label: text.user, width: 12, cell: assigneeCell, searchKeys: ['user'] },
 		{ key: 'status', label: text.status, width: 9, cell: statusCell, searchKeys: ['status'] }
-	]} onDetail={(item, trigger) => showDetail(item as Asset, trigger)} />{:else if !typeFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
+	]} onDetail={(item, trigger) => { forgetDetailReturn(trigger, 'asset-detail-title'); showDetail(item as Asset, trigger); }} />{:else if !typeFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	</ViewportListPage>
 	{#if open}
 		<ModalBackdrop>
 			<dialog bind:this={dialogElement} class="asset-dialog app-modal" open aria-modal="true" aria-labelledby="asset-form-title">
-				<header><h2 id="asset-form-title">{editing ? (canManageAssets ? text.edit : text.details) : text.add}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestCloseForm}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
-				<form class="asset-form app-modal-form" onsubmit={(event) => { event.preventDefault(); void save(); }}>
-					<div class="asset-form-body app-modal-form-body">
+				<header><h2 id="asset-form-title">{editing ? (canManageAssets ? text.edit : text.details) : text.add}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.closeForm} disabled={saving} onclick={requestCloseForm} data-button-scope="button-e1c0a75c5d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
+				<form class="asset-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
+					<div class="asset-form-body app-modal-form-body">{#if message && messageTone==='error'}<StatusNotice {message} tone="error" onDismiss={()=>message=''} />{/if}<FormTabs label={text.basic} kind="asset">
 						{#if formError}<StatusNotice title={text.saveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
-						<FormSection title={text.basic} framed>
+						<div data-form-panel="basic">
+<FormSection title={text.basic} framed>
 						{@render searchableSelect(text.type, 'typeId', types.map(item => ({ value: String(item.id), label: item.name })), true)}
 						<label><span>{text.assetTag} <span class="required" aria-hidden="true">*</span></span><input name="assetTag" value={form.assetTag} maxlength="64" class:invalid={Boolean(fieldErrors.assetTag)} aria-invalid={Boolean(fieldErrors.assetTag)} aria-describedby={fieldErrors.assetTag ? 'assetTag-error' : 'assetTag-hint'} placeholder={codeLoading ? text.preparingCode : text.selectTypePlaceholder} disabled={!canManageAssets || codeLoading} oninput={(event) => updateManagementCode(event.currentTarget.value)}/>{#if fieldErrors.assetTag}<span id="assetTag-error" class="field-error" role="alert">{fieldErrors.assetTag}</span>{:else}<small id="assetTag-hint" class="field-hint">{editing && form.assetTag === editing.assetTag && /-[0-9]{4}$/.test(form.assetTag) ? text.legacyCodeHint : text.codeHint}</small>{/if}</label>
 						{@render searchableSelect(text.status, 'statusId', [{ value: '', label: '-' }, ...statuses.map(item => ({ value: String(item.id), label: item.name }))], true)}
@@ -640,14 +654,33 @@
 						<label>{text.modelNumber}<input bind:value={form.modelNumber} placeholder={text.modelExample} disabled={!canManageAssets}/></label>
 						<label>{text.serialNumber}<input name="serialNumber" value={form.serialNumber} oninput={(event) => updateField('serialNumber', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.serialNumber)} aria-invalid={Boolean(fieldErrors.serialNumber)} aria-describedby={fieldErrors.serialNumber ? 'serialNumber-error' : undefined} placeholder={text.serialExample} disabled={!canManageAssets}/>{#if fieldErrors.serialNumber}<span id="serialNumber-error" class="field-error" role="alert">{fieldErrors.serialNumber}</span>{/if}</label>
 						</FormSection>
+</div>
 						{#if selectedType?.supportsCpu || selectedType?.supportsRam || selectedType?.supportsOs}
-							<FormSection title={text.hardware} framed>
+							<div data-form-panel="hardware">
+<FormSection title={text.hardware} framed>
 							{#if selectedType?.supportsCpu}{@render searchableSelect(text.cpuType, 'cpuTypeId', [{ value: '', label: '-' }, ...cpus.map(item => ({ value: String(item.id), label: item.name }))])}{/if}
 							{#if selectedType?.supportsRam}<label>{text.ramGb}<input name="ramGb" value={form.ramGb} oninput={(event) => updateField('ramGb', event.currentTarget.value)} class:invalid={Boolean(fieldErrors.ramGb)} aria-invalid={Boolean(fieldErrors.ramGb)} aria-describedby={fieldErrors.ramGb ? 'ramGb-error' : undefined} type="number" min="1" step="1" placeholder={text.ramExample} disabled={!canManageAssets}/>{#if fieldErrors.ramGb}<span id="ramGb-error" class="field-error" role="alert">{fieldErrors.ramGb}</span>{/if}</label>{/if}
 							{#if selectedType?.supportsOs}{@render searchableSelect(text.operatingSystem, 'operatingSystemId', [{ value: '', label: '-' }, ...systems.map(item => ({ value: String(item.id), label: operatingSystemName(item) }))])}{/if}
 							</FormSection>
-						{/if}
-						<FormSection title={text.network} framed>
+</div>{/if}<div data-form-panel="location">
+<FormSection title={text.location} framed>
+						{@render searchableSelect(text.branch, 'branchId', [{ value: '', label: '-' }, ...branches.map(item => ({ value: String(item.id), label: item.name }))], true)}
+						{@render searchableSelect(text.room, 'roomId', [{ value: '', label: '-' }, ...availableRooms.map(item => ({ value: String(item.id), label: item.name }))], true, !branchId)}
+						{@render searchableSelect(text.storage, 'storageId', [{ value: '', label: '-' }, ...availableStorage.map(item => ({ value: String(item.id), label: item.name }))], true, !roomId)}
+						{@render dateInput(text.purchasedOn, 'purchasedOn', form.purchasedOn, false, true)}
+<PurchaseMoneyFields bind:amount={form.purchaseAmount} bind:currency={form.purchaseCurrency} amountError={fieldErrors.purchaseAmount} currencyError={fieldErrors.purchaseCurrency} disabled={!canManageAssets||saving} onChange={()=>{clearFieldError('purchaseAmount');clearFieldError('purchaseCurrency');}}/>
+						{@render dateInput(text.disposalOn, 'disposalOn', form.disposalOn, true, selectedStatus?.disposalDatePolicy === 'required', selectedStatus?.disposalDatePolicy === 'prohibited')}
+						</FormSection>
+<FormSection title={text.additional} framed>
+						<label class="wide">{text.notes}<textarea bind:value={form.notes} placeholder={text.notesExample} disabled={!canManageAssets}></textarea></label>
+						</FormSection>
+<FormSection title={text.assign} framed>
+						<div class="wide">
+							{@render searchableSelect(text.employee, 'assignEmployeeId', [{ value: '', label: text.unassigned }, ...employees.map(employee => ({ value: String(employee.id), label: employeeOptionLabel(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName, employee.employeeCode] }))])}
+						</div>
+						</FormSection>
+</div><div data-form-panel="network">
+<FormSection title={commonText.detailNetworkCredentials} framed>
 						<label>{text.ipAddress1}<input name="ipAddress1" value={form.ipAddress1} oninput={(event) => updateField('ipAddress1', event.currentTarget.value)} maxlength="45" placeholder={text.ip1Example} disabled={!canManageAssets} class:invalid={Boolean(fieldErrors.ipAddress1)} aria-invalid={Boolean(fieldErrors.ipAddress1)} aria-describedby={fieldErrors.ipAddress1 ? 'ipAddress1-error' : undefined}/>{#if fieldErrors.ipAddress1}<span id="ipAddress1-error" class="field-error" role="alert">{fieldErrors.ipAddress1}</span>{/if}</label>
 						<label>{text.ipAddress2}<input name="ipAddress2" value={form.ipAddress2} oninput={(event) => updateField('ipAddress2', event.currentTarget.value)} maxlength="45" placeholder={text.ip2Example} disabled={!canManageAssets} class:invalid={Boolean(fieldErrors.ipAddress2)} aria-invalid={Boolean(fieldErrors.ipAddress2)} aria-describedby={fieldErrors.ipAddress2 ? 'ipAddress2-error' : undefined}/>{#if fieldErrors.ipAddress2}<span id="ipAddress2-error" class="field-error" role="alert">{fieldErrors.ipAddress2}</span>{/if}</label>
 						<label>{text.hostname}<input name="hostname" value={form.hostname} oninput={(event) => updateField('hostname', event.currentTarget.value)} maxlength="253" placeholder={text.hostnameExample} disabled={!canManageAssets} class:invalid={Boolean(fieldErrors.hostname)} aria-invalid={Boolean(fieldErrors.hostname)} aria-describedby={fieldErrors.hostname ? 'hostname-error' : undefined}/>{#if fieldErrors.hostname}<span id="hostname-error" class="field-error" role="alert">{fieldErrors.hostname}</span>{/if}</label>
@@ -662,23 +695,8 @@
 							{#if credentialsError && !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}
 						{/if}
 						</FormSection>
-						<FormSection title={text.location} framed>
-						{@render searchableSelect(text.branch, 'branchId', [{ value: '', label: '-' }, ...branches.map(item => ({ value: String(item.id), label: item.name }))], true)}
-						{@render searchableSelect(text.room, 'roomId', [{ value: '', label: '-' }, ...availableRooms.map(item => ({ value: String(item.id), label: item.name }))], true, !branchId)}
-						{@render searchableSelect(text.storage, 'storageId', [{ value: '', label: '-' }, ...availableStorage.map(item => ({ value: String(item.id), label: item.name }))], true, !roomId)}
-						{@render dateInput(text.purchasedOn, 'purchasedOn', form.purchasedOn, false, true)}
-						{@render dateInput(text.disposalOn, 'disposalOn', form.disposalOn, true, selectedStatus?.disposalDatePolicy === 'required', selectedStatus?.disposalDatePolicy === 'prohibited')}
-						</FormSection>
-						<FormSection title={text.additional} framed>
-						<label class="wide">{text.notes}<textarea bind:value={form.notes} placeholder={text.notesExample} disabled={!canManageAssets}></textarea></label>
-						</FormSection>
-						<FormSection title={text.assign} framed>
-						<div class="wide">
-							{@render searchableSelect(text.employee, 'assignEmployeeId', [{ value: '', label: text.unassigned }, ...employees.map(employee => ({ value: String(employee.id), label: employeeOptionLabel(employee), searchTerms: [employee.firstName, employee.middleName ?? '', employee.lastName, employee.employeeCode] }))])}
-						</div>
-						</FormSection>
-					</div>
-					<footer class="asset-form-footer app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseForm}>{canManageAssets ? common.cancel : common.close}</button>{#if canManageAssets}<button class="app-primary-action save-button" type="submit" disabled={saving || codeLoading || credentialsLoading || (Boolean(editing) && !hasUnsavedChanges)}>{saving ? common.saving : editing ? common.saveChanges : text.add}</button>{/if}</footer>
+</div></FormTabs></div>
+					<footer class="asset-form-footer app-modal-footer">{#if editing && allowedOperation('assets.delete',editing.storage.branchId)}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(editing!)} variant="danger" data-button-scope="button-e1c0a75c5d">{commonText.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestCloseForm} variant="secondary" data-button-scope="button-e1c0a75c5d">{canManageAssets ? common.cancel : common.close}</ModalActionButton>{#if canManageAssets}<ModalActionButton class="app-primary-action save-button" type="submit" disabled={saving || !allowedOperation(editing?'assets.update':'assets.create',editing?.storage.branchId) || codeLoading || credentialsLoading || (Boolean(editing) && !hasUnsavedChanges)} variant="primary" data-button-scope="button-e1c0a75c5d">{saving ? common.saving : editing ? common.saveChanges : text.add}</ModalActionButton>{/if}</footer>
 				</form>
 			</dialog>
 		</ModalBackdrop>
@@ -687,9 +705,11 @@
 	{#if detailAsset}
 		<div hidden={Boolean(detailEmployee || revealType)} inert={Boolean(detailEmployee || revealType)}>
 		<DetailModal title={text.detail} titleId="asset-detail-title" closeLabel={text.closeDetail} returnFocus={detailReturnFocus} onClose={closeDetail}>
-			{#snippet headerActions()}{#if canManageAssets}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={allowedOperation('assets.update', detailAsset?.storage.branchId) ? () => { const item = detailAsset!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('assets.delete', detailAsset?.storage.branchId) ? () => void remove(detailAsset!) : undefined} />{/if}{/snippet}
+			{#snippet headerActions()}{#if canManageAssets}<DetailActionButtons editing={false} editLabel={commonText.edit} deleteLabel={commonText.delete} onEdit={(allowedOperation('assets.update', detailAsset?.storage.branchId) || allowedOperation('assets.delete', detailAsset?.storage.branchId)) ? () => { const item = detailAsset!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={allowedOperation('assets.delete', detailAsset?.storage.branchId) ? () => void remove(detailAsset!) : undefined} />{/if}{/snippet}
 			{#if employeeDetailError}<StatusNotice message={text.employeeDetailFailed} tone="error" onDismiss={() => employeeDetailError = false} />{/if}
-			<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid">
+			{#if detailAsset}
+{#snippet basic()}{#if detailAsset}
+<section class="app-detail-section"><h3>{text.basic}</h3><dl class="app-detail-grid">
 						{@render detailField(text.assetTag, detailAsset.assetTag)}
 						{@render detailField(text.type, detailAsset.type.name)}
 						{@render detailField(text.status, detailAsset.status.name)}
@@ -697,23 +717,30 @@
 						{@render detailField(text.modelNumber, detailAsset.modelNumber)}
 						{@render detailField(text.serialNumber, detailAsset.serialNumber)}
 			</dl></section>
-			{#if detailAsset.type.supportsCpu || detailAsset.type.supportsRam || detailAsset.type.supportsOs}
+{/if}{/snippet}
+{#snippet hardware()}{#if detailAsset}
+{#if detailAsset.type.supportsCpu || detailAsset.type.supportsRam || detailAsset.type.supportsOs}
 				<section class="app-detail-section"><h3>{text.hardware}</h3><dl class="app-detail-grid">
 							{#if detailAsset.type.supportsCpu}{@render detailField(text.cpuType, detailAsset.cpuType?.name)}{/if}
 							{#if detailAsset.type.supportsRam}{@render detailField(text.ramGb, detailAsset.ramGb)}{/if}
 							{#if detailAsset.type.supportsOs}{@render detailField(text.operatingSystem, detailAsset.operatingSystem ? operatingSystemName(detailAsset.operatingSystem) : null)}{/if}
 				</dl></section>
 			{/if}
-			<section class="app-detail-section"><h3>{text.location}</h3><dl class="app-detail-grid">
+{/if}{/snippet}
+{#snippet location()}{#if detailAsset}
+<section class="app-detail-section"><h3>{text.location}</h3><dl class="app-detail-grid">
 						{@render detailField(text.branch, detailAsset.storage.room.branch.name)}
 						{@render detailField(text.room, detailAsset.storage.room.name)}
 						{@render detailField(text.storage, detailAsset.storage.name)}
 						{@render detailField(text.purchasedOn, formatDate(detailAsset.purchasedOn, $localization))}
+{@render detailField(moneyText.amount, displayPurchaseMoney(detailAsset.purchaseAmount,detailAsset.purchaseCurrency,$localization.displayLanguage))}
 						{@render detailField(text.disposalOn, formatDate(detailAsset.disposalOn, $localization))}
-						<div><dt>{text.employee}</dt><dd>{#if detailAsset.assignments[0]}<button class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(detailAsset!.assignments[0].employee.id, event.currentTarget)}>{assigneeName(detailAsset.assignments[0])}</button>{/if}</dd></div>
+						<div><dt>{text.employee}</dt><dd>{#if detailAsset.assignments[0]}<TextActionButton class="asset-employee-link" type="button" disabled={employeeDetailLoading} onclick={(event) => void openEmployeeDetail(detailAsset!.assignments[0].employee.id, event.currentTarget)} data-button-scope="button-e1c0a75c5d">{assigneeName(detailAsset.assignments[0])}</TextActionButton>{/if}</dd></div>
 						<div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{detailAsset.notes ?? ''}</dd></div>
 			</dl></section>
-			<section class="app-detail-section"><h3>{text.network}</h3><dl class="app-detail-grid">
+{/if}{/snippet}
+{#snippet network()}{#if detailAsset}
+<section class="app-detail-section"><h3>{text.network}</h3><dl class="app-detail-grid">
 				{@render detailField(text.ipAddress1, detailAsset.ipAddress1)}
 				{@render detailField(text.ipAddress2, detailAsset.ipAddress2)}
 				{@render detailField(text.hostname, detailAsset.hostname)}
@@ -727,13 +754,19 @@
 					{#if credentialsLoading}<LoadingSpinner label={text.loadingCredentials} compact />{:else if credentialsError}{#if !credentialsErrorDismissed}<StatusNotice message={credentialsError} tone="error" onDismiss={() => credentialsErrorDismissed = true} />{/if}{:else}
 						{#each [['admin',text.adminPassword],['login',text.loginPassword],['management_console',text.consolePassword]] as credential}
 							{@const type = credential[0] as CredentialType}
-							<div><span>{credential[1]}</span><span class:configured={credentialStatus[type].configured}>{credentialStatus[type].configured ? credentialStatusText.configured : credentialStatusText.unconfigured}</span>{#if credentialStatus[type].configured}<button type="button" onclick={() => openCredentialAccess(type)}>{text.reveal}</button>{/if}</div>
+							<div><span>{credential[1]}</span><span class:configured={credentialStatus[type].configured}>{credentialStatus[type].configured ? credentialStatusText.configured : credentialStatusText.unconfigured}</span>{#if credentialStatus[type].configured}<ActionButton type="button" onclick={() => openCredentialAccess(type)} variant="secondary" data-button-scope="button-e1c0a75c5d">{text.reveal}</ActionButton>{/if}</div>
 						{/each}
 					{/if}
 				</div>
 			{/if}
 			</section>
-			<ChangeHistorySection entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} dateFields={['purchasedOn','disposalOn']} actionLabels={historyActions} onEmployeeClick={openEmployeeDetail} />
+{/if}{/snippet}
+{#snippet history()}{#if detailAsset}
+<ChangeHistorySection collapsible={false} entries={changeHistory} loading={historyLoading} error={historyError} fieldLabels={historyFields} dateFields={['purchasedOn','disposalOn']} actionLabels={historyActions} onEmployeeClick={openEmployeeDetail} />
+{/if}{/snippet}
+<DetailTabs label={text.detail} kind="asset" tabs={[{id:'basic',label:text.basic,content:basic},...(detailAsset.type.supportsCpu || detailAsset.type.supportsRam || detailAsset.type.supportsOs ? [{id:'hardware',label:text.hardware,content:hardware}]:[]),{id:'location',label:text.location,content:location},{id:'network',label:commonText.detailNetworkCredentials,content:network},{id:'history',label:commonText.history,content:history}]} />
+{/if}
+
 		</DetailModal>
 		</div>
 	{/if}
@@ -741,26 +774,26 @@
 	{#if revealType}
 		<ModalBackdrop>
 			<dialog bind:this={credentialDialogElement} class="credential-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="credential-dialog-title">
-				<header><h2 id="credential-dialog-title">{text.revealTitle}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.closePassword} disabled={revealing} onclick={closeCredentialAccess}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+				<header><h2 id="credential-dialog-title">{text.revealTitle}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.closePassword} disabled={revealing} onclick={closeCredentialAccess} data-button-scope="button-e1c0a75c5d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 				<div class="credential-dialog-body">
 					<p>{text.revealGuidance}</p>
 					{#if revealedPassword}<label>{text.storedPassword}<input value={revealedPassword} type="text" readonly autocomplete="off" onclick={(event) => event.currentTarget.select()}/></label>{:else}<label>{text.currentPassword}<input bind:value={currentPassword} type="password" maxlength="1024" autocomplete="current-password" onkeydown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void revealCredential(); } }}/></label>{/if}
 					{#if revealError}<StatusNotice message={revealError} tone={revealError === text.passwordCopied ? 'success' : 'error'} onDismiss={() => revealError = ''} />{/if}
 				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={revealing} onclick={closeCredentialAccess}>{common.close}</button>{#if revealedPassword}<button class="app-primary-action" type="button" onclick={() => void copyRevealedPassword()}>{text.copyPassword}</button>{:else}<button class="app-primary-action" type="button" disabled={revealing || !currentPassword} onclick={() => void revealCredential()}>{revealing ? text.verifying : text.reveal}</button>{/if}</footer>
+				<footer class="app-modal-footer"><ModalActionButton class="secondary" type="button" disabled={revealing} onclick={closeCredentialAccess} variant="secondary" data-button-scope="button-e1c0a75c5d">{common.close}</ModalActionButton>{#if revealedPassword}<ModalActionButton class="app-primary-action" type="button" onclick={() => void copyRevealedPassword()} variant="primary" data-button-scope="button-e1c0a75c5d">{text.copyPassword}</ModalActionButton>{:else}<ModalActionButton class="app-primary-action" type="button" disabled={revealing || !currentPassword} onclick={() => void revealCredential()} variant="primary" data-button-scope="button-e1c0a75c5d">{revealing ? text.verifying : text.reveal}</ModalActionButton>{/if}</footer>
 			</dialog>
 		</ModalBackdrop>
 	{/if}
 </AssetManagementShell>
 
 <style>
- .asset-search-quick .asset-type-filter{flex-direction:column;align-items:stretch;gap:6px}
- .asset-search-quick{display:flex;flex-wrap:wrap;align-items:end;gap:12px;min-width:0}.asset-search-quick :global(.form-select-field){width:208px;max-width:100%}.asset-unassigned{display:flex;align-items:center;gap:8px;min-height:44px;font-size:var(--font-size-support);color:var(--text-secondary)}.asset-unassigned input{width:16px;height:16px;accent-color:var(--action-primary)}
-.mobile-asset{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}.mobile-asset>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-asset :global(button){align-self:flex-start;min-height:44px}
-	.asset-type-filter{display:flex;min-width:0;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:220px}.asset-type-filter :global(.form-multi-select-field>span),.asset-type-filter :global(.form-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.asset-type-filter :global(.form-multi-select-trigger),.asset-type-filter :global(.form-select-trigger){height:32px}.type-filter-retry{align-self:flex-start;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);padding:7px 12px}
-	.asset-primary{display:block;color:var(--text);font-weight:600}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:3px 7px;border-radius:10px;background:#1abb9c1c;color:#169f85;font-size:var(--font-size-support)}
-	.asset-employee-link{border:0;padding:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;text-decoration:underline;cursor:pointer}.asset-employee-link:disabled{opacity:.6;cursor:wait}.asset-employee-link:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
+ .asset-search-quick .asset-type-filter{flex-direction:column;align-items:stretch;gap:var(--sph-space-6px)}
+ .asset-search-quick{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sph-space-12px);min-width:0}.asset-search-quick :global(.form-select-field){width:208px;max-width:100%}.asset-unassigned{display:flex;align-items:center;gap:var(--sph-space-8px);min-height:44px;font-size:var(--font-size-support);color:var(--text-secondary)}.asset-unassigned input{width:16px;height:16px;accent-color:var(--action-primary)}
+.mobile-asset{display:flex;min-width:0;flex-direction:column;gap:var(--sph-space-3px);overflow-wrap:anywhere}.mobile-asset>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-asset :global(button){align-self:flex-start;min-height:44px}
+	.asset-type-filter{display:flex;min-width:0;align-items:center;gap:var(--sph-space-8px);color:var(--text-secondary);font-size:var(--font-size-support);white-space:nowrap}.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:220px}.asset-type-filter :global(.form-multi-select-field>span),.asset-type-filter :global(.form-select-field>span){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.asset-type-filter :global(.form-multi-select-trigger),.asset-type-filter :global(.form-select-trigger){height:32px}:global(.type-filter-retry[data-button-scope="button-e1c0a75c5d"]){align-self:flex-start;border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text);padding:var(--sph-space-7px) var(--sph-space-12px)}
+	.asset-primary{display:block;color:var(--text);font-weight:var(--sph-weight-600)}.asset-secondary{display:block;color:var(--muted);font-size:var(--font-size-support)}.asset-note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status{display:inline-block;padding:var(--sph-space-3px) var(--sph-space-7px);border-radius:var(--sph-radius-10px);background:var(--sph-color-accent-badge);color:var(--sph-color-accent-hover);font-size:var(--font-size-support)}
+	:global(.asset-employee-link[data-button-scope="button-e1c0a75c5d"]){border:0;padding:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;text-decoration:underline;cursor:pointer}:global(.asset-employee-link:disabled[data-button-scope="button-e1c0a75c5d"]){opacity:.6;cursor:wait}:global(.asset-employee-link:focus-visible[data-button-scope="button-e1c0a75c5d"]){outline:2px solid var(--action-primary);outline-offset:2px}
 	.wide{grid-column:1/-1}
-	.credential-field{display:grid;gap:6px}.clear-credential{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--font-size-support)}.clear-credential input{width:14px;height:14px}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:var(--font-size-support)}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,#169f85)}.credential-statuses button{height:28px;padding:0 10px;border:1px solid var(--action-primary);border-radius:4px;background:transparent;color:var(--action-primary);font-size:var(--font-size-body)}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:14px;padding:18px 24px 24px}.credential-dialog-body p{margin:0;color:var(--muted);font-size:var(--font-size-support)}.credential-dialog-body label{display:grid;gap:6px;font-size:var(--font-size-support)}.credential-dialog-body input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
+	.credential-field{display:grid;gap:var(--sph-space-6px)}.clear-credential{display:flex;align-items:center;gap:var(--sph-space-6px);color:var(--muted);font-size:var(--font-size-support)}.clear-credential input{width:14px;height:14px}.console-link{color:var(--action-primary);overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.credential-statuses{display:grid;gap:var(--sph-space-8px);margin-top:var(--sph-space-14px);padding-top:var(--sph-space-14px);border-top:1px solid var(--border-light)}.credential-statuses>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--sph-space-10px);font-size:var(--font-size-support)}.credential-statuses>div>span:nth-child(2){color:var(--muted)}.credential-statuses>div>span.configured{color:var(--success,var(--sph-color-accent-hover))}.credential-statuses :global(button[data-button-scope="button-e1c0a75c5d"]){height:28px;padding:0 var(--sph-space-10px);border:1px solid var(--action-primary);border-radius:var(--sph-radius-4px);background:transparent;color:var(--action-primary);font-size:var(--font-size-body)}.credential-dialog{width:min(480px,calc(100vw - 32px))}.credential-dialog-body{display:grid;gap:var(--sph-space-14px);padding:var(--sph-space-18px) var(--sph-space-24px) var(--sph-space-24px)}.credential-dialog-body p{margin:0;color:var(--muted);font-size:var(--font-size-support)}.credential-dialog-body label{display:grid;gap:var(--sph-space-6px);font-size:var(--font-size-support)}.credential-dialog-body input{height:36px;padding:0 var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text)}
 	@media(max-width:700px){.asset-type-filter,.asset-type-filter :global(.form-multi-select-field),.asset-type-filter :global(.form-select-field){width:100%}}
 </style>

@@ -1,4 +1,11 @@
 <script lang="ts">
+ import StatusSwitch from '$lib/components/StatusSwitch.svelte';
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import InfoPopover from '$lib/components/InfoPopover.svelte';
+ import { forgetDetailReturn } from '$lib/detail-modal-return';
 	import '$lib/styles/table-scroll.css';
 	import { tick } from 'svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -20,7 +27,7 @@
 
 	type PermissionScope = { code: string; scopeType: 'global' | 'own_branch' };
 	type Role = { id: number; name: string; notes: string | null; createdAt: string; updatedAt: string; usageCount: number; permissionCodes: string[]; permissionScopes: PermissionScope[]; editablePermissionScopes: PermissionScope[]; defaultPermissionCodes?: string[] | null; isSystemManagement: boolean; isBranchAdministrator: boolean };
-	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean; derived?: boolean; dependencies?: Record<'global' | 'own_branch', PermissionScope[]> };
+	type Permission = { code: string; category: string; systemAdministratorOnly: boolean; allowOwnBranch: boolean; branchAdministratorOnly?: boolean; branchAdministratorAllowed?: boolean; derived?: boolean; dependencies?: Record<'global' | 'own_branch', PermissionScope[]> };
 	type RoleField = 'name';
 
 	let { onNotice = (_messages: string[]) => undefined }: { onNotice?: (messages: string[]) => void } = $props();
@@ -40,6 +47,7 @@
 	let confirmingDiscard = $state(false);
 	let reorderError = $state('');
 	let permissions = $state<Permission[]>([]);
+	let editingPermissions = $derived(permissions.filter(permission => selected?.isBranchAdministrator ? permission.branchAdministratorAllowed : !permission.branchAdministratorOnly));
 	let selectedCodes = $state<string[]>([]);
 	let scopeByCode = $state<Record<string, 'global' | 'own_branch'>>({});
 	let selectedScopes = $derived(selectedCodes.map((code) => ({ code, scopeType: scopeByCode[code] ?? 'global' })).sort((a, b) => a.code.localeCompare(b.code)));
@@ -60,8 +68,9 @@
 	let removing = $state(false);
 	let hasUnsavedChanges = $derived((Boolean(selected) || isAdding) && initialSnapshot !== '' && formSnapshot({ name, notes }) !== initialSnapshot);
 	let permissionsChanged = $derived((Boolean(selected) || isAdding) && JSON.stringify(selectedScopes) !== JSON.stringify([...(selected?.editablePermissionScopes ?? [])].sort((a, b) => a.code.localeCompare(b.code))));
-	let defaultEditablePermissionCodes = $derived((selected?.defaultPermissionCodes ?? []).filter((code) => permissions.some((permission) => permission.code === code && !permission.derived)));
-	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify(defaultEditablePermissionCodes.map((code) => ({ code, scopeType: 'global' })).sort((a, b) => a.code.localeCompare(b.code))));
+	let defaultEditablePermissionCodes = $derived((selected?.defaultPermissionCodes ?? []).filter((code) => editingPermissions.some((permission) => permission.code === code && !permission.derived)));
+	const defaultScope = (code: string): 'global' | 'own_branch' => selected?.isBranchAdministrator && permissions.find(permission => permission.code === code)?.allowOwnBranch ? 'own_branch' : 'global';
+	let atDefaultPermissions = $derived(JSON.stringify(selectedScopes) === JSON.stringify(defaultEditablePermissionCodes.map((code) => ({ code, scopeType: defaultScope(code) })).sort((a, b) => a.code.localeCompare(b.code))));
 	let permissionLabels = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManage,
 		'employees.read': text.permissionEmployeeRead, 'employees.manage': text.permissionEmployeeManage,
@@ -74,7 +83,7 @@
 		'software.keys.read': text.permissionSoftwareKeyRead, 'software.keys.write': text.permissionSoftwareKeyWrite,
 		'roles.read': text.permissionRoleRead
 	});
-	let categoryLabels = $derived<Record<string, string>>({ employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, books: $localization.displayLanguage === 'ja' ? '書籍' : 'Books', other: text.permissionOther });
+	let categoryLabels = $derived<Record<string, string>>({ projects:$localization.displayLanguage==='ja'?'プロジェクト':'Projects',workflows:$localization.displayLanguage==='ja'?'ワークフロー':'Workflows',schedule:$localization.displayLanguage==='ja'?'スケジュール':'Schedule',notifications:$localization.displayLanguage==='ja'?'通知':'Notifications',employees: text.permissionEmployees, masters: text.permissionMasters, calendars: text.permissionCalendars, assets: text.permissionAssets, software: text.permissionSoftware, system: text.permissionSystem, books: $localization.displayLanguage === 'ja' ? '書籍' : 'Books', other: text.permissionOther });
 	let permissionDescriptions = $derived<Record<string, string>>({
 		'system.manage': text.permissionSystemManageHelp,
 		'employees.read': text.permissionEmployeeReadHelp, 'employees.manage': text.permissionEmployeeManageHelp,
@@ -95,7 +104,7 @@
 		'software.read': 'software', 'software.manage': 'software', 'software.keys.read': 'software', 'software.keys.write': 'software',
 		'roles.read': 'system', 'system.manage': 'system'
 	};
-	const detailCategories = ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system', 'other'];
+	const detailCategories = ['employees', 'masters', 'calendars', 'schedule', 'notifications', 'workflows', 'projects', 'assets', 'software', 'books', 'system', 'other'];
 	const knownPermissionCodes = Object.keys(permissionCategoryByCode);
 	function permissionCategory(code: string): string {
 		const fromCatalog = permissions.find((permission) => permission.code === code)?.category;
@@ -129,7 +138,7 @@
 	]);
 
 	function openEdit(item: Role, trigger: HTMLElement | null) {
-		if (item.isSystemManagement || item.isBranchAdministrator) return;
+		if (item.isSystemManagement) return;
 		returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 		selected = item;
 		isAdding = false;
@@ -200,7 +209,7 @@
 	}
 
 	async function save() {
-		if ((!selected && !isAdding) || selected?.isSystemManagement || selected?.isBranchAdministrator || (!isAdding && !hasUnsavedChanges && !permissionsChanged) || !validate()) return;
+		if ((!selected && !isAdding) || selected?.isSystemManagement || (!isAdding && !hasUnsavedChanges && !permissionsChanged) || !validate()) return;
 		saving = true;
 		formError = '';
 		const creating = isAdding;
@@ -242,7 +251,7 @@
 	}
 
 	async function remove(item: Role) {
-		if (removing || item.isSystemManagement || item.isBranchAdministrator || !confirm(formatLocaleTemplate(text.deleteConfirm, item.name))) return;
+		if (removing || item.isSystemManagement || !confirm(formatLocaleTemplate(text.deleteConfirm, item.name))) return;
 		removing = true;
 		deleteError = '';
 		if (detailRole?.id === item.id) detailRole = null;
@@ -255,7 +264,7 @@
 					: systemSettingError(payload?.error?.code, response.status, text, 'role', text.roleDeleteFailed);
 				return;
 			}
-			onNotice([text.roleDeleted]);
+			selected = null; isAdding = false; detailBeforeEdit = null; onNotice([text.roleDeleted]);
 			await list?.refresh();
 		} catch { deleteError = text.roleDeleteFailed; }
 		finally { removing = false; }
@@ -274,7 +283,7 @@
 	function resetPermissionsToDefault() {
 		if (!selected?.defaultPermissionCodes || saving) return;
 		selectedCodes = [...defaultEditablePermissionCodes];
-		scopeByCode = Object.fromEntries(selectedCodes.map((code) => [code, 'global']));
+		scopeByCode = Object.fromEntries(selectedCodes.map((code) => [code, defaultScope(code)]));
 		permissionError = '';
 	}
 
@@ -296,10 +305,10 @@
 
 {#if reorderError}<StatusNotice message={reorderError} tone="error" onDismiss={() => reorderError = ''} />{/if}
 {#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={() => deleteError = ''} />{/if}
-<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} emptyLabel={text.noRoles} />
+<MasterList bind:this={list} endpoint="/v1/roles" title={text.roles} listHeading={text.roles} description={text.rolesDescription} {columns} canManage canDetail headerActions={listActions} initialSortBy="sortOrder" unpaged hideColumnHeaders showNameIcon usageLabel={(count) => formatLocaleTemplate(text.roleAssignments, count)} minTableWidth={0} reorderEndpoint="/v1/system-setting-orders/roles" reorderHint={text.reorderHint} reorderSavingLabel={text.reorderSaving} onReorderError={(reason) => reorderError = reason === 'conflict' ? text.reorderConflict : reason === 'forbidden' ? text.reorderForbidden : text.reorderFailed} onDetail={(item, trigger) => { forgetDetailReturn(trigger, 'role-detail-title'); detailRole = item as Role; returnFocus = trigger; if (!permissions.length) void loadPermissions(); }} emptyLabel={text.noRoles} />
 
-{#if detailRole}<MasterRecordDetailModal title={`${text.roles} ${common.detail}`} titleId="role-detail-title" sectionTitle={common.basicInformation} closeLabel={common.close} {returnFocus} endpoint="/v1/roles" itemId={detailRole.id} fields={[{ key: 'name', label: text.name, value: detailRole.name }, { key: 'notes', label: text.notes, value: detailRole.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailRole = null}>
-	{#snippet headerActions()}{#if detailRole && !detailRole.isSystemManagement && !detailRole.isBranchAdministrator}<DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => { const item = detailRole!; const row = returnFocus; detailBeforeEdit = item; detailRole = null; openEdit(item, row); }} onDelete={() => void remove(detailRole!)} />{/if}{/snippet}
+{#if detailRole}<MasterRecordDetailModal tabbed detailsLabel={text.permissionHeading} title={`${text.roles} ${common.detail}`} titleId="role-detail-title" sectionTitle={common.basicInformation} closeLabel={common.close} {returnFocus} endpoint="/v1/roles" itemId={detailRole.id} fields={[{ key: 'name', label: text.name, value: detailRole.name }, { key: 'notes', label: text.notes, value: detailRole.notes }]} hiddenHistoryFields={['sortOrder']} onClose={() => detailRole = null}>
+	{#snippet headerActions()}{#if detailRole && !detailRole.isSystemManagement}<DetailActionButtons editing={false} editLabel={common.edit} deleteLabel={common.delete} disabled={removing} onEdit={() => { const item = detailRole!; const row = returnFocus; detailBeforeEdit = item; detailRole = null; openEdit(item, row); }} onDelete={() => void remove(detailRole!)} />{/if}{/snippet}
 	{#snippet details()}
 		<section class="app-detail-section"><h3>{text.permissionHeading}</h3><p class="role-permission-description">{text.permissionAssignedDescription}</p>
 			<div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead>
@@ -309,7 +318,7 @@
 							{@const globalAllowed = detailRole?.permissionScopes.some((item) => item.code === code && item.scopeType === 'global') ?? false}
 							{@const ownApplicable = availableScopes(code).includes('own_branch')}
 							{@const ownAllowed = ownApplicable && (detailRole?.permissionScopes.some((item) => item.code === code) ?? false)}
-							<tr><th scope="row">{permissionLabels[code] ?? granularPermissionLabel(code, $localization.displayLanguage)}{#if permissionDescriptions[code]}<small>{permissionDescriptions[code]}</small>{/if}</th><td><span class:allowed={globalAllowed} class="role-permission-state">{globalAllowed ? text.permissionAllowed : text.permissionNotAllowed}</span></td><td><span class:allowed={ownAllowed} class:unavailable={!ownApplicable} class="role-permission-state">{ownApplicable ? ownAllowed ? text.permissionAllowed : text.permissionNotAllowed : text.permissionNotApplicable}</span></td></tr>
+							<tr><th scope="row"><div class="role-permission-name"><span>{permissionLabels[code] ?? granularPermissionLabel(code, $localization.displayLanguage)}</span>{#if permissionDescriptions[code]}<InfoPopover label={permissionLabels[code] ?? granularPermissionLabel(code, $localization.displayLanguage)} showHeading={false}><p>{permissionDescriptions[code]}</p></InfoPopover>{/if}</div></th><td><span class:allowed={globalAllowed} class="role-permission-state">{globalAllowed ? text.permissionAllowed : text.permissionNotAllowed}</span></td><td><span class:allowed={ownAllowed} class:unavailable={!ownApplicable} class="role-permission-state">{ownApplicable ? ownAllowed ? text.permissionAllowed : text.permissionNotAllowed : text.permissionNotApplicable}</span></td></tr>
 						{/each}
 					</tbody>
 				{/each}
@@ -321,26 +330,28 @@
 {#if selected || isAdding}
 	<ModalBackdrop>
 		<dialog bind:this={dialogElement} class="role-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="role-dialog-title">
-			<header><h2 id="role-dialog-title">{isAdding ? text.addRole : text.editRole}</h2><button class="app-modal-close" type="button" aria-label={text.closeRoleDialog} disabled={saving} onclick={requestClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+			<header><h2 id="role-dialog-title">{isAdding ? text.addRole : text.editRole}</h2><IconActionButton class="app-modal-close" type="button" aria-label={text.closeRoleDialog} disabled={saving} onclick={requestClose} data-button-scope="button-ff387708e7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 			<form class="app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-				<div class="app-modal-form-body role-form-body">
+				<div class="app-modal-form-body role-form-body">{#if deleteError}<StatusNotice message={deleteError} tone="error" onDismiss={()=>deleteError=''} />{/if}<FormTabs label={text.roles} kind="role">
 					{#if formError}<StatusNotice title={text.roleSaveHeading} message={formError} tone="error" onDismiss={() => formError = ''} />{/if}
-					<FormSection title={text.roleInformation} framed columns={2}>
+					<div data-form-panel="basic">
+<FormSection title={text.roleInformation} framed columns={2}>
 						<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" value={name} required maxlength="128" class:invalid={Boolean(errors.name)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'role-name-error' : undefined} oninput={(event) => updateName(event.currentTarget.value)} />{#if errors.name}<span class="field-error" id="role-name-error" role="alert">{errors.name}</span>{/if}</label>
 						<label class="wide"><span>{text.notes}</span><textarea name="notes" bind:value={notes} maxlength="5000"></textarea></label>
 					</FormSection>
-					<FormSection title={text.permissionHeading} framed columns={2}>
+</div><div data-form-panel="permissions">
+<FormSection title={text.permissionHeading} framed columns={2}>
 						{#snippet action()}
-							{#if selected?.defaultPermissionCodes}<button class="permission-reset-button" type="button" disabled={saving || atDefaultPermissions} onclick={resetPermissionsToDefault}>{text.resetPermissionsToDefault}</button>{/if}
+							{#if selected?.defaultPermissionCodes}<ActionButton class="permission-reset-button" type="button" disabled={saving || atDefaultPermissions} onclick={resetPermissionsToDefault} variant="secondary" data-button-scope="button-ff387708e7">{text.resetPermissionsToDefault}</ActionButton>{/if}
 						{/snippet}
 						<div class="permission-section wide">
-		{#each ['employees', 'masters', 'calendars', 'assets', 'software', 'books', 'system'] as category}
-							{#if permissions.some((permission) => permission.category === category)}
+		{#each ['employees', 'masters', 'calendars', 'schedule', 'notifications', 'workflows', 'projects', 'assets', 'software', 'books', 'system'] as category}
+							{#if editingPermissions.some((permission) => permission.category === category)}
 								<fieldset><legend>{categoryLabels[category]}</legend><div class="role-permission-table-wrap app-table-scroll app-table-scroll--bounded"><table class="role-permission-table role-permission-table--scoped"><thead><tr><th scope="col">{text.permissionColumn}</th><th scope="col">{text.permissionGlobalColumn}</th><th scope="col">{text.permissionOwnBranchColumn}</th></tr></thead><tbody>
-									{#each permissions.filter((permission) => permission.category === category) as permission}
+									{#each editingPermissions.filter((permission) => permission.category === category) as permission}
 										{@const globalEnabled = effectiveScopes[permission.code] === 'global'}
 										{@const ownEnabled = Boolean(effectiveScopes[permission.code])}
-										<tr data-permission-code={permission.code}><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))}<small>{$localization.displayLanguage === 'ja' ? '必要な補助権限（自動付与）' : 'Required permission (automatic)'}</small>{/if}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><button class="app-status-switch" class:is-on={globalEnabled} type="button" role="switch" aria-checked={globalEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)}><span class="app-status-switch__knob"></span></button></td><td>{#if permission.allowOwnBranch}<button class="app-status-switch" class:is-on={ownEnabled} type="button" role="switch" aria-checked={ownEnabled} aria-label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code)) || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)}><span class="app-status-switch__knob"></span></button>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
+										<tr data-permission-code={permission.code}><th scope="row">{permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}{#if permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))}<small>{$localization.displayLanguage === 'ja' ? '必要な補助権限（自動付与）' : 'Required permission (automatic)'}</small>{/if}{#if permissionDescriptions[permission.code]}<small>{permissionDescriptions[permission.code]}</small>{/if}</th><td><StatusSwitch width={48} checked={globalEnabled} label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionGlobalColumn}`} disabled={saving || Boolean(selected?.isBranchAdministrator && permission.allowOwnBranch) || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code))} onclick={() => togglePermission(permission.code, 'global', !globalEnabled)} data-button-scope="button-ff387708e7"/></td><td>{#if permission.allowOwnBranch}<StatusSwitch width={48} checked={ownEnabled} label={`${permissionLabels[permission.code] ?? granularPermissionLabel(permission.code, $localization.displayLanguage)}: ${text.permissionOwnBranchColumn}`} disabled={saving || permission.systemAdministratorOnly || permission.derived || (dependencyCodes.has(permission.code) || Boolean(effectiveScopes[permission.code]) && !selectedCodes.includes(permission.code)) || globalEnabled} onclick={() => togglePermission(permission.code, 'own_branch', !ownEnabled)} data-button-scope="button-ff387708e7"/>{:else}<span class="role-permission-state unavailable">{text.permissionNotApplicable}</span>{/if}</td></tr>
 									{/each}
 								</tbody></table></div></fieldset>
 							{/if}
@@ -348,8 +359,8 @@
 						{#if permissionError}<StatusNotice message={permissionError} tone="error" onDismiss={() => permissionError = ''} />{/if}
 						</div>
 					</FormSection>
-				</div>
-				<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestClose}>{common.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (!isAdding && !hasUnsavedChanges && !permissionsChanged)}>{saving ? common.saving : isAdding ? text.createRole : common.saveChanges}</button></footer>
+</div></FormTabs></div>
+				<footer class="app-modal-footer">{#if selected && !selected.isSystemManagement}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(selected!)} variant="danger" data-button-scope="button-ff387708e7">{common.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestClose} variant="secondary" data-button-scope="button-ff387708e7">{common.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || (!isAdding && !hasUnsavedChanges && !permissionsChanged)} variant="primary" data-button-scope="button-ff387708e7">{saving ? common.saving : isAdding ? text.createRole : common.saveChanges}</ModalActionButton></footer>
 			</form>
 		</dialog>
 	</ModalBackdrop>
@@ -357,16 +368,14 @@
 {/if}
 
 <style>
-	.permission-reset-button{height:32px;min-height:32px;padding:0 12px;background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:4px;font-size:var(--font-size-support);font-weight:500;line-height:1;white-space:nowrap}
-	.permission-reset-button:hover:not(:disabled){background:var(--surface-hover,var(--surface-secondary))!important;color:var(--text)!important}
-	.permission-reset-button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
-	.permission-reset-button:disabled{cursor:not-allowed;opacity:.6}
-	.role-dialog,:global(dialog[aria-labelledby="role-detail-title"]){width:min(100%,650px)}.role-form-body{grid-template-columns:1fr}.permission-section{display:grid;gap:12px}.permission-section fieldset{border:1px solid var(--border-light);border-radius:5px;padding:10px}.permission-section legend{font-weight:600;padding:0 4px}
-	.role-permission-description{margin:0 0 16px;color:var(--text-secondary)}.role-permission-table-wrap{max-width:100%;overflow-x:auto}.role-permission-table{width:100%;border-collapse:collapse;table-layout:fixed;color:var(--text-secondary)}.role-permission-table th,.role-permission-table td{padding:10px 8px;border-bottom:1px solid var(--border-light);text-align:left;vertical-align:top;overflow-wrap:anywhere}.role-permission-table thead th{background:var(--surface-secondary);color:var(--muted);font-size:var(--font-size-support);font-weight:700}.role-permission-table thead th:last-child,.role-permission-table td{width:104px;text-align:center}.role-permission-table tbody th[scope="row"]{font-weight:500}.role-permission-table tbody small{display:block;margin-top:3px;color:var(--muted);font-size:var(--font-size-support);font-weight:400;line-height:1.4}.role-permission-table .role-permission-category th{background:var(--surface-secondary);color:var(--text);font-weight:700}
-	.role-permission-state{display:inline-flex;justify-content:center;align-items:center;max-width:100%;padding:2px 6px;border:1px solid var(--border-light);border-radius:4px;background:var(--surface-secondary);color:var(--text-secondary);font-size:var(--font-size-support);font-weight:600;line-height:1.3}.role-permission-state.allowed{border-color:color-mix(in srgb,var(--action-primary) 25%,var(--border));background:color-mix(in srgb,var(--action-primary) 10%,var(--surface));color:var(--action-primary)}.role-permission-state.unavailable{border-color:transparent;background:transparent;color:var(--muted);font-weight:400}
-	.role-permission-table :global(button.app-status-switch){--app-status-switch-width:48px;height:28px;border-radius:14px}
-	.role-permission-table :global(.app-status-switch__knob){top:3px;left:3px}
-	.role-permission-table :global(.app-status-switch.is-on .app-status-switch__knob){left:auto;right:3px}
+	.role-permission-name{display:flex;align-items:center;gap:var(--sph-space-6px)}.role-permission-name>span{min-width:0}
+	:global(.permission-reset-button[data-button-scope="button-ff387708e7"]){height:32px;min-height:32px;padding:0 var(--sph-space-12px);background:var(--surface)!important;color:var(--text-secondary)!important;border:1px solid var(--border);border-radius:var(--sph-radius-4px);font-size:var(--font-size-support);font-weight:var(--sph-weight-500);line-height:var(--sph-leading-1);white-space:nowrap}
+	:global(.permission-reset-button:hover:not(:disabled)[data-button-scope="button-ff387708e7"]){background:var(--surface-hover,var(--surface-secondary))!important;color:var(--text)!important}
+	:global(.permission-reset-button:focus-visible[data-button-scope="button-ff387708e7"]){outline:2px solid var(--action-primary);outline-offset:2px}
+	:global(.permission-reset-button:disabled[data-button-scope="button-ff387708e7"]){cursor:not-allowed;opacity:.6}
+	.role-dialog,:global(dialog[aria-labelledby="role-detail-title"]){width:min(100%,650px)}.role-form-body{grid-template-columns:1fr}.permission-section{display:grid;gap:var(--sph-space-12px)}.permission-section fieldset{border:1px solid var(--border-light);border-radius:var(--sph-radius-5px);padding:var(--sph-space-10px)}.permission-section legend{font-weight:var(--sph-weight-600);padding:0 var(--sph-space-4px)}
+	.role-permission-description{margin:0 0 var(--sph-space-16px);color:var(--text-secondary)}.role-permission-table-wrap{max-width:100%;overflow-x:auto}.role-permission-table{width:100%;border-collapse:collapse;table-layout:fixed;color:var(--text-secondary)}.role-permission-table th,.role-permission-table td{padding:var(--sph-space-10px) var(--sph-space-8px);border-bottom:1px solid var(--border-light);text-align:left;vertical-align:top;overflow-wrap:anywhere}.role-permission-table thead th{background:var(--surface-secondary);color:var(--muted);font-size:var(--font-size-support);font-weight:var(--sph-weight-700)}.role-permission-table thead th:last-child,.role-permission-table td{width:104px;text-align:center}.role-permission-table tbody th[scope="row"]{font-weight:var(--sph-weight-500)}.role-permission-table tbody small{display:block;margin-top:var(--sph-space-3px);color:var(--muted);font-size:var(--font-size-support);font-weight:var(--sph-weight-400);line-height:var(--sph-leading-1-4)}.role-permission-table .role-permission-category th{background:var(--surface-secondary);color:var(--text);font-weight:var(--sph-weight-700)}
+	.role-permission-state{display:inline-flex;justify-content:center;align-items:center;max-width:100%;padding:var(--sph-space-2px) var(--sph-space-6px);border:1px solid var(--border-light);border-radius:var(--sph-radius-4px);background:var(--surface-secondary);color:var(--text-secondary);font-size:var(--font-size-support);font-weight:var(--sph-weight-600);line-height:var(--sph-leading-1-3)}.role-permission-state.allowed{border-color:color-mix(in srgb,var(--action-primary) 25%,var(--border));background:color-mix(in srgb,var(--action-primary) 10%,var(--surface));color:var(--action-primary)}.role-permission-state.unavailable{border-color:transparent;background:transparent;color:var(--muted);font-weight:var(--sph-weight-400)}
 	.role-permission-table--scoped thead th:nth-child(n+2){width:104px;text-align:center}
-	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.role-permission-table{min-width:380px}.role-permission-table thead th:last-child,.role-permission-table td{width:100px}.role-permission-table th,.role-permission-table td{padding:9px 6px}.role-permission-table--scoped thead th:nth-child(n+2){width:100px}}
+	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.role-permission-table{min-width:380px}.role-permission-table thead th:last-child,.role-permission-table td{width:100px}.role-permission-table th,.role-permission-table td{padding:var(--sph-space-9px) var(--sph-space-6px)}.role-permission-table--scoped thead th:nth-child(n+2){width:100px}}
 </style>

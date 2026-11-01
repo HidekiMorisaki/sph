@@ -36,6 +36,8 @@ export async function readAssetFields(tx: Prisma.TransactionClient, assetId: num
 		storageId: field(asset.storageId, `${storage.room.branch.name} / ${storage.room.name} / ${storage.name}`),
 		statusId: field(asset.statusId, asset.status.name),
 		purchasedOn: field(date(asset.purchasedOn)),
+		purchaseAmount: field(asset.purchaseAmount?.toString()),
+		purchaseCurrency: field(asset.purchaseCurrency),
 		disposalOn: field(date(asset.disposalOn)),
 		notes: field(asset.notes),
 		assigneeId: field(assignee?.id, assignee ? { id: assignee.id } : null)
@@ -68,7 +70,7 @@ export async function changeAssignee(tx: Prisma.TransactionClient, assetId: numb
 	let employee: { id: number; firstName: string; middleName: string | null; lastName: string } | null = null;
 	if (assigneeId !== null) {
 		employee = await tx.employee.findFirst({
-			where: { id: assigneeId, deletedAt: null, OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }] },
+			where: { id: assigneeId, deletedAt: null, assetReturnCompletedAt: null, deletionScheduledOn: null, OR: [{ retiredAt: null }, { retiredAt: { gt: new Date() } }] },
 			select: { id: true, firstName: true, middleName: true, lastName: true }
 		});
 		if (!employee) throw new ItAssetValidationError([{ field: 'assigneeId', reason: 'Select an active employee.' }]);

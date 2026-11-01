@@ -35,5 +35,5 @@
  <label>{text.reason}{total ? ' *' : ''}<textarea rows="3" maxlength="5000" required={total > 0} bind:value={reason}></textarea></label>
 </div>
 <style>
- .purchase-fields{display:grid;gap:12px;min-width:0}.purchase-fields p{margin:0;color:var(--text-secondary)}label{display:grid;gap:6px;color:var(--text-secondary);font-size:var(--font-size-body)}input,textarea{box-sizing:border-box;width:100%;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit}textarea{resize:vertical}
+ .purchase-fields{display:grid;gap:var(--sph-space-12px);min-width:0}.purchase-fields p{margin:0;color:var(--text-secondary)}label{display:grid;gap:var(--sph-space-6px);color:var(--text-secondary);font-size:var(--font-size-body)}input,textarea{box-sizing:border-box;width:100%;min-width:0;padding:var(--sph-space-8px) var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text);font:inherit}textarea{resize:vertical}
 </style>

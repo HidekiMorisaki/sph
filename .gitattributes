@@ -1,2 +1,11 @@
 *.sh text eol=lf
+api/prisma/migrations/**/*.sql text eol=lf
 *.bat text eol=crlf
+frontend/vendor/highlightjs-11.12.0/** -text
+api/licenses/marked-18.1.2.txt -text
+frontend/licenses/marked-18.1.2.txt -text
+frontend/static/licenses/marked-18.1.2.txt -text
+frontend/static/licenses/highlightjs-11.12.0.txt -text
+
+# Preserve official unified-diff bytes, including required context prefixes.
+db/patches/*.patch -text -whitespace

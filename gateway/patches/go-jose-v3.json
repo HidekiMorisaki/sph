@@ -1,0 +1,8 @@
+{
+  "advisory": "https://github.com/go-jose/go-jose/security/advisories/GHSA-mgcc-cww5-fp2q",
+  "originalSource": "https://raw.githubusercontent.com/go-jose/go-jose/v3.0.5/jwk.go",
+  "originalSha256": "79f510a4b97fa2e34ec37932cab57e64dfdc9fa6c314654d1ccc2dd93898a532",
+  "modifiedSha256": "17a4685ada12642629b574e970b23d8b960fe8fff1802da9c551568a97e02ebe",
+  "upstreamFix": "https://github.com/go-jose/go-jose/blob/v4.1.6/jwk.go",
+  "modulusLimitBits": 8192
+}

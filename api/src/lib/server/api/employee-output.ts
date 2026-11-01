@@ -26,6 +26,7 @@ export const employeeSafeSelect = {
 	employmentTypeId: true,
 	branchId: true,
 	retiredAt: true,
+	deletionScheduledOn: true,
 	notes: true,
 	createdAt: true,
 	updatedAt: true,
@@ -67,7 +68,7 @@ export function employeeOutput(record: EmployeeSafeRecord, referenceDate = emplo
 	const positions = positionAssignments.map((assignment) => ({ ...assignment.position, isPrimary: assignment.isPrimary }));
 	const primaryDepartment = departments.find((department) => department.isPrimary) ?? null;
 	const primaryPosition = positions.find((position) => position.isPrimary) ?? null;
-	const employmentStatus = employee.deletedAt
+	const employmentStatus = employee.deletedAt || (employee.deletionScheduledOn && employee.deletionScheduledOn <= referenceDate)
 		? 'deleted'
 		: employee.retiredAt && employee.retiredAt <= referenceDate
 			? 'retired'

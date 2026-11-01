@@ -1,3 +1,4 @@
+import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
 import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
 import { requireScopedOperationApi } from '$lib/server/api/branch-access';
 import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
@@ -35,6 +36,7 @@ export async function POST({ locals, request }: import('./$types').RequestEvent)
 		const dueOn = dateField(body.dueOn, 'dueOn', true)!;
 		if (dueOn < loanedOn) throw new BookInputError([{ field: 'dueOn', reason: 'BEFORE_LOAN' }]);
 		const item = await getPrisma().$transaction(async tx => {
+			await lockEmployeeAllocation(tx,employeeId);
 			const initial = await tx.bookCopy.findFirst({ where: { id: copyId, deletedAt: null }, select: { titleId: true } });
 			if (!initial) throw new BookInputError([{ field: 'copyId', reason: 'NOT_FOUND' }]);
 			await lockBookQueue(tx, initial.titleId);

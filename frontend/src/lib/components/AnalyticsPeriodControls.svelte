@@ -21,6 +21,6 @@
 </div>
 
 <style>
-	.period-controls{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;margin:0;min-width:0;max-width:100%}
+	.period-controls{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--sph-space-10px);margin:0;min-width:0;max-width:100%}
 	.period-field{min-width:0;flex:1 1 120px}
 </style>

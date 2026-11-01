@@ -1,6 +1,7 @@
 import type { Prisma } from '$lib/server/generated/prisma/client';
 import type { ApiErrorDetail } from '$lib/server/api/response';
 import { parseIpAddress } from './it-asset-network';
+import { purchaseMoney } from './purchase-money';
 
 type Body = Record<string, unknown>;
 const nullableText = (body: Body, key: string, max = 5000) => typeof body[key] === 'string' && body[key].trim() ? body[key].trim().slice(0, max) : null;
@@ -36,6 +37,7 @@ function managementConsoleUrl(body: Body, details: ApiErrorDetail[]): string | n
 export function parseItAssetInput(value: unknown) {
 	const body: Body = value && typeof value === 'object' && !Array.isArray(value) ? value as Body : {};
 	const details: ApiErrorDetail[] = [];
+	const money = purchaseMoney(body);
 	const ipAddress1 = parseIpAddress(body.ipAddress1, 'ipAddress1');
 	const ipAddress2 = parseIpAddress(body.ipAddress2, 'ipAddress2');
 	if (ipAddress1.error) details.push(ipAddress1.error);
@@ -71,7 +73,7 @@ export function parseItAssetInput(value: unknown) {
 			cpuTypeId: ids.cpuTypeId, ramGb, operatingSystemId: ids.operatingSystemId, loginUsername: nullableText(body, 'loginUsername', 255),
 			hostname: parsedHostname, adminUsername: nullableText(body, 'adminUsername', 255), managementConsoleUrl: parsedManagementConsoleUrl,
 			managementConsoleUsername: nullableText(body, 'managementConsoleUsername', 255), storageId: ids.storageId!, statusId: ids.statusId!,
-			purchasedOn: purchasedOn!, disposalOn: disposalOn!, notes: nullableText(body, 'notes')
+			purchasedOn: purchasedOn!, purchaseAmount: money.amount, purchaseCurrency: money.currency, disposalOn: disposalOn!, notes: nullableText(body, 'notes')
 		},
 		details, assigneeId, assetTag: assetTag ?? null, ipAddresses: { ipAddress1: ipAddress1.value, ipAddress2: ipAddress2.value }
 	};

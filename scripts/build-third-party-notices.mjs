@@ -13,6 +13,8 @@ for (const project of ['api', 'frontend']) {
   if (!location) continue;
   const folder = join(root, project, location);
   let names; try { names = await readdir(folder, { withFileTypes: true }); } catch { continue; } // Other-platform optional archives are not copied.
+  const installed=JSON.parse(await readFile(join(folder,'package.json'),'utf8'));
+  if(installed.version!==pkg.version)throw Error('Installed package differs from locked license version: '+location);
   const files = names.filter(n => n.isFile() && /^(?:(?:licen[cs]e|copying|notice|copyright)(?:[._-]|$)|third.?party.*(?:notice|licen[cs]e))/i.test(n.name)).map(n => n.name).sort();
   // Some official archives put the complete grant and copyright in README.
   // A label such as "MIT" alone is deliberately insufficient.

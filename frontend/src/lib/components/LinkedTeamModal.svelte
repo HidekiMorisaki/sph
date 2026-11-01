@@ -1,4 +1,5 @@
 <script lang="ts">
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
  import { onMount, tick, untrack } from 'svelte';
  import { apiData } from '$lib/api';
  import type { SessionUser } from '$lib/auth';
@@ -52,11 +53,11 @@
  <div hidden={editing || deleting} inert={editing || deleting}>
   <TeamDetailModal {team} {user} returnFocus={origin} titleId={`${modalId}-team-detail-title`} onClose={close} onEdit={trigger => { actionFocus = trigger; editing = true; }} onDelete={trigger => { actionFocus = trigger; failed = false; deleting = true; }} {onChanged} />
  </div>
- {#if editing}<TeamFormModal {team} returnFocus={actionFocus} onClose={() => editing = false} onSaved={saved => { team = saved; onChanged(); }} />{/if}
+ {#if editing}<div hidden={deleting} inert={deleting}><TeamFormModal {user} onDelete={trigger=>{actionFocus=trigger;failed=false;deleting=true;}} {team} returnFocus={actionFocus} onClose={() => editing = false} onSaved={saved => { team = saved; onChanged(); }} /></div>{/if}
  {#if deleting}<DetailModal title={text.deleteTitle} titleId={`${modalId}-team-delete-title`} closeLabel={common.cancel} returnFocus={actionFocus} onClose={() => { if (!busy) deleting = false; }}>
   <p>{text.deleteHelp}</p>
   {#if failed}<StatusNotice message={text.failed} tone="error" onDismiss={() => failed = false} />{/if}
-  {#snippet actions()}<button class="secondary" type="button" disabled={busy} onclick={() => { deleting = false; void tick().then(() => actionFocus?.focus({ preventScroll: true })); }}>{common.cancel}</button><button class="app-danger-action" type="button" disabled={busy} onclick={() => void remove()}>{common.delete}</button>{/snippet}
+  {#snippet actions()}<ModalActionButton class="secondary" type="button" disabled={busy} onclick={() => { deleting = false; void tick().then(() => actionFocus?.focus({ preventScroll: true })); }} variant="secondary" data-button-scope="button-97f995f7ff">{common.cancel}</ModalActionButton><ModalActionButton class="app-danger-action" type="button" disabled={busy} onclick={() => void remove()} variant="danger" data-button-scope="button-97f995f7ff">{common.delete}</ModalActionButton>{/snippet}
  </DetailModal>{/if}
 {:else}
  <DetailModal title={text.information} titleId={`${modalId}-team-loading-title`} closeLabel={common.cancel} returnFocus={origin} onClose={close}>

@@ -1,4 +1,11 @@
 <script lang="ts">
+ import ActionButton from '$lib/components/ActionButton.svelte';
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import TextActionButton from '$lib/components/TextActionButton.svelte';
+ import { displayPurchaseMoney } from "$lib/purchase-money";
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import { forgetDetailReturn } from '$lib/detail-modal-return';
  import { operationAccess } from '$lib/operation-access';
  const allowedOperation = operationAccess();
  import "$lib/styles/mobile-records.css";
@@ -13,6 +20,7 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import MasterList from '$lib/components/MasterList.svelte';
 	import DetailModal from '$lib/components/DetailModal.svelte';
+	import DetailTabs from '$lib/components/DetailTabs.svelte';
 	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
 	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
 	import FormSection from '$lib/components/FormSection.svelte';
@@ -52,6 +60,7 @@
 	let selected = $state<Contract | null>(null);
 	let selectedProduct = $state<Product | null>(null);
 	let activeDetail = $state<'product' | 'contract' | null>(null);
+	let contractDetailTab = $state('basic');
 	let detailReturnFocus = $state<HTMLElement | null>(null);
 	let productHistory = $state<History[]>([]);
 	let keys = $state<Key[]>([]);
@@ -151,7 +160,7 @@
 	}
 	async function loadDetail(id: number, open = true, focusReturn?: HTMLElement) {
 		const requestId = ++detailRequest;
-		if (open) restoreDetailEditFocus = false;
+		if (open) { restoreDetailEditFocus = false; contractDetailTab = 'basic'; }
 		if (open && !editor) { error = ''; notice = ''; }
 		if (open && !editor) detailReturnFocus = focusReturn ?? document.activeElement as HTMLElement;
 		clearReveal();
@@ -210,9 +219,27 @@
 		finally { loading = false; }
 	}
 	onMount(() => { void initialize(); return () => { clearReveal(); if (targetSearchTimer) clearTimeout(targetSearchTimer); }; });
-	function editorSnapshot() { return formSnapshot({ editor, productForm, contractForm, keyForm, assignmentForm, releaseForm, targetSearch }); }
+ let suspendedContract = $state<{item:Contract|null;initial:string;errors:Record<string,string>;error:string;date:string|null;returnFocus:HTMLElement|null;returnDetail:typeof activeDetail;childFocus:HTMLElement|null;scrollTop:number}|null>(null);
+ const softwareEditorNodes = new Map<string,HTMLDialogElement>();
+ function trackSoftwareEditor(node:HTMLDialogElement, mode:string){softwareEditorNodes.set(mode,node);editorDialogElement=node;return{destroy(){softwareEditorNodes.delete(mode);if(editorDialogElement===node)editorDialogElement=softwareEditorNodes.get(editor??'');}};}
+ function associateSoftwareForm(node:HTMLElement,id:string){const apply=()=>{for(const control of node.querySelectorAll<HTMLElement>('input,select,textarea'))if(!control.closest('form')&&control.getAttribute('form')!==id)control.setAttribute('form',id);};apply();const observer=new MutationObserver(apply);observer.observe(node,{childList:true,subtree:true});return{destroy(){observer.disconnect();}};}
+ function beginRelatedEditor(){
+  if(editor==='contract'){
+   suspendedContract={item:editingContract,initial:initialEditorSnapshot,errors:fieldErrors,error,date:openEditorDate,returnFocus:editorReturnFocus,returnDetail:editorReturnDetail,childFocus:document.activeElement as HTMLElement,scrollTop:editorDialogElement?.querySelector('.app-modal-form-body')?.scrollTop??0};
+   clearReveal();fieldErrors={};error='';openEditorDate=null;
+  }else closeEditor(false);
+ }
+ function restoreContractEditor(){
+  const parent=suspendedContract;if(!parent)return;
+  editor='contract';editingContract=parent.item;initialEditorSnapshot=parent.initial;fieldErrors=parent.errors;error=parent.error;openEditorDate=parent.date;editorReturnFocus=parent.returnFocus;editorReturnDetail=parent.returnDetail;suspendedContract=null;editingKey=null;releasing=null;keyForm=blankKey();clearReveal();confirmingDiscard=false;
+  void tick().then(()=>{editorDialogElement=softwareEditorNodes.get('contract');parent.childFocus?.focus({preventScroll:true});const body=editorDialogElement?.querySelector('.app-modal-form-body');if(body)body.scrollTop=parent.scrollTop;});
+ }
+
+	const canEditContractRelations=()=>['software.keys.create','software.keys.update','software.assignments.create','software.assignments.release','software.installations.create','software.installations.end','software.usage.create','software.usage.end'].some(code=>allowedOperation(code));
+
+	function editorSnapshot() { return formSnapshot({editor,form:editor==='product'?productForm:editor==='contract'?contractForm:editor==='key'?keyForm:editor==='assignment'?assignmentForm:releaseForm}); }
 	let hasDraftChanges = $derived(Boolean(editor) && initialEditorSnapshot !== editorSnapshot());
-	function closeEditor(restoreFocus = true) { if (saving) return; if (targetSearchTimer) { clearTimeout(targetSearchTimer); targetSearchTimer = null; } ++targetRequest; const focusReturn = editorReturnFocus; const returnDetail = editorReturnDetail; editor = null; openEditorDate = null; editingProduct = null; editingContract = null; editingKey = null; releasing = null; fieldErrors = {}; confirmingDiscard = false; error = ''; editorReturnDetail = null; if (restoreFocus) { restoreDetailEditFocus = returnDetail === 'contract'; activeDetail = returnDetail; if (!returnDetail) void tick().then(() => focusReturn?.isConnected && focusReturn.focus()); } }
+	function closeEditor(restoreFocus = true) { if (saving) return; if(suspendedContract && restoreFocus){restoreContractEditor();return;} if (targetSearchTimer) { clearTimeout(targetSearchTimer); targetSearchTimer = null; } ++targetRequest; const focusReturn = editorReturnFocus; const returnDetail = editorReturnDetail; editor = null; openEditorDate = null; editingProduct = null; editingContract = null; editingKey = null; releasing = null; fieldErrors = {}; confirmingDiscard = false; error = ''; editorReturnDetail = null; if (restoreFocus) { restoreDetailEditFocus = returnDetail === 'contract'; activeDetail = returnDetail; if (!returnDetail) void tick().then(() => focusReturn?.isConnected && focusReturn.focus()); } }
 	function requestCloseEditor(fromEscape = false) { if (saving) return; if (hasDraftChanges && (fromEscape || Boolean(editingProduct || editingContract || editingKey))) confirmingDiscard = true; else closeEditor(); }
 	function toggleEditorDate(field: string) { openEditorDate = openEditorDate === field ? null : field; }
 	function focusEditor(focusReturn?: HTMLElement | null) { notice = ''; editorReturnDetail = activeDetail; editorReturnFocus = focusReturn ?? document.activeElement as HTMLElement; activeDetail = null; fieldErrors = {}; initialEditorSnapshot = editorSnapshot(); void tick().then(() => requestAnimationFrame(() => editorDialogElement?.querySelector<HTMLElement>('.form-select-trigger, input, textarea')?.focus())); }
@@ -230,7 +257,8 @@
 			if (contractForm.licenseType === 'user') { positive('usersPerLicense', text.usersPerLicense, contractForm.usersPerLicense); positive('devicesPerUser', text.devicesPerUser, contractForm.devicesPerUser, true); }
 			if (contractForm.licenseType === 'device') positive('usersPerDevice', text.usersPerDevice, contractForm.usersPerDevice, true);
 			if (contractForm.licenseType === 'concurrent') positive('concurrentLimit', text.concurrentLimit, contractForm.concurrentLimit, true);
-			if (contractForm.amount && (!/^\d{1,14}(?:\.\d{1,2})?$/.test(contractForm.amount))) fields.amount = formatLocaleTemplate(text.invalidValue, text.amount);
+			required('amount',text.amount,contractForm.amount);required('currency',text.currency,contractForm.currency);
+            if (contractForm.amount && (!/^\d{1,14}(?:\.\d{1,2})?$/.test(contractForm.amount))) fields.amount = formatLocaleTemplate(text.invalidValue, text.amount);
 			if (contractForm.currency && !isFinancialCurrency(contractForm.currency)) fields.currency = formatLocaleTemplate(text.invalidValue, text.currency);
 			if (contractForm.endsOn && contractForm.endsOn < contractForm.startsOn) fields.endsOn = text.endBeforeStart;
 			if (contractForm.renewsOn && contractForm.renewsOn < contractForm.startsOn) fields.renewsOn = text.renewBeforeStart;
@@ -260,9 +288,9 @@
 		contractForm = item ? { productId: String(item.productId), reference: item.reference, licenseType: item.licenseType, purchasedQuantity: String(item.purchasedQuantity), startsOn: date(item.startsOn), endsOn: date(item.endsOn), renewsOn: date(item.renewsOn), autoRenew: item.autoRenew, vendor: item.vendor ?? '', orderNumber: item.orderNumber ?? '', amount: item.amount ?? '', currency: item.currency ?? '', evidenceReference: item.evidenceReference ?? '', notes: item.notes ?? '', usersPerLicense: String(item.terms?.usersPerLicense ?? 1), devicesPerUser: String(item.terms?.devicesPerUser ?? ''), usersPerDevice: String(item.terms?.usersPerDevice ?? ''), concurrentLimit: String(item.terms?.concurrentLimit ?? ''), evidenceStatus: item.terms?.evidenceStatus ?? 'unverified', termsReference: item.terms?.termsReference ?? '', termsNotes: item.terms?.notes ?? '' } : blankContract();
 		editor = 'contract'; focusEditor(focusReturn);
 	}
-	function openKey(item: Key | null = null) { closeEditor(false); editingKey = item; keyForm = item ? { key: '', label: item.label ?? '', activationLimit: String(item.activationLimit ?? ''), expiresOn: date(item.expiresOn), notes: item.notes ?? '' } : blankKey(); editor = 'key'; focusEditor(); }
-	function openAssignment() { closeEditor(false); assignmentForm = blankAssignment(); targetSearch = ''; targets = []; editor = 'assignment'; void loadTargets().catch(() => error = text.loadFailed); focusEditor(); }
-	function openRelease(item: Assignment) { closeEditor(false); releasing = item; releaseForm = blankRelease(); editor = 'release'; focusEditor(); }
+	function openKey(item: Key | null = null) { beginRelatedEditor(); editingKey = item; keyForm = item ? { key: '', label: item.label ?? '', activationLimit: String(item.activationLimit ?? ''), expiresOn: date(item.expiresOn), notes: item.notes ?? '' } : blankKey(); editor = 'key'; focusEditor(); }
+	function openAssignment() { beginRelatedEditor(); assignmentForm = blankAssignment(); targetSearch = ''; targets = []; editor = 'assignment'; void loadTargets().catch(() => error = text.loadFailed); focusEditor(); }
+	function openRelease(item: Assignment) { beginRelatedEditor(); releasing = item; releaseForm = blankRelease(); editor = 'release'; focusEditor(); }
 	async function send(path: string, method: string, body: unknown) {
 		const response = await fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 		if (!response.ok) {
@@ -282,7 +310,7 @@
 	}
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
-		if (!editor || saving) return;
+		if (!editor || saving || (editor==='contract'&&!allowedOperation(editingContract?'software.contracts.update':'software.contracts.create')) || (editor==='product'&&!allowedOperation(editingProduct?'software.products.update':'software.products.create'))) return;
 		const validationErrors = validateEditor();
 		if (Object.keys(validationErrors).length) { showFieldErrors(validationErrors); return; }
 		saving = true; error = ''; notice = '';
@@ -327,7 +355,7 @@
 		if (selectedProduct?.id === item.id) closeDetail();
 		const response = await fetch(`/v1/software-products/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { error = response.status === 409 ? text.deleteProductInUse : response.status === 403 ? text.deleteForbidden : text.deleteFailed; return; }
-		await Promise.all([productList?.refresh(), loadProductChoices()]);
+		closeEditor(false);await Promise.all([productList?.refresh(), loadProductChoices()]);
 		notice = text.deleted;
 	}
 	async function removeContract(item: Contract) {
@@ -335,10 +363,104 @@
 		if (selected?.id === item.id) closeDetail();
 		const response = await fetch(`/v1/software-contracts/${item.id}`, { method: 'DELETE' });
 		if (!response.ok) { error = response.status === 409 ? text.deleteContractInUse : response.status === 403 ? text.deleteForbidden : text.deleteFailed; return; }
-		await Promise.all([contractList?.refresh(), loadAlerts()]);
+		suspendedContract=null;closeEditor(false);await Promise.all([contractList?.refresh(), loadAlerts()]);
 		notice = text.deleted;
 	}
 </script>
+{#snippet softwareEditor(mode:NonNullable<typeof editor>)}{@const modeTitle=mode==='contract'||mode==='product'?'editor-title':'software-child-editor-title'}{@const formId=mode==='contract'||mode==='product'?'software-editor-form':'software-child-editor-form'}
+<ModalBackdrop>
+				<dialog use:trackSoftwareEditor={mode} class="app-modal" class:app-modal--compact={mode !== 'contract'} open aria-modal="true" aria-labelledby={modeTitle}>
+					<header><h2 id={modeTitle}>{mode === 'product' ? (editingProduct ? text.editProduct : text.addProduct) : mode === 'contract' ? (editingContract ? text.editContract : text.addContract) : mode === 'key' ? (editingKey ? text.editKey : text.addKey) : mode === 'assignment' ? text.assign : text.release}</h2><IconActionButton type="button" class="app-modal-close" aria-label={text.close} disabled={saving} onclick={() => requestCloseEditor()} data-button-scope="button-fbef633d5e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
+					<form id={formId} hidden novalidate onsubmit={save}></form><div class="app-modal-form" use:associateSoftwareForm={formId}>
+						<div class="app-modal-form-body">
+							{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
+							{#if mode === 'product'}
+<FormTabs label={text.products} {formId}><div data-form-panel="basic">
+
+								<FormSection title={common.basicInformation} framed>
+									<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" bind:value={productForm.name} maxlength="255" placeholder={text.nameExample} class:invalid={Boolean(fieldErrors.name)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'software-name-error' : undefined} oninput={() => clearFieldError('name')} />{#if fieldErrors.name}<span id="software-name-error" class="field-error" role="alert">{fieldErrors.name}</span>{/if}</label>
+									<label><span>{text.manufacturer} <span class="required" aria-hidden="true">*</span></span><input name="manufacturer" bind:value={productForm.manufacturer} maxlength="255" placeholder={text.manufacturerExample} class:invalid={Boolean(fieldErrors.manufacturer)} aria-invalid={Boolean(fieldErrors.manufacturer)} aria-describedby={fieldErrors.manufacturer ? 'software-manufacturer-error' : undefined} oninput={() => clearFieldError('manufacturer')} />{#if fieldErrors.manufacturer}<span id="software-manufacturer-error" class="field-error" role="alert">{fieldErrors.manufacturer}</span>{/if}</label>
+									<label>{text.edition}<input bind:value={productForm.edition} maxlength="128" placeholder={text.editionExample} /></label><label>{text.version}<input bind:value={productForm.version} maxlength="128" placeholder={text.versionExample} /></label><label>{text.productCode}<input bind:value={productForm.productCode} maxlength="128" placeholder={text.productCodeExample} /></label>
+								</FormSection>
+								<FormSection title={text.notes} framed><label class="wide">{text.notes}<textarea bind:value={productForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label></FormSection>
+
+</div></FormTabs>{:else if mode === 'contract'}
+<FormTabs label={text.contracts} kind="contract" {formId} formPanels={['basic','purchase','terms']}>
+								<div data-form-panel="basic"><fieldset class="editor-fields" disabled={Boolean(editingContract)&&!allowedOperation('software.contracts.update')}>
+<FormSection title={text.contractOverview} framed>
+									<SearchSelect label={text.product} field="productId" value={contractForm.productId} options={[{ value: '', label: '-' }, ...productChoices.map((product) => ({ value: String(product.id), label: `${product.name} · ${product.manufacturer}` }))]} required error={fieldErrors.productId ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.productId = value; clearFieldError('productId'); }} />
+									<label><span>{text.reference} <span class="required" aria-hidden="true">*</span></span><input name="reference" bind:value={contractForm.reference} maxlength="255" placeholder={text.contractReferenceExample} class:invalid={Boolean(fieldErrors.reference)} aria-invalid={Boolean(fieldErrors.reference)} aria-describedby={fieldErrors.reference ? 'software-reference-error' : undefined} oninput={() => clearFieldError('reference')} />{#if fieldErrors.reference}<span id="software-reference-error" class="field-error" role="alert">{fieldErrors.reference}</span>{/if}</label>
+									<SearchSelect label={text.licenseType} field="licenseType" value={contractForm.licenseType} options={[{ value: 'user', label: text.userLicense }, { value: 'device', label: text.deviceLicense }, { value: 'concurrent', label: text.concurrentLicense }]} required searchable={false} error={fieldErrors.licenseType ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.licenseType = value as Contract['licenseType']; clearFieldError('licenseType'); }} />
+									<label><span>{text.purchasedQuantity} <span class="required" aria-hidden="true">*</span></span><input name="purchasedQuantity" value={contractForm.purchasedQuantity} type="number" min="1" max="1000000" placeholder={text.quantityExample} class:invalid={Boolean(fieldErrors.purchasedQuantity)} aria-invalid={Boolean(fieldErrors.purchasedQuantity)} aria-describedby={fieldErrors.purchasedQuantity ? 'software-quantity-error' : undefined} oninput={(event) => { contractForm.purchasedQuantity = event.currentTarget.value; clearFieldError('purchasedQuantity'); }} />{#if fieldErrors.purchasedQuantity}<span id="software-quantity-error" class="field-error" role="alert">{fieldErrors.purchasedQuantity}</span>{/if}</label>
+									<DatePicker label={text.startsOn} field="startsOn" value={contractForm.startsOn} required error={fieldErrors.startsOn ?? ''} open={openEditorDate === 'startsOn'} onToggle={() => toggleEditorDate('startsOn')} onSelect={(value) => { contractForm.startsOn = value; openEditorDate = null; clearFieldError('startsOn'); }} />
+									<DatePicker label={text.endsOn} field="endsOn" value={contractForm.endsOn} error={fieldErrors.endsOn ?? ''} open={openEditorDate === 'endsOn'} onToggle={() => toggleEditorDate('endsOn')} onSelect={(value) => { contractForm.endsOn = value; openEditorDate = null; clearFieldError('endsOn'); }} />
+									<DatePicker label={text.renewsOn} field="renewsOn" value={contractForm.renewsOn} error={fieldErrors.renewsOn ?? ''} open={openEditorDate === 'renewsOn'} onToggle={() => toggleEditorDate('renewsOn')} onSelect={(value) => { contractForm.renewsOn = value; openEditorDate = null; clearFieldError('renewsOn'); }} />
+									<label class="checkbox"><input bind:checked={contractForm.autoRenew} type="checkbox" />{text.autoRenew}</label>
+								</FormSection>
+<FormSection title={text.additionalInfo} framed><label class="wide">{text.notes}<textarea bind:value={contractForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label></FormSection>
+</fieldset></div><div data-form-panel="purchase"><fieldset class="editor-fields" disabled={Boolean(editingContract)&&!allowedOperation('software.contracts.update')}>
+<FormSection title={text.purchaseDetails} framed>
+									<label>{text.vendor}<input bind:value={contractForm.vendor} maxlength="255" placeholder={text.vendorExample} /></label><label>{text.orderNumber}<input bind:value={contractForm.orderNumber} maxlength="128" placeholder={text.orderNumberExample} /></label>
+									<label><span>{text.amount} <span class="required">*</span></span><input required name="amount" value={contractForm.amount} type="number" min="0" step="0.01" placeholder={text.amountExample} class:invalid={Boolean(fieldErrors.amount)} aria-invalid={Boolean(fieldErrors.amount)} aria-describedby={fieldErrors.amount ? 'software-amount-error' : undefined} oninput={(event) => { contractForm.amount = event.currentTarget.value; clearFieldError('amount'); }} />{#if fieldErrors.amount}<span id="software-amount-error" class="field-error" role="alert">{fieldErrors.amount}</span>{/if}</label>
+									<div class="currency-field"><SearchSelect required label={text.currency} field="currency" value={isFinancialCurrency(contractForm.currency) ? contractForm.currency : ''} options={[{ value: '', label: '-' }, ...currencyOptions]} searchable={false} error={fieldErrors.currency ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.currency = value; clearFieldError('currency'); }} />{#if contractForm.currency && !isFinancialCurrency(contractForm.currency)}<small class="legacy-currency">{contractForm.currency}</small>{/if}</div>
+									<label class="wide">{text.evidenceReference}<input bind:value={contractForm.evidenceReference} maxlength="2048" placeholder={text.documentReferenceExample} /></label>
+								</FormSection>
+</fieldset></div><div data-form-panel="terms"><fieldset class="editor-fields" disabled={Boolean(editingContract)&&!allowedOperation('software.contracts.update')}>
+<FormSection title={text.usageTerms} framed>
+									{#if contractForm.licenseType === 'user'}
+										<label><span>{text.usersPerLicense} <span class="required" aria-hidden="true">*</span></span><input name="usersPerLicense" value={contractForm.usersPerLicense} type="number" min="1" max="1000000" placeholder={text.usersPerLicenseExample} class:invalid={Boolean(fieldErrors.usersPerLicense)} aria-invalid={Boolean(fieldErrors.usersPerLicense)} aria-describedby={fieldErrors.usersPerLicense ? 'software-users-error' : undefined} oninput={(event) => { contractForm.usersPerLicense = event.currentTarget.value; clearFieldError('usersPerLicense'); }} />{#if fieldErrors.usersPerLicense}<span id="software-users-error" class="field-error" role="alert">{fieldErrors.usersPerLicense}</span>{/if}</label>
+										<label>{text.devicesPerUser}<input name="devicesPerUser" value={contractForm.devicesPerUser} type="number" min="1" max="1000000" placeholder={text.devicesPerUserExample} class:invalid={Boolean(fieldErrors.devicesPerUser)} aria-invalid={Boolean(fieldErrors.devicesPerUser)} aria-describedby={fieldErrors.devicesPerUser ? 'software-devices-error' : undefined} oninput={(event) => { contractForm.devicesPerUser = event.currentTarget.value; clearFieldError('devicesPerUser'); }} />{#if fieldErrors.devicesPerUser}<span id="software-devices-error" class="field-error" role="alert">{fieldErrors.devicesPerUser}</span>{/if}</label>
+									{:else if contractForm.licenseType === 'device'}<label>{text.usersPerDevice}<input name="usersPerDevice" value={contractForm.usersPerDevice} type="number" min="1" max="1000000" placeholder={text.usersPerDeviceExample} class:invalid={Boolean(fieldErrors.usersPerDevice)} aria-invalid={Boolean(fieldErrors.usersPerDevice)} aria-describedby={fieldErrors.usersPerDevice ? 'software-per-device-error' : undefined} oninput={(event) => { contractForm.usersPerDevice = event.currentTarget.value; clearFieldError('usersPerDevice'); }} />{#if fieldErrors.usersPerDevice}<span id="software-per-device-error" class="field-error" role="alert">{fieldErrors.usersPerDevice}</span>{/if}</label>
+									{:else}<label>{text.concurrentLimit}<input name="concurrentLimit" value={contractForm.concurrentLimit} type="number" min="1" max="1000000" placeholder={text.concurrentLimitExample} class:invalid={Boolean(fieldErrors.concurrentLimit)} aria-invalid={Boolean(fieldErrors.concurrentLimit)} aria-describedby={fieldErrors.concurrentLimit ? 'software-concurrent-error' : undefined} oninput={(event) => { contractForm.concurrentLimit = event.currentTarget.value; clearFieldError('concurrentLimit'); }} />{#if fieldErrors.concurrentLimit}<span id="software-concurrent-error" class="field-error" role="alert">{fieldErrors.concurrentLimit}</span>{/if}</label>{/if}
+									<SearchSelect label={text.evidenceStatus} field="evidenceStatus" value={contractForm.evidenceStatus} options={[{ value: 'unverified', label: text.unverified }, { value: 'confirmed', label: text.confirmed }]} searchable={false} onOpen={() => openEditorDate = null} onSelect={(value) => contractForm.evidenceStatus = value as Terms['evidenceStatus']} />
+									<label class="wide">{text.termsReference}<input name="termsReference" bind:value={contractForm.termsReference} maxlength="2048" placeholder={text.termsReferenceExample} class:invalid={Boolean(fieldErrors.termsReference)} aria-invalid={Boolean(fieldErrors.termsReference)} aria-describedby={fieldErrors.termsReference ? 'software-terms-source-error' : undefined} oninput={() => clearFieldError('termsReference')} />{#if fieldErrors.termsReference}<span id="software-terms-source-error" class="field-error" role="alert">{fieldErrors.termsReference}</span>{/if}</label><label class="wide">{text.termsNotes}<textarea bind:value={contractForm.termsNotes} maxlength="5000" placeholder={text.termsNotesExample}></textarea></label>
+								</FormSection>
+</fieldset></div><div data-form-panel="usage">{#if editingContract && selected}<p>{common.relatedSaveNotice}</p>{@render contractUsage(true)}{:else}<p>{common.relatedAfterCreate}</p>{/if}</div>
+<div data-form-panel="keys">{#if editingContract && selected}<p>{common.relatedSaveNotice}</p>{@render contractKeys(true)}{:else}<p>{common.relatedAfterCreate}</p>{/if}</div></FormTabs>{:else if mode === 'key'}
+								<FormSection title={text.key} framed>
+									<label><span>{text.key}{#if !editingKey} <span class="required" aria-hidden="true">*</span>{/if}</span><input name="key" bind:value={keyForm.key} type="password" autocomplete="new-password" minlength="4" maxlength="2048" placeholder={text.productKeyExample} class:invalid={Boolean(fieldErrors.key)} aria-invalid={Boolean(fieldErrors.key)} aria-describedby={fieldErrors.key ? 'software-key-error' : undefined} oninput={() => clearFieldError('key')} />{#if fieldErrors.key}<span id="software-key-error" class="field-error" role="alert">{fieldErrors.key}</span>{/if}</label>
+									<label>{text.keyLabel}<input bind:value={keyForm.label} maxlength="255" placeholder={text.keyLabelExample} /></label><label>{text.activationLimit}<input name="activationLimit" value={keyForm.activationLimit} type="number" min="1" max="1000000" placeholder={text.activationLimitExample} class:invalid={Boolean(fieldErrors.activationLimit)} aria-invalid={Boolean(fieldErrors.activationLimit)} aria-describedby={fieldErrors.activationLimit ? 'software-activation-error' : undefined} oninput={(event) => { keyForm.activationLimit = event.currentTarget.value; clearFieldError('activationLimit'); }} />{#if fieldErrors.activationLimit}<span id="software-activation-error" class="field-error" role="alert">{fieldErrors.activationLimit}</span>{/if}</label>
+									<DatePicker label={text.keyExpiresOn} field="expiresOn" value={keyForm.expiresOn} open={openEditorDate === 'expiresOn'} onToggle={() => toggleEditorDate('expiresOn')} onSelect={(value) => { keyForm.expiresOn = value; openEditorDate = null; }} />
+									<label class="wide">{text.notes}<textarea bind:value={keyForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label>
+								</FormSection>
+							{:else if mode === 'assignment'}
+								<FormSection title={text.target} framed>
+									<SearchInput label={text.targetSearch} value={targetSearch} placeholder={text.targetSearch} onValueChange={searchTargets} />
+									<SearchSelect label={text.target} field="targetId" value={assignmentForm.targetId} options={[{ value: '', label: '-' }, ...targets.map((target) => ({ value: String(target.id), label: targetOption(target) }))]} required error={fieldErrors.targetId ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { assignmentForm.targetId = value; clearFieldError('targetId'); }} />
+									<DatePicker label={text.assignedOn} field="assignedOn" value={assignmentForm.assignedOn} required error={fieldErrors.assignedOn ?? ''} open={openEditorDate === 'assignedOn'} onToggle={() => toggleEditorDate('assignedOn')} onSelect={(value) => { assignmentForm.assignedOn = value; openEditorDate = null; clearFieldError('assignedOn'); }} />
+									<DatePicker label={text.plannedReleaseOn} field="plannedReleaseOn" value={assignmentForm.plannedReleaseOn} open={openEditorDate === 'plannedReleaseOn'} onToggle={() => toggleEditorDate('plannedReleaseOn')} onSelect={(value) => { assignmentForm.plannedReleaseOn = value; openEditorDate = null; }} />
+									<SearchSelect label={text.keySelect} field="keyId" value={assignmentForm.keyId} options={[{ value: '', label: '-' }, ...keys.map((item) => ({ value: String(item.id), label: item.label ? `${item.label} · •••• ${item.lastFour}` : `•••• ${item.lastFour}` }))]} onOpen={() => openEditorDate = null} onSelect={(value) => assignmentForm.keyId = value} />
+									<label class="wide">{text.notes}<textarea bind:value={assignmentForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label>
+								</FormSection>
+							{:else}
+								<FormSection title={text.release} framed>
+									<p class="wide">{releasing ? targetName(releasing) : ''}</p>
+									<DatePicker label={text.releasedOn} field="releasedOn" value={releaseForm.releasedOn} required error={fieldErrors.releasedOn ?? ''} open={openEditorDate === 'releasedOn'} onToggle={() => toggleEditorDate('releasedOn')} onSelect={(value) => { releaseForm.releasedOn = value; openEditorDate = null; clearFieldError('releasedOn'); }} />
+									<DatePicker label={text.deactivatedOn} field="deactivatedOn" value={releaseForm.deactivatedOn} open={openEditorDate === 'deactivatedOn'} onToggle={() => toggleEditorDate('deactivatedOn')} onSelect={(value) => { releaseForm.deactivatedOn = value; openEditorDate = null; }} />
+									<label class="wide">{text.releaseReason}<textarea bind:value={releaseForm.releaseReason} maxlength="1000" placeholder={text.releaseReasonExample}></textarea></label>
+								</FormSection>
+							{/if}
+						</div>
+						<footer class="app-modal-footer">{#if mode==='product' && editingProduct && canDeleteProducts && allowedOperation('software.products.delete')}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void removeProduct(editingProduct!)} variant="danger" data-button-scope="button-fbef633d5e">{common.delete}</ModalActionButton>{/if}{#if mode==='contract' && editingContract && canDeleteContracts && allowedOperation('software.contracts.delete')}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void removeContract(editingContract!)} variant="danger" data-button-scope="button-fbef633d5e">{common.delete}</ModalActionButton>{/if}<ModalActionButton type="button" class="secondary" disabled={saving} onclick={() => requestCloseEditor()} variant="secondary" data-button-scope="button-fbef633d5e">{text.cancel}</ModalActionButton><ModalActionButton type="submit" form={formId} class="app-primary-action" disabled={saving || (mode==='contract'&&!allowedOperation(editingContract?'software.contracts.update':'software.contracts.create')) || (mode==='product'&&!allowedOperation(editingProduct?'software.products.update':'software.products.create'))} variant="primary" data-button-scope="button-fbef633d5e">{saving ? common.saving : mode === 'release' ? text.confirmRelease : text.save}</ModalActionButton></footer>
+					</div>
+				</dialog>
+			</ModalBackdrop>
+{/snippet}
+
+{#snippet contractKeys(editable = false)}{#if selected}
+<section class="app-detail-section"><div class="section-heading"><h3>{text.key}</h3>{#if editable && canWriteKeys && allowedOperation('software.keys.create')}<AddButton label={text.addKey} onclick={() => openKey()} />{/if}</div>
+					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.keyLabel}</th><th>{text.key}</th><th>{text.activationLimit}</th><th>{text.keyExpiresOn}</th><th></th></tr></thead><tbody>{#each keys as item}<tr><td data-label={text.keyLabel}>{item.label ?? ''}</td><td data-label={text.key}>•••• {item.lastFour}</td><td data-label={text.activationLimit}>{count(item.activationLimit)}</td><td data-label={text.keyExpiresOn}>{date(item.expiresOn)}</td><td>{#if editable && canWriteKeys && allowedOperation('software.keys.update')}<TextActionButton type="button" class="text-button" onclick={() => openKey(item)} data-button-scope="button-fbef633d5e">{text.editKey}</TextActionButton>{/if}{#if canReadKeys && allowedOperation('software.keys.reveal')}<TextActionButton type="button" class="text-button" onclick={() => { clearReveal(); revealKeyId = item.id; }} data-button-scope="button-fbef633d5e">{text.reveal}</TextActionButton>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noKeys}</td></tr>{/each}</tbody></table></div>
+					{#if revealKeyId !== null}<div class="reveal-panel"><h3>{text.reveal}</h3><p>{text.keyWarning}</p><form onsubmit={(event) => { event.preventDefault(); void reveal(revealKeyId!); }}><label><span>{text.currentPassword} <span class="required" aria-hidden="true">*</span></span><input type="password" bind:value={currentPassword} autocomplete="current-password" placeholder={text.currentPasswordPlaceholder} required /></label><ModalActionButton type="submit" class="app-primary-action" variant="primary" data-button-scope="button-fbef633d5e">{text.reveal}</ModalActionButton><ModalActionButton type="button" class="secondary" onclick={clearReveal} variant="secondary" data-button-scope="button-fbef633d5e">{text.close}</ModalActionButton></form>{#if revealError}<p role="alert">{revealError}</p>{/if}{#if revealedKey}<output>{revealedKey}</output>{/if}</div>{/if}
+				</section>
+{/if}{/snippet}
+
+{#snippet contractUsage(editable = false)}{#if selected}
+<section class="app-detail-section"><div class="section-heading"><h3>{text.recordedUse}</h3>{#if editable && allowedOperation('software.assignments.create') && selected.licenseType !== 'concurrent'}<AddButton label={text.assign} onclick={openAssignment} />{/if}</div>
+					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.target}</th><th>{text.assignedOn}</th><th>{text.plannedReleaseOn}</th><th>{text.releasedOn}</th><th></th></tr></thead><tbody>{#each assignments as item}<tr><td data-label={text.target}>{targetName(item)}</td><td data-label={text.assignedOn}>{date(item.assignedOn)}</td><td data-label={text.plannedReleaseOn}>{date(item.plannedReleaseOn)}</td><td data-label={text.releasedOn}>{date(item.releasedOn)}</td><td>{#if editable && allowedOperation('software.assignments.release') && !item.releasedOn}<TextActionButton type="button" class="text-button" onclick={() => openRelease(item)} data-button-scope="button-fbef633d5e">{text.release}</TextActionButton>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noAssignments}</td></tr>{/each}</tbody></table></div>
+				</section>
+				{#if selected.licenseType !== 'concurrent'}<div class="app-detail-section">{#key selected.id}<SoftwareInstallationsSection readOnly={!editable} contractId={selected.id} capabilities={usageCapabilities} onChanged={async () => { if (selected) await Promise.all([loadDetail(selected.id, false), contractList?.refresh()]); }} />{/key}</div>{/if}
+{/if}{/snippet}
+
 
 {#snippet detailMessages()}
 	{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
@@ -360,7 +482,7 @@
 		<div id="software-alerts" role="tabpanel" aria-labelledby="software-alerts-tab" hidden={activeTab !== 'alerts'} tabindex="0">
 		<section class="software-card" aria-labelledby="renewal-title">
 			<h2 id="renewal-title">{text.renewalAlerts} ({alerts.length})</h2><div id="renewal-content"><p class="help">{text.renewalAlertDescription}</p>
-			{#if alerts.length === 0}<p class="empty">{text.noAlerts}</p>{:else}<ul class="alert-list">{#each alerts as item}<li><button type="button" onclick={(event) => void loadDetail(item.id, true, event.currentTarget)}>{item.product.name} · {item.reference}</button><span class:overdue={item.metrics.daysToRenewal !== null && item.metrics.daysToRenewal < 0}>{renewal(item.metrics)}</span></li>{/each}</ul>{/if}
+			{#if alerts.length === 0}<p class="empty">{text.noAlerts}</p>{:else}<ul class="alert-list">{#each alerts as item}<li><ActionButton type="button" onclick={(event) => void loadDetail(item.id, true, event.currentTarget)} variant="secondary" data-button-scope="button-fbef633d5e">{item.product.name} · {item.reference}</ActionButton><span class:overdue={item.metrics.daysToRenewal !== null && item.metrics.daysToRenewal < 0}>{renewal(item.metrics)}</span></li>{/each}</ul>{/if}
 		</div></section></div>
 		{#snippet productActions()}{#if allowedOperation('software.products.create')}<AddButton label={text.addProduct} onclick={() => openProduct()} />{/if}{/snippet}
 		<div id="software-products" class="software-list-panel" role="tabpanel" aria-labelledby="software-products-tab" hidden={activeTab !== 'products'} tabindex="0"><MasterList mobileItem={mobileProduct} bind:this={productList} endpoint="/v1/software-products" searchParam="q" title={text.products} listHeading={text.products} description="" initialSortBy="name" pageSizeStorageKey="software-products-page-size" sortStorageKey="software-products-sort" minTableWidth={650} canDetail actionLabel={(item) => (item as Product).name} headerActions={productActions} loadingLabel={text.loading} emptyLabel={text.noProducts} columns={[
@@ -371,16 +493,18 @@
 		]} onDetail={(item, trigger) => void loadProductDetail(item as Product, trigger ?? undefined)} /></div>
 		{#if selectedProduct && activeDetail === 'product' && !editor}
 			<DetailModal title={selectedProduct.name} titleId="product-detail-title" closeLabel={text.close} returnFocus={detailReturnFocus} compact onClose={closeDetail}>
-				{#snippet headerActions()}<DetailActionButtons editLabel={text.editProduct} deleteLabel={common.delete} onEdit={allowedOperation('software.products.update') ? () => openProduct(selectedProduct) : undefined} onDelete={canDeleteProducts ? () => void removeProduct(selectedProduct!) : undefined} />{/snippet}
+				{#snippet headerActions()}<DetailActionButtons editing={false} editLabel={text.editProduct} deleteLabel={common.delete} onEdit={allowedOperation('software.products.update') ? () => openProduct(selectedProduct) : undefined} onDelete={canDeleteProducts ? () => void removeProduct(selectedProduct!) : undefined} />{/snippet}
 				{@render detailMessages()}
-				<section class="app-detail-section"><h3>{common.basicInformation}</h3><dl class="app-detail-grid">
+{#if selectedProduct}{#snippet tabInformation()}{#if selectedProduct}				<section class="app-detail-section"><h3>{common.basicInformation}</h3><dl class="app-detail-grid">
 					<div><dt>{text.manufacturer}</dt><dd>{selectedProduct.manufacturer}</dd></div>
 					<div><dt>{text.edition}</dt><dd>{selectedProduct.edition ?? ''}</dd></div>
 					<div><dt>{text.version}</dt><dd>{selectedProduct.version ?? ''}</dd></div>
 					<div><dt>{text.productCode}</dt><dd>{selectedProduct.productCode ?? ''}</dd></div>
 					<div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selectedProduct.notes ?? ''}</dd></div>
 				</dl></section>
-				<ChangeHistorySection entries={productHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} />
+				{/if}{/snippet}
+{#snippet tabHistory()}{#if selectedProduct}<ChangeHistorySection collapsible={false} entries={productHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} />{/if}{/snippet}
+<DetailTabs label={common.basicInformation} tabs={[{id:"basic",label:common.basicInformation,content:tabInformation},{id:"history",label:common.history,content:tabHistory}]} />{/if}
 			</DetailModal>
 		{/if}
 		{#snippet contractActions()}{#if allowedOperation('software.contracts.create')}<AddButton label={text.addContract} onclick={() => openContract()} disabled={productChoices.length === 0} />{/if}{/snippet}
@@ -393,12 +517,14 @@
 			{ key: 'remaining', label: text.remaining, width: 10, sortable: false, value: (item) => count((item as Contract).metrics.remaining) },
 			{ key: 'renewsOn', label: text.renewal, width: 14, value: (item) => renewal((item as Contract).metrics) },
 			{ key: 'status', label: text.complianceStatus, width: 13, sortable: false, cell: contractStatusCell }
-		]} onDetail={(item, trigger) => void loadDetail(item.id, true, trigger ?? undefined)} /></div>
+		]} onDetail={(item, trigger) => { forgetDetailReturn(trigger, 'detail-title'); void loadDetail(item.id, true, trigger ?? undefined); }} /></div>
 		{#if selected && activeDetail === 'contract' && !editor}
 			<DetailModal title={`${selected.product.name} · ${selected.reference}`} titleId="detail-title" closeLabel={text.close} returnFocus={detailReturnFocus} initialFocusSelector={restoreDetailEditFocus && canManage ? '.detail-header-edit' : '.app-modal-close'} onClose={closeDetail}>
-				{#snippet headerActions()}<DetailActionButtons editLabel={text.editContract} deleteLabel={common.delete} onEdit={allowedOperation('software.contracts.update') ? () => openContract(selected) : undefined} onDelete={canDeleteContracts ? () => void removeContract(selected!) : undefined} />{/snippet}
+				{#snippet headerActions()}<DetailActionButtons editing={false} editLabel={text.editContract} deleteLabel={common.delete} onEdit={allowedOperation('software.contracts.update') || allowedOperation('software.contracts.delete') || canEditContractRelations() ? () => openContract(selected) : undefined} onDelete={canDeleteContracts ? () => void removeContract(selected!) : undefined} />{/snippet}
 				{@render detailMessages()}
-				<section class="app-detail-section">
+				{#if selected}
+{#snippet contractBasic()}{#if selected}
+<section class="app-detail-section">
 					<h3>{text.complianceStatus}</h3>
 					<p class="status" data-status={selected.metrics.status}>{statusLabel(selected.metrics.status)}</p>
 					<div class="metric-grid">
@@ -421,13 +547,19 @@
 					<div><dt>{text.renewsOn}</dt><dd class:overdue={selected.renewsOn !== null && selected.metrics.daysToRenewal !== null && selected.metrics.daysToRenewal < 0}>{date(selected.renewsOn)}</dd></div>
 					<div><dt>{text.autoRenew}</dt><dd>{selected.autoRenew ? common.yes : common.no}</dd></div>
 				</dl></section>
-				<section class="app-detail-section"><h3>{text.purchaseDetails}</h3><dl class="app-detail-grid">
+<section class="app-detail-section"><h3>{text.additionalInfo}</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div></dl></section>
+
+{/if}{/snippet}
+{#snippet contractPurchase()}{#if selected}
+<section class="app-detail-section"><h3>{text.purchaseDetails}</h3><dl class="app-detail-grid">
 					<div><dt>{text.vendor}</dt><dd>{selected.vendor ?? ''}</dd></div>
 					<div><dt>{text.orderNumber}</dt><dd>{selected.orderNumber ?? ''}</dd></div>
-					<div><dt>{text.amount}</dt><dd>{selected.amount ? `${selected.amount} ${selected.currency ?? ''}` : ''}</dd></div>
+					<div><dt>{text.amount}</dt><dd>{displayPurchaseMoney(selected.amount,selected.currency,$localization.displayLanguage)}</dd></div>
 					<div class="app-detail-wide"><dt>{text.evidenceReference}</dt><dd>{selected.evidenceReference ?? ''}</dd></div>
 				</dl></section>
-				<section class="app-detail-section"><h3>{text.usageTerms}</h3>
+{/if}{/snippet}
+{#snippet contractTerms()}{#if selected}
+<section class="app-detail-section"><h3>{text.usageTerms}</h3>
 					{#if selected.licenseType === 'concurrent'}<p class="help">{text.concurrentNote}</p>{:else if selected.terms?.devicesPerUser}<p class="help">{text.termsNote}</p>{/if}
 					<dl class="app-detail-grid">
 						<div><dt>{text.usersPerLicense}</dt><dd>{count(selected.terms?.usersPerLicense ?? null)}</dd></div>
@@ -439,88 +571,19 @@
 						<div class="app-detail-wide"><dt>{text.termsNotes}</dt><dd class="app-detail-notes">{selected.terms?.notes ?? ''}</dd></div>
 					</dl>
 				</section>
-				<section class="app-detail-section"><h3>{text.additionalInfo}</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div></dl></section>
-				<section class="app-detail-section"><div class="section-heading"><h3>{text.recordedUse}</h3>{#if allowedOperation('software.assignments.create') && selected.licenseType !== 'concurrent'}<AddButton label={text.assign} onclick={openAssignment} />{/if}</div>
-					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.target}</th><th>{text.assignedOn}</th><th>{text.plannedReleaseOn}</th><th>{text.releasedOn}</th><th></th></tr></thead><tbody>{#each assignments as item}<tr><td data-label={text.target}>{targetName(item)}</td><td data-label={text.assignedOn}>{date(item.assignedOn)}</td><td data-label={text.plannedReleaseOn}>{date(item.plannedReleaseOn)}</td><td data-label={text.releasedOn}>{date(item.releasedOn)}</td><td>{#if allowedOperation('software.assignments.release') && !item.releasedOn}<button type="button" class="text-button" onclick={() => openRelease(item)}>{text.release}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noAssignments}</td></tr>{/each}</tbody></table></div>
-				</section>
-				{#if selected.licenseType !== 'concurrent'}<div class="app-detail-section">{#key selected.id}<SoftwareInstallationsSection contractId={selected.id} capabilities={usageCapabilities} onChanged={async () => { if (selected) await Promise.all([loadDetail(selected.id, false), contractList?.refresh()]); }} />{/key}</div>{/if}
-				<section class="app-detail-section"><div class="section-heading"><h3>{text.key}</h3>{#if canWriteKeys && allowedOperation('software.keys.create')}<AddButton label={text.addKey} onclick={() => openKey()} />{/if}</div>
-					<div class="table-wrap app-table-scroll app-table-scroll--bounded mobile-record-table"><table><thead><tr><th>{text.keyLabel}</th><th>{text.key}</th><th>{text.activationLimit}</th><th>{text.keyExpiresOn}</th><th></th></tr></thead><tbody>{#each keys as item}<tr><td data-label={text.keyLabel}>{item.label ?? ''}</td><td data-label={text.key}>•••• {item.lastFour}</td><td data-label={text.activationLimit}>{count(item.activationLimit)}</td><td data-label={text.keyExpiresOn}>{date(item.expiresOn)}</td><td>{#if canWriteKeys && allowedOperation('software.keys.update')}<button type="button" class="text-button" onclick={() => openKey(item)}>{text.editKey}</button>{/if}{#if canReadKeys && allowedOperation('software.keys.reveal')}<button type="button" class="text-button" onclick={() => { clearReveal(); revealKeyId = item.id; }}>{text.reveal}</button>{/if}</td></tr>{:else}<tr><td colspan="5">{text.noKeys}</td></tr>{/each}</tbody></table></div>
-					{#if revealKeyId !== null}<div class="reveal-panel"><h3>{text.reveal}</h3><p>{text.keyWarning}</p><form onsubmit={(event) => { event.preventDefault(); void reveal(revealKeyId!); }}><label><span>{text.currentPassword} <span class="required" aria-hidden="true">*</span></span><input type="password" bind:value={currentPassword} autocomplete="current-password" placeholder={text.currentPasswordPlaceholder} required /></label><button type="submit" class="app-primary-action">{text.reveal}</button><button type="button" class="secondary" onclick={clearReveal}>{text.close}</button></form>{#if revealError}<p role="alert">{revealError}</p>{/if}{#if revealedKey}<output>{revealedKey}</output>{/if}</div>{/if}
-				</section>
-				<ChangeHistorySection entries={contractHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} dateFields={['startsOn', 'endsOn', 'renewsOn', 'assignedOn', 'releasedOn', 'deactivatedOn', 'expiresOn']} />
+{/if}{/snippet}
+
+
+{#snippet contractHistory()}{#if selected}
+<ChangeHistorySection collapsible={false} entries={contractHistoryEntries} fieldLabels={historyFields} actionLabels={historyActions} dateFields={['startsOn', 'endsOn', 'renewsOn', 'assignedOn', 'releasedOn', 'deactivatedOn', 'expiresOn']} />
+{/if}{/snippet}
+<DetailTabs bind:active={contractDetailTab} kind="contract" label={common.detail} tabs={[{id:'basic',label:common.detailContractInformation,content:contractBasic},{id:'purchase',label:text.purchaseDetails,content:contractPurchase},{id:'terms',label:text.usageTerms,content:contractTerms},{id:'usage',label:common.detailUsageInformation,content:contractUsage},{id:'keys',label:text.key,content:contractKeys},{id:'history',label:common.history,content:contractHistory}]} />
+{/if}
+
 			</DetailModal>
 		{/if}
 		{#if editor}
-			<ModalBackdrop>
-				<dialog bind:this={editorDialogElement} class="app-modal" class:app-modal--compact={editor !== 'contract'} open aria-modal="true" aria-labelledby="editor-title">
-					<header><h2 id="editor-title">{editor === 'product' ? (editingProduct ? text.editProduct : text.addProduct) : editor === 'contract' ? (editingContract ? text.editContract : text.addContract) : editor === 'key' ? (editingKey ? text.editKey : text.addKey) : editor === 'assignment' ? text.assign : text.release}</h2><button type="button" class="app-modal-close" aria-label={text.close} disabled={saving} onclick={() => requestCloseEditor()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
-					<form id="software-editor-form" class="app-modal-form" novalidate onsubmit={save}>
-						<div class="app-modal-form-body">
-							{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
-							{#if editor === 'product'}
-								<FormSection title={common.basicInformation} framed>
-									<label><span>{text.name} <span class="required" aria-hidden="true">*</span></span><input name="name" bind:value={productForm.name} maxlength="255" placeholder={text.nameExample} class:invalid={Boolean(fieldErrors.name)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'software-name-error' : undefined} oninput={() => clearFieldError('name')} />{#if fieldErrors.name}<span id="software-name-error" class="field-error" role="alert">{fieldErrors.name}</span>{/if}</label>
-									<label><span>{text.manufacturer} <span class="required" aria-hidden="true">*</span></span><input name="manufacturer" bind:value={productForm.manufacturer} maxlength="255" placeholder={text.manufacturerExample} class:invalid={Boolean(fieldErrors.manufacturer)} aria-invalid={Boolean(fieldErrors.manufacturer)} aria-describedby={fieldErrors.manufacturer ? 'software-manufacturer-error' : undefined} oninput={() => clearFieldError('manufacturer')} />{#if fieldErrors.manufacturer}<span id="software-manufacturer-error" class="field-error" role="alert">{fieldErrors.manufacturer}</span>{/if}</label>
-									<label>{text.edition}<input bind:value={productForm.edition} maxlength="128" placeholder={text.editionExample} /></label><label>{text.version}<input bind:value={productForm.version} maxlength="128" placeholder={text.versionExample} /></label><label>{text.productCode}<input bind:value={productForm.productCode} maxlength="128" placeholder={text.productCodeExample} /></label>
-								</FormSection>
-								<FormSection title={text.notes} framed><label class="wide">{text.notes}<textarea bind:value={productForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label></FormSection>
-							{:else if editor === 'contract'}
-								<FormSection title={text.contractOverview} framed>
-									<SearchSelect label={text.product} field="productId" value={contractForm.productId} options={[{ value: '', label: '-' }, ...productChoices.map((product) => ({ value: String(product.id), label: `${product.name} · ${product.manufacturer}` }))]} required error={fieldErrors.productId ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.productId = value; clearFieldError('productId'); }} />
-									<label><span>{text.reference} <span class="required" aria-hidden="true">*</span></span><input name="reference" bind:value={contractForm.reference} maxlength="255" placeholder={text.contractReferenceExample} class:invalid={Boolean(fieldErrors.reference)} aria-invalid={Boolean(fieldErrors.reference)} aria-describedby={fieldErrors.reference ? 'software-reference-error' : undefined} oninput={() => clearFieldError('reference')} />{#if fieldErrors.reference}<span id="software-reference-error" class="field-error" role="alert">{fieldErrors.reference}</span>{/if}</label>
-									<SearchSelect label={text.licenseType} field="licenseType" value={contractForm.licenseType} options={[{ value: 'user', label: text.userLicense }, { value: 'device', label: text.deviceLicense }, { value: 'concurrent', label: text.concurrentLicense }]} required searchable={false} error={fieldErrors.licenseType ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.licenseType = value as Contract['licenseType']; clearFieldError('licenseType'); }} />
-									<label><span>{text.purchasedQuantity} <span class="required" aria-hidden="true">*</span></span><input name="purchasedQuantity" value={contractForm.purchasedQuantity} type="number" min="1" max="1000000" placeholder={text.quantityExample} class:invalid={Boolean(fieldErrors.purchasedQuantity)} aria-invalid={Boolean(fieldErrors.purchasedQuantity)} aria-describedby={fieldErrors.purchasedQuantity ? 'software-quantity-error' : undefined} oninput={(event) => { contractForm.purchasedQuantity = event.currentTarget.value; clearFieldError('purchasedQuantity'); }} />{#if fieldErrors.purchasedQuantity}<span id="software-quantity-error" class="field-error" role="alert">{fieldErrors.purchasedQuantity}</span>{/if}</label>
-									<DatePicker label={text.startsOn} field="startsOn" value={contractForm.startsOn} required error={fieldErrors.startsOn ?? ''} open={openEditorDate === 'startsOn'} onToggle={() => toggleEditorDate('startsOn')} onSelect={(value) => { contractForm.startsOn = value; openEditorDate = null; clearFieldError('startsOn'); }} />
-									<DatePicker label={text.endsOn} field="endsOn" value={contractForm.endsOn} error={fieldErrors.endsOn ?? ''} open={openEditorDate === 'endsOn'} onToggle={() => toggleEditorDate('endsOn')} onSelect={(value) => { contractForm.endsOn = value; openEditorDate = null; clearFieldError('endsOn'); }} />
-									<DatePicker label={text.renewsOn} field="renewsOn" value={contractForm.renewsOn} error={fieldErrors.renewsOn ?? ''} open={openEditorDate === 'renewsOn'} onToggle={() => toggleEditorDate('renewsOn')} onSelect={(value) => { contractForm.renewsOn = value; openEditorDate = null; clearFieldError('renewsOn'); }} />
-									<label class="checkbox"><input bind:checked={contractForm.autoRenew} type="checkbox" />{text.autoRenew}</label>
-								</FormSection>
-								<FormSection title={text.purchaseDetails} framed>
-									<label>{text.vendor}<input bind:value={contractForm.vendor} maxlength="255" placeholder={text.vendorExample} /></label><label>{text.orderNumber}<input bind:value={contractForm.orderNumber} maxlength="128" placeholder={text.orderNumberExample} /></label>
-									<label>{text.amount}<input name="amount" value={contractForm.amount} type="number" min="0" step="0.01" placeholder={text.amountExample} class:invalid={Boolean(fieldErrors.amount)} aria-invalid={Boolean(fieldErrors.amount)} aria-describedby={fieldErrors.amount ? 'software-amount-error' : undefined} oninput={(event) => { contractForm.amount = event.currentTarget.value; clearFieldError('amount'); }} />{#if fieldErrors.amount}<span id="software-amount-error" class="field-error" role="alert">{fieldErrors.amount}</span>{/if}</label>
-									<div class="currency-field"><SearchSelect label={text.currency} field="currency" value={isFinancialCurrency(contractForm.currency) ? contractForm.currency : ''} options={[{ value: '', label: '-' }, ...currencyOptions]} searchable={false} error={fieldErrors.currency ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { contractForm.currency = value; clearFieldError('currency'); }} />{#if contractForm.currency && !isFinancialCurrency(contractForm.currency)}<small class="legacy-currency">{contractForm.currency}</small>{/if}</div>
-									<label class="wide">{text.evidenceReference}<input bind:value={contractForm.evidenceReference} maxlength="2048" placeholder={text.documentReferenceExample} /></label>
-								</FormSection>
-								<FormSection title={text.usageTerms} framed>
-									{#if contractForm.licenseType === 'user'}
-										<label><span>{text.usersPerLicense} <span class="required" aria-hidden="true">*</span></span><input name="usersPerLicense" value={contractForm.usersPerLicense} type="number" min="1" max="1000000" placeholder={text.usersPerLicenseExample} class:invalid={Boolean(fieldErrors.usersPerLicense)} aria-invalid={Boolean(fieldErrors.usersPerLicense)} aria-describedby={fieldErrors.usersPerLicense ? 'software-users-error' : undefined} oninput={(event) => { contractForm.usersPerLicense = event.currentTarget.value; clearFieldError('usersPerLicense'); }} />{#if fieldErrors.usersPerLicense}<span id="software-users-error" class="field-error" role="alert">{fieldErrors.usersPerLicense}</span>{/if}</label>
-										<label>{text.devicesPerUser}<input name="devicesPerUser" value={contractForm.devicesPerUser} type="number" min="1" max="1000000" placeholder={text.devicesPerUserExample} class:invalid={Boolean(fieldErrors.devicesPerUser)} aria-invalid={Boolean(fieldErrors.devicesPerUser)} aria-describedby={fieldErrors.devicesPerUser ? 'software-devices-error' : undefined} oninput={(event) => { contractForm.devicesPerUser = event.currentTarget.value; clearFieldError('devicesPerUser'); }} />{#if fieldErrors.devicesPerUser}<span id="software-devices-error" class="field-error" role="alert">{fieldErrors.devicesPerUser}</span>{/if}</label>
-									{:else if contractForm.licenseType === 'device'}<label>{text.usersPerDevice}<input name="usersPerDevice" value={contractForm.usersPerDevice} type="number" min="1" max="1000000" placeholder={text.usersPerDeviceExample} class:invalid={Boolean(fieldErrors.usersPerDevice)} aria-invalid={Boolean(fieldErrors.usersPerDevice)} aria-describedby={fieldErrors.usersPerDevice ? 'software-per-device-error' : undefined} oninput={(event) => { contractForm.usersPerDevice = event.currentTarget.value; clearFieldError('usersPerDevice'); }} />{#if fieldErrors.usersPerDevice}<span id="software-per-device-error" class="field-error" role="alert">{fieldErrors.usersPerDevice}</span>{/if}</label>
-									{:else}<label>{text.concurrentLimit}<input name="concurrentLimit" value={contractForm.concurrentLimit} type="number" min="1" max="1000000" placeholder={text.concurrentLimitExample} class:invalid={Boolean(fieldErrors.concurrentLimit)} aria-invalid={Boolean(fieldErrors.concurrentLimit)} aria-describedby={fieldErrors.concurrentLimit ? 'software-concurrent-error' : undefined} oninput={(event) => { contractForm.concurrentLimit = event.currentTarget.value; clearFieldError('concurrentLimit'); }} />{#if fieldErrors.concurrentLimit}<span id="software-concurrent-error" class="field-error" role="alert">{fieldErrors.concurrentLimit}</span>{/if}</label>{/if}
-									<SearchSelect label={text.evidenceStatus} field="evidenceStatus" value={contractForm.evidenceStatus} options={[{ value: 'unverified', label: text.unverified }, { value: 'confirmed', label: text.confirmed }]} searchable={false} onOpen={() => openEditorDate = null} onSelect={(value) => contractForm.evidenceStatus = value as Terms['evidenceStatus']} />
-									<label class="wide">{text.termsReference}<input name="termsReference" bind:value={contractForm.termsReference} maxlength="2048" placeholder={text.termsReferenceExample} class:invalid={Boolean(fieldErrors.termsReference)} aria-invalid={Boolean(fieldErrors.termsReference)} aria-describedby={fieldErrors.termsReference ? 'software-terms-source-error' : undefined} oninput={() => clearFieldError('termsReference')} />{#if fieldErrors.termsReference}<span id="software-terms-source-error" class="field-error" role="alert">{fieldErrors.termsReference}</span>{/if}</label><label class="wide">{text.termsNotes}<textarea bind:value={contractForm.termsNotes} maxlength="5000" placeholder={text.termsNotesExample}></textarea></label>
-								</FormSection>
-								<FormSection title={text.additionalInfo} framed><label class="wide">{text.notes}<textarea bind:value={contractForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label></FormSection>
-							{:else if editor === 'key'}
-								<FormSection title={text.key} framed>
-									<label><span>{text.key}{#if !editingKey} <span class="required" aria-hidden="true">*</span>{/if}</span><input name="key" bind:value={keyForm.key} type="password" autocomplete="new-password" minlength="4" maxlength="2048" placeholder={text.productKeyExample} class:invalid={Boolean(fieldErrors.key)} aria-invalid={Boolean(fieldErrors.key)} aria-describedby={fieldErrors.key ? 'software-key-error' : undefined} oninput={() => clearFieldError('key')} />{#if fieldErrors.key}<span id="software-key-error" class="field-error" role="alert">{fieldErrors.key}</span>{/if}</label>
-									<label>{text.keyLabel}<input bind:value={keyForm.label} maxlength="255" placeholder={text.keyLabelExample} /></label><label>{text.activationLimit}<input name="activationLimit" value={keyForm.activationLimit} type="number" min="1" max="1000000" placeholder={text.activationLimitExample} class:invalid={Boolean(fieldErrors.activationLimit)} aria-invalid={Boolean(fieldErrors.activationLimit)} aria-describedby={fieldErrors.activationLimit ? 'software-activation-error' : undefined} oninput={(event) => { keyForm.activationLimit = event.currentTarget.value; clearFieldError('activationLimit'); }} />{#if fieldErrors.activationLimit}<span id="software-activation-error" class="field-error" role="alert">{fieldErrors.activationLimit}</span>{/if}</label>
-									<DatePicker label={text.keyExpiresOn} field="expiresOn" value={keyForm.expiresOn} open={openEditorDate === 'expiresOn'} onToggle={() => toggleEditorDate('expiresOn')} onSelect={(value) => { keyForm.expiresOn = value; openEditorDate = null; }} />
-									<label class="wide">{text.notes}<textarea bind:value={keyForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label>
-								</FormSection>
-							{:else if editor === 'assignment'}
-								<FormSection title={text.target} framed>
-									<SearchInput label={text.targetSearch} value={targetSearch} placeholder={text.targetSearch} onValueChange={searchTargets} />
-									<SearchSelect label={text.target} field="targetId" value={assignmentForm.targetId} options={[{ value: '', label: '-' }, ...targets.map((target) => ({ value: String(target.id), label: targetOption(target) }))]} required error={fieldErrors.targetId ?? ''} onOpen={() => openEditorDate = null} onSelect={(value) => { assignmentForm.targetId = value; clearFieldError('targetId'); }} />
-									<DatePicker label={text.assignedOn} field="assignedOn" value={assignmentForm.assignedOn} required error={fieldErrors.assignedOn ?? ''} open={openEditorDate === 'assignedOn'} onToggle={() => toggleEditorDate('assignedOn')} onSelect={(value) => { assignmentForm.assignedOn = value; openEditorDate = null; clearFieldError('assignedOn'); }} />
-									<DatePicker label={text.plannedReleaseOn} field="plannedReleaseOn" value={assignmentForm.plannedReleaseOn} open={openEditorDate === 'plannedReleaseOn'} onToggle={() => toggleEditorDate('plannedReleaseOn')} onSelect={(value) => { assignmentForm.plannedReleaseOn = value; openEditorDate = null; }} />
-									<SearchSelect label={text.keySelect} field="keyId" value={assignmentForm.keyId} options={[{ value: '', label: '-' }, ...keys.map((item) => ({ value: String(item.id), label: item.label ? `${item.label} · •••• ${item.lastFour}` : `•••• ${item.lastFour}` }))]} onOpen={() => openEditorDate = null} onSelect={(value) => assignmentForm.keyId = value} />
-									<label class="wide">{text.notes}<textarea bind:value={assignmentForm.notes} maxlength="5000" placeholder={text.notesExample}></textarea></label>
-								</FormSection>
-							{:else}
-								<FormSection title={text.release} framed>
-									<p class="wide">{releasing ? targetName(releasing) : ''}</p>
-									<DatePicker label={text.releasedOn} field="releasedOn" value={releaseForm.releasedOn} required error={fieldErrors.releasedOn ?? ''} open={openEditorDate === 'releasedOn'} onToggle={() => toggleEditorDate('releasedOn')} onSelect={(value) => { releaseForm.releasedOn = value; openEditorDate = null; clearFieldError('releasedOn'); }} />
-									<DatePicker label={text.deactivatedOn} field="deactivatedOn" value={releaseForm.deactivatedOn} open={openEditorDate === 'deactivatedOn'} onToggle={() => toggleEditorDate('deactivatedOn')} onSelect={(value) => { releaseForm.deactivatedOn = value; openEditorDate = null; }} />
-									<label class="wide">{text.releaseReason}<textarea bind:value={releaseForm.releaseReason} maxlength="1000" placeholder={text.releaseReasonExample}></textarea></label>
-								</FormSection>
-							{/if}
-						</div>
-						<footer class="app-modal-footer"><button type="button" class="secondary" disabled={saving} onclick={() => requestCloseEditor()}>{text.cancel}</button><button type="submit" class="app-primary-action" disabled={saving}>{saving ? common.saving : editor === 'release' ? text.confirmRelease : text.save}</button></footer>
-					</form>
-				</dialog>
-			</ModalBackdrop>
+			{#if editor==='contract'||suspendedContract}<div hidden={editor!=='contract'} inert={editor!=='contract'}>{@render softwareEditor('contract')}</div>{/if}{#if editor && editor!=='contract'}{@render softwareEditor(editor)}{/if}
 			{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={() => closeEditor()} />{/if}
 		{/if}
 	{/if}
@@ -528,14 +591,15 @@
 </AssetManagementShell>
 
 <style>
- .software-list-panel,#renewal-title{scroll-margin-top:72px}.mobile-software{display:flex;min-width:0;flex-direction:column;gap:3px;overflow-wrap:anywhere}.mobile-software>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-software .status{align-self:flex-start}
+ .editor-fields{display:grid;gap:var(--sph-space-16px);min-width:0;margin:0;padding:0;border:0}
+ .software-list-panel,#renewal-title{scroll-margin-top:72px}.mobile-software{display:flex;min-width:0;flex-direction:column;gap:var(--sph-space-3px);overflow-wrap:anywhere}.mobile-software>span{color:var(--text-secondary);font-size:var(--font-size-support)}.mobile-software .status{align-self:flex-start}
 
-	.reveal-panel input::placeholder{color:#c0c7cf}:global(html[data-theme='dark']) .reveal-panel input::placeholder{color:#5a6473}
-	.software-page{min-width:0;color:var(--text)}.software-page :global(.master-list){margin-bottom:20px}.software-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:20px}.software-card h2{font-size:var(--font-size-section);margin:0}.section-heading h3{font-size:var(--font-size-subsection);margin:0}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.reveal-panel input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 9px;min-height:38px}.reveal-panel input:focus{outline:2px solid var(--action-primary)}.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);font-size:var(--font-size-body);vertical-align:top}th{font-size:var(--font-size-support);color:var(--muted);background:var(--surface-secondary)}td{overflow-wrap:anywhere}.text-button{border:0;background:none;color:var(--action-primary);text-decoration:underline;cursor:pointer;margin-right:10px;font:inherit}button:disabled{opacity:.5;cursor:not-allowed}.help,.empty{color:var(--muted);font-size:var(--font-size-support)}.alert-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;list-style:none;padding:0;margin:14px 0 0}.alert-list li{display:flex;min-width:0;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--border-light);border-radius:4px;background:var(--surface-secondary)}.alert-list button{min-width:0;padding:0;border:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;overflow-wrap:anywhere;cursor:pointer}.alert-list button:hover{text-decoration:underline}.alert-list button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}.alert-list li>span{flex:none;font-size:var(--font-size-support)}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric-grid>div{background:var(--surface-secondary);border:1px solid var(--border);border-radius:6px;padding:12px}.observation-metrics{margin-top:10px}.app-detail-section .section-heading{margin-bottom:14px}.app-detail-section .status{margin:0 0 14px}.metric-grid span{display:block;color:var(--muted);font-size:var(--font-size-support)}.metric-grid strong{display:block;margin-top:4px;font-size:var(--font-size-body)}.status{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--surface-secondary);border:1px solid var(--border);font-size:var(--font-size-support)}.status[data-status="overallocated"],.status[data-status="expired"]{color:var(--danger)}.reveal-panel{border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:16px}.reveal-panel form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.reveal-panel label{display:flex;flex-direction:column;gap:5px}.app-modal-form .checkbox{display:flex;align-items:center;flex-direction:row;gap:8px}.app-modal-form .checkbox input{width:auto;height:auto}.app-modal-form .wide{grid-column:1/-1}.reveal-panel output{display:block;padding:12px;margin-top:12px;overflow-wrap:anywhere;background:var(--surface-secondary);border:1px solid var(--border)}@media(max-width:900px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:1000px){.alert-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.software-card{padding:16px}.alert-list{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-heading{align-items:flex-start;flex-wrap:wrap}}
+	.reveal-panel input::placeholder{color:var(--sph-color-placeholder-light)}:global(html[data-theme='dark']) .reveal-panel input::placeholder{color:var(--sph-color-placeholder-dark)}
+	.software-page{min-width:0;color:var(--text)}.software-page :global(.master-list){margin-bottom:var(--sph-space-20px)}.software-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);padding:var(--sph-space-20px);margin-bottom:var(--sph-space-20px)}.software-card h2{font-size:var(--font-size-section);margin:0}.section-heading h3{font-size:var(--font-size-subsection);margin:0}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-12px);margin-bottom:var(--sph-space-16px)}.reveal-panel input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-4px);padding:var(--sph-space-7px) var(--sph-space-9px);min-height:38px}.reveal-panel input:focus{outline:2px solid var(--action-primary)}.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--sph-radius-6px)}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:var(--sph-space-10px) var(--sph-space-12px);border-bottom:1px solid var(--border);font-size:var(--font-size-body);vertical-align:top}th{font-size:var(--font-size-support);color:var(--muted);background:var(--surface-secondary)}td{overflow-wrap:anywhere}:global(.text-button[data-button-scope="button-fbef633d5e"]){border:0;background:none;color:var(--action-primary);text-decoration:underline;cursor:pointer;margin-right:var(--sph-space-10px);font:inherit}:global(button:disabled[data-button-scope="button-fbef633d5e"]){opacity:.5;cursor:not-allowed}.help,.empty{color:var(--muted);font-size:var(--font-size-support)}.alert-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sph-space-8px) var(--sph-space-16px);list-style:none;padding:0;margin:var(--sph-space-14px) 0 0}.alert-list li{display:flex;min-width:0;align-items:baseline;justify-content:space-between;gap:var(--sph-space-10px);padding:var(--sph-space-9px) var(--sph-space-12px);border:1px solid var(--border-light);border-radius:var(--sph-radius-4px);background:var(--surface-secondary)}.alert-list :global(button[data-button-scope="button-fbef633d5e"]){min-width:0;padding:0;border:0;background:transparent;color:var(--action-primary);font:inherit;text-align:left;overflow-wrap:anywhere;cursor:pointer}.alert-list :global(button:hover[data-button-scope="button-fbef633d5e"]){text-decoration:underline}.alert-list :global(button:focus-visible[data-button-scope="button-fbef633d5e"]){outline:2px solid var(--action-primary);outline-offset:2px}.alert-list li>span{flex:none;font-size:var(--font-size-support)}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sph-space-10px)}.metric-grid>div{background:var(--surface-secondary);border:1px solid var(--border);border-radius:var(--sph-radius-6px);padding:var(--sph-space-12px)}.observation-metrics{margin-top:var(--sph-space-10px)}.app-detail-section .section-heading{margin-bottom:var(--sph-space-14px)}.app-detail-section .status{margin:0 0 var(--sph-space-14px)}.metric-grid span{display:block;color:var(--muted);font-size:var(--font-size-support)}.metric-grid strong{display:block;margin-top:var(--sph-space-4px);font-size:var(--font-size-body)}.status{display:inline-block;padding:var(--sph-space-4px) var(--sph-space-10px);border-radius:var(--sph-radius-99px);background:var(--surface-secondary);border:1px solid var(--border);font-size:var(--font-size-support)}.status[data-status="overallocated"],.status[data-status="expired"]{color:var(--danger)}.reveal-panel{border:1px solid var(--border);border-radius:var(--sph-radius-6px);padding:var(--sph-space-16px);margin-top:var(--sph-space-16px)}.reveal-panel form{display:flex;gap:var(--sph-space-10px);align-items:end;flex-wrap:wrap}.reveal-panel label{display:flex;flex-direction:column;gap:var(--sph-space-5px)}.app-modal-form .checkbox{display:flex;align-items:center;flex-direction:row;gap:var(--sph-space-8px)}.app-modal-form .checkbox input{width:auto;height:auto}.app-modal-form .wide{grid-column:1/-1}.reveal-panel output{display:block;padding:var(--sph-space-12px);margin-top:var(--sph-space-12px);overflow-wrap:anywhere;background:var(--surface-secondary);border:1px solid var(--border)}@media(max-width:900px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:1000px){.alert-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.software-card{padding:var(--sph-space-16px)}.alert-list{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-heading{align-items:flex-start;flex-wrap:wrap}}
 	.overdue{color:var(--danger)!important}
 	.app-modal-form .required,.reveal-panel .required{color:var(--danger)}
-	.currency-field{min-width:0}.legacy-currency{display:block;margin-top:6px;color:var(--danger);font-size:var(--font-size-support)}
-@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.software-card{padding:12px}.alert-list{grid-template-columns:1fr}.alert-list button{min-height:44px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+	.currency-field{min-width:0}.legacy-currency{display:block;margin-top:var(--sph-space-6px);color:var(--danger);font-size:var(--font-size-support)}
+@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.software-card{padding:var(--sph-space-12px)}.alert-list{grid-template-columns:1fr}.alert-list :global(button[data-button-scope="button-fbef633d5e"]){min-height:44px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 [role='tabpanel']:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 </style>

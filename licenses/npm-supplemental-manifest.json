@@ -137,11 +137,13 @@
     }
   ],
   "noticeSha256": "9fb3b8a5696d7e78bbe90126cc52191974797a6c972a79928b56991b85498e72",
-  "unresolvedCandidates": [
+  "unresolvedCandidates": [],
+  "scope": "The original grants for the historical candidates remain unconfirmed. Current locks and sanitized sources exclude their code before installation. Git distribution contains the reviewed preparation source and hashes, not installed dependencies or generated packages/builds. This source release does not authorize Docker image redistribution.",
+  "historicalUnresolvedCandidates": [
     "@prisma/dev@0.24.17",
     "is-reference@1.2.1",
     "is-reference@3.0.3",
     "locate-character@3.0.0"
   ],
-  "scope": "Candidates without original license text must not be redistributed in a binary or dependency archive without further review. Source-only Git distribution does not contain node_modules or generated build output."
+  "exclusionRecord": "vendor/npm/README.md"
 }

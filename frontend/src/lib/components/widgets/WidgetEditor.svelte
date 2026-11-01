@@ -20,7 +20,7 @@
  const endpoint='/v1/employees/me/widget-drafts';
  async function api(path:string,method='GET',body?:unknown){const r=await fetch(path,{method,headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store'});if(!r.ok){const p=await r.json().catch(()=>null);throw Error(r.status===409?(ja?'競合しました。編集内容を保持しています。':'Conflict. Your edits are kept.'):p?.error?.message??(ja?'操作に失敗しました。':'Request failed.'));}return apiData(r);}
  async function list(){drafts=await api(endpoint+'?limit=100&sortBy=updatedAt&sortOrder=desc') as Omit<Draft,'content'>[];}
- onMount(()=>{void(async()=>{try{const user=await readSessionUser();if(!user){location.assign('/');return;}await applyLocalization(user);operations=user.capabilities.widgetDraftOperations??[];await list();allowed=true;}catch(e){failed=true;message=e instanceof Error?e.message:'Access denied';}})();});
+ onMount(()=>{void(async()=>{try{const user=await readSessionUser();if(!user){location.assign('/');return;}if(!user.capabilities.canManageSystemSettings)throw Error(ja?'システム管理者のみ利用できます。':'System administrator access is required.');await applyLocalization(user);operations=user.capabilities.widgetDraftOperations??[];await list();allowed=true;}catch(e){failed=true;message=e instanceof Error?e.message:'Access denied';}})();});
  function discard(){return !dirty||confirm(ja?'未保存の編集を破棄しますか？':'Discard unsaved edits?');}
  async function load(value:number){if(!discard())return;try{const d=await api(`${endpoint}/${value}`) as Draft;id=d.id;revision=d.revision;widgetCode=d.widgetCode;version=d.version;content={...d.content};dirty=false;preview=null;message='';}catch(e){failed=true;message=String(e);}}
  function fresh(){if(!discard())return;id=undefined;revision=0;content={...initial};widgetCode='custom.calculator';version='1.0.0';dirty=false;preview=null;message='';}
@@ -71,8 +71,8 @@
  {/if}
 </div>
 <style>
- .editor-page{display:grid;min-width:0;gap:16px}.editor-columns{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;align-items:start}
- .editor-columns>:global(.app-form-section){grid-column:auto}.draft-actions,.preview-actions{display:flex;flex-wrap:wrap;gap:8px;min-width:0}.draft-actions,.export-action{align-self:end}
- .wide{min-width:0}.editor-preview{border:1px solid var(--border);min-height:240px}.field-hint{margin:12px 0;color:var(--muted);font-size:var(--font-size-support);font-weight:400;line-height:1.6}a{color:var(--action-primary)}
+ .editor-page{display:grid;min-width:0;gap:var(--sph-space-16px)}.editor-columns{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:var(--sph-space-16px);align-items:start}
+ .editor-columns>:global(.app-form-section){grid-column:auto}.draft-actions,.preview-actions{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px);min-width:0}.draft-actions,.export-action{align-self:end}
+ .wide{min-width:0}.editor-preview{border:1px solid var(--border);min-height:240px}.field-hint{margin:var(--sph-space-12px) 0;color:var(--muted);font-size:var(--font-size-support);font-weight:var(--sph-weight-400);line-height:var(--sph-leading-1-6)}a{color:var(--action-primary)}
  @media(max-width:1100px){.editor-columns{grid-template-columns:minmax(0,1fr)}}
 </style>

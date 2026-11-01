@@ -7,3 +7,5 @@
 !licenses/
 !licenses/caddy/
 !licenses/caddy/**
+!gateway/patches/
+!gateway/patches/**

@@ -9,6 +9,7 @@ import { catalogue, manifest, digest, settings, type Manifest } from './contract
 import { publicJson } from './public-json';
 import { widgetInformation } from './information';
 import {retiredOfficialRelease,isRetiredOfficial} from './retirement';
+import {lockWidgetWrites,latestRelease,assessUpgrade,compareVersions} from './upgrades';
 
 export function admin(user: AuthenticatedUser | null, operation: 'sources' | 'approvals') {
  const actor = requireSystemAdminApi(user);
@@ -16,23 +17,55 @@ export function admin(user: AuthenticatedUser | null, operation: 'sources' | 'ap
 }
 export const personal = (user: AuthenticatedUser | null, write=false) => requireOperationApi(user, write ? 'widgets.layout.update' : 'widgets.read');
 export async function refreshSource(sourceId: number, actor: AuthenticatedUser) {
+ admin(actor,'sources');admin(actor,'approvals');
  const source = await getPrisma().widgetSource.findFirst({where:{id:sourceId,deletedAt:null}});
  if (!source) throwApiError(404,'NOT_FOUND','Source not found.');
  let definitions: Manifest[];
  try { definitions=catalogue(source.sourceKey === 'sph-official' ? bundled : await publicJson(source.url)); }
  catch { throwApiError(422,'CATALOGUE_UNAVAILABLE','Unable to read a valid public catalogue.'); }
- return getPrisma().$transaction(async tx => {
+ const fetched=await getPrisma().$transaction(async tx => {
+  await lockWidgetWrites(tx);
   // Serialize refresh/removal of this source, including same-version hash checks.
   await tx.$queryRaw`SELECT id FROM widget_sources WHERE id=${source.id} AND deleted_at IS NULL FOR UPDATE`;
   if (!await tx.widgetSource.findFirst({where:{id:source.id,deletedAt:null}})) throwApiError(409,'SOURCE_CHANGED','Source changed.');
+  const created:number[]=[];
+  // Registration and all same-version hash checks commit atomically.
   for (const definition of definitions) {
    const existing=await tx.widgetRelease.findUnique({where:{sourceId_widgetCode_version:{sourceId,widgetCode:definition.id,version:definition.version}}});
    if(existing && existing.digest !== digest(definition)) throwApiError(409,'VERSION_HASH_CONFLICT','Publish changed definitions using a new version.');
-   if(!existing) await tx.widgetRelease.create({data:{sourceId,widgetCode:definition.id,version:definition.version,definition,digest:digest(definition),approval:{create:{allowed:false}}}});
+   if(!existing){const item=await tx.widgetRelease.create({data:{sourceId,widgetCode:definition.id,version:definition.version,definition,digest:digest(definition),approval:{create:{allowed:false}}}});created.push(item.id);}
   }
   await writeAuditLog(tx,actor.id,'refresh_widget_source','widget_source',source.id,{releases:definitions.length});
-  return {releases:definitions.length};
- });
+  return created;
+ },{timeout:30000});
+ const updates:Array<{widgetCode:string;version:string;instances:number;reason?:string}>=[];
+ // Each widget commits independently; one incompatible widget does not hold up others.
+ for(const widgetCode of [...new Set(definitions.filter(d=>!d.version.includes('-')).map(d=>d.id))]){
+  const update=await getPrisma().$transaction(async tx=>{
+   await lockWidgetWrites(tx);
+   if(!await tx.widgetSource.findFirst({where:{id:sourceId,deletedAt:null}}))throwApiError(409,'SOURCE_CHANGED','Source changed.');
+   const releases=await tx.widgetRelease.findMany({where:{sourceId,widgetCode,deletedAt:null},include:{approval:true}});
+   const available=releases.filter(r=>definitions.some(d=>d.id===r.widgetCode&&d.version===r.version));
+   const target=latestRelease(available);
+   const newest=latestRelease(releases);
+   if(!target)return {widgetCode,version:latestRelease(definitions.filter(d=>d.id===widgetCode)).version,instances:0,reason:'RELEASE_UNAVAILABLE'};
+   if(target.version.includes('-')||compareVersions(target.version,newest.version)<0)return {widgetCode,version:newest.version,instances:0};
+   if(isRetiredOfficial(widgetCode,source.sourceKey))return {widgetCode,version:target.version,instances:0};
+   const assessment=await assessUpgrade(tx,releases,target,fetched);
+   if(assessment.reason)return {widgetCode,version:target.version,instances:0,reason:assessment.reason};
+   const moved=assessment.instances;
+   await tx.widgetApproval.upsert({where:{releaseId:target.id},create:{releaseId:target.id,allowed:assessment.desired},update:{allowed:assessment.desired,deletedAt:null}});
+   if(moved.length){
+    await tx.widgetInstance.updateMany({where:{id:{in:moved.map(i=>i.id)}},data:{releaseId:target.id}});
+    await tx.widgetLayout.updateMany({where:{id:{in:[...new Set(moved.map(i=>i.layoutId))]}},data:{revision:{increment:1}}});
+   }
+   // Keep version snapshots immutable; audit the inherited approval as well.
+   if(moved.length||assessment.desired!==!!target.approval?.allowed)await writeAuditLog(tx,actor.id,'upgrade_widget_release','widget_release',target.id,{fromReleaseIds:[...new Set(moved.map(i=>i.releaseId))],instances:moved.length,allowed:assessment.desired});
+   return {widgetCode,version:target.version,instances:moved.length};
+  },{timeout:30000});
+  updates.push(update);
+ }
+ return {releases:definitions.length,registered:fetched.length,updatedWidgets:updates.filter(u=>u.instances>0).length,updatedInstances:updates.reduce((n,u)=>n+u.instances,0),updates};
 }
 export async function layout(actor: AuthenticatedUser) {
  const db=getPrisma();
@@ -57,6 +90,7 @@ export async function updateLayout(actor: AuthenticatedUser, body: unknown) {
   if(i.initialRecords!==undefined){requireOperationApi(actor,'widgets.read');requireOperationApi(actor,'widgets.records.update');}
  }
  await getPrisma().$transaction(async tx=>{
+  await lockWidgetWrites(tx);
   const l=await tx.widgetLayout.findUnique({where:{employeeId:actor.id}});
   if(!l || (await tx.widgetLayout.updateMany({where:{id:l.id,revision:input.revision as number,deletedAt:null},data:{revision:{increment:1}}})).count!==1) throwApiError(409,'LAYOUT_CONFLICT','Layout changed. Reload before saving your draft.');
   const existing=await tx.widgetInstance.findMany({where:{layoutId:l.id,deletedAt:null}});

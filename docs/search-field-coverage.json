@@ -1,8 +1,15 @@
 {
   "schemaVersion": 1,
   "employeeRelations": {
+    "workflowRequests": "exclude: workflow requests are searched on the workflow page",
+    "workflowSteps": "exclude: workflow steps use workflow-specific authorization",
+    "workflowActions": "exclude: workflow action history",
+    "scheduleEvents": "exclude: schedule events are outside employee search",
+    "scheduleParticipation": "exclude: schedule participants are outside employee search",
+    "schedulePreference": "exclude: private schedule preferences",
+    "notificationReceipts": "exclude: private notification delivery/read state",
     "skills": "skills",
-    "projectParticipations": "participations",
+    "engagementParticipations": "participations",
     "workforceHistory": "exclude: change history",
     "workforceActions": "exclude: actor-only change history",
     "itAssetAssignments": "assets / assetCodes / assetIps / deviceSoftware / deviceInstallations",
@@ -40,7 +47,9 @@
     "workCalendar": "calendar / calendarDays",
     "widgetDrafts": "exclude: private SDK source drafts",
     "widgetLayout": "exclude: private SDK layout infrastructure",
-    "savedSearchFilters": "exclude: search infrastructure"
+    "savedSearchFilters": "exclude: search infrastructure",
+    "requestedDeletions": "exclude: actor-only scheduled deletion requests",
+    "deletionRequestedBy": "exclude: scheduled deletion requester metadata"
   },
   "fields": [
     {
@@ -118,6 +127,14 @@
           "current": "loan.employee_id=employee.id AND loan.deleted_at IS NULL AND loan.returned_on IS NULL"
         }
       ]
+    },
+    {
+      "source": "BookCopy.purchaseAmount",
+      "classification": "Per-copy purchase registration/detail data; monetary search is outside this feature."
+    },
+    {
+      "source": "BookCopy.purchaseCurrency",
+      "classification": "Per-copy purchase registration/detail data; monetary search is outside this feature."
     },
     {
       "source": "BookCopy.status",
@@ -6039,6 +6056,34 @@
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {
+      "source": "Employee.workflowRequests",
+      "classification": "exclude: workflow requests are searched on the workflow page"
+    },
+    {
+      "source": "Employee.workflowSteps",
+      "classification": "exclude: workflow steps use workflow-specific authorization"
+    },
+    {
+      "source": "Employee.workflowActions",
+      "classification": "exclude: workflow action history"
+    },
+    {
+      "source": "Employee.scheduleEvents",
+      "classification": "exclude: schedule events are outside employee search"
+    },
+    {
+      "source": "Employee.scheduleParticipation",
+      "classification": "exclude: schedule participants are outside employee search"
+    },
+    {
+      "source": "Employee.schedulePreference",
+      "classification": "exclude: private schedule preferences"
+    },
+    {
+      "source": "Employee.notificationReceipts",
+      "classification": "exclude: private notification delivery/read state"
+    },
+    {
       "source": "Employee.savedSearchFilters",
       "classification": "exclude: search infrastructure"
     },
@@ -6047,7 +6092,7 @@
       "classification": "skills"
     },
     {
-      "source": "Employee.projectParticipations",
+      "source": "Employee.engagementParticipations",
       "classification": "participations"
     },
     {
@@ -6557,6 +6602,26 @@
           "current": "true"
         }
       ]
+    },
+    {
+      "source": "Employee.deletionScheduledOn",
+      "classification": "Employee departure scheduling metadata; no detailed search field is exposed."
+    },
+    {
+      "source": "Employee.deletionRequestedById",
+      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
+    },
+    {
+      "source": "Employee.assetReturnCompletedAt",
+      "classification": "Internal departure allocation guard; no detailed search field is exposed."
+    },
+    {
+      "source": "Employee.deletionRequestedBy",
+      "classification": "exclude: scheduled deletion requester metadata"
+    },
+    {
+      "source": "Employee.requestedDeletions",
+      "classification": "exclude: actor-only scheduled deletion requests"
     },
     {
       "source": "Employee.notes",
@@ -8315,6 +8380,324 @@
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {
+      "source": "Engagement.clientId",
+      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
+    },
+    {
+      "source": "Engagement.contractStartsOn",
+      "classification": "Engagement contract metadata; no participation contract-date search field is exposed"
+    },
+    {
+      "source": "Engagement.contractEndsOn",
+      "classification": "Engagement contract metadata; no participation contract-date search field is exposed"
+    },
+    {
+      "source": "Engagement.client",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "Engagement.id",
+      "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
+    },
+    {
+      "source": "Engagement.code",
+      "classification": "Internal automatically allocated identifier; never exposed as a search field"
+    },
+    {
+      "source": "Engagement.name",
+      "search": [
+        {
+          "context": "participations",
+          "field": "name",
+          "label": {
+            "en": "Name",
+            "ja": "名称"
+          },
+          "type": "string",
+          "maxLength": 128,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "contains",
+            "notContains"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "Engagement.description",
+      "search": [
+        {
+          "context": "participations",
+          "field": "description",
+          "label": {
+            "en": "Description",
+            "ja": "説明"
+          },
+          "type": "string",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "contains",
+            "notContains"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "Engagement.createdAt",
+      "search": [
+        {
+          "context": "participations",
+          "field": "createdAt",
+          "label": {
+            "en": "Created At",
+            "ja": "作成日時"
+          },
+          "type": "datetime",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "Engagement.updatedAt",
+      "search": [
+        {
+          "context": "participations",
+          "field": "updatedAt",
+          "label": {
+            "en": "Updated At",
+            "ja": "更新日時"
+          },
+          "type": "datetime",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "Engagement.deletedAt",
+      "classification": "Deleted records are excluded from detailed conditions."
+    },
+    {
+      "source": "Engagement.participations",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "EngagementParticipation.id",
+      "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
+    },
+    {
+      "source": "EngagementParticipation.employeeId",
+      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
+    },
+    {
+      "source": "EngagementParticipation.engagementId",
+      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
+    },
+    {
+      "source": "EngagementParticipation.startsOn",
+      "search": [
+        {
+          "context": "participations",
+          "field": "record.startsOn",
+          "label": {
+            "en": "Record: Starts On",
+            "ja": "参画：開始日"
+          },
+          "type": "date",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "EngagementParticipation.endsOn",
+      "search": [
+        {
+          "context": "participations",
+          "field": "record.endsOn",
+          "label": {
+            "en": "Record: Ends On",
+            "ja": "参画：終了日"
+          },
+          "type": "date",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "EngagementParticipation.responsibility",
+      "search": [
+        {
+          "context": "participations",
+          "field": "record.responsibility",
+          "label": {
+            "en": "Record: Responsibility",
+            "ja": "参画：担当内容"
+          },
+          "type": "string",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "contains",
+            "notContains"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "EngagementParticipation.createdAt",
+      "search": [
+        {
+          "context": "participations",
+          "field": "record.createdAt",
+          "label": {
+            "en": "Record: Created At",
+            "ja": "参画：作成日時"
+          },
+          "type": "datetime",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "EngagementParticipation.updatedAt",
+      "search": [
+        {
+          "context": "participations",
+          "field": "record.updatedAt",
+          "label": {
+            "en": "Record: Updated At",
+            "ja": "参画：更新日時"
+          },
+          "type": "datetime",
+          "maxLength": 500,
+          "operators": [
+            "eq",
+            "ne",
+            "set",
+            "unset",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "between",
+            "relative"
+          ],
+          "operation": "engagements.read",
+          "scope": "employee scope",
+          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
+        }
+      ]
+    },
+    {
+      "source": "EngagementParticipation.deletedAt",
+      "classification": "Deleted records are excluded from detailed conditions."
+    },
+    {
+      "source": "EngagementParticipation.employee",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "EngagementParticipation.engagement",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "ItAsset.reservableResource",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
       "source": "ItAsset.id",
       "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
     },
@@ -8650,6 +9033,14 @@
           "current": "assignment.employee_id=employee.id AND assignment.deleted_at IS NULL AND assignment.returned_at IS NULL"
         }
       ]
+    },
+    {
+      "source": "ItAsset.purchaseAmount",
+      "classification": "Purchase registration/detail data; monetary search is outside this feature."
+    },
+    {
+      "source": "ItAsset.purchaseCurrency",
+      "classification": "Purchase registration/detail data; monetary search is outside this feature."
     },
     {
       "source": "ItAsset.disposalOn",
@@ -10605,320 +10996,6 @@
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {
-      "source": "Project.clientId",
-      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
-    },
-    {
-      "source": "Project.contractStartsOn",
-      "classification": "Project contract metadata; no participation contract-date search field is exposed"
-    },
-    {
-      "source": "Project.contractEndsOn",
-      "classification": "Project contract metadata; no participation contract-date search field is exposed"
-    },
-    {
-      "source": "Project.client",
-      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
-    },
-    {
-      "source": "Project.id",
-      "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
-    },
-    {
-      "source": "Project.code",
-      "classification": "Internal automatically allocated identifier; never exposed as a search field"
-    },
-    {
-      "source": "Project.name",
-      "search": [
-        {
-          "context": "participations",
-          "field": "name",
-          "label": {
-            "en": "Name",
-            "ja": "名称"
-          },
-          "type": "string",
-          "maxLength": 128,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "contains",
-            "notContains"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "Project.description",
-      "search": [
-        {
-          "context": "participations",
-          "field": "description",
-          "label": {
-            "en": "Description",
-            "ja": "説明"
-          },
-          "type": "string",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "contains",
-            "notContains"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "Project.createdAt",
-      "search": [
-        {
-          "context": "participations",
-          "field": "createdAt",
-          "label": {
-            "en": "Created At",
-            "ja": "作成日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "Project.updatedAt",
-      "search": [
-        {
-          "context": "participations",
-          "field": "updatedAt",
-          "label": {
-            "en": "Updated At",
-            "ja": "更新日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "Project.deletedAt",
-      "classification": "Deleted records are excluded from detailed conditions."
-    },
-    {
-      "source": "Project.participations",
-      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
-    },
-    {
-      "source": "ProjectParticipation.id",
-      "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
-    },
-    {
-      "source": "ProjectParticipation.employeeId",
-      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
-    },
-    {
-      "source": "ProjectParticipation.projectId",
-      "classification": "Foreign-key linkage represented by the related context; internal IDs are not free-text search fields."
-    },
-    {
-      "source": "ProjectParticipation.startsOn",
-      "search": [
-        {
-          "context": "participations",
-          "field": "record.startsOn",
-          "label": {
-            "en": "Record: Starts On",
-            "ja": "参画：開始日"
-          },
-          "type": "date",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "ProjectParticipation.endsOn",
-      "search": [
-        {
-          "context": "participations",
-          "field": "record.endsOn",
-          "label": {
-            "en": "Record: Ends On",
-            "ja": "参画：終了日"
-          },
-          "type": "date",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "ProjectParticipation.responsibility",
-      "search": [
-        {
-          "context": "participations",
-          "field": "record.responsibility",
-          "label": {
-            "en": "Record: Responsibility",
-            "ja": "参画：担当内容"
-          },
-          "type": "string",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "contains",
-            "notContains"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "ProjectParticipation.createdAt",
-      "search": [
-        {
-          "context": "participations",
-          "field": "record.createdAt",
-          "label": {
-            "en": "Record: Created At",
-            "ja": "参画：作成日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "ProjectParticipation.updatedAt",
-      "search": [
-        {
-          "context": "participations",
-          "field": "record.updatedAt",
-          "label": {
-            "en": "Record: Updated At",
-            "ja": "参画：更新日時"
-          },
-          "type": "datetime",
-          "maxLength": 500,
-          "operators": [
-            "eq",
-            "ne",
-            "set",
-            "unset",
-            "gt",
-            "gte",
-            "lt",
-            "lte",
-            "between",
-            "relative"
-          ],
-          "operation": "projects.read",
-          "scope": "employee scope",
-          "current": "record.employee_id=employee.id AND record.deleted_at IS NULL"
-        }
-      ]
-    },
-    {
-      "source": "ProjectParticipation.deletedAt",
-      "classification": "Deleted records are excluded from detailed conditions."
-    },
-    {
-      "source": "ProjectParticipation.employee",
-      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
-    },
-    {
-      "source": "ProjectParticipation.project",
-      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
-    },
-    {
       "source": "Role.id",
       "classification": "Surrogate identifier; master selectors and resource relationships use identifiers internally."
     },
@@ -11077,6 +11154,10 @@
     },
     {
       "source": "Role.permissions",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "Room.reservableResource",
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {
@@ -16911,5 +16992,613 @@
         "between"
       ]
     }
-  ]
+  ],
+  "businessFields": {
+    "teams": [
+      {
+        "context": "team",
+        "field": "name",
+        "source": "Team.name",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "teams.read"
+      },
+      {
+        "context": "team",
+        "field": "description",
+        "source": "Team.description",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "teams.read"
+      },
+      {
+        "context": "team",
+        "field": "memberCount",
+        "source": "derived.teamMemberCount",
+        "type": "number",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between"
+        ],
+        "operation": "teams.read"
+      },
+      {
+        "context": "team",
+        "field": "createdAt",
+        "source": "Team.createdAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "teams.read"
+      },
+      {
+        "context": "team",
+        "field": "updatedAt",
+        "source": "Team.updatedAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "teams.read"
+      }
+    ],
+    "skills": [
+      {
+        "context": "skill",
+        "field": "name",
+        "source": "Skill.name",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "skills.read"
+      },
+      {
+        "context": "skill",
+        "field": "description",
+        "source": "Skill.description",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "skills.read"
+      },
+      {
+        "context": "skill",
+        "field": "category",
+        "source": "Skill.category",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "skills.read"
+      },
+      {
+        "context": "skill",
+        "field": "createdAt",
+        "source": "Skill.createdAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "skills.read"
+      },
+      {
+        "context": "skill",
+        "field": "updatedAt",
+        "source": "Skill.updatedAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "skills.read"
+      }
+    ],
+    "clients": [
+      {
+        "context": "client",
+        "field": "name",
+        "source": "Client.name",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "companyName",
+        "source": "Client.companyName",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "contactName",
+        "source": "Client.contactName",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "contactDepartment",
+        "source": "Client.contactDepartment",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "contactEmail",
+        "source": "Client.contactEmail",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "contactMobile",
+        "source": "Client.contactMobile",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "postalCode",
+        "source": "Client.postalCode",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "prefecture",
+        "source": "Client.prefecture",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "city",
+        "source": "Client.city",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "streetAddress",
+        "source": "Client.streetAddress",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "buildingName",
+        "source": "Client.buildingName",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "phoneNumber1",
+        "source": "Client.phoneNumber1",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "phoneNumber2",
+        "source": "Client.phoneNumber2",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "faxNumber1",
+        "source": "Client.faxNumber1",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "faxNumber2",
+        "source": "Client.faxNumber2",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "notes",
+        "source": "Client.notes",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "countryCode",
+        "source": "Client.countryCode",
+        "type": "choice",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "in",
+          "notIn"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "createdAt",
+        "source": "Client.createdAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "clients.read"
+      },
+      {
+        "context": "client",
+        "field": "updatedAt",
+        "source": "Client.updatedAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "clients.read"
+      }
+    ],
+    "engagements": [
+      {
+        "context": "engagement",
+        "field": "name",
+        "source": "Engagement.name",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "description",
+        "source": "Engagement.description",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "contractStartsOn",
+        "source": "Engagement.contractStartsOn",
+        "type": "date",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "contractEndsOn",
+        "source": "Engagement.contractEndsOn",
+        "type": "date",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "clientName",
+        "source": "Client.name",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "companyName",
+        "source": "Client.companyName",
+        "type": "string",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "contains",
+          "notContains"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "createdAt",
+        "source": "Engagement.createdAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "engagements.read"
+      },
+      {
+        "context": "engagement",
+        "field": "updatedAt",
+        "source": "Engagement.updatedAt",
+        "type": "datetime",
+        "operators": [
+          "eq",
+          "ne",
+          "set",
+          "unset",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "between",
+          "relative"
+        ],
+        "operation": "engagements.read"
+      }
+    ]
+  }
 }

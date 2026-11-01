@@ -11,3 +11,5 @@ api/scripts/generated-book-sources/
 .vite/
 
 .sph-preflight-*/
+
+vendor/npm/generated/

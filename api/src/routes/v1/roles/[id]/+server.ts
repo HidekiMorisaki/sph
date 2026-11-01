@@ -17,7 +17,7 @@ export async function PATCH({ locals, params, request }: import('./$types').Requ
 		const result = await getPrisma().$transaction(async (tx) => {
 			const existing = await tx.role.findFirst({ where: { id, deletedAt: null }, select: roleSelect });
 			if (!existing) return { state: 'not_found' as const };
-			if (roleOutput(existing).isSystemManagement || roleOutput(existing).isBranchAdministrator) return { state: 'immutable' as const };
+			if (roleOutput(existing).isSystemManagement) return { state: 'immutable' as const };
 			const before = await readMasterSnapshot(tx, 'role', id);
 			const changed = await tx.role.updateMany({ where: { id, deletedAt: null }, data: parsed.data });
 			if (!changed.count) return { state: 'not_found' as const };
@@ -43,7 +43,7 @@ export async function DELETE({ locals, params }: import('./$types').RequestEvent
 			const locked = await tx.$queryRaw<Array<{ id: number }>>`SELECT id FROM roles WHERE id = ${id} AND deleted_at IS NULL FOR UPDATE`;
 			if (!locked.length) return 'not_found';
 			const role = await tx.role.findUniqueOrThrow({ where: { id }, select: roleSelect });
-			if (roleOutput(role).isSystemManagement || roleOutput(role).isBranchAdministrator) return 'immutable';
+			if (roleOutput(role).isSystemManagement) return 'immutable';
 			if (await tx.employeeRole.count({ where: { roleId: id, deletedAt: null } })) return 'referenced';
 			const before = await readMasterSnapshot(tx, 'role', id);
 			const now = new Date();

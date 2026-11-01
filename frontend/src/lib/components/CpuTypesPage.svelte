@@ -1,4 +1,10 @@
 <script lang="ts">
+ import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import { operationAccess } from '$lib/operation-access';
+ const allowedOperation = operationAccess();
+ import FormTabs from '$lib/components/FormTabs.svelte';
+ import DetailTabs from '$lib/components/DetailTabs.svelte';
 	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
 	import { onMount, tick } from 'svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -180,15 +186,14 @@
 	}
 	async function remove(item: CpuType) {
 		if (removing || !canManage) return;
-		if (item.usageCount && item.usageCount > 0) { if (selected?.id === item.id) closeDetail(); notice = 'deleteInUse'; return; }
+		if (item.usageCount && item.usageCount > 0) { notice = 'deleteInUse'; return; }
 		notice = '';
 		if (!confirm(t('deleteConfirm', item.name))) return;
-		if (selected?.id === item.id) closeDetail();
 		removing = true;
 		try {
 			const response = await fetch(`/v1/cpu-types/${item.id}`, { method: 'DELETE' });
 			if (!response.ok) { notice = response.status === 409 ? 'deleteInUse' : 'cpuDeleteFailed'; return; }
-			notice = 'cpuDeleted';
+			mode = null; selected = null; returnToDetail = false; notice = 'cpuDeleted';
 			await list?.refresh();
 			void tick().then(() => addButton?.focus());
 		} catch { notice = 'cpuDeleteFailed'; }
@@ -225,16 +230,19 @@
 {#if mode === 'detail' && selected}
 	{@const officialUrl = officialUrlHref(selected.officialUrl)}
 	<DetailModal title={text.cpuDetail} titleId="cpu-detail-title" closeLabel={text.cpuDetailClose} {returnFocus} compact dialogClass="cpu-dialog" onClose={closeDetail}>
-		{#snippet headerActions()}{#if canManage}<DetailActionButtons editLabel={commonText.edit} deleteLabel={commonText.delete} disabled={removing} onEdit={() => openModal('edit', selected, returnFocus)} onDelete={() => void remove(selected!)} />{/if}{/snippet}
-		<section class="app-detail-section"><h3>{text.basicInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div><dt>{text.manufacturer}</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>{text.series}</dt><dd>{selected.series}</dd></div><div><dt>{text.modelNumber}</dt><dd>{selected.modelNumber}</dd></div></dl></section>
+		{#snippet headerActions()}{#if canManage}<DetailActionButtons editing={false} editLabel={commonText.edit} deleteLabel={commonText.delete} disabled={removing} onEdit={() => openModal('edit', selected, returnFocus)} onDelete={() => void remove(selected!)} />{/if}{/snippet}
+{#if selected}{#snippet tabInformation()}{#if selected}		<section class="app-detail-section"><h3>{text.basicInformation}</h3><dl class="app-detail-grid"><div><dt>{text.name}</dt><dd>{selected.name}</dd></div><div><dt>{text.manufacturer}</dt><dd>{selected.manufacturer?.name}</dd></div><div><dt>{text.series}</dt><dd>{selected.series}</dd></div><div><dt>{text.modelNumber}</dt><dd>{selected.modelNumber}</dd></div></dl></section>
 		<section class="app-detail-section"><h3>{text.referenceInformation}</h3><dl class="app-detail-grid"><div class="app-detail-wide"><dt>{text.officialUrl}</dt><dd>{#if officialUrl}<a class="detail-link" href={officialUrl} target="_blank" rel="noopener noreferrer">{selected.officialUrl}</a>{:else}{selected.officialUrl ?? ''}{/if}</dd></div><div><dt>{text.sourceChecked}</dt><dd>{formatDate(selected.sourceCheckedOn,$localization)}</dd></div><div class="app-detail-wide"><dt>{text.notes}</dt><dd class="app-detail-notes">{selected.notes ?? ''}</dd></div></dl></section>
-		<MasterHistorySection endpoint="/v1/cpu-types" itemId={selected.id} fieldLabels={{ name: text.name, manufacturerId: text.manufacturer, series: text.series, modelNumber: text.modelNumber, officialUrl: text.officialUrl, sourceCheckedOn: text.sourceChecked, notes: text.notes }} hiddenFields={['sortOrder']} dateFields={['sourceCheckedOn']} />
+		{/if}{/snippet}
+{#snippet tabHistory()}{#if selected}<MasterHistorySection collapsible={false} endpoint="/v1/cpu-types" itemId={selected.id} fieldLabels={{ name: text.name, manufacturerId: text.manufacturer, series: text.series, modelNumber: text.modelNumber, officialUrl: text.officialUrl, sourceCheckedOn: text.sourceChecked, notes: text.notes }} hiddenFields={['sortOrder']} dateFields={['sourceCheckedOn']} />{/if}{/snippet}
+<DetailTabs label={commonText.basicInformation} tabs={[{id:"basic",label:commonText.basicInformation,content:tabInformation},{id:"history",label:commonText.history,content:tabHistory}]} />{/if}
 	</DetailModal>
 {:else if mode}
 	<ModalBackdrop><dialog bind:this={dialogElement} class="cpu-dialog app-modal app-modal--compact" open aria-modal="true" aria-labelledby="cpu-dialog-title">
-		<header><h2 id="cpu-dialog-title">{mode === 'add' ? text.cpuAdd : text.cpuEdit}</h2><button class="modal-close app-modal-close" type="button" aria-label={text.cpuClose} onclick={requestCloseModal}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+		<header><h2 id="cpu-dialog-title">{mode === 'add' ? text.cpuAdd : text.cpuEdit}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.cpuClose} onclick={requestCloseModal} data-button-scope="button-6f9686d86f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header>
 		<form id="cpu-form" class="cpu-form app-modal-form" novalidate onsubmit={(event) => { event.preventDefault(); void save(); }}>
-			<div class="cpu-form-body app-modal-form-body">
+			<div class="cpu-form-body app-modal-form-body"><FormTabs label={text.cpuEdit}>{#if notice}<StatusNotice message={m(notice)} tone="error" onDismiss={()=>notice=''} />{/if}<div data-form-panel="basic">
+
 				{#if formError}<StatusNotice title={text.cpuSaveTitle} message={m(formError)} tone="error" onDismiss={() => formError = ''} />{/if}
 				<FormSection title={text.basicInformation} framed>
 				<SearchSelect label={text.manufacturer} field="manufacturerId" name="manufacturerId" value={form.manufacturerId} options={manufacturers.map((item) => ({ value: String(item.id), label: item.name }))} required disabled={!manufacturers.length} error={m(errors.manufacturerId ?? '')} onOpen={() => sourceDateOpen = false} onSelect={(value) => updateField('manufacturerId', value)} />
@@ -245,17 +253,18 @@
 				<FormSection title={text.referenceInformation} framed>
 					<label><span>{text.officialUrl}</span><input name="officialUrl" type="url" value={form.officialUrl} maxlength="1000" class:invalid={Boolean(errors.officialUrl)} aria-invalid={Boolean(errors.officialUrl)} aria-describedby={errors.officialUrl ? 'officialUrl-error' : undefined} oninput={(event) => updateField('officialUrl', event.currentTarget.value)} />{#if errors.officialUrl}<span class="field-error" id="officialUrl-error" role="alert">{m(errors.officialUrl)}</span>{/if}</label>
 					<DatePicker label={text.sourceChecked} field="sourceCheckedOn" value={form.sourceCheckedOn} error={m(errors.sourceCheckedOn ?? '')} above={sourceDateAbove} open={sourceDateOpen} onToggle={toggleSourceDate} onSelect={(value) => { updateField('sourceCheckedOn', value); sourceDateOpen = false; }} />
-					<label class="notes-field"><span>{text.notes}</span><textarea name="notes" value={form.notes} maxlength="5000" oninput={(event) => updateField('notes', event.currentTarget.value)}></textarea></label>
+					</FormSection><FormSection title={text.additionalInformation} framed><label class="notes-field"><span>{text.notes}</span><textarea name="notes" value={form.notes} maxlength="5000" oninput={(event) => updateField('notes', event.currentTarget.value)}></textarea></label>
 				</FormSection>
-			</div>
-			<footer class="app-modal-footer"><button class="secondary" type="button" disabled={saving} onclick={requestCloseModal}>{text.cancel}</button><button class="app-primary-action" type="submit" disabled={saving || (mode === 'edit' && !hasUnsavedChanges)}>{saving ? text.saving : mode === 'add' ? text.cpuAdd : text.saveChanges}</button></footer>
+
+</div></FormTabs></div>
+			<footer class="app-modal-footer">{#if mode==='edit' && selected && allowedOperation('masters.delete')}<ModalActionButton class="app-danger-action editor-delete" type="button" disabled={saving} onclick={()=>void remove(selected!)} variant="danger" data-button-scope="button-6f9686d86f">{commonText.delete}</ModalActionButton>{/if}<ModalActionButton class="secondary" type="button" disabled={saving} onclick={requestCloseModal} variant="secondary" data-button-scope="button-6f9686d86f">{text.cancel}</ModalActionButton><ModalActionButton class="app-primary-action" type="submit" disabled={saving || !allowedOperation(mode==='edit' ? 'masters.update' : 'masters.create') || (mode === 'edit' && !hasUnsavedChanges)} variant="primary" data-button-scope="button-6f9686d86f">{saving ? text.saving : mode === 'add' ? text.cpuAdd : text.saveChanges}</ModalActionButton></footer>
 		</form>
 	</dialog></ModalBackdrop>
 	{#if confirmingDiscard}<DiscardChangesDialog onContinue={() => confirmingDiscard = false} onDiscard={closeModalImmediately} />{/if}
 {/if}
 
 <style>
-	.cpu-page{display:flex;min-width:0;width:100%;min-height:0;flex-direction:column}.cpu-page :global(.master-list){max-height:none}.cpu-page :global(.master-header){flex-wrap:wrap}.cpu-page :global(thead){display:none}.cpu-page :global(th),.cpu-page :global(td){padding-right:6px;padding-left:6px;overflow-wrap:anywhere}.cpu-page :global(td:first-child){padding-left:10px}.cpu-page :global(.tree-child td:first-child){padding-left:38px}.cpu-page :global(.tree-grandchild td:first-child){padding-left:58px}.cpu-page :global(.actions-cell){padding-right:6px;padding-left:2px}
-	.detail-link{color:#337ab7;text-decoration:underline;text-underline-offset:2px}.notes-field{grid-column:1/-1}:global(html[data-theme='dark']) .detail-link{color:#77b9f0}
-	input:focus-visible{outline:2px solid #1abb9c;outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}
+	.cpu-page{display:flex;min-width:0;width:100%;min-height:0;flex-direction:column}.cpu-page :global(.master-list){max-height:none}.cpu-page :global(.master-header){flex-wrap:wrap}.cpu-page :global(thead){display:none}.cpu-page :global(th),.cpu-page :global(td){padding-right:var(--sph-space-6px);padding-left:var(--sph-space-6px);overflow-wrap:anywhere}.cpu-page :global(td:first-child){padding-left:var(--sph-space-10px)}.cpu-page :global(.tree-child td:first-child){padding-left:var(--sph-space-38px)}.cpu-page :global(.tree-grandchild td:first-child){padding-left:var(--sph-space-58px)}.cpu-page :global(.actions-cell){padding-right:var(--sph-space-6px);padding-left:var(--sph-space-2px)}
+	.detail-link{color:var(--sph-color-action);text-decoration:underline;text-underline-offset:2px}.notes-field{grid-column:1/-1}:global(html[data-theme='dark']) .detail-link{color:var(--sph-color-software-notice-info)}
+	input:focus-visible{outline:2px solid var(--sph-color-accent);outline-offset:2px}@media(max-width:760px){.cpu-page{width:calc(100vw - 96px);max-width:calc(100vw - 96px)}}
 </style>

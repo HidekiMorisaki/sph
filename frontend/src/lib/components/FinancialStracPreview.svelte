@@ -82,39 +82,39 @@
 </DetailModal>
 
 <style>
-	.preview-content{display:grid;gap:18px;min-width:0}
+	.preview-content{display:grid;gap:var(--sph-space-18px);min-width:0}
 	.preview-note{margin:0;color:var(--text-secondary);font-size:var(--font-size-support)}
-	.incomplete{margin:0;padding:10px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text-secondary);font-size:var(--font-size-support)}
-	.diagram{display:grid;gap:18px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
-	.legend{display:flex;flex-wrap:wrap;gap:6px 16px}
-	.legend-item{display:inline-flex;align-items:center;gap:6px;margin:0;padding:4px 2px;border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}
+	.incomplete{margin:0;padding:var(--sph-space-10px) var(--sph-space-12px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--surface);color:var(--text-secondary);font-size:var(--font-size-support)}
+	.diagram{display:grid;gap:var(--sph-space-18px);padding:var(--sph-space-18px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px)}
+	.legend{display:flex;flex-wrap:wrap;gap:var(--sph-space-6px) var(--sph-space-16px)}
+	.legend-item{display:inline-flex;align-items:center;gap:var(--sph-space-6px);margin:0;padding:var(--sph-space-4px) var(--sph-space-2px);border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--font-size-support);cursor:pointer}
 	.legend-item+.legend-item{margin-left:0}
 	.legend-item:hover{background:transparent;color:var(--action-primary)}
 	.legend-item:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.legend-item.muted{opacity:.55;text-decoration:line-through}
-	.chart-row{display:grid;grid-template-columns:125px minmax(0,1fr);align-items:center;gap:12px}
-	.bar-label{color:var(--text-secondary);font-size:var(--font-size-support);font-weight:700}
-	.bar-track{position:relative;display:grid;width:100%;height:56px;overflow:hidden;background:var(--surface-secondary);border-radius:4px}
+	.chart-row{display:grid;grid-template-columns:125px minmax(0,1fr);align-items:center;gap:var(--sph-space-12px)}
+	.bar-label{color:var(--text-secondary);font-size:var(--font-size-support);font-weight:var(--sph-weight-700)}
+	.bar-track{position:relative;display:grid;width:100%;height:56px;overflow:hidden;background:var(--surface-secondary);border-radius:var(--sph-radius-4px)}
 	.gridline{position:absolute;top:0;bottom:0;width:1px;background:var(--border);pointer-events:none}
 	.gridline.zero{background:var(--text-secondary)}
 	.negative-side,.positive-side{position:relative;z-index:1;display:flex;min-width:0;height:100%}
 	.negative-side{justify-content:flex-end;border-right:2px solid var(--text-secondary)}
-	.chart-axis{display:grid;grid-template-columns:125px minmax(0,1fr);gap:12px;margin-top:-12px}
+	.chart-axis{display:grid;grid-template-columns:125px minmax(0,1fr);gap:var(--sph-space-12px);margin-top:-12px}
 	.axis-track{position:relative;height:36px;border-top:1px solid var(--border)}
 	.axis-tick{position:absolute;top:0;height:6px;border-left:1px solid var(--muted)}
 	.axis-tick.zero{border-color:var(--text)}
-	.tick-label{position:absolute;top:8px;left:0;transform:translateX(-50%);color:var(--text-secondary);font-size:.75rem;white-space:nowrap}
+	.tick-label{position:absolute;top:8px;left:0;transform:translateX(-50%);color:var(--text-secondary);font-size:var(--sph-type-75rem);white-space:nowrap}
 	.axis-tick:first-child .tick-label{transform:none}
 	.axis-tick:last-child .tick-label{transform:translateX(-100%)}
-	.axis-caption{margin:-12px 0 0 137px;text-align:center;color:var(--text-secondary);font-size:var(--font-size-support)}
+	.axis-caption{margin:-12px 0 0 var(--sph-space-137px);text-align:center;color:var(--text-secondary);font-size:var(--font-size-support)}
 	.segment{min-width:0;height:100%}
-	.revenue{background:#337ab7}.variable{background:#5f8cff}.gross{background:#ffbd78}.fixed{background:#ed56c1}.profit{background:#1abb9c}.loss-segment,.loss-swatch{background:#f5a4cf}
-	.values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
-	.values>div{min-width:0;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px}
-	.values dt{display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:var(--font-size-support)}
-	.values dd{margin:6px 0 0;overflow-wrap:anywhere;color:var(--text);font-size:var(--font-size-body);font-weight:700}
+	.revenue{background:var(--sph-color-action)}.variable{background:var(--sph-color-software-series-blue)}.gross{background:var(--sph-color-software-series-orange)}.fixed{background:var(--sph-color-software-series-magenta)}.profit{background:var(--sph-color-accent)}.loss-segment,.loss-swatch{background:var(--sph-color-software-series-pink)}
+	.values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sph-space-10px);margin:0}
+	.values>div{min-width:0;padding:var(--sph-space-12px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-4px)}
+	.values dt{display:flex;align-items:center;gap:var(--sph-space-8px);color:var(--text-secondary);font-size:var(--font-size-support)}
+	.values dd{margin:var(--sph-space-6px) 0 0;overflow-wrap:anywhere;color:var(--text);font-size:var(--font-size-body);font-weight:var(--sph-weight-700)}
 	.values dd.negative{color:var(--danger)}
 	.swatch{display:inline-block;flex:none;width:12px;height:12px;border-radius:50%}
-	.empty{margin:0;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:4px}
-	@media(max-width:700px){.chart-row{grid-template-columns:1fr;gap:6px}.chart-axis{grid-template-columns:1fr}.chart-axis>div:first-child{display:none}.axis-caption{margin-left:0}.axis-tick:nth-child(even):not(.zero) .tick-label{display:none}.values{grid-template-columns:1fr}}
+	.empty{margin:0;padding:var(--sph-space-18px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-4px)}
+	@media(max-width:700px){.chart-row{grid-template-columns:1fr;gap:var(--sph-space-6px)}.chart-axis{grid-template-columns:1fr}.chart-axis>div:first-child{display:none}.axis-caption{margin-left:0}.axis-tick:nth-child(even):not(.zero) .tick-label{display:none}.values{grid-template-columns:1fr}}
 </style>

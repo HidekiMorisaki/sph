@@ -15,3 +15,13 @@ export async function widgetUsageCounts(db:Prisma.TransactionClient,releaseIds:n
  `);
  return new Map(rows.map(row=>[row.releaseId,Number(row.userCount)]));
 }
+
+export async function widgetGroupUsageCount(db:Prisma.TransactionClient,releaseIds:number[]){
+ if(!releaseIds.length)return 0;
+ const rows=await db.$queryRaw<Array<{count:bigint}>>(Prisma.sql`
+  SELECT COUNT(DISTINCT l.employee_id) AS count FROM widget_instances i
+  JOIN widget_layouts l ON l.id=i.layout_id JOIN employees e ON e.id=l.employee_id
+  WHERE i.release_id IN (${Prisma.join(releaseIds)}) AND i.deleted_at IS NULL
+   AND l.deleted_at IS NULL AND e.deleted_at IS NULL`);
+ return Number(rows[0].count);
+}

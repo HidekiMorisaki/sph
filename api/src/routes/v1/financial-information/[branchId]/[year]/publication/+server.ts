@@ -6,6 +6,7 @@ import { failure, success } from '$lib/server/api/response';
 import { getPrisma } from '$lib/server/prisma';
 
 export async function PUT({ locals, params, request }: import('./$types').RequestEvent) {
+	requireSystemAdminApi(locals.user);
 	const branchId = Number(params.branchId);
 	const year = parseYear(params.year);
 	const body = await request.json().catch(() => null) as Record<string, unknown> | null;
