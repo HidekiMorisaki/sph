@@ -1,0 +1,68 @@
+[
+  {
+    "name": "postgresql-16.16-COPYRIGHT",
+    "source": "https://raw.githubusercontent.com/postgres/postgres/REL_16_16/COPYRIGHT",
+    "sha256": "3d6af92ff8a4c2cdf69afb1cf44edea727922f5cd0cf8b5f72b11cdecac8fdfd",
+    "bytes": 1198
+  },
+  {
+    "name": "go-1.26.11-LICENSE",
+    "source": "https://raw.githubusercontent.com/golang/go/go1.26.11/LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "bytes": 1453
+  },
+  {
+    "name": "go-1.26.11-PATENTS",
+    "source": "https://raw.githubusercontent.com/golang/go/go1.26.11/PATENTS",
+    "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+    "bytes": 1303
+  },
+  {
+    "name": "tzdata-2026f-LICENSE",
+    "source": "https://data.iana.org/time-zones/releases/tzdata2026f.tar.gz",
+    "archiveSha256": "01b4a91cec5167ed48c11e8ab78f2048cead78ce94b0cafcad0ae8c5a3044d3d",
+    "sourcePath": "LICENSE",
+    "sha256": "0613408568889f5739e5ae252b722a2659c02002839ad970a63dc5e9174b27cf",
+    "bytes": 252
+  },
+  {
+    "name": "docker-postgres-LICENSE",
+    "source": "https://raw.githubusercontent.com/docker-library/postgres/168a848e5905af32aaa5fd6fad4f30906c80af95/LICENSE",
+    "sha256": "87ffd2c45e3f90cfa3407b5c40ef8333e87c3e875e4895f8b64df758198deafc",
+    "bytes": 1084
+  },
+  {
+    "name": "docker-golang-LICENSE",
+    "source": "https://raw.githubusercontent.com/docker-library/golang/f66ba4e64dfbab452b77f8ae045428aacadc24a2/LICENSE",
+    "sha256": "31668de690a9ecc50ba008a701b6bdb4d08ded13df7c319c49466b500eef6f69",
+    "bytes": 1477
+  },
+  {
+    "name": "zlib-1.4-LICENSE",
+    "source": "https://zlib.net/zlib-1.4.tar.gz",
+    "archiveSha256": "02dd159783677a749c04adbdd02b55b8a2bcc7e054f51b76b549199a916ad584",
+    "sourcePath": "zlib-1.4/LICENSE",
+    "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+  },
+  {
+    "name": "libxslt-1.1.43-Copyright",
+    "source": "https://download.gnome.org/sources/libxslt/1.1/libxslt-1.1.43.tar.xz",
+    "archiveSha256": "5a3d6b383ca5afc235b171118e90f5ff6aa27e9fea3303065231a6d403f0183a",
+    "sourcePath": "libxslt-1.1.43/Copyright",
+    "sha256": "7e48e290b6bfccc2ec1b297023a1d77f2fd87417f71fbb9f50aabef40a851819"
+  },
+  {
+    "name": "krb5-1.22.3-NOTICE",
+    "source": "https://web.mit.edu/kerberos/dist/krb5/1.22/krb5-1.22.3.tar.gz",
+    "archiveSha256": "fe90af8441ad9fa9b064b8e53077cefb782a96f8a68276b031dc54af1789ff0b",
+    "sourcePath": "krb5-1.22.3/NOTICE",
+    "sha256": "a11085f3471c71bead67a61038d45cb60b306434ccaaaeef2f59ffb4b474077e"
+  },
+  {
+    "name": "apk-tools-3.0.9-LICENSE",
+    "source": "https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v3.0.9/apk-tools-v3.0.9.tar.gz",
+    "archiveSha256": "0063029a3eb228fd494b6804613ac53c30372a1a79ac83e23cefa78368767726",
+    "sourcePath": "apk-tools-v3.0.9/LICENSE",
+    "sha256": "b3c87315aae4c9f276c37168f2655dd8bd990544d7a0bbfb929664155c7ab257"
+  }
+]
