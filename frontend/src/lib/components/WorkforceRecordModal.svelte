@@ -1,10 +1,10 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import {onMount,untrack,tick} from 'svelte';
- import {apiData} from '$lib/api';
- import {localeMessages} from '$lib/locale-messages';
- import {localization} from '$lib/localization';
- import {workforceOptions,type WorkforceMaster,type WorkforceRecord,type RecordContext} from '$lib/workforce';
+ import {apiData} from '#lib/api.js';
+ import {localeMessages} from '#lib/locale-messages.js';
+ import {localization} from '#lib/localization.js';
+ import {workforceOptions,type WorkforceMaster,type WorkforceRecord,type RecordContext} from '#lib/workforce.js';
  import DetailModal from './DetailModal.svelte';
  import DiscardChangesDialog from './DiscardChangesDialog.svelte';
  import FormSection from './FormSection.svelte';

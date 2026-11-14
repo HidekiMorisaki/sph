@@ -1,8 +1,8 @@
 <script lang="ts">
  import InfoIconButton from './InfoIconButton.svelte';
 	import { onMount, type Snippet } from 'svelte';
-	import { localization } from '$lib/localization';
-	import { localeMessages } from '$lib/locale-messages';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages } from '#lib/locale-messages.js';
 	let { label, children, showHeading = true }: { label: string; children: Snippet; showHeading?: boolean } = $props();
 	const id = $props.id();
 	let trigger = $state<HTMLButtonElement>();

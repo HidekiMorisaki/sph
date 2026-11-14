@@ -1,10 +1,10 @@
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { parseWorkCalendarEntryInput, workDateIsInCalendarYear } from '$lib/server/api/work-calendar-input';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { parseWorkCalendarEntryInput, workDateIsInCalendarYear } from '#lib/server/api/work-calendar-input.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['workDate', 'entryType', 'title', 'createdAt', 'updatedAt'] as const;
 

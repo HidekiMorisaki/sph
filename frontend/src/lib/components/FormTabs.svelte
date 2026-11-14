@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { stickyTabBackdrop } from '$lib/sticky-tab-backdrop';
+	import { stickyTabBackdrop } from '#lib/sticky-tab-backdrop.js';
 	import { onMount, tick, type Snippet } from 'svelte';
 	import PageTabs from './PageTabs.svelte';
-	import { modalTabs, initialEditorTab, type ModalTabKind } from '$lib/modal-tabs';
-	import { localization } from '$lib/localization';
-	import { formTabsSize } from '$lib/form-tabs-size';
+	import { modalTabs, initialEditorTab, type ModalTabKind } from '#lib/modal-tabs.js';
+	import { localization } from '#lib/localization.js';
+	import { formTabsSize } from '#lib/form-tabs-size.js';
 	let { label, children, kind = 'basic', formId, formPanels = ['basic'] }: { label: string; children: Snippet; kind?: ModalTabKind; formId?: string; formPanels?: string[] } = $props();
 	const instanceId = $props.id();
 	const prefix = `form-${instanceId}`;

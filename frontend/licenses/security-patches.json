@@ -1,5 +1,5 @@
 {
-  "description": "SPH downstream changes for GHSA-gcqx-w48m-w2h4 and GHSA-27mw-82g8-phjj. GHSA-pfhg-q3qv-9q6r is mitigated in both application hooks. npm audit version advisories remain visible.",
+  "description": "SPH deepmerge 4.3.1 prototype safety patch retained. Kit 2.70.3 prerender backport superseded by checked upstream Kit 3.2.0 source and a real malicious prerender regression. Leading // path guards remain in both application hooks.",
   "files": [
     {
       "path": "node_modules/deepmerge/index.js",
@@ -81,25 +81,6 @@
       ],
       "archive": "https://registry.npmjs.org/deepmerge/-/deepmerge-4.3.1.tgz",
       "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
-    },
-    {
-      "path": "node_modules/@sveltejs/kit/src/runtime/server/page/render.js",
-      "packageJson": "node_modules/@sveltejs/kit/package.json",
-      "version": "2.70.3",
-      "originalSha256": "dd41b0bbf460e8d60c2e5c8334547fc5cc0b90b2aebe6c79a13c0026dfbcb725",
-      "patchedSha256": "2f43e1a6c85910d69eec472f8af719c80e598c19b66be4a36c4db799aae95754",
-      "replacements": [
-        {
-          "before": "import { hash } from '../../../utils/hash.js';",
-          "after": "import { hash } from '../../../utils/hash.js';\nimport { escape_html } from '../../../utils/escape.js'; // SPH security backport"
-        },
-        {
-          "before": "${state.prerendering.cache}",
-          "after": "${escape_html(state.prerendering.cache, true)}"
-        }
-      ],
-      "archive": "https://registry.npmjs.org/@sveltejs/kit/-/kit-2.70.3.tgz",
-      "integrity": "sha512-UDvEYuZqAMbfB/oXIoqKvbKcb7YczK5zYrzmsGV1zRJk03jntwp8dXiYoIJotxAndsKvcPFtx9H1GRSKFdSHgg=="
     }
   ],
   "licenses": [
@@ -110,6 +91,17 @@
     {
       "path": "node_modules/@sveltejs/kit/LICENSE",
       "sha256": "ac6ecdc526c9e6aec1db76f0e8dfe344d792380e974686476e7c512152ae2636"
+    }
+  ],
+  "upstreamFiles": [
+    {
+      "path": "node_modules/@sveltejs/kit/src/runtime/server/page/render.js",
+      "packageJson": "node_modules/@sveltejs/kit/package.json",
+      "version": "3.2.0",
+      "sha256": "bce25d55964811cbc0637e89e2b8dbb4aeb89eb5bbeaa311c215b120637f0129",
+      "source": "https://registry.npmjs.org/@sveltejs/kit/-/kit-3.2.0.tgz",
+      "integrity": "sha512-zhb8GTeFd/6BwfqaY4wKIF7eFACYOgn/KNppV6UHFBHk174B4d7xTtN7x0PxaPPlwnCTgbnpaYF6r9lirz0Biw==",
+      "reason": "Upstream escaped cache-control attribute; actual malicious prerender regression passed before removal of the Kit 2 backport."
     }
   ]
 }

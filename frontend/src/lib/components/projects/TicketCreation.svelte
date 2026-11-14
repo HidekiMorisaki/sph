@@ -1,7 +1,7 @@
 <script lang="ts">
  import {onMount} from 'svelte';
- import {localization} from '$lib/localization';
- import {canProject,projectRequest,projectError,type Project,type Ticket,type TicketDetail,type Relation} from '$lib/projects';
+ import {localization} from '#lib/localization.js';
+ import {canProject,projectRequest,projectError,type Project,type Ticket,type TicketDetail,type Relation} from '#lib/projects.js';
  import DetailModal from '../DetailModal.svelte';
  import SearchSelect from '../SearchSelect.svelte';
  import ActionButton from '../ActionButton.svelte';

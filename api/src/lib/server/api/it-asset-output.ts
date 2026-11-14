@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { itAssetInclude } from './it-asset-input';
 
 type ItAssetRecord = Prisma.ItAssetGetPayload<{ include: typeof itAssetInclude }>;

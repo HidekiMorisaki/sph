@@ -1,17 +1,17 @@
-import { assetList } from '$lib/server/api/it-asset-list';
-import { itAssetOutput } from '$lib/server/api/it-asset-output';
-import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { authorizeCredentialChange, applyCredentialChanges, parseCredentialChanges } from '$lib/server/api/it-asset-credentials';
-import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
-import { reserveManagementCode, resolveManagementCode } from '$lib/server/api/it-asset-management-code';
-import { ItAssetValidationError, itAssetErrorResponse } from '$lib/server/api/it-asset-errors';
-import { changeAssignee, readAssetFields, recordAssetChange } from '$lib/server/api/it-asset-history';
-import { syncAssetIpAddresses } from '$lib/server/api/it-asset-network';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { assetList } from '#lib/server/api/it-asset-list.js';
+import { itAssetOutput } from '#lib/server/api/it-asset-output.js';
+import { lockEmployeeAllocation } from '#lib/server/api/employee-availability.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { authorizeCredentialChange, applyCredentialChanges, parseCredentialChanges } from '#lib/server/api/it-asset-credentials.js';
+import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '#lib/server/api/it-asset-input.js';
+import { reserveManagementCode, resolveManagementCode } from '#lib/server/api/it-asset-management-code.js';
+import { ItAssetValidationError, itAssetErrorResponse } from '#lib/server/api/it-asset-errors.js';
+import { changeAssignee, readAssetFields, recordAssetChange } from '#lib/server/api/it-asset-history.js';
+import { syncAssetIpAddresses } from '#lib/server/api/it-asset-network.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) { return assetList(locals.user, url); }
 export async function POST({ locals, request }: import('./$types').RequestEvent) {

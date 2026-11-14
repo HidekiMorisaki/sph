@@ -1,9 +1,9 @@
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
-import { recordBookChange } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { businessDate, lockBookQueue, reconcileBookQueue } from '#lib/server/api/book-circulation.js';
+import { recordBookChange } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function DELETE({ locals, params }: import('./$types').RequestEvent) {
 	const actor = requireOperationApi(locals.user, permissionOperations.bookRead);

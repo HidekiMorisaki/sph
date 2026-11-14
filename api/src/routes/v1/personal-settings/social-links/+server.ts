@@ -1,7 +1,7 @@
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { failure, success } from '$lib/server/api/response';
-import { parseSocialLinksInput, socialLinkPlatforms } from '$lib/server/api/social-links';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { parseSocialLinksInput, socialLinkPlatforms } from '#lib/server/api/social-links.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const select = { platform: true, url: true } as const;
 

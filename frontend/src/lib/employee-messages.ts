@@ -1,5 +1,5 @@
 import apiReasons from './employee-api-reasons.json';
-import { localeMessages, formatLocaleTemplate, type MessageLanguage } from '$lib/locale-messages';
+import { localeMessages, formatLocaleTemplate, type MessageLanguage } from '#lib/locale-messages.js';
 
 // Existing API reasons are English protocol values. Resolve them against the
 // protocol mapping; display only the selected language's matching message.

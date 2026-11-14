@@ -1,20 +1,20 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import AnalyticsChart from '$lib/components/AnalyticsChart.svelte';
-	import OrganizationSummary from '$lib/components/OrganizationSummary.svelte';
-	import AnalyticsHeadcountAgeChart from '$lib/components/AnalyticsHeadcountAgeChart.svelte';
-	import AnalyticsPeriodControls from '$lib/components/AnalyticsPeriodControls.svelte';
-	import AnalyticsTurnoverChart from '$lib/components/AnalyticsTurnoverChart.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { analyticsRequestGate, AnalyticsRequestError, requestAnalytics, type AnalyticsFailure } from '$lib/analyticsRequests';
-	import { analyticsChartKeys, analyticsSelectionSaver, readAnalyticsSelection, type AnalyticsSelection, type ChartKey, type SaveStatus } from '$lib/analyticsSelection';
-	import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '$lib/analytics';
-	import { DISPLAY_LANGUAGES, localization } from '$lib/localization';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import AnalyticsChart from '#lib/components/AnalyticsChart.svelte';
+	import OrganizationSummary from '#lib/components/OrganizationSummary.svelte';
+	import AnalyticsHeadcountAgeChart from '#lib/components/AnalyticsHeadcountAgeChart.svelte';
+	import AnalyticsPeriodControls from '#lib/components/AnalyticsPeriodControls.svelte';
+	import AnalyticsTurnoverChart from '#lib/components/AnalyticsTurnoverChart.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { analyticsRequestGate, AnalyticsRequestError, requestAnalytics, type AnalyticsFailure } from '#lib/analyticsRequests.js';
+	import { analyticsChartKeys, analyticsSelectionSaver, readAnalyticsSelection, type AnalyticsSelection, type ChartKey, type SaveStatus } from '#lib/analyticsSelection.js';
+	import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '#lib/analytics.js';
+	import { DISPLAY_LANGUAGES, localization } from '#lib/localization.js';
 
 	let data = $state<AnalyticsData | null>(null);
 	let loading = $state(true);
@@ -159,7 +159,7 @@
 		pdfError = null;
 		referenceDateOpen = false;
 		try {
-			const { prepareAnalyticsPdfDownload } = await import('$lib/analyticsPdfDownload');
+			const { prepareAnalyticsPdfDownload } = await import('#lib/analyticsPdfDownload.js');
 			const result = await prepareAnalyticsPdfDownload(selection, settings);
 			const referenceResult = await requestAnalytics({ referenceDate: selection.referenceDate });
 			if (!mounted || !requests.isCurrent(request)) return;

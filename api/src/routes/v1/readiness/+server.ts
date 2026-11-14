@@ -1,5 +1,5 @@
-import { failure, success } from '$lib/server/api/response';
-import { isServiceReady } from '$lib/server/startup-readiness';
+import { failure, success } from '#lib/server/api/response.js';
+import { isServiceReady } from '#lib/server/startup-readiness.js';
 
 export async function GET() {
 	const ready = await isServiceReady();

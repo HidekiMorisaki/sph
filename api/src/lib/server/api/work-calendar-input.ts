@@ -1,4 +1,4 @@
-import { parseBodyId } from '$lib/server/api/database';
+import { parseBodyId } from '#lib/server/api/database.js';
 
 export const WORK_CALENDAR_MIN_YEAR = 2011;
 export const WORK_CALENDAR_MAX_YEAR = 9999;

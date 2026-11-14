@@ -3,14 +3,14 @@ import {ticketSearchContexts} from '../projects/ticket-search-registry';
 import {projectSearchContexts} from '../projects/search-registry';
 import { businessSearchContexts, isBusinessTarget, type BusinessTarget } from './business-search-registry';
 import { assetSearchContexts } from './asset-search-registry';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { requiredBranchScope } from './branch-access';
 import { throwApiError } from './response';
 import { bookRentableSql } from './book-availability';
 
-export type SearchTarget = 'employees' | 'books' | 'assets' | 'workflows' | 'projects' | 'projectTickets' | BusinessTarget;
-export type SearchField = { code: string; label: { en: string; ja: string }; type: 'string' | 'number' | 'date' | 'datetime' | 'boolean' | 'choice'; maxLength: number; unsetMode?: 'value'|'relation'; choices?: string[]; expression: string; source: string; operation?: string; private?: boolean; reference?: {table:string;key:string;name:string;branch?:string} };
+export type SearchTarget = 'employees' | 'books' | 'assets' | 'workflows' | 'projects' | 'projectTickets' | 'projectMembers' | BusinessTarget;
+export type SearchField = { code: string; label: { en: string; ja: string }; type: 'string' | 'number' | 'date' | 'datetime' | 'boolean' | 'choice'; maxLength: number; multiple?:boolean; custom?:{guard:string;multiple:boolean;value:string}; options?:Array<{value:string;label:string}>; unsetMode?: 'value'|'relation'; choices?: string[]; expression: string; source: string; operation?: string; private?: boolean; reference?: {table:string;key:string;name:string;branch?:string} };
 export type SearchContext = { code: string; label: { en: string; ja: string }; category: string; from: string; link: string; operation?: string; branch?: string; private?: boolean; policy?: 'loans' | 'reservations' | 'purchases'; fields: SearchField[] };
 const snake = (value: string) => value.replace(/[A-Z]/g, char => '_' + char.toLowerCase()).replace(/([a-z])(\d)/g,'$1_$2');
 const english = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase());
@@ -130,7 +130,24 @@ for(const context of [...employeeSearchContexts,...assetSearchContexts,...bookSe
  if(context.fields===employeeSearchContexts.find(c=>c.code===context.code)?.fields&&field.code==='selection'&&['group','departments','positions','teams','skills','participations','calendar','managedBranches','deputyManagedBranches'].includes(context.code))field.unsetMode='relation';
 }
 
-export const contextsFor = (target: SearchTarget) => target==='projectTickets'?ticketSearchContexts:target==='projects'?projectSearchContexts:isBusinessTarget(target) ? businessSearchContexts(target) : target === 'workflows' ? workflowSearchContexts : target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts;
+const projectMemberContexts=employeeSearchContexts.filter(c=>['employee','branch','employmentType','group','departments','positions'].includes(c.code)).map(c=>({...c,fields:c.fields.filter(f=>c.code==='employee'?['employeeCode','firstName','lastName'].includes(f.code):f.code==='name')}));
+export const contextsFor = (target: SearchTarget) => withUnsetDates(target==='projectMembers'?projectMemberContexts:target==='projectTickets'?ticketSearchContexts:target==='projects'?projectSearchContexts:isBusinessTarget(target) ? businessSearchContexts(target) : target === 'workflows' ? workflowSearchContexts : target === 'employees' ? employeeSearchContexts : target === 'assets' ? assetSearchContexts : bookSearchContexts);
+// Only existing searchable dates that can be empty opt into the simple form's
+// unset control. Related records still use the existing some/none semantics.
+const optionalDateSources=new Set([
+ 'BookCopy.purchasedOn','BookReservation.expiresOn','BookTitle.sourceRetrievedAt',
+ 'Branch.closedOn','Branch.openedOn','CpuType.sourceCheckedOn','Employee.retiredAt',
+ 'Engagement.contractEndsOn','Engagement.contractStartsOn','EngagementParticipation.endsOn',
+ 'ItAsset.disposalOn','Manufacturer.sourceCheckedOn','OperatingSystem.sourceCheckedOn',
+ 'ProjectTicket.dueOn','ProjectTicket.startsOn','SoftwareAssignment.plannedReleaseOn',
+ 'SoftwareContract.endsOn','SoftwareContract.renewsOn','SoftwareLicenseKey.expiresOn',
+ 'EmployeeSettings.analyticsSelection'
+]);
+function withUnsetDates(contexts:SearchContext[]):SearchContext[]{
+ for(const context of contexts)for(const field of context.fields)
+  if((field.type==='date'||field.type==='datetime')&&optionalDateSources.has(field.source))field.unsetMode='value';
+ return contexts;
+}
 export function operationScope(user: AuthenticatedUser, operation: string) {
  // Related read operations must not inherit the saved-filter mutation operation.
  return requiredBranchScope({...user,activeOperation:undefined},operation);
@@ -160,17 +177,18 @@ export function contextScope(context: SearchContext, user: AuthenticatedUser, ta
  return constraints.length ? Prisma.sql`(${Prisma.join(constraints,' AND ')})` : Prisma.sql`true`;
 }
 
-export function operatorsFor(field: Pick<SearchField,'type'>): string[] {
+export function operatorsFor(field: Pick<SearchField,'type'|'custom'>): string[] {
+ if(field.custom?.multiple)return ['in','allIn','notIn','set','unset'];
  const base = ['eq','ne','set','unset'];
  if(field.type==='string') return [...base,'contains','notContains'];
  if(field.type==='choice') return [...base,'in','notIn'];
- if(field.type==='boolean') return ['eq'];
+ if(field.type==='boolean') return field.custom?['eq','set','unset']:['eq'];
  return [...base,'gt','gte','lt','lte','between',...(field.type==='date'||field.type==='datetime'?['relative']:[])];
 }
-export function searchFieldDefinitions(target: SearchTarget,user: AuthenticatedUser) {
- return contextsFor(target).filter(ctx=>{
+export function searchFieldDefinitions(target: SearchTarget,user: AuthenticatedUser,contexts=contextsFor(target)) {
+ return contexts.filter(ctx=>{
   if(ctx.operation&&!user.permissionOperations.includes(ctx.operation)&&!user.ownBranchPermissionOperations.includes(ctx.operation))return false;
   if(['deviceSoftware','deviceInstallations'].includes(ctx.code)&&!user.permissionOperations.includes('assets.read')&&!user.ownBranchPermissionOperations.includes('assets.read'))return false;
   return !ctx.operation || user.permissionOperations.includes(ctx.operation) || Boolean(ctx.branch);
- }).map(ctx=>({code:ctx.code,label:ctx.label,category:ctx.category,related:Boolean(ctx.from),private:ctx.private??false,scope:ctx.policy??(ctx.operation&&user.ownBranchPermissionOperations.includes(ctx.operation)&&!user.permissionOperations.includes(ctx.operation)?'own_branch':'visible'),fields:ctx.fields.filter(field=>!field.operation||user.permissionOperations.includes(field.operation)||Boolean(ctx.branch)&&user.ownBranchPermissionOperations.includes(field.operation)).map(({expression,source,operation,reference,...field})=>({...field,operators:operatorsFor(field)}))}));
+ }).map(ctx=>({code:ctx.code,label:ctx.label,category:ctx.category,related:Boolean(ctx.from),private:ctx.private??false,scope:ctx.policy??(ctx.operation&&user.ownBranchPermissionOperations.includes(ctx.operation)&&!user.permissionOperations.includes(ctx.operation)?'own_branch':'visible'),fields:ctx.fields.filter(field=>!field.operation||user.permissionOperations.includes(field.operation)||Boolean(ctx.branch)&&user.ownBranchPermissionOperations.includes(field.operation)).map(({expression,source,operation,reference,custom,...field})=>({...field,operators:operatorsFor(field)}))}));
 }

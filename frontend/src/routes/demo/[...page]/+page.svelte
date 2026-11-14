@@ -1,6 +1,6 @@
-<script lang="ts">import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import { productName } from '$lib/brand';
+<script lang="ts">import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import { productName } from '#lib/brand.js';
 	import { page } from '$app/state';
 	let label = $derived((page.params.page ?? 'preview').split('-').map((word) => word[0]?.toUpperCase() + word.slice(1)).join(' '));
 </script>

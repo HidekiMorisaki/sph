@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { niceAxis } from '$lib/chartAxis';
+	import { niceAxis } from '#lib/chartAxis.js';
 	let { title, type, points, axisLabel, formatTick, showValues = false, minPointWidth = 58 }: {
 		title: string; type: 'bar' | 'line';
 		points: { label: string; value: number | null; formatted: string }[]; axisLabel: string; formatTick: (value: number) => string;

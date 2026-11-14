@@ -1,11 +1,11 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { teamReader } from '$lib/server/api/teams';
-import { parseId } from '$lib/server/api/database';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
-import { success, failure, throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { teamReader } from '#lib/server/api/teams.js';
+import { parseId } from '#lib/server/api/database.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
+import { success, failure, throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 async function change(locals: App.Locals, params: { id: string; employeeId: string }, add: boolean) {
  const { actor, branchId } = requireScopedOperationApi(locals.user, add ? 'teams.members.add' : 'teams.members.remove');

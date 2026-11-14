@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { niceAxis } from '$lib/chartAxis';
-	import { formatFinancialAmount } from '$lib/financial-currency';
-	import { financialTrendSegmentValue, financialTrendSeries, type FinancialTrend, type FinancialTrendSegment } from '$lib/financialTrendsData';
-	import { DISPLAY_LANGUAGES, localization } from '$lib/localization';
+	import { niceAxis } from '#lib/chartAxis.js';
+	import { formatFinancialAmount } from '#lib/financial-currency.js';
+	import { financialTrendSegmentValue, financialTrendSeries, type FinancialTrend, type FinancialTrendSegment } from '#lib/financialTrendsData.js';
+	import { DISPLAY_LANGUAGES, localization } from '#lib/localization.js';
 
 	type Labels = { chartTitle: string; amountAxis: string; yearAxis: string; variableLegend: string; fixedLegend: string; profitLegend: string; lossLegend: string; netProfit: string };
 	let { points, labels, currency }: { points: FinancialTrend[]; labels: Labels; currency: 'JPY' | 'USD' } = $props();

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SocialLinkPlatform } from '$lib/employees';
+	import type { SocialLinkPlatform } from '#lib/employees.js';
 
 	let { platform, size = 20 }: { platform: SocialLinkPlatform; size?: number } = $props();
 </script>

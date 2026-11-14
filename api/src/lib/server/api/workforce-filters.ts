@@ -1,4 +1,4 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 import { throwApiError } from './response';
 
 export function workforceFilters(url: URL, today: Date) {

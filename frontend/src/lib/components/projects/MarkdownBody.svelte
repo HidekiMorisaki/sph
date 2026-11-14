@@ -1,5 +1,5 @@
 <script lang="ts">
- import {parseProjectMarkdown,referenceCandidates,resolveMarkdownReferences} from '$lib/project-markdown';
+ import {parseProjectMarkdown,referenceCandidates,resolveMarkdownReferences} from '#lib/project-markdown.js';
  import MarkdownNodes from './MarkdownNodes.svelte';
  let {source}:{source:string}=$props();
  let nodes=$derived(parseProjectMarkdown(source));

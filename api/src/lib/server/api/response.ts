@@ -12,9 +12,7 @@ export function throwApiError(
 	message: string,
 	details: ApiErrorDetail[] = []
 ): never {
-	return httpError(responseCode, {
-		message,
-		status: 'error',
+	return httpError(responseCode, message, {
 		responseCode,
 		error: { code, message, details }
 	});

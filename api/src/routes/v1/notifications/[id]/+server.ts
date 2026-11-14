@@ -1,7 +1,7 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { allowedNotificationTypes } from '$lib/server/notifications';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { allowedNotificationTypes } from '#lib/server/notifications/index.js';
 
 export async function DELETE({locals,params}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'notifications.delete');

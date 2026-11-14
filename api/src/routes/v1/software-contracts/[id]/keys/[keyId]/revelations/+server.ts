@@ -1,12 +1,12 @@
-import { dev } from '$app/environment';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { bodyObject, decryptLicenseKey, fieldsOnly } from '$lib/server/api/software';
-import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
-import { verifyPassword } from '$lib/server/auth/session';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { dev } from '$app/env';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { bodyObject, decryptLicenseKey, fieldsOnly } from '#lib/server/api/software.js';
+import { allowsSensitiveRequest } from '#lib/server/api/sensitive-transport.js';
+import { verifyPassword } from '#lib/server/auth/session.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function POST({ locals, params, request, url }: import('./$types').RequestEvent) {
 	const actor = requireOperationApi(locals.user, permissionOperations.softwareKeyRead);

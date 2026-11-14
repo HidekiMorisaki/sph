@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { COMPACT_NAVIGATION_QUERY } from '$lib/responsive-layout';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { COMPACT_NAVIGATION_QUERY } from '#lib/responsive-layout.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
 	import { onMount } from 'svelte';
-	import { productName } from '$lib/brand';
-	import favicon from '$lib/assets/favicon.svg';
-	import { canOperate, type SessionUser } from '$lib/auth';
-	import { clearExternalLinks, externalLinks, loadExternalLinks } from '$lib/externalLinks';
-	import { localization } from '$lib/localization';
+	import { productName } from '#lib/brand.js';
+	import favicon from '#lib/assets/favicon.svg';
+	import { canOperate, type SessionUser } from '#lib/auth.js';
+	import { clearExternalLinks, externalLinks, loadExternalLinks } from '#lib/externalLinks.js';
+	import { localization } from '#lib/localization.js';
 	import { menuIcon, groupIcon, localizedMenus, type Item, type MenuGroup } from './sidebarNavigation';
-	import { sidebarGroupExpanded, type SidebarGroupState, type SidebarGroupId } from '$lib/sidebar-groups';
+	import { sidebarGroupExpanded, type SidebarGroupState, type SidebarGroupId } from '#lib/sidebar-groups.js';
 
 	let { forceExpanded = false, collapsed, user, currentPath = '', groupExpansion = {}, onToggleGroup }: { forceExpanded?: boolean; collapsed: boolean; user: SessionUser | null; currentPath?: string; groupExpansion?: SidebarGroupState; onToggleGroup?: (id: string) => void } = $props();
 	const id = $props.id();
@@ -27,7 +27,7 @@
 	let sidebarMenus = $derived.by((): MenuGroup[] => localizedMenus($localization.displayLanguage).map((group) => group.id === 'dashboard'
 		? { ...group, items: group.items.filter(item => item.id !== 'assetOverview' || user?.capabilities.canReadAssets) }
 		: group.id === 'projects'
-        ? {...group,items:canOperate(user,'projects.read')?group.items:[]}
+        ? {...group,items:group.items.filter(item=>canOperate(user,'projects.read'))}
         : group.id === 'general'
 		? { ...group, items: group.items.filter((item) => (item.id !== 'projects' || canOperate(user,'projects.read')) && (item.id !== 'workflows' || canOperate(user,'workflows.read')) && (item.id !== 'schedule' || canOperate(user,'schedule.read')) && (item.id !== 'workCalendars' || user?.capabilities.canReadCalendars) && (item.id !== 'teams' || user?.capabilities.canReadTeams) && (item.id !== 'skills' || user?.capabilities.canReadSkills) && (item.id !== 'clients' || user?.capabilities.canReadClients) && (item.id !== 'engagements' || user?.capabilities.canReadEngagements)) }
 		: group.id === 'assets'

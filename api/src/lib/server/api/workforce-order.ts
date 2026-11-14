@@ -1,5 +1,5 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export const workforceOrderResources = ['employment-types', 'positions', 'departments', 'employee-groups'] as const;
 export type WorkforceOrderResource = (typeof workforceOrderResources)[number];

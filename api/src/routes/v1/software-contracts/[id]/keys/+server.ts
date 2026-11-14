@@ -1,12 +1,12 @@
-import { dev } from '$app/environment';
-import { requireOperationApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { bodyObject, dateInput, encryptLicenseKey, fieldsOnly, optionalText, positiveInteger, publicKey, recordSoftwareChange } from '$lib/server/api/software';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
+import { dev } from '$app/env';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { bodyObject, dateInput, encryptLicenseKey, fieldsOnly, optionalText, positiveInteger, publicKey, recordSoftwareChange } from '#lib/server/api/software.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { allowsSensitiveRequest } from '#lib/server/api/sensitive-transport.js';
 
 export async function GET({ locals, params, url }: import('./$types').RequestEvent) {
 	requireOperationApi(locals.user, permissionOperations.softwareRead);

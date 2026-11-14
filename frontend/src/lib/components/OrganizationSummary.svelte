@@ -1,10 +1,10 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { localization, formatDate } from '$lib/localization';
-	import { initialSearch, emptyGroup, type SearchGroup } from '$lib/search';
+	import { localization, formatDate } from '#lib/localization.js';
+	import { initialSearch, emptyGroup, type SearchGroup } from '#lib/search.js';
 	import LoadingSpinner from './LoadingSpinner.svelte';
 	import StatusNotice from './StatusNotice.svelte';
 	type Item = { id: number | null; name: string | null; count: number };

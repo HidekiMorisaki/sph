@@ -1,11 +1,11 @@
-import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { parseRoleNameInput } from '$lib/server/api/role-input';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { roleOutput, roleSelect } from '$lib/server/api/role-output';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { parseRoleNameInput } from '#lib/server/api/role-input.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { roleOutput, roleSelect } from '#lib/server/api/role-output.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export async function PATCH({ locals, params, request }: import('./$types').RequestEvent) {
 	const actor = requireSystemAdminApi(locals.user);

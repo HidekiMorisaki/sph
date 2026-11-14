@@ -1,14 +1,14 @@
 import { isHttpError } from '@sveltejs/kit';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { getPrisma } from '$lib/server/prisma';
-import { parseId } from '$lib/server/api/database';
-import { deleteEmployeeRecord, ensureNoBranchResponsibility, returnDepartureAssets } from '$lib/server/api/employee-offboarding';
-import { employeeConflictResponse } from '$lib/server/api/employee-errors';
-import { lockSystemAdministrators, preserveSystemAdministrator, protectSystemAdministrator } from '$lib/server/api/system-administrator-protection';
-import { businessDate } from '$lib/server/api/book-circulation';
-import { failure, success, throwApiError } from '$lib/server/api/response';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { parseId } from '#lib/server/api/database.js';
+import { deleteEmployeeRecord, ensureNoBranchResponsibility, returnDepartureAssets } from '#lib/server/api/employee-offboarding.js';
+import { employeeConflictResponse } from '#lib/server/api/employee-errors.js';
+import { lockSystemAdministrators, preserveSystemAdministrator, protectSystemAdministrator } from '#lib/server/api/system-administrator-protection.js';
+import { businessDate } from '#lib/server/api/book-circulation.js';
+import { failure, success, throwApiError } from '#lib/server/api/response.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
 
 export async function PUT({locals,params,request}:import('./$types').RequestEvent){
  const {actor,branchId}=requireScopedOperationApi(locals.user,'employees.manage'),id=parseId(params.id);

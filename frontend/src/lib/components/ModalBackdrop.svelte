@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
+	import { COMPACT_CONTENT_QUERY } from '#lib/responsive-layout.js';
 	import type { Snippet } from 'svelte';
 
 	let {

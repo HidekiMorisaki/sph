@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { highlightCode, type CodeLanguage } from '$lib/code-highlight';
+	import { highlightCode, type CodeLanguage } from '#lib/code-highlight.js';
 	let { label, field, value = $bindable(''), language, onValueChange }: {
 		label: string; field: string; value?: string; language: CodeLanguage; onValueChange?: () => void;
 	} = $props();

@@ -1,8 +1,8 @@
-import { requireAuthenticatedApi } from '$lib/server/api/admin';
-import { convertAmount, financialSettings, monthKey, parseYear, periodMonths, roundedAmount, type Currency } from '$lib/server/api/financial';
-import { failure, success } from '$lib/server/api/response';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi } from '#lib/server/api/admin.js';
+import { convertAmount, financialSettings, monthKey, parseYear, periodMonths, roundedAmount, type Currency } from '#lib/server/api/financial.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	const actor = requireAuthenticatedApi(locals.user);

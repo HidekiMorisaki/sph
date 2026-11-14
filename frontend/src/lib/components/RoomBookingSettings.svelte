@@ -1,9 +1,9 @@
 <script lang="ts">
  import { onMount } from 'svelte';
- import { canOperate,type SessionUser } from '$lib/auth';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { allSchedulePages,scheduleRequest,ScheduleRequestError } from '$lib/schedule';
+ import { canOperate,type SessionUser } from '#lib/auth.js';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { allSchedulePages,scheduleRequest,ScheduleRequestError } from '#lib/schedule.js';
  import DetailModal from './DetailModal.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
  import SearchSelect from './SearchSelect.svelte';

@@ -39,6 +39,10 @@ const actions: Record<string, [string, string]> = {
 
 export function granularPermissionLabel(code: string, language: 'ja' | 'en'): string {
  const markdown:Record<string,[string,string]>={
+  'projects.financial.read':['プロジェクトの金額・EVMの閲覧','View project monetary data and EVM'],
+  'projects.financial.manage':['プロジェクトの予算・原価の管理','Manage project budgets and actual costs'],
+  'projects.baselines.confirm':['プロジェクトの基準計画の確定','Confirm project baselines'],
+  'projects.evm.confirm':['プロジェクトの月次EVM報告の確定','Confirm monthly project EVM reports'],
   'projects.images.read':['Markdown画像の閲覧','View Markdown images'],
   'projects.images.create':['Markdown画像の追加','Add Markdown images'],
   'projects.images.delete':['未保存Markdown画像の削除','Delete draft Markdown images'],

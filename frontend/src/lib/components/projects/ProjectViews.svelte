@@ -1,11 +1,11 @@
 <script lang="ts">
- import {formatHours,sumMinutes} from '$lib/project-time';
- import {localization} from '$lib/localization';
- import {canProject,day,ticketOrder,type Project,type Ticket,type Relation} from '$lib/projects';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import SortableList from '$lib/components/SortableList.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
+ import {formatHours,sumMinutes} from '#lib/project-time.js';
+ import {localization} from '#lib/localization.js';
+ import {canProject,day,ticketOrder,type Project,type Ticket,type Relation} from '#lib/projects.js';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import SortableList from '#lib/components/SortableList.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
  let {project,tickets,relations,view,statusIds,onopen,onmove,onchild,onorder,busy=false}:{project:Project;tickets:Ticket[];relations:Relation[];view:string;statusIds?:number[];onopen:(t:Ticket,el:HTMLElement|null)=>void;onmove:(t:Ticket,statusId:number)=>void;onchild:(t:Ticket)=>void;onorder:(t:Ticket,position:number)=>void;busy?:boolean}=$props();
  let ja=$derived($localization.displayLanguage==='ja');const tr=(j:string,e:string)=>ja?j:e;
  let collapsed=$state<number[]>([]),dragging=$state<number|null>(null),dismissedWarnings=$state('');

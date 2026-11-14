@@ -1,6 +1,6 @@
-import { requireSystemAdminApi } from '$lib/server/api/admin';
-import { ensureBojRates, financialSettings, parseYear, periodMonths } from '$lib/server/api/financial';
-import { failure, success } from '$lib/server/api/response';
+import { requireSystemAdminApi } from '#lib/server/api/admin.js';
+import { ensureBojRates, financialSettings, parseYear, periodMonths } from '#lib/server/api/financial.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 export async function POST({ locals, request }: import('./$types').RequestEvent) {
 	requireSystemAdminApi(locals.user);

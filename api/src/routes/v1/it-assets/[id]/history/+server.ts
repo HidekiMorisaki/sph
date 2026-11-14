@@ -1,11 +1,11 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { resolveHistoryEmployees } from '$lib/server/api/history-employees';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { assetBranchWhere, requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { resolveHistoryEmployees } from '#lib/server/api/history-employees.js';
 
 const sortFields = ['changedAt', 'id'] as const;
 

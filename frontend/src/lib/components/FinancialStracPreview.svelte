@@ -1,8 +1,8 @@
 <script lang="ts">
 	import DetailModal from './DetailModal.svelte';
-	import { formatFinancialAmount, type FinancialCurrency } from '$lib/financial-currency';
-	import { formatLocaleTemplate, localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import { formatFinancialAmount, type FinancialCurrency } from '#lib/financial-currency.js';
+	import { formatLocaleTemplate, localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	type Totals = { currency: FinancialCurrency; completedMonths: number; revenue: string; variableCost: string; fixedCost: string; netProfit: string };
 	let { branchName, periodLabel, totals, returnFocus, onClose }: {

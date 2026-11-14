@@ -1,21 +1,21 @@
-import { isSystemAdministratorEmployee, lockSystemAdministrators, protectSystemAdministrator, preserveSystemAdministrator } from '$lib/server/api/system-administrator-protection';
-import { returnDepartureAssets, ensureAssetsReturned, deleteEmployeeRecord } from '$lib/server/api/employee-offboarding';
+import { isSystemAdministratorEmployee, lockSystemAdministrators, protectSystemAdministrator, preserveSystemAdministrator } from '#lib/server/api/system-administrator-protection.js';
+import { returnDepartureAssets, ensureAssetsReturned, deleteEmployeeRecord } from '#lib/server/api/employee-offboarding.js';
 import { isHttpError } from '@sveltejs/kit';
-import { syncEmployeeTeams } from '$lib/server/api/teams';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { hasScopedPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { parseEmployeeInput } from '$lib/server/api/employee-input';
-import { employeeConflictResponse } from '$lib/server/api/employee-errors';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
-import { employeeOutput, employeeSafeSelect } from '$lib/server/api/employee-output';
-import { syncEmployeeDepartments } from '$lib/server/api/employee-departments';
-import { syncEmployeePositions } from '$lib/server/api/employee-positions';
-import { employeeReferenceErrors } from '$lib/server/api/employee-references';
-import { syncGlobalRoleGrants } from '$lib/server/api/employee-roles';
-import { getPrisma } from '$lib/server/prisma';
-import { failure, success } from '$lib/server/api/response';
+import { syncEmployeeTeams } from '#lib/server/api/teams.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { hasScopedPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { parseEmployeeInput } from '#lib/server/api/employee-input.js';
+import { employeeConflictResponse } from '#lib/server/api/employee-errors.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
+import { employeeOutput, employeeSafeSelect } from '#lib/server/api/employee-output.js';
+import { syncEmployeeDepartments } from '#lib/server/api/employee-departments.js';
+import { syncEmployeePositions } from '#lib/server/api/employee-positions.js';
+import { employeeReferenceErrors } from '#lib/server/api/employee-references.js';
+import { syncGlobalRoleGrants } from '#lib/server/api/employee-roles.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) {
 	const { actor: viewer, branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);

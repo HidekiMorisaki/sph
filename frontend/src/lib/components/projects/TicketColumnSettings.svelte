@@ -1,18 +1,19 @@
 <script lang="ts">
- import StatusSwitch from '$lib/components/StatusSwitch.svelte';
+ import StatusSwitch from '#lib/components/StatusSwitch.svelte';
  import {untrack} from 'svelte';
  import DetailModal from '../DetailModal.svelte';
  import ActionButton from '../ActionButton.svelte';
  import StatusNotice from '../StatusNotice.svelte';
  import SortableList from '../SortableList.svelte';
- import {localization} from '$lib/localization';
- import {ticketColumns,defaultTicketColumns} from '$lib/project-ticket-columns';
- let {columns,userId,onclose,onsaved,returnFocus}:{columns:string[];userId:number;onclose:()=>void;onsaved:(columns:string[])=>void;returnFocus:HTMLElement|null}=$props();
- let selected=$state(untrack(()=>[...columns])),order=$state(untrack(()=>[...columns,...ticketColumns.map(c=>c[0]).filter(c=>!columns.includes(c))])),busy=$state(false),error=$state('');
+ import {localization} from '#lib/localization.js';
+ import {ticketColumns,defaultTicketColumns} from '#lib/project-ticket-columns.js';
+ let {columns,customColumns=[],userId,onclose,onsaved,returnFocus}:{columns:string[];customColumns?:Array<{key:string;label:{ja:string;en:string}}>;userId:number;onclose:()=>void;onsaved:(columns:string[])=>void;returnFocus:HTMLElement|null}=$props();
+ const available=untrack(()=>[...ticketColumns,...customColumns.map(c=>[c.key,c.label.ja,c.label.en])]);
+ let selected=$state(untrack(()=>[...columns])),order=$state(untrack(()=>[...columns,...available.map(c=>c[0]).filter(c=>!columns.includes(c))])),busy=$state(false),error=$state('');
  let ja=$derived($localization.displayLanguage==='ja');const tr=(j:string,e:string)=>ja?j:e;
- const columnId=(key:string)=>ticketColumns.findIndex(c=>c[0]===key)+1;
- const columnKey=(id:number)=>ticketColumns[id-1][0];
- const columnLabel=(id:number)=>ticketColumns[id-1][ja?1:2];
+ const columnId=(key:string)=>available.findIndex(c=>c[0]===key)+1;
+ const columnKey=(id:number)=>available[id-1][0];
+ const columnLabel=(id:number)=>available[id-1][ja?1:2];
  function toggle(key:string){if(busy||selected.length===1&&selected.includes(key))return;selected=selected.includes(key)?selected.filter(c=>c!==key):[...selected,key];}
  async function save(){busy=true;error='';try{const r=await fetch('/v1/personal-settings/project-ticket-columns',{method:'PUT',headers:{'content-type':'application/json','x-settings-owner':String(userId)},body:JSON.stringify({columns:order.filter(c=>selected.includes(c))})});if(!r.ok)throw Error();const p=await r.json();onsaved(p.data.columns);}catch{error=tr('保存できませんでした。再試行してください。','Unable to save. Please retry.');}finally{busy=false;}}
 </script>
@@ -22,6 +23,6 @@
  <div class="column-options"><SortableList ids={order.map(columnId)} label={tr('表示項目の順序を変更','Reorder display columns')} labelFor={columnLabel} disabled={busy} onreorder={ids=>order=ids.map(columnKey)}>
  {#snippet children(id:number)}{@const key=columnKey(id)}<div class="option" data-column={key}><span>{columnLabel(id)}</span><StatusSwitch width={52} checked={selected.includes(key)} label={columnLabel(id)} disabled={busy||(selected.length===1&&selected.includes(key))} onclick={()=>toggle(key)}/></div>{/snippet}
  </SortableList></div>
- {#snippet actions()}<ActionButton label={tr('初期設定に戻す','Restore defaults')} disabled={busy} onclick={()=>{selected=[...defaultTicketColumns];order=[...defaultTicketColumns,...ticketColumns.map(c=>c[0]).filter(c=>!defaultTicketColumns.includes(c))];}}/><ActionButton label={tr('キャンセル','Cancel')} disabled={busy} onclick={onclose}/><ActionButton label={tr('保存','Save')} variant="primary" disabled={busy} onclick={save}/>{/snippet}
+ {#snippet actions()}<ActionButton label={tr('初期設定に戻す','Restore defaults')} disabled={busy} onclick={()=>{selected=[...defaultTicketColumns];order=[...defaultTicketColumns,...available.map(c=>c[0]).filter(c=>!defaultTicketColumns.includes(c))];}}/><ActionButton label={tr('キャンセル','Cancel')} disabled={busy} onclick={onclose}/><ActionButton label={tr('保存','Save')} variant="primary" disabled={busy} onclick={save}/>{/snippet}
 </DetailModal>
 <style>.column-options{min-width:0}.option{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;border-bottom:1px solid var(--border);padding:6px 0}.option>span{min-width:0;overflow-wrap:anywhere}p{font-size:var(--font-size-support);color:var(--muted)}</style>

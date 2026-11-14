@@ -1,4 +1,4 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 // The first release uses the business date in Japan, where the initial branches operate.
 export function businessDate(): Date {

@@ -1,13 +1,13 @@
-import { dev } from '$app/environment';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { decryptPassword, isAssetCredentialType } from '$lib/server/api/it-asset-credentials';
-import { parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
-import { verifyPassword } from '$lib/server/auth/session';
-import { getPrisma } from '$lib/server/prisma';
+import { dev } from '$app/env';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { assetBranchWhere, requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { decryptPassword, isAssetCredentialType } from '#lib/server/api/it-asset-credentials.js';
+import { parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { allowsSensitiveRequest } from '#lib/server/api/sensitive-transport.js';
+import { verifyPassword } from '#lib/server/auth/session.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 function reauthenticationFailed() {
 	return failure(401, 'REAUTHENTICATION_FAILED', 'The current password could not be verified.');

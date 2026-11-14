@@ -1,16 +1,16 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
-	import { localeMessages } from '$lib/locale-messages';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
 	import { onMount, tick } from 'svelte';
-	import type { SessionUser } from '$lib/auth';
-	import { applyLocalization, localization } from '$lib/localization';
-	import { readSessionUser } from '$lib/client-session';
-	import { safeLoginDestination } from '$lib/login-redirect';
-	import { productName } from '$lib/brand';
-	import PageTitle from '$lib/components/PageTitle.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { checkServiceReadiness } from '$lib/service-readiness.mjs';
+	import type { SessionUser } from '#lib/auth.js';
+	import { applyLocalization, localization } from '#lib/localization.js';
+	import { readSessionUser } from '#lib/client-session.js';
+	import { safeLoginDestination } from '#lib/login-redirect.js';
+	import { productName } from '#lib/brand.js';
+	import PageTitle from '#lib/components/PageTitle.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { checkServiceReadiness } from '#lib/service-readiness.mjs';
 	const pageText = localeMessages.en.login;
 	let startupText = $derived(localeMessages[$localization.displayLanguage].login);
 	type CurrentUser = SessionUser;

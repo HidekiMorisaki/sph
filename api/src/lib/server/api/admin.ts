@@ -1,7 +1,7 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { throwApiError } from '$lib/server/api/response';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { throwApiError } from '#lib/server/api/response.js';
 
 export function requireAdminApi(user: AuthenticatedUser | null): AuthenticatedUser {
 	if (!user) throwApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');

@@ -3,13 +3,13 @@ import { avatarThumbnailDataUrl } from './avatar-image';
 import { requireScopedOperationApi } from './branch-access';
 import { employeeReferenceDate } from './employee-derived';
 import { employeeOutput, employeeSafeSelect } from './employee-output';
-import { permissionOperations } from '$lib/server/auth/permissions';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
 import { listMeta, parseListQuery } from './query';
 import { containsPattern, parseVisibleSearch } from './visible-list-search';
 import { success, throwApiError } from './response';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 
 const sortFields = ['id', 'employee', 'employeeCode', 'firstName', 'lastName', 'age', 'lengthOfService', 'department', 'group', 'teams', 'position', 'employmentType', 'branch', 'roles', 'hiredAt', 'createdAt', 'updatedAt'] as const;
 

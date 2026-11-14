@@ -1,46 +1,47 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import EmployeeDepartureModal from '$lib/components/EmployeeDepartureModal.svelte';
- import { operationAccess } from '$lib/operation-access';
+ import CopyIconButton from '#lib/components/CopyIconButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import EmployeeDepartureModal from '#lib/components/EmployeeDepartureModal.svelte';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
- import SearchOptionalSelection from '$lib/components/SearchOptionalSelection.svelte';
- import SearchSkillSelection from '$lib/components/SearchSkillSelection.svelte';
- import { initialSearch } from '$lib/search';
- import SearchPanel from '$lib/components/SearchPanel.svelte';
- import CsvExportButton from '$lib/components/CsvExportButton.svelte';
- import { searchCsv, downloadCsv, csvFilename } from '$lib/csv-export';
+ import SearchOptionalSelection from '#lib/components/SearchOptionalSelection.svelte';
+ import SearchSkillSelection from '#lib/components/SearchSkillSelection.svelte';
+ import { initialSearch } from '#lib/search.js';
+ import SearchPanel from '#lib/components/SearchPanel.svelte';
+ import CsvExportButton from '#lib/components/CsvExportButton.svelte';
+ import { searchCsv, downloadCsv, csvFilename } from '#lib/csv-export.js';
  let searchState=$state(initialSearch('employees'));
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
-	import { workforceOptions, type WorkforceMaster } from '$lib/workforce';
-	import { loadTeamOptions, type Team } from '$lib/teams';
-	import { apiData } from '$lib/api';
-	import type { SessionUser } from '$lib/auth';
-	import AddButton from '$lib/components/AddButton.svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import EmailAddressActions from '$lib/components/EmailAddressActions.svelte';
-	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
-	import EmployeeFormModal from '$lib/components/EmployeeFormModal.svelte';
-	import MasterList from '$lib/components/MasterList.svelte';
-	import ViewportListPage from '$lib/components/ViewportListPage.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import SearchMultiSelect from '$lib/components/SearchMultiSelect.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { allBranchesValue, nextBranchSelection, restoreBranchSelection } from '$lib/employee-branch-filter';
-	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
-	import { formatEmployeeName, formatLengthOfService, formatTimestamp, invitationEmailSubject, localization } from '$lib/localization';
-	import { inferPersonNameLocale } from '$lib/person-name';
+	import { workforceOptions, type WorkforceMaster } from '#lib/workforce.js';
+	import { loadTeamOptions, type Team } from '#lib/teams.js';
+	import { apiData } from '#lib/api.js';
+	import type { SessionUser } from '#lib/auth.js';
+	import AddButton from '#lib/components/AddButton.svelte';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import EmailAddressActions from '#lib/components/EmailAddressActions.svelte';
+	import EmployeeDetailModal from '#lib/components/EmployeeDetailModal.svelte';
+	import EmployeeFormModal from '#lib/components/EmployeeFormModal.svelte';
+	import MasterList from '#lib/components/MasterList.svelte';
+	import ViewportListPage from '#lib/components/ViewportListPage.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import SearchMultiSelect from '#lib/components/SearchMultiSelect.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { allBranchesValue, nextBranchSelection, restoreBranchSelection } from '#lib/employee-branch-filter.js';
+	import type { Employee, EmployeeMaster, EmployeeRole } from '#lib/employees.js';
+	import { formatEmployeeName, formatLengthOfService, formatTimestamp, invitationEmailSubject, localization } from '#lib/localization.js';
+	import { inferPersonNameLocale } from '#lib/person-name.js';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);
 
-	type InvitationPayload = { invitationUrl: string; invitationExpiresAt: string };
+	type InvitationPayload = { invitationUrl: string; invitationExpiresAt: string; invitationValidityMinutes: number };
 
 	const resources = ['departments', 'employee-groups', 'positions', 'employment-types'];
 
@@ -57,7 +58,7 @@
 	let invitationReturnFocus = $state<HTMLElement | null>(null);
 	let formOpen = $state(false);
 	let detailOpen = $state(false);
-	let invitation = $state<{ url: string; email: string; expiresAt: string } | null>(null);
+	let invitation = $state<{ url: string; email: string; expiresAt: string; validityMinutes: number } | null>(null);
 	let invitationDialogElement = $state<HTMLDialogElement>();
 	let invitationError = $state<'invitationRateLimited' | 'invitationFailed' | ''>('');
 	let issuingInvitation = $state(false);
@@ -195,8 +196,8 @@
 				return;
 			}
 		}
-		if (formMode === 'create' && 'invitationUrl' in saved && typeof saved.invitationUrl === 'string' && 'invitationExpiresAt' in saved && typeof saved.invitationExpiresAt === 'string') {
-			showInvitation({ invitationUrl: saved.invitationUrl, invitationExpiresAt: saved.invitationExpiresAt }, saved.email);
+		if (formMode === 'create' && 'invitationUrl' in saved && typeof saved.invitationUrl === 'string' && 'invitationExpiresAt' in saved && typeof saved.invitationExpiresAt === 'string' && 'invitationValidityMinutes' in saved && typeof saved.invitationValidityMinutes === 'number') {
+			showInvitation({ invitationUrl: saved.invitationUrl, invitationExpiresAt: saved.invitationExpiresAt, invitationValidityMinutes: saved.invitationValidityMinutes }, saved.email);
 		}
 		await employeeList?.refresh();
 	}
@@ -206,7 +207,7 @@
 	function showInvitation(payload: InvitationPayload, email: string, trigger: HTMLElement | null = null) {
 		const url = new URL(payload.invitationUrl, window.location.origin);
 		if (url.origin !== window.location.origin || url.pathname !== '/account-setup') throw new Error('Invalid invitation URL.');
-		invitation = { url: url.href, email, expiresAt: payload.invitationExpiresAt };
+		invitation = { url: url.href, email, expiresAt: payload.invitationExpiresAt, validityMinutes: payload.invitationValidityMinutes };
 		copyMessage = '';
 		invitationWarningDismissed = false;
 		invitationReturnToDetail = detailOpen && detailEmployee !== null;
@@ -220,6 +221,7 @@
 		void tick().then(() => target?.focus({ preventScroll: true }));
 	}
 	async function issueInvitation(item: Employee) {
+		if (issuingInvitation) return;
 		const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		issuingInvitation = true;
 		invitationError = '';
@@ -272,14 +274,14 @@
 {#snippet positionsCell(item: Employee)}<div class="position-badges">{#each item.positions as position}<span class:primary={position.isPrimary}>{position.name}</span>{/each}</div>{/snippet}
 {#snippet departmentsCell(item: Employee)}<div class="position-badges">{#each item.departments as department}<span class:primary={department.isPrimary}>{department.name}</span>{/each}</div>{/snippet}
 {#snippet pageActions()}<AddButton label={text.add} disabled={!allowedOperation('employees.create')} onclick={create} />{/snippet}
-{#snippet branchFilter(conditions:import('$lib/search').SearchGroup,onConditionsChange:(value:import('$lib/search').SearchGroup)=>void)}<div class="employee-workforce-filters">
+{#snippet branchFilter(conditions:import('#lib/search.js').SearchGroup,onConditionsChange:(value:import('#lib/search.js').SearchGroup)=>void)}<div class="employee-workforce-filters">
  {#if canReadSkills}<SearchSkillSelection {conditions} {onConditionsChange} fallback={{values:skillSelection,mode:skillMode,proficiency:minProficiency}} options={skillOptions.map(skill=>({value:String(skill.id),label:skill.name}))} onLegacyClear={selection=>{skillSelection=[];skillMode=selection.mode;minProficiency='1';}}/>{/if}
  <div class="employee-branch-filter"><SearchSelect label={workforceText.participationStatus} field="employeeParticipationStatus" value={participationStatus} searchable={false} options={[{value:'',label:workforceText.allStatuses},{value:'planned',label:workforceText.planned},{value:'active',label:workforceText.active},{value:'ended',label:workforceText.ended},{value:'none',label:workforceText.none}]} onSelect={value=>{participationStatus=value;if(value!=='active'&&value!=='')endingWithinDays='';}}/></div>
  <div class="employee-branch-filter"><SearchSelect label={workforceText.endingWithinDays} field="employeeEndingWithinDays" value={endingWithinDays} searchable={false} options={[{value:'',label:workforceText.anyEnd},{value:'30',label:workforceText.days30},{value:'60',label:workforceText.days60},{value:'90',label:workforceText.days90}]} onSelect={value=>{endingWithinDays=value;if(value)participationStatus='active';}}/></div>
 <div class="employee-branch-filter"><span>{text.teamFilter}</span><SearchOptionalSelection label={text.teamFilter} field="employeeTeamFilter" item={{context:"teams",field:{code:"selection",label:{ja:text.teamFilter,en:text.teamFilter},type:"choice",maxLength:500,operators:["eq","in"],unsetMode:"relation"}}} {conditions} {onConditionsChange} values={teamSelection} options={teamOptions.map(team => ({ value: String(team.id), label: team.name }))} onChange={values => teamSelection = values} /></div><div class="employee-branch-filter"><span>{text.branchFilter}</span>{#if branchOptions.length === 1}<SearchSelect label={text.branchFilter} field="employeeBranchFilter" value={String(branchOptions[0].id)} options={[{ value: String(branchOptions[0].id), label: branchOptions[0].name }]} searchable={false} onSelect={() => undefined} />{:else}<SearchMultiSelect label={text.branchFilter} field="employeeBranchFilter" values={branchSelection} placeholderValues={[allBranchesValue]} options={[{ value: allBranchesValue, label: text.allBranches }, ...branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))]} onChange={chooseBranches} />{/if}</div><div class="employee-visibility" aria-label={text.visibility}><label><input type="checkbox" bind:checked={includeRetired} /><span>{text.showRetired}</span></label><label><input type="checkbox" bind:checked={includeDeleted} /><span>{text.showDeleted}</span></label></div></div>{/snippet}
 {#snippet exportAction()}<div class="employee-list-actions"><CsvExportButton {exporting} disabled={!canManageEmployees || !searchState.success || searchState.loading || searchState.error} onExport={() => void exportCsv()} /></div>{/snippet}
 {#snippet listActions()}{@render exportAction()}{@render pageActions()}{/snippet}
-{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<ModalActionButton class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation((editing ?? detailEmployee)!)} variant="primary" data-button-scope="button-0800aa9666">{issuingInvitation ? text.generating : text.generateInvitation}</ModalActionButton></div>{/snippet}
+{#snippet invitationAction()}<div class="invite-footer">{#if invitationError}<StatusNotice message={text[invitationError]} tone="error" onDismiss={() => invitationError = ''} />{/if}<ModalActionButton class="app-primary-action" type="button" disabled={issuingInvitation} onclick={() => void issueInvitation(detailEmployee!)} variant="primary" data-button-scope="button-0800aa9666">{issuingInvitation ? text.generating : text.generateInvitation}</ModalActionButton></div>{/snippet}
 
 <AssetManagementShell title={text.title} active="Employees">
 	<ViewportListPage>
@@ -299,10 +301,10 @@
 		]} onDetail={(item, trigger) => showDetail(item as Employee, trigger)} />{:else if !branchFilterError}<div class="page-state"><LoadingSpinner label={text.loading} /></div>{/if}
 	</ViewportListPage>
 
-	{#if formOpen}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeFormModal canEditEmployee={!editing || (editing.allowedOperations?.update ?? allowedOperation('employees.update',editing.branchId))} deleteError={message==='deleteFailed'?text.deleteFailed:''} extraActions={editing && (editing.allowedOperations?.invite ?? (allowedOperation('employees.invite', editing.branchId) && (canManageSystemSettings || !editing.roles.some(role => role.isSystemManagement)))) && canInviteEmployees && (canManageSystemSettings || editing.roles.some((role) => role.isGeneralUser)) && editing.canIssueInvitation ? invitationAction : undefined} onDelete={editing && (editing.allowedOperations?.delete ?? allowedOperation('employees.delete', editing.branchId)) && editing.employmentStatus!=='deleted' ? () => void remove(editing!) : undefined} mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} {canManageTeamMemberships} {teamOptions} {teamsReady} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} /></div>{/if}
+	{#if formOpen}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeFormModal canEditEmployee={!editing || (editing.allowedOperations?.update ?? allowedOperation('employees.update',editing.branchId))} deleteError={message==='deleteFailed'?text.deleteFailed:''} onDelete={editing && (editing.allowedOperations?.delete ?? allowedOperation('employees.delete', editing.branchId)) && editing.employmentStatus!=='deleted' ? () => void remove(editing!) : undefined} mode={formMode} employee={editing} {masters} {roles} {canManageSystemSettings} {canAssignEmployeeRoles} {canManageTeamMemberships} {teamOptions} {teamsReady} returnFocus={formReturnFocus} onClose={closeForm} onSaved={formSaved} /></div>{/if}
 
-	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeDetailModal employee={detailEmployee} bind:activeTab={employeeDetailTab} bind:activeHistoryTab={employeeHistoryTab} onUpdated={updated => { detailEmployee = updated; void employeeList?.refresh(); }} returnFocus={detailReturnFocus} onEdit={detailEmployee.employmentStatus !== 'deleted' && ((detailEmployee.allowedOperations?.update ?? (allowedOperation('employees.update', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) || detailEmployee.id === currentUserId || canEditEmployeeRelations(detailEmployee) || (detailEmployee.allowedOperations?.delete ?? allowedOperation('employees.delete',detailEmployee.branchId))) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={(detailEmployee.allowedOperations?.delete ?? (allowedOperation('employees.delete', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
-	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation} data-button-scope="button-0800aa9666"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><label>{text.invitationUrl}<input aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /></label>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div><footer class="employee-form-footer app-modal-footer"><ModalActionButton class="secondary" type="button" onclick={closeInvitation} variant="secondary" data-button-scope="button-0800aa9666">{commonText.close}</ModalActionButton><ModalActionButton class="app-primary-action" type="button" onclick={() => void copyInvitation()} variant="primary" data-button-scope="button-0800aa9666">{text.copyLink}</ModalActionButton></footer></dialog></ModalBackdrop>{/if}
+	{#if detailOpen && detailEmployee}<div hidden={Boolean(invitation)||Boolean(deletingEmployee)} inert={Boolean(invitation)||Boolean(deletingEmployee)}><EmployeeDetailModal footer={detailEmployee && (detailEmployee.allowedOperations?.invite ?? (allowedOperation('employees.invite', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && canInviteEmployees && (canManageSystemSettings || detailEmployee.roles.some((role) => role.isGeneralUser)) && detailEmployee.canIssueInvitation ? invitationAction : undefined} employee={detailEmployee} bind:activeTab={employeeDetailTab} bind:activeHistoryTab={employeeHistoryTab} onUpdated={updated => { detailEmployee = updated; void employeeList?.refresh(); }} returnFocus={detailReturnFocus} onEdit={detailEmployee.employmentStatus !== 'deleted' && ((detailEmployee.allowedOperations?.update ?? (allowedOperation('employees.update', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) || detailEmployee.id === currentUserId || canEditEmployeeRelations(detailEmployee) || (detailEmployee.allowedOperations?.delete ?? allowedOperation('employees.delete',detailEmployee.branchId))) ? () => { const item = detailEmployee!; const row = detailReturnFocus; detailBeforeEdit = item; closeDetail(); edit(item, row); } : undefined} onDelete={(detailEmployee.allowedOperations?.delete ?? (allowedOperation('employees.delete', detailEmployee.branchId) && (canManageSystemSettings || !detailEmployee.roles.some(role => role.isSystemManagement)))) && detailEmployee.employmentStatus !== 'deleted' ? () => void remove(detailEmployee!) : undefined} onClose={closeDetail} /></div>{/if}
+	{#if invitation}<ModalBackdrop><dialog bind:this={invitationDialogElement} class="employee-dialog invitation-dialog app-modal app-modal--invitation" open aria-modal="true" aria-labelledby="invitation-title"><header><h2 id="invitation-title">{text.invitationTitle}</h2><IconActionButton class="modal-close app-modal-close" type="button" aria-label={text.closeInvitation} onclick={closeInvitation} data-button-scope="button-0800aa9666"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></IconActionButton></header><div class="invitation-body"><p>{formatLocaleTemplate(text.invitationDescription, formatTimestamp(invitation.expiresAt, $localization))}</p><p>{formatLocaleTemplate(text.invitationValidity, invitation.validityMinutes)}</p><p>{formatLocaleTemplate(text.invitationExpiry, formatTimestamp(invitation.expiresAt, $localization))}</p><EmailAddressActions email={invitation.email} subject={invitationEmailSubject($localization)} /><div class="invitation-link-field"><label for="employee-invitation-url">{text.invitationUrl}</label><div class="invitation-link-actions"><input id="employee-invitation-url" aria-label={text.invitationUrl} readonly value={invitation.url} onclick={(event) => event.currentTarget.select()} /><CopyIconButton label={text.copyLink} onclick={() => void copyInvitation()}/></div></div>{#if !invitationWarningDismissed}<StatusNotice message={text.invitationWarning} tone="warning" onDismiss={() => invitationWarningDismissed = true} />{/if}{#if copyMessage}<StatusNotice message={text[copyMessage]} tone={copyMessage === 'linkCopyFailed' ? 'error' : 'success'} onDismiss={() => copyMessage = ''} />{/if}</div></dialog></ModalBackdrop>{/if}
 </AssetManagementShell>
 
 <style>
@@ -321,7 +323,7 @@
 	.position-badges{display:flex;flex-wrap:wrap;gap:var(--sph-space-4px)}.position-badges>span{display:inline-flex;align-items:center;min-height:20px;padding:var(--sph-space-2px) var(--sph-space-7px);background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--sph-radius-999px);font-size:var(--font-size-support);font-weight:var(--sph-weight-500);line-height:var(--sph-leading-1-2)}.position-badges>span.primary{background:var(--sph-color-action-overlay-12);color:var(--sph-color-action);border-color:var(--sph-color-action-overlay-28)}
 	.employee-list-actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--sph-space-14px)}.employee-visibility{flex:0 1 auto;align-self:flex-end;min-height:32px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:var(--sph-space-6px) var(--sph-space-12px);min-width:0;max-width:100%}.employee-visibility label{display:inline-flex;flex:0 1 auto;max-width:100%;min-width:0;align-items:center;gap:var(--sph-space-6px);color:var(--text-secondary);font-size:var(--font-size-support);white-space:normal;cursor:pointer}.employee-visibility input{flex:none;width:14px;height:14px;margin:0;accent-color:var(--sph-color-accent)}.employee-visibility input:focus-visible{outline:2px solid var(--sph-color-accent);outline-offset:2px}.employee-cell{display:flex;align-items:center;gap:var(--sph-space-8px)}.avatar{display:grid;flex:0 0 24px;height:24px;place-items:center;background:var(--sph-color-accent);color:var(--sph-color-on-emphasis);border-radius:50%;font-size:var(--font-size-support);font-weight:var(--sph-weight-600)}.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}.employee-cell strong{display:block;min-width:0;overflow:hidden;color:var(--text);font-weight:var(--sph-weight-500);text-overflow:ellipsis;white-space:nowrap}.employee-cell small{display:block;color:var(--muted);font-size:var(--font-size-support)}@media(max-width:900px){.employee-list-actions{align-items:stretch;flex-direction:column;gap:var(--sph-space-8px)}.employee-visibility{justify-content:flex-start}}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.employee-list-actions{width:100%}.employee-visibility{align-items:center;flex-direction:row}}
 	/* Keep the actions visible while the fields scroll. */
-	.invitation-body{display:grid;gap:var(--sph-space-14px);padding:var(--sph-space-24px);overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-body label{display:grid;gap:var(--sph-space-6px);font-weight:var(--sph-weight-600)}.invitation-body input{width:100%;min-width:0;padding:var(--sph-space-9px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:var(--sph-space-12px);width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
+	.invitation-body{display:grid;gap:var(--sph-space-14px);padding:var(--sph-space-24px);overflow-y:auto;font-size:var(--font-size-body)}.invitation-body p{margin:0;color:var(--text-secondary)}.invitation-link-field{display:grid;gap:var(--sph-space-6px);min-width:0}.invitation-link-field label{font-weight:var(--sph-weight-600)}.invitation-link-actions{display:flex;align-items:center;gap:var(--sph-space-8px);min-width:0}.invitation-link-actions input{flex:1}.invitation-body input{width:100%;min-width:0;padding:var(--sph-space-9px);border:1px solid var(--border);border-radius:var(--sph-radius-4px);background:var(--bg);color:var(--text);font-size:var(--font-size-body)}.invite-footer{display:flex;align-items:center;justify-content:flex-end;gap:var(--sph-space-12px);width:100%}.invite-footer span{color:var(--danger);font-size:var(--font-size-support)}
 	@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.employee-branch-filter :global(.form-multi-select-field){width:100%}}
 
  @media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.mobile-employee p{margin:var(--sph-space-5px) 0 0 var(--sph-space-32px);color:var(--muted);font-size:var(--font-size-support);overflow-wrap:anywhere}.mobile-employee :global(.employee-cell strong){white-space:normal;overflow-wrap:anywhere}.mobile-employee :global(.employee-cell>div){min-width:0}}

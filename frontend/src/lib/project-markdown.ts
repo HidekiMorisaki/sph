@@ -2,7 +2,7 @@ import { Lexer, type Token, type Tokens } from 'marked';
 
 export type MarkdownNode = {
  kind: 'text'|'paragraph'|'heading'|'strong'|'em'|'del'|'quote'|'list'|'item'|'table'|'row'|'cell'|'link'|'image'|'code'|'inline-code'|'break'|'rule';
- text?: string; children?: MarkdownNode[]; href?: string; language?: string;
+ text?: string; children?: MarkdownNode[]; href?: string; language?: string; title?: string;
  level?: number; ordered?: boolean; start?: number; checked?: boolean; header?: boolean; literal?:boolean;
 };
 export type ProjectReference = {code:string;href:string};
@@ -63,7 +63,11 @@ export function parseProjectMarkdown(source:string):MarkdownNode[] {
     case 'blockquote': return [{kind:'quote',children:convert((token as Tokens.Blockquote).tokens,depth+1)}];
     case 'br': return [{kind:'break'}];
     case 'hr': return [{kind:'rule'}];
-    case 'code': {const t=token as Tokens.Code;return [{kind:'code',text:t.text,language:t.lang?.split(/\s/)[0]??'text'}];}
+    case 'code': {
+     const t=token as Tokens.Code,info=t.lang??'',titled=/^([^\s:]+)[ \t]*:([\s\S]*)$/.exec(info);
+     const title=titled?.[2].trim();
+     return [{kind:'code',text:t.text,language:titled?.[1]??(info.split(/\s/)[0]||'text'),...(title?{title}:{})}];
+    }
     case 'codespan': return [{kind:'inline-code',text:(token as Tokens.Codespan).text}];
     case 'link': {const t=token as Tokens.Link;return [{kind:'link',href:markdownHref(t.href),children:convert(t.tokens,depth+1)}];}
     case 'image': {const t=token as Tokens.Image;return [{kind:'image',text:t.text,href:markdownImagePattern.test(t.href)?t.href:markdownHref(t.href)}];}

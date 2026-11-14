@@ -1,9 +1,9 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasScopedPermissionOperation } from '#lib/server/auth/permissions.js';
 import { requireOperationApi, writeAuditLog } from './admin';
 import { failure, throwApiError } from './response';
-import { getPrisma } from '$lib/server/prisma';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function teamConflictResponse(error: unknown, name: string, excludeId = 0) {
  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') return null;

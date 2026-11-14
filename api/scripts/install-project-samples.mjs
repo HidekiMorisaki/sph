@@ -1,3 +1,5 @@
+import {installManagementSamples} from './install-management-samples.mjs';
+import {projectExampleMarkdown} from './project-example-markdown.mjs';
 // Original fictional examples. Called only inside the initial sample-data transaction.
 const tables=new Set(['projects','project_members','project_ticket_types','project_ticket_statuses','project_type_statuses','project_tickets','project_ticket_relations','project_comments','project_checklists','project_time_entries','project_watchers','project_history','audit_logs']);
 export async function installProjectSamples(client,{adminId,displayLanguage}){
@@ -20,7 +22,8 @@ export async function installProjectSamples(client,{adminId,displayLanguage}){
   {type:1,status:4,parent:null,start:-5,end:-2}, {type:0,status:0,parent:null,start:null,end:null}
  ];
  for(const [index,definition] of definitions.entries()){
-  const projectId=await insert('projects',{code:definition.code,name:definition.name,description:text('画面操作の確認用にインストーラーが登録した架空のプロジェクトです。親子チケット・状態・依存関係・日程を確認できます。','Fictional examples installed for previewing hierarchy, status, dependencies and dates.'),visibility:'internal',status:index===1?'on_hold':'active',next_ticket_number:11});
+  const markdown=projectExampleMarkdown(definition,ja);
+  const projectId=await insert('projects',{code:definition.code,name:definition.name,description:markdown.project,visibility:'internal',status:index===1?'on_hold':'active',next_ticket_number:11});
   await insert('project_members',{project_id:projectId,employee_id:adminId,role:'manager'});
   const statuses=[];
   for(const [position,names] of [['未着手','Open'],['進行中','In progress'],['レビュー中','In review'],['完了','Done'],['中止','Cancelled']].entries())statuses.push(await insert('project_ticket_statuses',{project_id:projectId,name:names[ja?0:1],category:['open','active','active','done','cancelled'][position],position}));
@@ -31,15 +34,23 @@ export async function installProjectSamples(client,{adminId,displayLanguage}){
   }
   await insert('project_history',{project_id:projectId,actor_id:adminId,kind:'project.created',detail:JSON.stringify({initialData:true,name:definition.name,code:definition.code})});
   const tickets=[];
+  const draft=text('# 実装計画\n\n共通の確認事項\n旧方式で実装する\n', '# Implementation plan\n\nShared review points\nImplement the old approach\n');
+  const reviewed=text('# 実装計画\n\n共通の確認事項\n新方式で実装する\nレビュー結果を反映する\n', '# Implementation plan\n\nShared review points\nImplement the new approach\nApply the review findings\n');
   for(const [i,row] of rows.entries()){
-   const id=await insert('project_tickets',{project_id:projectId,number:i+1,title:definition.titles[i],description:text('これは操作確認用のチケットです。\n完了条件：担当内容を確認し、結果をレビューします。','This is a ticket for exploring the application.\nAcceptance: review the work and verify the result.'),type_id:types[row.type],status_id:statuses[row.status],parent_id:row.parent===null?null:tickets[row.parent-1],author_id:adminId,assignee_id:[1,2,6,7].includes(i)?adminId:null,priority:i===3?'high':i===8?'low':'normal',starts_on:row.start===null?null:day(row.start),due_on:row.end===null?null:day(row.end),estimated_minutes:[0,0,120,60,90,0,60,30,30,0][i],position:i,labels:JSON.stringify([definition.label])});
+   const id=await insert('project_tickets',{project_id:projectId,number:i+1,title:definition.titles[i],description:markdown.tickets[i],type_id:types[row.type],status_id:statuses[row.status],parent_id:row.parent===null?null:tickets[row.parent-1],author_id:adminId,assignee_id:[1,2,6,7].includes(i)?adminId:null,priority:i===3?'high':i===8?'low':'normal',starts_on:row.start===null?null:day(row.start),due_on:row.end===null?null:day(row.end),estimated_minutes:[0,0,120,60,90,0,60,30,30,0][i],position:i,labels:JSON.stringify([definition.label])});
    tickets.push(id);
-   await insert('project_history',{project_id:projectId,ticket_id:id,actor_id:adminId,kind:'ticket.created',detail:JSON.stringify({initialData:true,title:definition.titles[i],number:i+1})});
+   await insert('project_history',{project_id:projectId,ticket_id:id,actor_id:adminId,kind:'ticket.created',detail:JSON.stringify({initialData:true,title:definition.titles[i],number:i+1,description:i===2?draft:markdown.tickets[i]})});
   }
+  const record=async(kind,detail)=>insert('project_history',{project_id:projectId,ticket_id:tickets[2],actor_id:adminId,kind,detail:JSON.stringify(detail)});
+  await record('ticket.updated',{before:{description:draft,statusId:statuses[0]},after:{description:reviewed,statusId:statuses[1]}});
+  await record('ticket.updated',{before:{description:reviewed},after:{description:markdown.tickets[2]}});
   for(const [from,to] of [[2,3],[3,5],[5,6]])await insert('project_ticket_relations',{project_id:projectId,from_id:tickets[from-1],to_id:tickets[to-1],kind:'finish_start'});
-  await insert('project_comments',{ticket_id:tickets[2],author_id:adminId,body:text('実装と日程を確認し、レビューを進めてください。','Check the implementation and dates, then continue the review.')});
+  await insert('project_comments',{ticket_id:tickets[2],author_id:adminId,body:markdown.comment});
+  await record('ticket.comments.post',{after:{body:markdown.comment}});
+  await record('ticket.checklists.post',{after:{text:text('要件を確認する','Review requirements'),completed:true}});
   for(const [position,completed] of [true,false].entries())await insert('project_checklists',{ticket_id:tickets[2],text:position===0?text('要件を確認する','Review requirements'):text('動作を確認する','Verify behavior'),completed,position});
   await insert('project_time_entries',{ticket_id:tickets[6],employee_id:adminId,work_date:day(-8),minutes:60,note:text('準備作業を完了しました。','Preparation completed.')});
+  await installManagementSamples(client,{adminId,displayLanguage,projectId,tickets,definition,index,today});
   await insert('project_watchers',{ticket_id:tickets[2],employee_id:adminId});
   await insert('audit_logs',{actor_id:adminId,action:'initial_data_import',resource:'projects',resource_id:projectId,detail:JSON.stringify({initialData:true,language:displayLanguage,code:definition.code,tickets:10})});
  }

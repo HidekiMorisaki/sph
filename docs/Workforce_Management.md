@@ -6,26 +6,22 @@ contract or team membership.
 
 ## Engagement naming and upgrade
 
-The Business Management resource is **Engagements** in English and **案件** in
-Japanese. Its page is `/engagements`, REST resource `/v1/engagements`, search routes
+The Business Management resource is **Engagements**, with a localized Japanese UI label. Its page is `/engagements`, REST resource `/v1/engagements`, search routes
 `/v1/engagement-searches` and `/v1/engagement-search-fields`. The previous
 `/projects` engagement routes are removed; those paths now belong to the separate
-General-group [Projects](Projects.md) module and never alias Engagements.
+dedicated [Projects](Projects.md) sidebar group and never alias Engagements.
 Employee `/participations` routes retain their
 names, but their JSON uses `engagementId` and `engagement`; the old `projectId`
 input is rejected, including when a valid `engagementId` is also supplied.
 
-Consolidated migration m0037 renames Project/ProjectParticipation to
-Engagement/EngagementParticipation, `projects`/`project_participations` to
-`engagements`/`engagement_participations`, and `project_id` to `engagement_id`.
-Attached constraints, indexes, triggers and sequences follow the same terminology.
-IDs, existing codes, dates, deletion states and sequence positions are retained;
-new codes use `ENG-`. The database name and connection configuration stay the same.
+Fresh-install baseline m0046 creates Engagement/EngagementParticipation as
+`engagements`/`engagement_participations`, using `engagement_id` references and
+`ENG-` business codes. Constraints, indexes, triggers and sequences use the same
+terminology. The former Project-to-Engagement rename is not replayed.
 
-Operation codes become `engagements.read/create/update/delete`. Permission IDs,
-UUIDs, grants/scopes, deleted states and timestamps are retained. Session
-capabilities expose `canReadEngagements`. Saved-filter targets become `engagements`
-with their IDs, definitions, names, revisions and timestamps retained. Existing
+Operation codes are `engagements.read/create/update/delete`; normal installer
+setup initializes the current role grants. Session capabilities expose
+`canReadEngagements`. Saved filters use the `engagements` target. Existing
 per-user search tabs, collapse/category/selection settings and page-size settings
 are transferred in browser storage before the new search mounts. Existing new
 settings take precedence, and other employees' preferences are untouched.
@@ -35,12 +31,13 @@ identifiers and contents. The new engagement history route also reads legacy
 `projects` rows; participation history renders both legacy `project` and current
 `engagement` field labels. New records use the new identifiers. Fixed migration
 history and existing backups are preserved. Restore an older full backup together
-with its matching application/schema, then apply the upgrade; the active-data
+with its matching application/schema; automatic migration to this fresh-install
+baseline is unsupported. The active-data
 backup tools require a matching current schema and stop on an unknown structure.
 Active-data exports also retain the engagement/team business-code sequence
 positions, so allocation after restore continues beyond the exported codes.
 
-This rename reserves project terminology for a separately planned feature.
+The separate [Projects](Projects.md) module is implemented for internal work management; Engagements continues to manage client work and employee participation.
 
 ## Clients and engagement contracts
 
@@ -71,7 +68,7 @@ Engagement POST/PATCH requires an active clientId and contractStartsOn (YYYY-MM-
 contractEndsOn is optional and cannot precede contractStartsOn. These contract
 dates are separate from each employee's participation dates; no automatic
 participation restriction is introduced. Engagement responses include client name
-and company, while internal engagement codes remain omitted. Consolidated m0031
+and company, while internal engagement codes remain omitted. Baseline m0046
 creates engagements with their final contract columns and code defaults. Legacy
 engagements with null client/start/end require completion on the next edit.
 Database constraints require a paired client/start
@@ -79,8 +76,8 @@ and a valid contract period. No client or contract date is fabricated for old da
 
 Clients use independent clients.read/create/update/delete operations. All five
 initial roles receive global read; only system/business administrators receive
-global writes. The migration also grants read to existing custom roles. New
-custom roles use their explicitly selected DB grants. Own-branch client grants
+global writes. Custom roles use their explicitly selected DB grants; fresh installation does
+not replay historical grants to existing custom roles. Own-branch client grants
 never authorize global writes. The branch administrator's global read follows
 the existing approved shared-master mechanism and requires an active DB grant.
 Changes and audit entries are stored in the same serializable transaction as

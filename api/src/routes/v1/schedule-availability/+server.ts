@@ -1,9 +1,9 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { DateTime } from 'luxon';
-import { eventInput,rebaseDate,reservationSlot } from '$lib/server/schedule/service';
-import { expandSlots } from '$lib/server/schedule/time';
+import { eventInput,rebaseDate,reservationSlot } from '#lib/server/schedule/service.js';
+import { expandSlots } from '#lib/server/schedule/time.js';
 export async function POST({locals,request}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'schedule.read'),body=await request.json().catch(()=>null),input=eventInput(body?.input),db=getPrisma();
  const employeeIds=[...new Set([actor.id,...input.attendeeIds])],resourceIds=input.resourceIds;

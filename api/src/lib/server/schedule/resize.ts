@@ -1,9 +1,9 @@
 import { DateTime } from 'luxon';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
-import { requireOperationApi,writeAuditLog } from '$lib/server/api/admin';
-import { throwApiError } from '$lib/server/api/response';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { requireOperationApi,writeAuditLog } from '#lib/server/api/admin.js';
+import { throwApiError } from '#lib/server/api/response.js';
 import { eventInput,occurrenceInclude,missing,conflict,lockResources,validateRefs,reservationSlot,reserve,notify } from './service';
 import { expandSlots,type EventInput } from './time';
 

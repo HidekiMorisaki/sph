@@ -1,6 +1,6 @@
-import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieSecure } from '$lib/server/auth/session';
-import { authenticateLogin } from '$lib/server/auth/login';
-import { failure, success } from '$lib/server/api/response';
+import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieSecure } from '#lib/server/auth/session.js';
+import { authenticateLogin } from '#lib/server/auth/login.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 function invalidCredentials() {
 	return failure(401, 'INVALID_CREDENTIALS', 'Invalid email or password.');

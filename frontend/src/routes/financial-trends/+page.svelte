@@ -1,15 +1,15 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 	import { onMount, untrack } from 'svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
-	import FinancialTrendsChart from '$lib/components/FinancialTrendsChart.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import type { FinancialTrend, FinancialTrendsResponse } from '$lib/financialTrendsData';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
+	import FinancialTrendsChart from '#lib/components/FinancialTrendsChart.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import type { FinancialTrend, FinancialTrendsResponse } from '#lib/financialTrendsData.js';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	const yearsStorageKey = 'asset-financial-trends-years';
 	function validYear(value: unknown): value is number { return Number.isInteger(value) && Number(value) >= 1980 && Number(value) <= 2100; }
@@ -92,7 +92,7 @@
 		pdfError = false;
 		activeYearPicker = null;
 		try {
-			const { prepareFinancialTrendsPdfDownload } = await import('$lib/financialTrendsPdfDownload');
+			const { prepareFinancialTrendsPdfDownload } = await import('#lib/financialTrendsPdfDownload.js');
 			const report = await prepareFinancialTrendsPdfDownload(selection, settings);
 			if (!mounted || request !== sequence) return;
 			await report.document.save(report.fileName, { returnPromise: true });

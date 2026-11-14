@@ -1,9 +1,9 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	requireOperationApi(locals.user, permissionOperations.softwareRead);

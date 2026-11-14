@@ -1,4 +1,4 @@
-import type { LocalizationSettings } from '$lib/localization';
+import type { LocalizationSettings } from '#lib/localization.js';
 
 // Only the session cookie is forwarded to the configured REST API host.
 export async function readInitialSession(sessionCookie: string | undefined, apiOrigin: string, fetcher: typeof fetch = fetch): Promise<(LocalizationSettings & { canManageSystemSettings: boolean }) | null> {

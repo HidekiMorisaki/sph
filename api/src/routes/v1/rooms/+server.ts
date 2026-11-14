@@ -1,13 +1,13 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { referenceBranchScope, requireLocationManagementApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
-import { duplicateField } from '$lib/server/api/database';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { referenceBranchScope, requireLocationManagementApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { listMeta, parseListQuery, parseSearch } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { duplicateField } from '#lib/server/api/database.js';
 
 const sortFields = ['id', 'name', 'branch', 'sortOrder', 'notes', 'createdAt', 'updatedAt'] as const;
 function input(value: unknown) {

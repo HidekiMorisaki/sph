@@ -1,8 +1,8 @@
 <script lang="ts">
- import { canOperate,type SessionUser } from '$lib/auth';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { scheduleRequest,ScheduleRequestError,type ScheduleItem } from '$lib/schedule';
+ import { canOperate,type SessionUser } from '#lib/auth.js';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { scheduleRequest,ScheduleRequestError,type ScheduleItem } from '#lib/schedule.js';
  import DetailModal from './DetailModal.svelte';
  import SearchSelect from './SearchSelect.svelte';
  import FormCheckbox from './FormCheckbox.svelte';

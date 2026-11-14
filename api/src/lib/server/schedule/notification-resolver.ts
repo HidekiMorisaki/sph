@@ -1,5 +1,5 @@
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { fullDetails,occurrenceInclude } from './service';
 export const scheduleNotificationTypes=['schedule.invitation','schedule.change','schedule.cancellation','schedule.response','schedule.resource-release'];
 export async function resolveScheduleNotification(key:string,actor:AuthenticatedUser) {

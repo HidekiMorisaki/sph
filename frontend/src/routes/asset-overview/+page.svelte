@@ -1,11 +1,11 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 	import { onMount } from 'svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization, formatDate } from '$lib/localization';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization, formatDate } from '#lib/localization.js';
 	type Item = { id: number; name: string; count: number };
 	type Summary = { asOf: string; scope: 'global' | 'own_branch'; branchId: number | null; total: number; types: Item[]; branches: Item[] };
 	let text = $derived(localeMessages[$localization.displayLanguage].assetOverview);

@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { throwApiError } from './response';
 
 /** Employee first, then asset/title: shared order for departure and new allocations. */

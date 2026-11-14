@@ -1,15 +1,15 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
  import { untrack,tick } from 'svelte';
  import FormTabs from './FormTabs.svelte';
  import ScheduleRoomPicker from './ScheduleRoomPicker.svelte';
- import { canCheckScheduleAvailability } from '$lib/schedule-availability';
+ import { canCheckScheduleAvailability } from '#lib/schedule-availability.js';
  import { DateTime } from 'luxon';
- import { ambiguousScheduleOffsets,scheduleSubmissionOffset } from '$lib/schedule-offsets';
- import { canOperate,type SessionUser } from '$lib/auth';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { scheduleRequest,ScheduleRequestError,type ScheduleDraft,type ScheduleItem,type EmployeeChoice } from '$lib/schedule';
+ import { ambiguousScheduleOffsets,scheduleSubmissionOffset } from '#lib/schedule-offsets.js';
+ import { canOperate,type SessionUser } from '#lib/auth.js';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { scheduleRequest,ScheduleRequestError,type ScheduleDraft,type ScheduleItem,type EmployeeChoice } from '#lib/schedule.js';
  import DetailModal from './DetailModal.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
  import DiscardChangesDialog from './DiscardChangesDialog.svelte';

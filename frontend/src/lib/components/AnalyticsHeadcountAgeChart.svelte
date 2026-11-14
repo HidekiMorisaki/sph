@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { analyticsText } from '$lib/analytics';
-	import { localization } from '$lib/localization';
-	import { niceAxis } from '$lib/chartAxis';
+	import { analyticsText } from '#lib/analytics.js';
+	import { localization } from '#lib/localization.js';
+	import { niceAxis } from '#lib/chartAxis.js';
 
 	let { points, formatCount, formatAge }: {
 		points: { year: number; headcount: number; averageAge: number | null; averageAgeCount: number }[];

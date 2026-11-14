@@ -25,7 +25,7 @@ export function choiceConditionValues(node:SearchNode,field:SearchField):{values
 }
 export function selectionNode(item:SelectionField,values:string[]):SearchNode|undefined{
  const ids=values.filter(v=>v!==unsetSelection),nodes:SearchNode[]=[];
- if(ids.length){const rule:SearchRule={kind:'rule',field:item.field.code,operator:ids.length===1?'eq':'in',value:ids.length===1?ids[0]:ids};nodes.push(item.root?rule:{...emptyGroup(),context:item.context,match:'some',children:[rule]});}
+ if(ids.length){const rule:SearchRule={kind:'rule',field:item.field.code,operator:ids.length===1&&!item.field.multiple?'eq':'in',value:ids.length===1&&!item.field.multiple?ids[0]:ids};nodes.push(item.root?rule:{...emptyGroup(),context:item.context,match:'some',children:[rule]});}
  if(values.includes(unsetSelection)&&item.field.unsetMode)nodes.push(item.root?{kind:'rule',field:item.field.code,operator:'unset'}:{...emptyGroup(),context:item.context,match:item.field.unsetMode==='relation'?'none':'some',children:item.field.unsetMode==='relation'?[]:[{kind:'rule',field:item.field.code,operator:'unset'}]});
  return nodes.length>1?{...emptyGroup(),mode:'any',children:nodes}:nodes[0];
 }

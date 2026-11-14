@@ -1,7 +1,7 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success } from '$lib/server/api/response';
-import { parseListQuery,parseSearch,listMeta } from '$lib/server/api/query';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success } from '#lib/server/api/response.js';
+import { parseListQuery,parseSearch,listMeta } from '#lib/server/api/query.js';
+import { getPrisma } from '#lib/server/prisma.js';
 export async function GET({locals,url}:import('./$types').RequestEvent) {
  requireOperationApi(locals.user,'schedule.read');const q=parseListQuery(url,['id'],'id'),search=parseSearch(url);
  const where={kind:'room',isBookable:true,deletedAt:null,room:{deletedAt:null,name:{contains:search,mode:'insensitive' as const},branch:{deletedAt:null,OR:[{closedOn:null},{closedOn:{gt:new Date()}}]}}};

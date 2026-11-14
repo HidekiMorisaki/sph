@@ -61,7 +61,6 @@ filter application does not overwrite that preference automatically.
 
 ## Migration
 
-User-approved `m0032` widens only `saved_search_filters_target_check` to include
-`assets` alongside `employees` and `books`. It does not recreate tables, change
-existing filter records, add roles or grant permissions. Apply it with the
-independent migration job before starting the updated API/frontend.
+Baseline `m0046` creates `saved_search_filters_target_check` with the complete
+current target list, including `assets`. No intermediate widening or existing
+filter conversion is needed for a fresh installation.

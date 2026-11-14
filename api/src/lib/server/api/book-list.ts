@@ -2,10 +2,10 @@ import { openPurchaseStatuses, managedPurchaseBranches } from './book-purchases'
 import { requireOperationApi } from './admin';
 import { listMeta, parseListQuery } from './query';
 import { failure, success } from './response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 import { bookRentableSql } from './book-availability';
 
 export async function bookList(user: AuthenticatedUser | null, url: URL, advanced?: Prisma.Sql) {

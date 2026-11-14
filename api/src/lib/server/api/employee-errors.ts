@@ -1,5 +1,5 @@
-import { failure } from '$lib/server/api/response';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { failure } from '#lib/server/api/response.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export function employeeConflictResponse(error: unknown) {
 	if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2034' || error.code === 'P2010' && ['40001', '40P01'].includes(String(error.meta?.code)))) return failure(409, 'CONCURRENT_CHANGE', 'Reload and try again.');

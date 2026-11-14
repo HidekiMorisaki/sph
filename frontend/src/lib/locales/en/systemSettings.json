@@ -1,4 +1,5 @@
 {
+	"otherTab": "Other",
 	"masterManagementTab": "Master management",
 	"financialTab": "Financial information",
 	"financialPeriodTab": "Year settings",
@@ -197,5 +198,11 @@
 		"closeHelp": "Close server status help",
 		"measurementScope": "Measurement scope",
 		"historyHelp": "History and sampling intervals"
-	}
+	},
+	"accountInvitations": "Account invitations",
+	"invitationValidityMinutes": "Invitation link validity (minutes)",
+	"invitationSettingsDescription": "Enter a whole number from 1 to 60 minutes. Changes apply to newly issued links and do not change the expiration of existing links.",
+	"invitationSettingsInvalid": "Enter a whole number from 1 to 60 minutes.",
+	"invitationSettingsSaved": "Invitation link validity saved.",
+	"invitationSettingsSaveFailed": "Unable to save invitation settings. Please try again."
 }

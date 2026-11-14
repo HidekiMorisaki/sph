@@ -1,7 +1,7 @@
 import { businessList } from './business-list';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { requireOperationApi, writeAuditLog } from './admin';
 import { masterInput } from './employee-masters';
 import { parseId } from './database';

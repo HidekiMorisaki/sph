@@ -1,4 +1,4 @@
-import type { ApiErrorDetail } from '$lib/server/api/response';
+import type { ApiErrorDetail } from '#lib/server/api/response.js';
 
 export type RoleNameInputResult =
 	| { success: true; data: { name: string; notes: string | null } }

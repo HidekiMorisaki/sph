@@ -1,15 +1,15 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import WorkflowFields from './WorkflowFields.svelte';
  import Control from './WorkflowControl.svelte';
- import FormCheckbox from '$lib/components/FormCheckbox.svelte';
- import '$lib/styles/workflow.css';
- import FormInput from '$lib/components/FormInput.svelte';
- import DatePicker from '$lib/components/DatePicker.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import {fieldGrid,condition,isContainer,isDisplay,isRepeat,defaults,fieldsOf,type Field,type Values,type Directory} from '$lib/workflow-form';
- import {choose,workflowError,WorkflowError,type Attachment} from '$lib/workflow-client';
+ import FormCheckbox from '#lib/components/FormCheckbox.svelte';
+ import '#lib/styles/workflow.css';
+ import FormInput from '#lib/components/FormInput.svelte';
+ import DatePicker from '#lib/components/DatePicker.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import {fieldGrid,condition,isContainer,isDisplay,isRepeat,defaults,fieldsOf,type Field,type Values,type Directory} from '#lib/workflow-form.js';
+ import {choose,workflowError,WorkflowError,type Attachment} from '#lib/workflow-client.js';
  let {fields,values=$bindable({}),context={},readonly=false,ja=true,directory,attachments=[],applicant='',errors={},path='',gridLayout=true,tableCell=false,upload,download}:{
  fields:Field[];gridLayout?:boolean;tableCell?:boolean;values?:Values;context?:Values;readonly?:boolean;ja?:boolean;directory:Directory;attachments?:Attachment[];applicant?:string;errors?:Record<string,string>;path?:string;
  upload?:(files:File[])=>Promise<Attachment[]>;download?:(file:Attachment,preview:boolean)=>void;

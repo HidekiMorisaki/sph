@@ -1,5 +1,5 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import type { SearchContext, SearchField } from './search-registry';
 
 export const businessTargets = ['teams', 'skills', 'clients', 'engagements'] as const;

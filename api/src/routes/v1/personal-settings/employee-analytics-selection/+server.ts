@@ -1,9 +1,9 @@
 import type { RequestHandler } from './$types';
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { parseAnalyticsSelection } from '$lib/server/api/analytics-selection';
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { parseAnalyticsSelection } from '#lib/server/api/analytics-selection.js';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const today = () => employeeReferenceDate().toISOString().slice(0, 10);
 

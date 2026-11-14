@@ -1,8 +1,8 @@
 <script lang="ts">
  import InfoIconButton from './InfoIconButton.svelte';
 	import { onMount, tick, untrack } from 'svelte';
-	import { calendarText, formatDate, formatMonthYear, localization, weekdayLabels } from '$lib/localization';
-	import FormInput from '$lib/components/FormInput.svelte';
+	import { calendarText, formatDate, formatMonthYear, localization, weekdayLabels } from '#lib/localization.js';
+	import FormInput from '#lib/components/FormInput.svelte';
 
 	let { label, field, value, showLabel = true, compact = false, above = false, required = false, disabled = false, error = '', open = false, mode = 'date', min = '', max = '', align = 'start', helpText = '', helpLabel = '', onToggle, onSelect }: {
 		label: string; field: string; value: string; above?: boolean; required?: boolean; disabled?: boolean;

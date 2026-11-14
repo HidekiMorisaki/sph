@@ -1,12 +1,12 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { referenceBranchScope } from '$lib/server/api/branch-access';
-import { hasOwnBranchPermissionOperation, hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { masterHistoryFields, type MasterHistoryResource } from '$lib/server/api/master-history';
-import { resolveHistoryEmployees } from '$lib/server/api/history-employees';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { referenceBranchScope } from '#lib/server/api/branch-access.js';
+import { hasOwnBranchPermissionOperation, hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { masterHistoryFields, type MasterHistoryResource } from '#lib/server/api/master-history.js';
+import { resolveHistoryEmployees } from '#lib/server/api/history-employees.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['changedAt', 'id'] as const;
 const aliases: Record<string, MasterHistoryResource> = { rooms: 'room', roles: 'role', 'external-links': 'external_link' };

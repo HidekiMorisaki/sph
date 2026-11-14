@@ -1,13 +1,13 @@
 <script lang="ts">
  import { tick,untrack } from 'svelte';
  import { goto } from '$app/navigation';
- import { canOperate,type SessionUser } from '$lib/auth';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { scheduleRequest } from '$lib/schedule';
+ import { canOperate,type SessionUser } from '#lib/auth.js';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { scheduleRequest } from '#lib/schedule.js';
  import SearchInput from './SearchInput.svelte';
- import {awaitNotificationView} from '$lib/notification-view';
- import { notificationDestination } from '$lib/notification-destination';
+ import {awaitNotificationView} from '#lib/notification-view.js';
+ import { notificationDestination } from '#lib/notification-destination.js';
  let {user}:{user:SessionUser|null}=$props();
  type Notice={id:number;key:string;type:string;createdAt:string;readAt:string|null;title:string|null;href:string|null;available:boolean};
  let text=$derived(scheduleText[$localization.displayLanguage]);
@@ -36,13 +36,13 @@
  $effect(()=>{
   const id=userId,enabled=allowed;++generation;cancelVisit?.();cancelVisit=undefined;clearTimeout(queryTimer);controller?.abort();items=[];unread=0;readCount=0;busy=false;open=false;error=false;tab='all';query='';unreadCounts={all:0,unread:0,workflows:0,projects:0,information:0};total=0;hasMore=false;snapshot='';updating=false;
   if(!id||!enabled)return;
-  const refresh=()=>{if(!document.hidden&&!updating)void load();};
+  const refresh=()=>{if(!document.hidden&&!updating&&!busy)void load();};
   untrack(refresh);const timer=setInterval(refresh,30000);
   document.addEventListener('visibilitychange',refresh);window.addEventListener('focus',refresh);
   return ()=>{++generation;cancelVisit?.();clearTimeout(queryTimer);controller?.abort();clearInterval(timer);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);};
  });
  function close(){open=false;trigger?.focus();}
- function toggle(){open=!open;trigger?.focus();if(open&&!updating)void load();}
+ function toggle(){open=!open;trigger?.focus();if(open&&!updating&&!busy)void load();}
  async function mark(item:Notice) {
   if(updating||busy)return;
   const href=notificationDestination(item.href);if(!href)return;
@@ -79,7 +79,7 @@
    if(open&&current===generation){const choices=root?.querySelectorAll<HTMLButtonElement>('.dismiss');const next=index>=0?choices?.[Math.min(index,(choices?.length??0)-1)]:null;(next??trigger)?.focus();}
   }catch{if(current===generation)error=true;}finally{if(current===generation)updating=false;}
  }
- function kind(type:string){const ja=$localization.displayLanguage==='ja';const workflow:Record<string,[string,string]>={'project.assigned':['チケットが割り当てられました','Ticket assigned'],'project.comment':['チケットにコメントが追加されました','New ticket comment'],'workflow.requested':['承認依頼','Approval requested'],'workflow.approved':['承認されました','Approved'],'workflow.returned':['差し戻されました','Returned'],'workflow.rejected':['却下されました','Rejected'],'workflow.completed':['最終承認が完了しました','Final approval completed'],'workflow.cancelled':['申請が取り下げられました','Request withdrawn'],'workflow.comment':['コメントが追加されました','New comment'],'workflow.reassigned':['承認者が変更されました','Approver reassigned'],'workflow.payment':['受渡しの確認依頼','Transfer receipt requested'],'workflow.received':['受領が確認されました','Receipt confirmed'],'workflow.correction':['受渡し記録の訂正・取消','Transfer correction']};if(workflow[type])return workflow[type][ja?0:1];return ({'schedule.invitation':text.invitation,'schedule.change':text.change,'schedule.cancellation':text.cancellation,'schedule.response':text.response,'schedule.resource-release':text.resourceRelease} as Record<string,string>)[type]??text.notifications;}
+ function kind(type:string){const ja=$localization.displayLanguage==='ja';const workflow:Record<string,[string,string]>={'project.ticket.created':['チケットが作成されました','Ticket created'],'project.ticket.updated':['チケットが更新されました','Ticket updated'],'project.comment.updated':['チケットのコメントが編集されました','Ticket comment edited'],'project.assigned':['チケットが割り当てられました','Ticket assigned'],'project.comment':['チケットにコメントが追加されました','New ticket comment'],'workflow.requested':['承認依頼','Approval requested'],'workflow.approved':['承認されました','Approved'],'workflow.returned':['差し戻されました','Returned'],'workflow.rejected':['却下されました','Rejected'],'workflow.completed':['最終承認が完了しました','Final approval completed'],'workflow.cancelled':['申請が取り下げられました','Request withdrawn'],'workflow.comment':['コメントが追加されました','New comment'],'workflow.reassigned':['承認者が変更されました','Approver reassigned'],'workflow.payment':['受渡しの確認依頼','Transfer receipt requested'],'workflow.received':['受領が確認されました','Receipt confirmed'],'workflow.correction':['受渡し記録の訂正・取消','Transfer correction']};if(workflow[type])return workflow[type][ja?0:1];return ({'schedule.invitation':text.invitation,'schedule.change':text.change,'schedule.cancellation':text.cancellation,'schedule.response':text.response,'schedule.resource-release':text.resourceRelease} as Record<string,string>)[type]??text.notifications;}
 </script>
 <svelte:window onpointerdown={event=>{if(open&&!root?.contains(event.target as Node))open=false;}} onkeydown={event=>{if(open&&event.key==='Escape'){event.preventDefault();close();}}}/>
 {#if allowed}

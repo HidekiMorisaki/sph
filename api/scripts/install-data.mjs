@@ -96,6 +96,13 @@ export async function assertSampleDatabaseEmpty(client) {
  const tables = (await client.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> '_prisma_migrations' ORDER BY tablename")).rows;
  for (const {tablename} of tables) {
   if (['widget_sources','widget_releases','widget_approvals'].includes(tablename)) continue;
+  // m0043 creates this default before the initial-data transaction starts.
+  // Accept only that pristine seed, never an operated or logically deleted row.
+  if (tablename === 'account_invitation_settings') {
+   const seed = await client.query("SELECT count(*)::int AS total, count(*) FILTER (WHERE id=1 AND key='main' AND validity_minutes=30 AND deleted_at IS NULL AND updated_at=created_at)::int AS pristine FROM account_invitation_settings");
+   if (seed.rows[0].total === 1 && seed.rows[0].pristine === 1) continue;
+   throw new Error('Modified invitation settings before sample installation.');
+  }
   if (!/^[a-z_]+$/.test(tablename) || (await client.query(`SELECT EXISTS(SELECT 1 FROM ${tablename}) AS populated`)).rows[0].populated) {
    throw new Error('Samples require an empty database before initial configuration, including logically deleted rows.');
   }

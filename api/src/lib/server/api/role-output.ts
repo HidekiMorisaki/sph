@@ -1,9 +1,9 @@
-import { derivedPermissionCodes } from '$lib/server/auth/permission-dependencies';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import defaultRoles from '$lib/server/auth/default-role-permissions.json';
-import granularOperations from '$lib/server/auth/granular-operations.json';
+import { derivedPermissionCodes } from '#lib/server/auth/permission-dependencies.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import defaultRoles from '#lib/server/auth/default-role-permissions.json';
+import granularOperations from '#lib/server/auth/granular-operations.json';
 import { editableCodesFrom } from './role-permissions';
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export const roleSelect = {
 	id: true,

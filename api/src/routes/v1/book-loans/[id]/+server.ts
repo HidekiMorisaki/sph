@@ -1,10 +1,10 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
-import { BookInputError, bookErrorResponse, dateField, objectBody, recordBookChange } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { businessDate, lockBookQueue, reconcileBookQueue } from '#lib/server/api/book-circulation.js';
+import { BookInputError, bookErrorResponse, dateField, objectBody, recordBookChange } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function PATCH({ locals, params, request }: import('./$types').RequestEvent) {
 	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.bookManage);

@@ -1,5 +1,5 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export const locationOrderResources = ['branches', 'rooms', 'storages'] as const;
 export type LocationOrderResource = (typeof locationOrderResources)[number];

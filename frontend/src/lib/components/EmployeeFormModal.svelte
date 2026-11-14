@@ -1,20 +1,20 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import type { Snippet } from 'svelte';
  import EmployeeDepartureModal, { type ReturnConfirmation } from './EmployeeDepartureModal.svelte';
  import EmployeeWorkforceSection from './EmployeeWorkforceSection.svelte';
  import WorkforceRecordModal from './WorkforceRecordModal.svelte';
- import type { RecordContext } from '$lib/workforce';
- import FormTabs from '$lib/components/FormTabs.svelte';
-	import { localeMessages } from '$lib/locale-messages';
+ import type { RecordContext } from '#lib/workforce.js';
+ import FormTabs from '#lib/components/FormTabs.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
 	import { onMount, tick } from 'svelte';
-	import { employeeFieldError, employeeSaveError } from '$lib/employee-messages';
-	import { apiData } from '$lib/api';
-	import type { Team } from '$lib/teams';
-	import type { Employee, EmployeeMaster, EmployeeRole } from '$lib/employees';
-	import { genderOptions, localization, personNameFields } from '$lib/localization';
-	import { formSnapshot } from '$lib/modalForm';
+	import { employeeFieldError, employeeSaveError } from '#lib/employee-messages.js';
+	import { apiData } from '#lib/api.js';
+	import type { Team } from '#lib/teams.js';
+	import type { Employee, EmployeeMaster, EmployeeRole } from '#lib/employees.js';
+	import { genderOptions, localization, personNameFields } from '#lib/localization.js';
+	import { formSnapshot } from '#lib/modalForm.js';
 	import DatePicker from './DatePicker.svelte';
 	import DiscardChangesDialog from './DiscardChangesDialog.svelte';
 	import FormSection from './FormSection.svelte';
@@ -23,7 +23,7 @@
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
 	import StatusNotice from './StatusNotice.svelte';
 	import PostalLookup from './PostalLookup.svelte';
-	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
+	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '#lib/postal-address.js';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let text = $derived(localeMessages[$localization.displayLanguage].employees);

@@ -1,5 +1,5 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
  let {kind,label,disabled=false,onclick,class:className=''}:{kind:'bold'|'italic'|'strike'|'link'|'code'|'image'|'preview'|'table'|'bullet-list'|'ordered-list'|'task-list';label:string;disabled?:boolean;onclick:()=>void;class?:string}=$props();
 </script>
 <ActionButton ariaLabel={label} title={label} {disabled} {onclick} class={'markdown-tool '+className}>

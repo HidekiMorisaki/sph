@@ -1,8 +1,8 @@
 import type { RequestHandler } from './$types';
-import { requireScopedOperationApi, requiredBranchScope } from '$lib/server/api/branch-access';
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { getPrisma } from '$lib/server/prisma';
-import { success } from '$lib/server/api/response';
+import { requireScopedOperationApi, requiredBranchScope } from '#lib/server/api/branch-access.js';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { success } from '#lib/server/api/response.js';
 
 export const GET: RequestHandler = async ({ locals, setHeaders }) => {
 	const { actor, branchId: employeeBranch } = requireScopedOperationApi(locals.user, 'employees.read');

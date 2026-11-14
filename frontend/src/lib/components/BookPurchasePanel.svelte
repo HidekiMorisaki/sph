@@ -1,10 +1,10 @@
 <script lang="ts">
- import { operationAccess } from '$lib/operation-access';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
  import { onMount } from 'svelte';
- import { localization } from '$lib/localization';
- import { apiData } from '$lib/api';
- import { bookPurchaseMessages, type PurchaseRequest, type PurchaseOrder } from '$lib/book-purchase-messages';
+ import { localization } from '#lib/localization.js';
+ import { apiData } from '#lib/api.js';
+ import { bookPurchaseMessages, type PurchaseRequest, type PurchaseOrder } from '#lib/book-purchase-messages.js';
  import BookPurchaseFields from './BookPurchaseFields.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
  import AddButton from './AddButton.svelte';

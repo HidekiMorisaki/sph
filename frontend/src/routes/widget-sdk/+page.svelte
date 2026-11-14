@@ -1,11 +1,11 @@
 <script lang="ts">
  import {page} from '$app/state';
- import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
- import GuideInline from '$lib/components/GuideInline.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import {localization} from '$lib/localization';
- import {parseGuide,type GuideBlock} from '$lib/guide-markdown';
+ import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+ import GuideInline from '#lib/components/GuideInline.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import {localization} from '#lib/localization.js';
+ import {parseGuide,type GuideBlock} from '#lib/guide-markdown.js';
  let ja=$derived($localization.displayLanguage==='ja');
  let storage=$derived(page.url.searchParams.get('document')==='storage');
  let title=$derived(storage?(ja?'ウィジェット保存仕様':'Widget storage guide'):(ja?'ウィジェットSDK・配布手順':'Widget SDK and distribution guide'));

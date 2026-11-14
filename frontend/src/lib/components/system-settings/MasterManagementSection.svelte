@@ -1,7 +1,7 @@
 <script lang="ts">
- import {localization} from '$lib/localization';
- import {localeMessages} from '$lib/locale-messages';
- import type {SessionUser} from '$lib/auth';
+ import {localization} from '#lib/localization.js';
+ import {localeMessages} from '#lib/locale-messages.js';
+ import type {SessionUser} from '#lib/auth.js';
  import PageTabs from '../PageTabs.svelte';
  import EmployeeMasterSection from '../EmployeeMasterSection.svelte';
  import LocationMasterPage from '../LocationMasterPage.svelte';

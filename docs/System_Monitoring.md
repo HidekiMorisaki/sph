@@ -11,7 +11,7 @@ The shared telemetry table and REST endpoint are still needed for these values
 and CPU/memory history.
 
 Local Docker Compose enables collection with `SPH_SYSTEM_METRICS=docker`.
-The blitz.cloud Compose file explicitly disables it. Without the Docker setting,
+Without the Docker setting,
 the API returns `supported: false`, does not query telemetry, and starts no timer.
 The page then displays the localized Docker-only message alongside the existing
 version information. No new packages or third-party assets are included.

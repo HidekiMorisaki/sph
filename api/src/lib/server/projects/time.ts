@@ -1,4 +1,4 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
 import {success,throwApiError} from '../api/response';
 
 // The REST contract remains numeric minutes. Decimal storage preserves hundredths

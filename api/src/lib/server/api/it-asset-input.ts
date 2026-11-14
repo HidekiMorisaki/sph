@@ -1,5 +1,5 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { ApiErrorDetail } from '$lib/server/api/response';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { ApiErrorDetail } from '#lib/server/api/response.js';
 import { parseIpAddress } from './it-asset-network';
 import { purchaseMoney } from './purchase-money';
 

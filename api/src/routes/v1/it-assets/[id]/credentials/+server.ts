@@ -1,9 +1,9 @@
-import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { ASSET_CREDENTIAL_TYPES } from '$lib/server/api/it-asset-credentials';
-import { parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { assetBranchWhere, requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { ASSET_CREDENTIAL_TYPES } from '#lib/server/api/it-asset-credentials.js';
+import { parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) {
 	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetCredentialRead);

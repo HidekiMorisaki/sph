@@ -1,23 +1,23 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
-	import { COMPACT_NAVIGATION_QUERY } from '$lib/responsive-layout';
-	import favicon from '$lib/assets/favicon.svg';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+	import { COMPACT_NAVIGATION_QUERY } from '#lib/responsive-layout.js';
+	import favicon from '#lib/assets/favicon.svg';
 	import { onMount, setContext, untrack, tick } from 'svelte';
-	import { afterNavigate, beforeNavigate, replaceState } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { readSessionUser } from '$lib/client-session';
-	import { safeLoginDestination } from '$lib/login-redirect';
-	import { clearAvatar, loadAvatarFor } from '$lib/avatar';
-	import { canOperate, type SessionUser } from '$lib/auth';
-	import { isSidebarGroupId, readSidebarGroups, saveSidebarGroups, sidebarGroupExpanded, type SidebarGroupState } from '$lib/sidebar-groups';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import AppSidebar from '$lib/components/AppSidebar.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { localeMessages } from '$lib/locale-messages';
-	import { breadcrumbsForPath } from '$lib/components/sidebarNavigation';
-	import { applyLocalization, initializeLocalization, LOCALIZATION_CONTEXT, localization } from '$lib/localization';
+	import { readSessionUser } from '#lib/client-session.js';
+	import { safeLoginDestination } from '#lib/login-redirect.js';
+	import { clearAvatar, loadAvatarFor } from '#lib/avatar.js';
+	import { canOperate, type SessionUser } from '#lib/auth.js';
+	import { isSidebarGroupId, readSidebarGroups, saveSidebarGroups, sidebarGroupExpanded, type SidebarGroupState } from '#lib/sidebar-groups.js';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import AppSidebar from '#lib/components/AppSidebar.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { breadcrumbsForPath } from '#lib/components/sidebarNavigation.js';
+	import { applyLocalization, initializeLocalization, LOCALIZATION_CONTEXT, localization } from '#lib/localization.js';
 	import '../app.css';
-	import { initializeAppearance } from '$lib/themes/appearance';
+	import { initializeAppearance } from '#lib/themes/appearance.js';
 
 	let { children, data } = $props();
 	onMount(initializeAppearance);
@@ -107,8 +107,9 @@
 			sessionStorage.setItem('book-overdue-checked', String(employeeId));
 		} catch { /* The next navigation can retry. */ } finally { noticeCheckRunning = false; }
 	}
-	beforeNavigate(({ to }) => { navigationDestination = to?.url ?? null; });
-	afterNavigate(({ to }) => {
+	beforeNavigate(({ to,shallow }) => { if(!shallow)navigationDestination = to?.url ?? null; });
+	afterNavigate(({ to,shallow }) => {
+        if(shallow)return;
 		// Client-side redirects cannot send the requested fragment to the server.
 		// Carry it into the sign-in URL so reloads and failed logins retain it.
 		if (to?.url.pathname === '/' && navigationDestination?.hash) {
@@ -117,7 +118,7 @@
 				const loginPage = new URL(to.url);
 				loginPage.searchParams.set('returnTo', destination + navigationDestination.hash);
 				loginPage.hash = '';
-				replaceState(loginPage, page.state);
+				void goto(loginPage,{shallow:true,replace:true,reset:false,state:page.state});
 			}
 		}
 		navigationDestination = null;

@@ -69,7 +69,7 @@ shared popover without expanding the canvas; Escape and outside click close it.
 
 ## Template publication and request versions
 
-Japanese workflow labels use テンプレート. The Version selector in a request
+Workflow setup uses Templates and Designer tabs. The Version selector in a request
 chooses Current or a numbered submission snapshot; it does not choose a template
 version. Submission snapshots are read-only records of the submitted form.
 
@@ -195,14 +195,15 @@ aggregate a repeated column. References to unrelated rows, incompatible types,
 deleted fields or cycles are rejected. Hidden fields do not contribute to totals.
 Decimal arithmetic uses fixed-point integers; each calculation rounds to its
 configured precision, with half values rounded away from zero. Money inputs and
-the submitted financial total must fit the selected currency's precision.
+calculated money values must fit the selected currency's precision.
 
 Preview supports form inputs, page navigation and temporary attachment selection.
 Preview files stay in that browser session and are not uploaded as applications.
-Saving a template does not publish edits: publish explicitly to create a new
-immutable template version. New applications use a published version; existing
-applications retain their original version. Unpublishing prevents new requests
-and first submission of existing drafts. Returned requests retain their route and
+Saving an active template with a nonempty approval route publishes a new
+immutable version atomically; inactive templates require explicit publication.
+New requests and never-submitted drafts follow the current published version,
+while previously submitted requests retain their original version. Unpublishing
+prevents new requests and first submission of existing drafts. Returned requests retain their route and
 can be resubmitted after correcting their inputs.
 
 ## Submission and approval

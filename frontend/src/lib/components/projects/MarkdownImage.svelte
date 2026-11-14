@@ -1,6 +1,6 @@
 <script lang="ts">
- import {localization} from '$lib/localization';
- import {markdownImagePattern} from '$lib/project-markdown';
+ import {localization} from '#lib/localization.js';
+ import {markdownImagePattern} from '#lib/project-markdown.js';
  let {href,alt=''}:{href:string;alt?:string}=$props();
  let url=$state(''),failed=$state(false);
  $effect(()=>{

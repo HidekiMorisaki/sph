@@ -1,8 +1,8 @@
 import { lockSystemAdministrators, preserveSystemAdministrator } from './system-administrator-protection';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export type RoleSyncResult = 'updated' | 'roles_not_found' | 'system_role_forbidden' | 'last_system_administrator';
 

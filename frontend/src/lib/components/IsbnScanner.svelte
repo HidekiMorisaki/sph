@@ -1,9 +1,9 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
 	import { onMount, tick } from 'svelte';
-	import { localization } from '$lib/localization';
-	import { decodeIsbnFrame, loadIsbnDecoder } from '$lib/isbn-scanner';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
+	import { localization } from '#lib/localization.js';
+	import { decodeIsbnFrame, loadIsbnDecoder } from '#lib/isbn-scanner.js';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
 
 	let { onRead, onClose }: { onRead: (isbn: string) => void; onClose: () => void } = $props();
 	let video: HTMLVideoElement;

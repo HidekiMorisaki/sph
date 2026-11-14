@@ -1,31 +1,31 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ControlButton from '$lib/components/ControlButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import { operationAccess } from '$lib/operation-access';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ControlButton from '#lib/components/ControlButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
 	import { onMount, tick } from 'svelte';
-	import { apiData, type ApiSuccess } from '$lib/api';
-	import CountryFlag from '$lib/components/CountryFlag.svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import DetailModal from '$lib/components/DetailModal.svelte';
-	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
-	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
-	import FormSection from '$lib/components/FormSection.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import WorkCalendarEntryModal, { type WorkCalendarEntry } from '$lib/components/WorkCalendarEntryModal.svelte';
-	import { calendarNoteTooltip } from '$lib/calendar-note-tooltip';
-	import { holidayDisplayName } from '$lib/holiday-display-name';
-	import '$lib/styles/calendar-note-tooltip.css';
-	import { calendarErrorKey } from '$lib/work-calendar-errors';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { formSnapshot } from '$lib/modalForm';
-	import { DISPLAY_LANGUAGES, formatMonthYear, formatTimestamp, localization, weekdayLabels as localizedWeekdays } from '$lib/localization';
+	import { apiData, type ApiSuccess } from '#lib/api.js';
+	import CountryFlag from '#lib/components/CountryFlag.svelte';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import DetailModal from '#lib/components/DetailModal.svelte';
+	import DetailActionButtons from '#lib/components/DetailActionButtons.svelte';
+	import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+	import FormSection from '#lib/components/FormSection.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import WorkCalendarEntryModal, { type WorkCalendarEntry } from '#lib/components/WorkCalendarEntryModal.svelte';
+	import { calendarNoteTooltip } from '#lib/calendar-note-tooltip.js';
+	import { holidayDisplayName } from '#lib/holiday-display-name.js';
+	import '#lib/styles/calendar-note-tooltip.css';
+	import { calendarErrorKey } from '#lib/work-calendar-errors.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import { formSnapshot } from '#lib/modalForm.js';
+	import { DISPLAY_LANGUAGES, formatMonthYear, formatTimestamp, localization, weekdayLabels as localizedWeekdays } from '#lib/localization.js';
 
 	type WorkCalendar = { id: number; name: string; calendarYear: number; countryCode: 'JP' | 'US'; scheduledWorkMinutesPerDay: number; description: string | null; employeeCount: number; entryCount: number };
 	type EmployeeReference = { id: number; name: string };
@@ -265,7 +265,7 @@
 		{#if !loading && !error && !calendars.length}<div class="unassigned-notice" role="status">{canManage ? text.empty : text.unassigned}</div>{/if}
 		{#if message}<StatusNotice message={message} tone="success" onDismiss={() => message = ''} />{/if}{#if error}<StatusNotice message={error} tone="error" onDismiss={() => error = ''} />{/if}
 		{#if loading}<LoadingSpinner label={text.loading} />{:else if calendars.length || canManage}<div class="layout">
-			<section class="calendar-list" aria-label={text.title}><header><h2>{text.calendars}</h2>{#if allowedOperation('calendars.create')}<ControlButton bind:element={addCalendarButton} class="calendar-add-icon" type="button" aria-label={text.addCalendar} title={text.addCalendar} onclick={(event) => openCalendarForm(null, event)} data-button-scope="button-ff967db5e6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></ControlButton>{/if}<span hidden>{calendars.length}</span></header>{#if !calendars.length}<p>{text.empty}</p>{:else}<div class="calendar-groups">{#each calendarGroups as group}{@const expanded = expandedCalendarYears.includes(group.year)}<section class="calendar-year-group"><ControlButton class="calendar-year-toggle" type="button" aria-expanded={expanded} aria-controls={`calendar-year-${group.year}`} onclick={() => toggleCalendarYear(group.year)} data-button-scope="button-ff967db5e6"><span>{group.year}</span><span class="calendar-year-count" aria-label={t(group.items.length === 1 ? 'calendarCountOne' : 'calendarCountMany', group.items.length)}>{group.items.length}</span><svg class:expanded viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></ControlButton><div class="calendar-items" id={`calendar-year-${group.year}`} hidden={!expanded}>{#each group.items as calendar}<ActionButton type="button" onclick={() => void chooseCalendar(calendar.id)} class={['',(calendar.id === selectedId?"active":'')]} variant="secondary" data-button-scope="button-ff967db5e6"><span class="calendar-name-row"><CountryFlag countryCode={calendar.countryCode} countryName={countryName(calendar.countryCode)} /><strong>{calendar.name}</strong></span><span class="calendar-item-details">{t('counts', calendar.entryCount, calendar.employeeCount)}</span></ActionButton>{/each}</div></section>{/each}</div>{/if}</section>
+			<section class="calendar-list" aria-label={text.title}><header><h2>{text.calendars}</h2>{#if allowedOperation('calendars.create')}<ControlButton bind:element={addCalendarButton} class="calendar-add-icon" type="button" aria-label={text.addCalendar} title={text.addCalendar} onclick={(event) => openCalendarForm(null, event)} data-button-scope="button-ff967db5e6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></ControlButton>{/if}<span hidden>{calendars.length}</span></header>{#if !calendars.length}<p>{text.empty}</p>{:else}<div class="calendar-groups">{#each calendarGroups as group}{@const expanded = expandedCalendarYears.includes(group.year)}<section class="calendar-year-group"><ControlButton class="calendar-year-toggle" type="button" aria-expanded={expanded} aria-controls={`calendar-year-${group.year}`} onclick={() => toggleCalendarYear(group.year)} data-button-scope="button-ff967db5e6"><span>{group.year}</span><span class="calendar-year-count" aria-label={t(group.items.length === 1 ? 'calendarCountOne' : 'calendarCountMany', group.items.length)}>{group.items.length}</span><svg class:expanded viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></ControlButton><div class="calendar-items" id={`calendar-year-${group.year}`} hidden={!expanded}>{#each group.items as calendar}<ControlButton type="button" onclick={() => void chooseCalendar(calendar.id)} class={['',(calendar.id === selectedId?"active":'')]} data-button-scope="button-ff967db5e6"><span class="calendar-name-row"><CountryFlag countryCode={calendar.countryCode} countryName={countryName(calendar.countryCode)} /><strong>{calendar.name}</strong></span><span class="calendar-item-details">{t('counts', calendar.entryCount, calendar.employeeCount)}</span></ControlButton>{/each}</div></section>{/each}</div>{/if}</section>
 			{#if selectedCalendar}<div class="details" class:busy={detailLoading} aria-busy={detailLoading}>
 				{#if detailLoading}<LoadingSpinner label={text.loading} compact />{/if}
 				<section class="summary"><div class="summary-main"><p class="calendar-year">{selectedCalendar.calendarYear}</p><h2 class="calendar-name-row"><CountryFlag countryCode={selectedCalendar.countryCode} countryName={countryName(selectedCalendar.countryCode)} /><span>{selectedCalendar.name}</span></h2><p class="calendar-description">{selectedCalendar.description || text.noDescription}</p></div>{#if canManage}<div class="calendar-summary-actions"><DetailActionButtons editLabel={common.edit} deleteLabel={common.delete} disabled={saving} onEdit={allowedOperation('calendars.update') ? (trigger) => openCalendarForm(selectedCalendar, undefined, trigger) : undefined} onDelete={allowedOperation('calendars.delete') ? () => void deleteCalendar() : undefined} /></div>{/if}<div class="summary-side"><dl class="calendar-stats"><div><dt>{text.annualHolidays}</dt><dd>{t('days', calendarSummary.holidays)}</dd></div><div><dt>{text.annualWorkingDays}</dt><dd>{t('days', calendarSummary.workingDays)}</dd></div><div><dt>{text.dailyHours}</dt><dd>{formatHoursAndMinutes(selectedCalendar.scheduledWorkMinutesPerDay)}</dd></div><div><dt>{text.annualHours}</dt><dd>{formatHoursAndMinutes(calendarSummary.annualMinutes)}</dd></div><div><dt>{text.weeklyHours}</dt><dd>{formatHoursAndMinutes(calendarSummary.weeklyMinutes)}</dd></div></dl></div></section>

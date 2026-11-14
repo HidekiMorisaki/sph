@@ -22,4 +22,8 @@ for(const entry of manifest.files){
  if(digest(patched)!==entry.patchedSha256)throw Error('Security patch output differs: '+entry.path);
  await writeFile(path,patched);
 }
-console.log('Downstream security patches verified: safe merge properties and escaped prerender cache policy.');
+for(const entry of manifest.upstreamFiles??[]){
+ const pkg=JSON.parse(await readFile(new URL(entry.packageJson,root),'utf8'));
+ if(pkg.version!==entry.version||digest(await readFile(new URL(entry.path,root)))!==entry.sha256)throw Error('Review upstream security fix before changing '+entry.path);
+}
+console.log('Security fixes verified: safe merge properties and upstream escaped prerender cache policy.');

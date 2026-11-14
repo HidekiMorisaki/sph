@@ -2,10 +2,12 @@ SDK v2 widgets use this same per-instance REST storage. Code runs in a Worker an
 
 # Widget storage and declarative record UI
 
-This is the storage contract for new v0.6.0 installations. The unpublished m0032
-includes `widget_records`. Older development databases and note/time-zone layout
-payloads are not supported; recreate the installation with the installer. There
-is no data-copy or migration-checksum reconciliation procedure for this change.
+This is the shared storage contract used by the current widget system. Released
+m0046 includes `widget_records`; SDK runtime widgets use the same per-instance
+REST records. Obsolete development-only note/time-zone layout payloads are not
+supported by this contract. Do not reinstall an operational database to resolve
+a mismatch: preserve backups and plan a verified transition separately. See
+[Backup, update, and restore](Backup_Update_and_Restore.md).
 
 ## Ownership and database
 
@@ -18,7 +20,7 @@ have positive revisions and created/updated/deleted timestamps; normal deletion
 is logical, and deleted record keys cannot be reused. Removing an instance
 logically deletes its records in the same transaction.
 
-## Definition
+## Legacy declarative record definition
 
 See the complete [ToDo example](examples/widget-todo.json). It is an authoring
 example, not an automatically installed official widget. Publish the definition
@@ -99,8 +101,8 @@ initial records; the server independently enforces the same requirements.
 
 Base: `/v1/employees/me/widget-instances/{key}/records`.
 Requests use the normal same-origin login session and Origin protection. No
-credentials are accepted in URL parameters or bodies. API keys and arbitrary
-widget JavaScript are not part of this interface.
+credentials are accepted in URL parameters or bodies. SDK JavaScript uses the
+host storage bridge rather than arbitrary HTTP access; API keys are not supported.
 
 | Resource / method | Request |
 | --- | --- |
@@ -157,15 +159,18 @@ record-only update increments only the record revision. A display-only edit uses
 the layout API. Record schemas are fixed by the approved release; there is no
 automatic conversion to a new version's schema or cross-instance data sharing.
 
-## Built-in storage
+## Official SDK storage
 
 Note initializes record `default` with `values: {note: ""}`. Its plain-text value
 has a 5,000 UTF-16-unit limit. World clock initializes record `default` with
 `values: {timeZones: ["Asia/Tokyo"]}`. At least one valid, unique zone is required.
 Both have one record, allow updates and disallow record creation/deletion.
 
-Their settings modal reads/writes the same record API. Note title, clock design,
-size and order remain presentation settings. The layout API neither accepts nor
-returns note text/time-zone arrays in `settings`. The existing data endpoint
-reads these values from `widget_records` for card rendering. There is no fallback
+Their settings modal reads/writes the same record API. SDK Note title and World
+clock design are configuration values in `settings.custom`, exposed through
+`context.configuration`. Size and order remain layout preferences. The earlier
+record/presentation JSON example with `settings.title` applies only to legacy
+declarative definitions, not current official SDK widgets. The layout API neither accepts nor
+returns note text/time-zone arrays in `settings`. SDK widgets read these values through `sph.records` and the host REST bridge;
+the legacy declarative data endpoint also reads `widget_records`. There is no fallback
 to, or second copy in, `widget_instances.settings`.

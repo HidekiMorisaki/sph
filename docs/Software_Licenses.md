@@ -1,28 +1,28 @@
-# ソフトウェアライセンス管理（第2段階）
+# Software license management
 
-画面は `/licenses`、API は `/v1/software-*` で提供する。製品、契約・購入分、利用条件、キー、割当を別々に記録する。同じ製品でも契約の条件と残数は合算しない。
+The page is `/licenses`; REST resources use `/v1/software-*`. Products, contracts/purchases, usage terms, keys and assignments are separate records. Conditions and remaining capacity are not pooled across contracts for the same product.
 
-## 計数
+## Counting
 
-- ユーザー単位：契約内で有効な従業員1人を1枠とする。上限は `購入数 × 1ライセンスあたりの利用者数`。
-- 端末単位：契約内で有効なIT資産1台を1枠とする。上限は購入数。
-- 同じ契約と割当先の有効な割当は重複できない。割当を解除すると枠を解放し、履歴を保持したまま再割当できる。
-- 表示する残数は `max(0, 上限 − 割当数)`、超過数は `max(0, 割当数 − 上限)`。割当時は契約行をロックし、上限を超える新規割当を拒否する。
-- 同時利用数型は契約を登録できるが、実測値がないため適合判定は「判定保留」、残数・超過数は未算出とする。利用条件の根拠が未確認の場合は「要確認」とする。
+- User-based contracts count each active assigned Employee once. Capacity is `purchased quantity × users per license`.
+- Device-based contracts count each active assigned IT asset once. Capacity is the purchased quantity.
+- A contract cannot have duplicate active assignments to the same target. Releasing an assignment frees capacity and retains history; later reassignment is allowed.
+- Remaining capacity is `max(0, capacity − assignments)`; excess is `max(0, assignments − capacity)`. Assignment locks the contract row and rejects new assignments beyond capacity.
+- Concurrent-use contracts can be registered, but compliance remains pending without measured usage; remaining/excess counts are not calculated. Unverified evidence for usage terms is marked as requiring confirmation.
 
-## インストールと実際の利用者
+## Installations and actual users
 
-- ユーザー単位・端末単位の契約では、登録済みの有効なIT資産をインストール先として記録し、その端末を実際に利用する登録済みの有効な従業員を複数記録できる。各記録に開始日・終了日があり、終了後も履歴を保持する。同一契約・端末の有効なインストール、同一インストール・従業員の有効な利用者記録は重複できない。
-- インストールや利用者の記録は実態を残すため、割当不足や条件超過があっても登録できる。インストールを終了すると、そのインストールの有効な利用者記録も同じ日に終了する。終了後は同じ端末へ再記録できる。
-- ユーザー単位契約の `1利用者あたりの端末数` は、同じ従業員の有効な利用者記録がある異なるIT資産数と照合する。端末単位契約の `端末あたりの利用者上限` は、インストールごとの有効な従業員数と照合する。
-- 契約詳細には有効なインストール数、利用者記録数、割当と一致しない記録数、上限超過の端末数・利用者数を表示する。有効な割当先の利用実態が未記録なら「要確認」とし、未記録を適合の根拠にしない。実際の端末側やメーカー側の認証状況を自動検証した結果ではない。
+- User- and device-based contracts can record installations on active registered IT assets, with multiple active registered Employees as actual users. Installation and user records have start/end dates and retain history. Duplicate active contract/device installations and installation/employee user records are rejected.
+- These records describe actual use and can be recorded even when assignments or limits are insufficient. Ending an installation ends its active user records on the same date. A later installation on that device can be recorded again.
+- Devices per user are checked against distinct active IT assets with active user records for that Employee in the contract. Users per device are checked against the active Employees on each installation.
+- Contract details show active installations, user records, mismatches with assignments, and devices/users exceeding limits. Missing usage records for an assigned target require confirmation; absence of records does not establish compliance. These are not automatic checks against devices or vendor activation services.
 
-## 管理と保護
+## Administration and protection
 
-- 割当先は登録済みで有効な `Employee` または `ItAsset` のみ。利用開始前・終了後の契約や、計数単位と異なる割当先には割り当てられない。
-- 画面には更新日または終了日が30日以内の契約と期限を過ぎた契約を表示する。メール通知は行わない。契約書・購入証憑は参照情報を保存し、ファイル添付は扱わない。
-- キー本文は AES-256-GCM で暗号化し、通常の一覧には末尾4文字のみ表示する。全文開示には `software.keys.reveal` 操作権限、現在のパスワードによる再認証、安全な通信経路が必要。開示操作は監査ログに記録する。
-- `software.read`、製品・契約の操作、割当・解除、キーの書込・開示を別々の操作権限で保護する。既存DBでは migration が権限項目を追加し、システム管理者ロールに付与する。その他の既存ロールへの追加はシステム管理者がロール設定画面で行う。
-- インストールと利用者の記録・終了にも別々の操作権限を適用する。既存DBでは `m0020` が新権限をシステム管理者ロールへ付与し、他の既存ロールへは自動付与しない。
+- Assignment targets must be active registered Employees or IT assets. Contracts outside their active period and targets inconsistent with the counting unit cannot receive assignments.
+- The UI shows contracts expiring or renewing within 30 days and overdue contracts. Email reminders are not implemented. Contract/purchase evidence is stored as reference information, without file attachments.
+- Key text is encrypted with AES-256-GCM. Ordinary lists expose only the last four characters. Full disclosure requires `software.keys.reveal`, reauthentication with the current password and a secure transport. Disclosure is audited.
+- `software.read`, product/contract writes, assignment/release and key write/disclosure are separate operation permissions. Migration grants new operations to the system administrator role; other existing roles require explicit configuration by a system administrator.
+- Recording/ending installations and user records also requires separate operations. m0020 grants these to existing system administrators, without automatically extending other existing roles.
 
-同時利用数型の適合判定には第3段階の実測値が必要。
+Measured concurrent usage, evidence-file attachments and email deadline reminders remain unimplemented.

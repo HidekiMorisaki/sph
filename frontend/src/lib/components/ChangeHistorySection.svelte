@@ -1,11 +1,11 @@
 <script lang="ts">
- import "$lib/styles/mobile-records.css";
-	import '$lib/styles/table-scroll.css';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import type { ChangeHistoryEntry } from '$lib/change-history';
-	import { formatDate, formatEmployeeName, formatTimestamp, localization } from '$lib/localization';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+ import "#lib/styles/mobile-records.css";
+	import '#lib/styles/table-scroll.css';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import type { ChangeHistoryEntry } from '#lib/change-history.js';
+	import { formatDate, formatEmployeeName, formatTimestamp, localization } from '#lib/localization.js';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 

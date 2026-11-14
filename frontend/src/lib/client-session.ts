@@ -1,5 +1,5 @@
-import { apiData } from '$lib/api';
-import type { SessionUser } from '$lib/auth';
+import { apiData } from '#lib/api.js';
+import type { SessionUser } from '#lib/auth.js';
 
 export async function readSessionUser(fetcher: typeof fetch = fetch): Promise<SessionUser | null> {
 	const response = await fetcher('/v1/auth/session', { cache: 'no-store' });

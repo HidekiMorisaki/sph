@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { throwApiError } from '$lib/server/api/response';
+import { throwApiError } from '#lib/server/api/response.js';
 export function calendarQuery(url:URL,actorId:number,timeZone='UTC') {
  const start=new Date(url.searchParams.get('start')??''),end=new Date(url.searchParams.get('end')??'');
  if(!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end<=start || DateTime.fromJSDate(end,{zone:timeZone}).diff(DateTime.fromJSDate(start,{zone:timeZone}),'days').days>42.001) throwApiError(422,'INVALID_RANGE','Choose a range of at most 42 days.');

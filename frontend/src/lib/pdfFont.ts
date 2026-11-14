@@ -1,11 +1,11 @@
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
 
 let fontPromise: Promise<string> | null = null;
 
 export async function loadPdfFont(fetcher: typeof fetch): Promise<string> {
 	if (!fontPromise) {
 		fontPromise = (async () => {
-			const response = await fetcher(`${base}/fonts/NotoSansJP-Regular.ttf`);
+			const response = await fetcher(asset('fonts/NotoSansJP-Regular.ttf'));
 			if (!response.ok) throw new Error('Unable to load PDF font');
 			const bytes = new Uint8Array(await response.arrayBuffer());
 			let binary = '';

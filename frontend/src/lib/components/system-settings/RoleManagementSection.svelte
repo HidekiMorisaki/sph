@@ -1,27 +1,27 @@
 <script lang="ts">
- import StatusSwitch from '$lib/components/StatusSwitch.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import FormTabs from '$lib/components/FormTabs.svelte';
- import InfoPopover from '$lib/components/InfoPopover.svelte';
- import { forgetDetailReturn } from '$lib/detail-modal-return';
-	import '$lib/styles/table-scroll.css';
+ import StatusSwitch from '#lib/components/StatusSwitch.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import FormTabs from '#lib/components/FormTabs.svelte';
+ import InfoPopover from '#lib/components/InfoPopover.svelte';
+ import { forgetDetailReturn } from '#lib/detail-modal-return.js';
+	import '#lib/styles/table-scroll.css';
 	import { tick } from 'svelte';
-	import AddButton from '$lib/components/AddButton.svelte';
-	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
-	import FormSection from '$lib/components/FormSection.svelte';
-	import MasterList from '$lib/components/MasterList.svelte';
-	import MasterRecordDetailModal from '$lib/components/MasterRecordDetailModal.svelte';
-	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { formSnapshot } from '$lib/modalForm';
-	import { granularPermissionLabel } from '$lib/granular-permission-labels';
+	import AddButton from '#lib/components/AddButton.svelte';
+	import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+	import FormSection from '#lib/components/FormSection.svelte';
+	import MasterList from '#lib/components/MasterList.svelte';
+	import MasterRecordDetailModal from '#lib/components/MasterRecordDetailModal.svelte';
+	import DetailActionButtons from '#lib/components/DetailActionButtons.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { formSnapshot } from '#lib/modalForm.js';
+	import { granularPermissionLabel } from '#lib/granular-permission-labels.js';
 
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
-	import { localization } from '$lib/localization';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import { systemSettingError, systemSettingReason } from '#lib/system-setting-errors.js';
+	import { localization } from '#lib/localization.js';
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
 

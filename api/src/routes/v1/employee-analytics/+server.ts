@@ -1,10 +1,10 @@
 import type { RequestHandler } from './$types';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { employeeAnalytics, parseAnalyticsPeriod, parseAnalyticsReferenceDate } from '$lib/server/api/employee-analytics';
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { employeeAnalytics, parseAnalyticsPeriod, parseAnalyticsReferenceDate } from '#lib/server/api/employee-analytics.js';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export const GET: RequestHandler = async ({ locals, url, setHeaders }) => {
 	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.employeeRead);

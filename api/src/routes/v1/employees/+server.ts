@@ -1,23 +1,23 @@
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import { isHttpError } from '@sveltejs/kit';
-import { syncEmployeeTeams } from '$lib/server/api/teams';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { parseEmployeeInput } from '$lib/server/api/employee-input';
-import { employeeConflictResponse } from '$lib/server/api/employee-errors';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
-import { employeeOutput, employeeSafeSelect } from '$lib/server/api/employee-output';
-import { syncEmployeeDepartments } from '$lib/server/api/employee-departments';
-import { syncEmployeePositions } from '$lib/server/api/employee-positions';
-import { employeeReferenceErrors } from '$lib/server/api/employee-references';
-import { canAssignRequestedRoles, createGlobalRoleGrants } from '$lib/server/api/employee-roles';
-import { issueInvitation } from '$lib/server/auth/invitation';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { failure, success } from '$lib/server/api/response';
-import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
-import { getPrisma } from '$lib/server/prisma';
+import { syncEmployeeTeams } from '#lib/server/api/teams.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { parseEmployeeInput } from '#lib/server/api/employee-input.js';
+import { employeeConflictResponse } from '#lib/server/api/employee-errors.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
+import { employeeOutput, employeeSafeSelect } from '#lib/server/api/employee-output.js';
+import { syncEmployeeDepartments } from '#lib/server/api/employee-departments.js';
+import { syncEmployeePositions } from '#lib/server/api/employee-positions.js';
+import { employeeReferenceErrors } from '#lib/server/api/employee-references.js';
+import { canAssignRequestedRoles, createGlobalRoleGrants } from '#lib/server/api/employee-roles.js';
+import { issueInvitation } from '#lib/server/auth/invitation.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { allowsSensitiveRequest } from '#lib/server/api/sensitive-transport.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
-import { employeeList } from '$lib/server/api/employee-list';
+import { employeeList } from '#lib/server/api/employee-list.js';
 
 export async function GET({locals,url}: import('./$types').RequestEvent) { return employeeList(locals.user,url); }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
-	import { localization } from '$lib/localization';
-	import { operatorLabels, type SearchContext, type SearchGroup, type SearchRule } from '$lib/search';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+	import { localization } from '#lib/localization.js';
+	import { operatorLabels, type SearchContext, type SearchGroup, type SearchRule } from '#lib/search.js';
 	import SearchSelect from './SearchSelect.svelte';
 	import FormInput from './FormInput.svelte';
 	let { group, context, onChange, onRemove }: { group:SearchGroup; context:SearchContext; onChange:(group:SearchGroup)=>void; onRemove:()=>void } = $props();

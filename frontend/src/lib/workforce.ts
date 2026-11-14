@@ -1,4 +1,4 @@
-import { apiData } from '$lib/api';
+import { apiData } from '#lib/api.js';
 export const clientTextFields = ['companyName','contactName','contactDepartment','contactEmail','contactMobile','postalCode','prefecture','city','streetAddress','buildingName','phoneNumber1','phoneNumber2','faxNumber1','faxNumber2'] as const;
 export const removedClientFields=["openedOn","closedOn","managerEmployeeId", "deputyManagerEmployeeId", "sortOrder", "phoneNumber1Label", "phoneNumber2Label", "faxNumber1Label", "faxNumber2Label"];
 export type ClientTextField = typeof clientTextFields[number];

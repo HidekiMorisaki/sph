@@ -1,11 +1,11 @@
-import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { parseId } from '$lib/server/api/database';
-import { parseTeam, teamReader, teamSelect, teamConflictResponse } from '$lib/server/api/teams';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
-import { success, failure, throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { hasScopedPermissionOperation } from '#lib/server/auth/permissions.js';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { parseId } from '#lib/server/api/database.js';
+import { parseTeam, teamReader, teamSelect, teamConflictResponse } from '#lib/server/api/teams.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
+import { success, failure, throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export async function GET({ locals, params }: import('./$types').RequestEvent) {
  const actor = teamReader(locals.user);

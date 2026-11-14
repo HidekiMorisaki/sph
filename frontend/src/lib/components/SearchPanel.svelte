@@ -1,27 +1,27 @@
 <script lang="ts">
- import ControlButton from '$lib/components/ControlButton.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import TextActionButton from '$lib/components/TextActionButton.svelte';
-	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
+ import ControlButton from '#lib/components/ControlButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import TextActionButton from '#lib/components/TextActionButton.svelte';
+	import { COMPACT_CONTENT_QUERY } from '#lib/responsive-layout.js';
  import { onMount, tick, type Snippet } from 'svelte';
  import { beforeNavigate } from '$app/navigation';
- import { localization } from '$lib/localization';
- import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
- import { emptyGroup, ruleCount, searchMessages, type SearchState, type SearchTarget, type SearchContext, type SearchGroup, type SavedFilter, type SearchDefinition } from '$lib/search';
+ import { localization } from '#lib/localization.js';
+ import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+ import { emptyGroup, ruleCount, searchMessages, type SearchState, type SearchTarget, type SearchContext, type SearchGroup, type SavedFilter, type SearchDefinition } from '#lib/search.js';
  import SearchFields from './SearchFields.svelte';
- import { searchConfigurations, type SearchConfiguration } from '$lib/search-configurations';
+ import { searchConfigurations, type SearchConfiguration } from '#lib/search-configurations.js';
  import SearchInput from './SearchInput.svelte';
  import FormInput from './FormInput.svelte';
  import SearchSelect from './SearchSelect.svelte';
  import ModalBackdrop from './ModalBackdrop.svelte';
  import StatusNotice from './StatusNotice.svelte';
  import DetailActionButtons from './DetailActionButtons.svelte';
- import { searchInputExample } from '$lib/search-input-examples';
- import '$lib/styles/search-form.css';
- import { normalizeSharedOptions } from '$lib/shared-search-options';
- let {target,storageNamespace=target,searchState=$bindable(),draftOptions={},onRestoreOptions,filters,userId=null,restoreSelectedFilter=true,configuration=searchConfigurations[target],onDefinitions}:{target:SearchTarget;storageNamespace?:string;searchState:SearchState;draftOptions?:Record<string,string|boolean>;onRestoreOptions:(options:Record<string,string|boolean>)=>void;filters?:Snippet<[SearchGroup,(value:SearchGroup)=>void]>;userId?:number|null;restoreSelectedFilter?:boolean;configuration?:SearchConfiguration;onDefinitions?:(contexts:SearchContext[])=>void}=$props();
+ import { searchInputExample } from '#lib/search-input-examples.js';
+ import '#lib/styles/search-form.css';
+ import { normalizeSharedOptions } from '#lib/shared-search-options.js';
+ let {target,storageNamespace=target,searchState=$bindable(),draftOptions={},onRestoreOptions,filters,parentTabs,panelId,panelLabelledBy,userId=null,restoreSelectedFilter=true,configuration=searchConfigurations[target],onDefinitions}:{target:SearchTarget;storageNamespace?:string;searchState:SearchState;draftOptions?:Record<string,string|boolean>;onRestoreOptions:(options:Record<string,string|boolean>)=>void;filters?:Snippet<[SearchGroup,(value:SearchGroup)=>void]>;parentTabs?:Snippet;panelId?:string;panelLabelledBy?:string;userId?:number|null;restoreSelectedFilter?:boolean;configuration?:SearchConfiguration;onDefinitions?:(contexts:SearchContext[])=>void}=$props();
  const id=$props.id();
  let t=$derived(searchMessages[$localization.displayLanguage]);
  let nameExample=$derived(searchInputExample({code:configuration.filterNameExample,type:'string'},$localization.displayLanguage));
@@ -153,6 +153,8 @@
 {/snippet}
 
 <form class="search-panel search-form" class:mobile-expanded={mobileExpanded} aria-label={t.search} aria-busy={searchState.loading||busy||!definitionsReady||dirty} onsubmit={event=>event.preventDefault()}>
+ {#if parentTabs}<div class="search-parent-tabs">{@render parentTabs()}</div>{/if}
+ <div id={panelId} role={panelLabelledBy?'tabpanel':undefined} aria-labelledby={panelLabelledBy}>
  {#if initializationFailed}{#if message}<StatusNotice message={message} tone="error" onDismiss={()=>message=''}/>{/if}<ActionButton type="button" disabled={busy} onclick={()=>void initializeSearch()} variant="secondary" data-button-scope="button-928e3b15a4">{t.refresh}</ActionButton>{/if}
  {#if compactMode}<div class="mobile-search-bar"><SearchInput label={t.keyword} value={keyword} placeholder={searchInputExample({code:configuration.keywordExample,type:'string'},$localization.displayLanguage)} onValueChange={value=>keyword=value}/><ActionButton type="button" aria-expanded={mobileExpanded} aria-controls={`${id}-search-body ${id}-search-footer`} onclick={()=>mobileExpanded=!mobileExpanded} variant="secondary" data-button-scope="button-928e3b15a4">{common.filters}</ActionButton></div>{/if}
  {#if appliedCount}<p class="mobile-search-summary" role="status">{formatLocaleTemplate(common.appliedConditions,appliedCount)}</p>{/if}
@@ -174,6 +176,7 @@
  </div>
  </div>
  <footer id={`${id}-search-footer`} class="search-footer" hidden={bodyCollapsed}>{#if filterOperations.includes('create')||filterOperations.includes('update')}<ModalActionButton class="app-primary-action save-filter" type="button" disabled={!canSave||busy} onclick={event=>void openDialog('save',event)} variant="primary" data-button-scope="button-928e3b15a4">{t.save}</ModalActionButton>{/if}<ActionButton class="clear-search" type="button" disabled={busy} onclick={clear} variant="secondary" data-button-scope="button-928e3b15a4">{t.clear}</ActionButton></footer>
+ </div>
 </form>
 
 {#if dialog}<ModalBackdrop><dialog bind:this={dialogElement} open class="app-modal app-modal--compact search-dialog search-form" aria-modal="true" aria-labelledby={`${id}-dialog-title`} oncancel={event=>{event.preventDefault();closeDialog();}} onkeydown={keydown}>
@@ -188,6 +191,8 @@
 </dialog></ModalBackdrop>{/if}
 
 <style>
+ .search-parent-tabs{margin:-16px -16px var(--sph-space-16px)}
+ @media(max-width:700px),(min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.search-parent-tabs{margin:-12px -12px var(--sph-space-12px)}}
  .filter-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));grid-auto-rows:1fr;align-content:start;gap:var(--sph-space-12px);padding:var(--sph-space-3px)}.filter-card{display:flex;flex-direction:column;min-width:0;align-self:stretch;border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:color-mix(in srgb,var(--text) 4%,var(--surface))}.filter-card.selected{border-color:var(--action-primary);background:color-mix(in srgb,var(--action-primary) 6%,var(--surface))}.filter-card-heading{display:flex;flex:1;align-items:flex-start;min-width:0}:global(.filter-card-name[data-button-scope="button-928e3b15a4"]){display:flex;align-items:flex-start;flex:1;min-width:0;align-self:stretch;min-height:52px;padding:var(--sph-space-12px);background:transparent!important;color:var(--text-secondary);border:0;border-radius:var(--sph-radius-5px);text-align:left;overflow-wrap:anywhere;font-size:var(--font-size-body);font-weight:var(--sph-weight-400)}:global(.filter-card-name:hover:not(:disabled)[data-button-scope="button-928e3b15a4"]){background:var(--surface-hover,var(--surface-secondary))!important}:global(.filter-card-name:focus-visible[data-button-scope="button-928e3b15a4"]){outline:2px solid var(--action-primary);outline-offset:-2px}.filter-card-actions{flex:none;padding:var(--sph-space-8px) var(--sph-space-8px) var(--sph-space-8px) 0}.filter-card-actions :global(button+button){margin-left:0}.filter-card-editor{display:grid;gap:var(--sph-space-12px);padding:0 var(--sph-space-12px) var(--sph-space-12px)}.filter-card-edit-actions{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px)}.filter-card-edit-actions :global(button[data-button-scope="button-928e3b15a4"]+button[data-button-scope="button-928e3b15a4"]){margin-left:0}.empty-filters{grid-column:1/-1;margin:0;color:var(--muted);font-size:var(--font-size-support)}
  .search-simple.shared-search-simple{flex-direction:row;align-items:flex-start}.shared-search-simple .keyword-control{flex:0 1 220px;width:220px;max-width:100%;min-width:0}.shared-search-simple .search-filters,.shared-search-simple :global(.employee-workforce-filters){display:contents}
  .search-footer{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sph-space-12px);margin:var(--sph-space-16px) -16px -16px;padding:var(--sph-space-12px) var(--sph-space-16px);border-top:1px solid var(--border)}.search-footer :global(button[data-button-scope="button-928e3b15a4"]+button[data-button-scope="button-928e3b15a4"]){margin-left:0}@media (max-width:700px), (min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.search-footer{margin:var(--sph-space-12px) -12px -12px;padding:var(--sph-space-12px)}}

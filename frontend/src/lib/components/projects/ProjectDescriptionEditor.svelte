@@ -1,11 +1,11 @@
 <script lang="ts">
  import {untrack} from 'svelte';
  import {beforeNavigate} from '$app/navigation';
- import {localization} from '$lib/localization';
- import {projectRequest,projectError,type Project} from '$lib/projects';
+ import {localization} from '#lib/localization.js';
+ import {projectRequest,projectError,type Project} from '#lib/projects.js';
  import MarkdownEditor from './MarkdownEditor.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
  let {project,onclose,onsaved}:{project:Project;onclose:()=>void;onsaved:(project:Project)=>void}=$props();
  const original=untrack(()=>project.description),revision=untrack(()=>project.revision);
  let value=$state(original),busy=$state(false),uploading=$state(false),error=$state(''),completed=false;
@@ -18,7 +18,7 @@
 <svelte:window onbeforeunload={event=>{if(!completed&&(dirty||busy||uploading)){event.preventDefault();event.returnValue='';}}}/>
 <div class="description-editor">
  {#if error}<StatusNotice tone="error" message={error} onDismiss={()=>error=''}/>{/if}
- <MarkdownEditor label={tr('説明','Description')} field="project-description-inline" labelToolbar {value} maxlength={5000} disabled={busy} imageContext={{target:'project',project:project.code}} onUploadState={v=>uploading=v} onValueChange={v=>value=v}/>
+ <MarkdownEditor label={tr('説明','Description')} field="project-description-inline" {value} maxlength={5000} disabled={busy} imageContext={{target:'project',project:project.code}} onUploadState={v=>uploading=v} onValueChange={v=>value=v}/>
  <div class="description-actions"><ActionButton label={tr('キャンセル','Cancel')} disabled={busy||uploading} onclick={close}/><ActionButton label={tr('保存','Save')} variant="primary" disabled={busy||uploading||!dirty} onclick={()=>void save()}/></div>
 </div>
 <style>.description-editor{display:grid;gap:12px;min-width:0}.description-actions{display:flex;justify-content:flex-end;gap:8px}</style>

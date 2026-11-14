@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	let { label, compact = false, inline = false }: { label?: string; compact?: boolean; inline?: boolean } = $props();
 	let fallbackLabel = $derived(localeMessages[$localization.displayLanguage].common.loading);

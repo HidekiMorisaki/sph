@@ -138,7 +138,7 @@
   ],
   "noticeSha256": "9fb3b8a5696d7e78bbe90126cc52191974797a6c972a79928b56991b85498e72",
   "unresolvedCandidates": [],
-  "scope": "The original grants for the historical candidates remain unconfirmed. Current locks and sanitized sources exclude their code before installation. Git distribution contains the reviewed preparation source and hashes, not installed dependencies or generated packages/builds. This source release does not authorize Docker image redistribution.",
+  "scope": "The original grants for the historical candidates remain unconfirmed. Current locks and sanitized sources exclude their code before installation. Git distribution contains the reviewed preparation source and hashes, not installed dependencies or generated packages/builds.",
   "historicalUnresolvedCandidates": [
     "@prisma/dev@0.24.17",
     "is-reference@1.2.1",

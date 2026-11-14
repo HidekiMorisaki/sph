@@ -24,7 +24,9 @@ for(const item of manifest.packages){
   if(item.name!=='prisma'&&!patch.path.startsWith('src/'))files.set(patch.path.split('/').slice(0,-1).join('/')+'/sph-helpers.cjs',helper);
  }
  files.set('LICENSE-SPH',sphLicense);
+ for(const [name,expected] of Object.entries(item.originalFiles??{}))if(hash(files.get(name)??'')!==expected)throw Error('Unreviewed original '+item.name+'/'+name);
  const pkg=JSON.parse(files.get('package.json'));delete pkg.devDependencies;delete pkg.scripts;
+ for(const name of item.removedDependencies??[])delete pkg.dependencies?.[name];
  if(item.name==='@rollup/plugin-commonjs')delete pkg.dependencies['is-reference'];
  if(item.name==='prisma')delete pkg.dependencies['@prisma/dev'];
  if(item.name==='svelte'){
@@ -36,8 +38,8 @@ for(const item of manifest.packages){
   pkg.files.push('sph-*');
  }
  if(Array.isArray(pkg.files))pkg.files.push('LICENSE-SPH','SPH-MODIFICATIONS.md');
- pkg.sphModified='2026-11-01: see SPH-MODIFICATIONS.md';files.set('package.json',Buffer.from(JSON.stringify(pkg,null,2)+'\n'));
- files.set('SPH-MODIFICATIONS.md',Buffer.from(`SPH modified ${item.name} ${item.version}, 2026-11-01.\nPinned original: ${item.source}\nIntegrity: ${item.integrity}\n\nReplaced bundled reference/position helpers with SPH implementations, or excluded\nthe Prisma embedded development database. Removed stale source maps and lifecycle\nscripts. Original retained component licenses and copyrights remain applicable.\nSee product/vendor/npm/manifest.json for exact source and output digests.\n`));
+ pkg.sphModified=(item.modifiedAt??'2026-11-01')+': see SPH-MODIFICATIONS.md';files.set('package.json',Buffer.from(JSON.stringify(pkg,null,2)+'\n'));
+ files.set('SPH-MODIFICATIONS.md',Buffer.from(`SPH modified ${item.name} ${item.version}, ${item.modifiedAt??'2026-11-01'}.\nPinned original: ${item.source}\nIntegrity: ${item.integrity}\n\n${item.modifications??'Replaced bundled reference/position helpers with SPH implementations, or excluded\nthe Prisma embedded development database. Removed stale source maps and lifecycle\nscripts.'} Original retained component licenses and copyrights remain applicable.\nSee product/vendor/npm/manifest.json for exact source and output digests.\n`));
  const destination=new URL(item.directory+'/',output);await mkdir(destination,{recursive:true});
  for(const [name,data]of files){if(name.endsWith('.map'))continue;const target=new URL(name,destination);if(!target.href.startsWith(destination.href))throw Error('Path outside vendor package');await mkdir(new URL('./',target),{recursive:true});await writeFile(target,data);}
  console.log('Prepared reviewed package: '+item.directory);

@@ -1,12 +1,12 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { isIP } from 'node:net';
 import { promisify } from 'node:util';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 
-import { getPrisma } from '$lib/server/prisma';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { throwApiError } from '$lib/server/api/response';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { throwApiError } from '#lib/server/api/response.js';
 
 import type { AuthenticatedSession, AuthenticatedUser } from './types';
 import { DEFAULT_DISPLAY_CURRENCY, DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayCurrency, isDisplayLanguage, isTimeZone } from './localization';

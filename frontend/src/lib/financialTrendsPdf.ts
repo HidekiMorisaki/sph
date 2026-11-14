@@ -1,9 +1,9 @@
 import { jsPDF } from '../../vendor/jspdf/index.js';
-import { productName } from '$lib/brand';
-import { niceAxis } from '$lib/chartAxis';
-import { financialTrendSegmentValue, financialTrendSeries, type FinancialTrend, type FinancialTrendsResponse } from '$lib/financialTrendsData';
-import { DISPLAY_LANGUAGES, type LocalizationSettings } from '$lib/localization';
-import { localeMessages } from '$lib/locale-messages';
+import { productName } from '#lib/brand.js';
+import { niceAxis } from '#lib/chartAxis.js';
+import { financialTrendSegmentValue, financialTrendSeries, type FinancialTrend, type FinancialTrendsResponse } from '#lib/financialTrendsData.js';
+import { DISPLAY_LANGUAGES, type LocalizationSettings } from '#lib/localization.js';
+import { localeMessages } from '#lib/locale-messages.js';
 
 const fontName = 'NotoSansJP';
 const ink = '#243449', muted = '#607086', border = '#dce4ec', green = '#168b75', white = '#ffffff';

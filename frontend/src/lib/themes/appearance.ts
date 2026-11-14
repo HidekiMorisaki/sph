@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { writable } from 'svelte/store';
 
 export const themes = [{ id: 'default', label: 'SPH', colorModes: ['light', 'dark'] }] as const;

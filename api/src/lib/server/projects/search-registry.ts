@@ -1,4 +1,4 @@
-import type { SearchContext } from '$lib/server/api/search-registry';
+import type { SearchContext } from '#lib/server/api/search-registry.js';
 export const projectSearchContexts:SearchContext[]=[{
  code:'project',label:{ja:'プロジェクト',en:'Project'},category:'basic',from:'',link:'',
  fields:[

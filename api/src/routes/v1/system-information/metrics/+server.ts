@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
-import { requireSystemAdminApi, requireOperationApi } from '$lib/server/api/admin';
-import { success, throwApiError } from '$lib/server/api/response';
-import { readSystemMetrics } from '$lib/server/system-metrics';
+import { requireSystemAdminApi, requireOperationApi } from '#lib/server/api/admin.js';
+import { success, throwApiError } from '#lib/server/api/response.js';
+import { readSystemMetrics } from '#lib/server/system-metrics.js';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	requireSystemAdminApi(locals.user);

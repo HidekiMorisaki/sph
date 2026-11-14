@@ -1,24 +1,26 @@
+import {projectMemberResults,authorizeMemberSearch} from '../projects/employee-directory';
+import {customSearchContexts} from '../projects/custom-fields';
 import {workflowSearchResults,workflowOptions} from '../workflow/search';
 import {ticketSearchResults,ticketReferenceOptions} from '../projects/ticket-search';
 import { projectList } from '../projects/service';
 import { businessList } from './business-list';
 import { isBusinessTarget } from './business-search-registry';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { requireScopedOperationApi } from './branch-access';
 import { employeeList } from './employee-list';
 import { assetList } from './it-asset-list';
 import { bookList } from './book-list';
 import { compileSearchConditions, definitionUrl, invalidSearch, parseSearchDefinition, searchBody, type SearchDefinition } from './search-conditions';
 import { searchFieldDefinitions, contextsFor, operationScope, type SearchTarget } from './search-registry';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { requireOperationApi } from './admin';
 import type { SearchNode } from './search-conditions';
 import { success } from './response';
 import { parseAssetSummaryFilters } from './it-asset-summary';
 
 export function searchActor(user:AuthenticatedUser|null,target:SearchTarget) {
- if(target==='projects'||target==='projectTickets')return requireOperationApi(user?{...user,activeOperation:undefined}:null,'projects.read');
+ if(target==='projects'||target==='projectTickets'||target==='projectMembers')return requireOperationApi(user?{...user,activeOperation:undefined}:null,'projects.read');
  if(isBusinessTarget(target))return requireOperationApi(user?{...user,activeOperation:undefined}:null,target+'.read');
  if(target==='workflows')return requireOperationApi(user?{...user,activeOperation:undefined}:null,'workflows.read');
  if(target==='books')return requireOperationApi(user,'books.read');
@@ -33,8 +35,9 @@ export async function searchResults(user:AuthenticatedUser|null,target:SearchTar
   if(!Array.isArray(body.ticketIds)||body.ticketIds.length<1||body.ticketIds.length>500||body.ticketIds.some(value=>typeof value!=='number'||!Number.isSafeInteger(value)||value<1||value>2147483647)||new Set(body.ticketIds).size!==body.ticketIds.length)invalidSearch('ticketIds');
   ticketIds=body.ticketIds as number[];
  }
- const definition=parseSearchDefinition(body.definition,target,actor);
- await validateSearchReferences(definition,target,actor);
+ const contexts=target==='projectTickets'?await customSearchContexts(actor,contextsFor(target)):contextsFor(target);
+ const definition=parseSearchDefinition(body.definition,target,actor,contexts);
+ await validateSearchReferences(definition,target,actor,contexts);
  if(body.offset!==undefined&&(typeof body.offset!=='number'||!Number.isSafeInteger(body.offset)||body.offset<0))invalidSearch('offset');
  if(body.includeColumns!==undefined&&typeof body.includeColumns!=='boolean')invalidSearch('includeColumns');
  const resultUrl=definitionUrl(definition,url,body.offset as number??0,body.includeColumns===true);
@@ -43,18 +46,20 @@ export async function searchResults(user:AuthenticatedUser|null,target:SearchTar
   if(body.visibleSearch!==undefined){if(typeof body.visibleSearch!=='string'||body.visibleSearch.length>500)invalidSearch('visibleSearch');resultUrl.searchParams.set('visibleSearch',body.visibleSearch);}
   if(body.searchLocale!==undefined){if(!['ja','en'].includes(String(body.searchLocale)))invalidSearch('searchLocale');resultUrl.searchParams.set('searchLocale',String(body.searchLocale));}
  }
- const sql=compileSearchConditions(definition,target,actor);
- const response=await (target==='projectTickets'?ticketSearchResults(actor,definition,sql,body.offset as number??0,url.searchParams.get('projectId'),ticketIds):target==='projects'?projectList(actor,resultUrl,sql):isBusinessTarget(target)?businessList(actor,target,resultUrl,sql):target==='workflows'?workflowSearchResults(actor,definition,sql,body.offset as number??0):target==='employees'?employeeList(actor,resultUrl,sql):target==='assets'?assetList(actor,resultUrl,sql):bookList(actor,resultUrl,sql));
+ const sql=compileSearchConditions(definition,target,actor,contexts);
+ const response=await (target==='projectMembers'?projectMemberResults(actor,definition,sql,url,body.offset as number??0):target==='projectTickets'?ticketSearchResults(actor,definition,sql,body.offset as number??0,url.searchParams.get('projectId'),ticketIds):target==='projects'?projectList(actor,resultUrl,sql):isBusinessTarget(target)?businessList(actor,target,resultUrl,sql):target==='workflows'?workflowSearchResults(actor,definition,sql,body.offset as number??0):target==='employees'?employeeList(actor,resultUrl,sql):target==='assets'?assetList(actor,resultUrl,sql):bookList(actor,resultUrl,sql));
  response.headers.set('Cache-Control','no-store');return response;
 }
-export async function searchFields(user:AuthenticatedUser|null,target:SearchTarget) {
+export async function searchFields(user:AuthenticatedUser|null,target:SearchTarget,url?:URL) {
  const actor=searchActor(user,target);
- const data=searchFieldDefinitions(target,actor);
+ const contexts=target==='projectTickets'?await customSearchContexts(actor,contextsFor(target)):contextsFor(target);
+ if(target==='projectMembers'){if(!url)invalidSearch('projectId');await authorizeMemberSearch(actor,url);}
+ const data=searchFieldDefinitions(target,actor,contexts);
  const result=[];
  for(const context of data){
   const fields=[];
   for(const field of context.fields){
-   const source=contextsFor(target).find(ctx=>ctx.code===context.code)!.fields.find(f=>f.code===field.code)!;
+   const source=contexts.find(ctx=>ctx.code===context.code)!.fields.find(f=>f.code===field.code)!;
    const options=source.reference?await referenceOptions(context.code,source.reference,actor,target):undefined;
    fields.push({...field,...(options?{options}: {})});
   }
@@ -64,11 +69,13 @@ export async function searchFields(user:AuthenticatedUser|null,target:SearchTarg
  response.headers.set('Cache-Control','no-store');return response;
 }
 export async function validateSavedDefinition(definition:unknown,target:SearchTarget,user:AuthenticatedUser):Promise<SearchDefinition> {
- const parsed=parseSearchDefinition(definition,target,user);
- await validateSearchReferences(parsed,target,user);
+ const contexts=target==='projectTickets'?await customSearchContexts(user,contextsFor(target)):contextsFor(target);
+ const parsed=parseSearchDefinition(definition,target,user,contexts);
+ await validateSearchReferences(parsed,target,user,contexts);
+ if(target==='projectMembers')return parsed;
  // Reuse actual list validation, including option permissions and sort allowlists.
  const url=definitionUrl({...parsed,limit:1},new URL('http://search.invalid'));
- await (target==='projectTickets'?ticketSearchResults(user,parsed,compileSearchConditions(parsed,target,user),0):target==='projects'?projectList(user,url,compileSearchConditions(parsed,target,user)):isBusinessTarget(target)?businessList(user,target,url,compileSearchConditions(parsed,target,user)):target==='workflows'?workflowSearchResults(user,parsed,compileSearchConditions(parsed,target,user)):target==='employees'?employeeList(user,url,compileSearchConditions(parsed,target,user)):target==='assets'?assetList(user,url,compileSearchConditions(parsed,target,user)):bookList(user,url,compileSearchConditions(parsed,target,user)));
+ await (target==='projectTickets'?ticketSearchResults(user,parsed,compileSearchConditions(parsed,target,user,contexts),0):target==='projects'?projectList(user,url,compileSearchConditions(parsed,target,user,contexts)):isBusinessTarget(target)?businessList(user,target,url,compileSearchConditions(parsed,target,user,contexts)):target==='workflows'?workflowSearchResults(user,parsed,compileSearchConditions(parsed,target,user,contexts)):target==='employees'?employeeList(user,url,compileSearchConditions(parsed,target,user,contexts)):target==='assets'?assetList(user,url,compileSearchConditions(parsed,target,user,contexts)):bookList(user,url,compileSearchConditions(parsed,target,user,contexts)));
  return parsed;
 }
 
@@ -79,8 +86,7 @@ async function referenceOptions(contextCode:string,reference:{table:string;key:s
  const branch=scope===null?Prisma.empty:reference.table==='branches'?Prisma.sql`AND id=${scope}`:target==='assets'&&['rooms','storage'].includes(reference.table)?Prisma.sql`AND branch_id=${scope}`:Prisma.empty;
  return getPrisma().$queryRaw<Array<{value:string;label:string}>>(Prisma.sql`SELECT ${Prisma.raw(reference.key)}::text AS value,${Prisma.raw(reference.name)} AS label FROM ${Prisma.raw(reference.table)} WHERE deleted_at IS NULL ${branch} ORDER BY ${Prisma.raw(reference.name)},id`);
 }
-async function validateSearchReferences(definition:SearchDefinition,target:SearchTarget,user:AuthenticatedUser) {
- const contexts=contextsFor(target);
+async function validateSearchReferences(definition:SearchDefinition,target:SearchTarget,user:AuthenticatedUser,contexts=contextsFor(target)) {
  if(target==='projectTickets'){
   for(const [key,kind] of [['projectIds','project'],['assigneeIds','assignee'],['typeIds','type'],['statusIds','status'],['categories','category']]){
    const raw=definition.options[key];if(raw===undefined)continue;if(typeof raw!=='string')invalidSearch(key);const values=raw.split(',');

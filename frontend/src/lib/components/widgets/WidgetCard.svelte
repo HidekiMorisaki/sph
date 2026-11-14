@@ -1,8 +1,8 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import {onMount,untrack} from 'svelte';import {apiData} from '$lib/api';import {localization} from '$lib/localization';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import {onMount,untrack} from 'svelte';import {apiData} from '#lib/api.js';import {localization} from '#lib/localization.js';
  import RecordWidget from './RecordWidget.svelte';
- import DetailModal from '../DetailModal.svelte';import {runtimeConfiguration,widgetText,type WidgetInstance,type WidgetData} from '$lib/widgets';import WidgetContent from './WidgetContent.svelte';
+ import DetailModal from '../DetailModal.svelte';import {runtimeConfiguration,widgetText,type WidgetInstance,type WidgetData} from '#lib/widgets.js';import WidgetContent from './WidgetContent.svelte';
  let content=$state<HTMLDivElement>();let shell=$state<HTMLDivElement>();let overflowing=$state(false),expanded=$state(false);let returnFocus=$state<HTMLElement|null>(null);
  function checkFit(){if(content&&shell)overflowing=content.scrollHeight>shell.clientHeight+1||content.scrollWidth>shell.clientWidth+1;}
  onMount(()=>{if(!shell||!content)return;const observer=new ResizeObserver(checkFit);observer.observe(shell);observer.observe(content);return()=>observer.disconnect();});

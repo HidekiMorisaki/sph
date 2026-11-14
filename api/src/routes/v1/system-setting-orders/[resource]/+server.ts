@@ -1,6 +1,6 @@
-import { requireSystemAdminApi } from '$lib/server/api/admin';
-import { failure, success } from '$lib/server/api/response';
-import { isSystemSettingOrderResource, parseSystemSettingOrder, reorderSystemSettings, SystemSettingOrderConflictError } from '$lib/server/api/system-setting-order';
+import { requireSystemAdminApi } from '#lib/server/api/admin.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { isSystemSettingOrderResource, parseSystemSettingOrder, reorderSystemSettings, SystemSettingOrderConflictError } from '#lib/server/api/system-setting-order.js';
 
 export async function PUT({ params, request, locals }: import('./$types').RequestEvent) {
 	const actor = requireSystemAdminApi(locals.user);

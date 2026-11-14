@@ -1,12 +1,12 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
  import {onMount} from 'svelte';
- import {localization} from '$lib/localization';
- import {workflowApi,workflowError,choose,WorkflowError,emptyDirectory,type Template} from '$lib/workflow-client';
- import type {Definition,Directory} from '$lib/workflow-form';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
- import PageTabs from '$lib/components/PageTabs.svelte';
- import '$lib/styles/workflow.css';
+ import {localization} from '#lib/localization.js';
+ import {workflowApi,workflowError,choose,WorkflowError,emptyDirectory,type Template} from '#lib/workflow-client.js';
+ import type {Definition,Directory} from '#lib/workflow-form.js';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
+ import PageTabs from '#lib/components/PageTabs.svelte';
+ import '#lib/styles/workflow.css';
  import WorkflowDesigner from './WorkflowDesigner.svelte';
  let ja=$derived($localization.displayLanguage==='ja'),items=$state<Template[]>([]),directory=$state<Directory>(emptyDirectory),editing=$state<Template|null>(null),error=$state(''),loading=$state(true),busy=$state(false),removeKey=$state('');
  let activeTab=$state('templates'),editorId=$state(0),designer=$state<{requestClose:(action:()=>void)=>void;isWorking:()=>boolean}>();

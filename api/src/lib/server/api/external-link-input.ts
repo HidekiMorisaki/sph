@@ -1,4 +1,4 @@
-import type { ApiErrorDetail } from '$lib/server/api/response';
+import type { ApiErrorDetail } from '#lib/server/api/response.js';
 
 export type ExternalLinkInput = { name: string; url: string; sortOrder: number; notes: string | null };
 export type ExternalLinkInputResult =

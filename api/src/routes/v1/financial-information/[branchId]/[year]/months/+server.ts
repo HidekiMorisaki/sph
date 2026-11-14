@@ -1,9 +1,9 @@
-import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { requireBranchAccess } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { financialSettings, monthKey, parseAmount, parseYear, periodMonths, periodYearForMonth, type Currency } from '$lib/server/api/financial';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { requireBranchAccess } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { financialSettings, monthKey, parseAmount, parseYear, periodMonths, periodYearForMonth, type Currency } from '#lib/server/api/financial.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 type SubmittedMonth = { month: string; currency: Currency; revenue: string | null; variableCost: string | null; fixedCost: string | null; version: number | null };
 

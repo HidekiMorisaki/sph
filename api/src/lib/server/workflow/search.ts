@@ -1,6 +1,6 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
-import {getPrisma} from '$lib/server/prisma';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import {getPrisma} from '#lib/server/prisma.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
 import {admin,visible,workflowRead,workflowListSelect,workflowListItems} from './service';
 import {workflowPeople,workflowApplicantExpression} from './search-registry';
 import {invalidSearch,type SearchDefinition} from '../api/search-conditions';

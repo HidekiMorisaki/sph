@@ -8,10 +8,15 @@ Generated packages preserve original licenses, add the SPH MIT license and
 modification notice, and omit stale maps and lifecycle scripts.
 
 The replacements preserve the adopted versions: Svelte 5.57.2, svelte-check
-4.4.6 (frontend) / 4.7.6 (API), Prisma 7.10.1 and CommonJS plugin 29.0.3.
+4.4.6 (frontend) / 4.7.6 (API) and Prisma 7.10.1. Vite 8.3.8 is a metadata-only
+modified package: its unused Lightning CSS dependency is removed before
+resolution, while all executable source hashes match the original npm archive.
+The officially supported esbuild CSS minifier is selected after Kit configuration
+for both SSR and client environments; CSS remains minified. See
+[`licenses/build-native`](../../licenses/build-native/) for native-tool originals.
+The obsolete CommonJS plugin from adapter-node 5 is no longer installed.
 Svelte source imports and its bundled CommonJS compiler use SPH's ESTree-role
-and UTF-16 location helpers. The checker bundle's reference helper and the
-CommonJS plugin's external helper are replaced too. `is-reference` and
+and UTF-16 location helpers. The checker bundle's reference helper is replaced too. `is-reference` and
 `locate-character` are not installed. The unused helper in the compiler bundle
 is removed. The SPH code is a compatible implementation; it does not supply or
 claim a missing grant for the upstream helper packages.

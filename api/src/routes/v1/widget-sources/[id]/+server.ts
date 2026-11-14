@@ -1,8 +1,8 @@
-import {getPrisma} from '$lib/server/prisma';
-import {admin} from '$lib/server/widgets/service';
-import {writeAuditLog} from '$lib/server/api/admin';
-import {failure,success} from '$lib/server/api/response';
-import {lockWidgetWrites} from '$lib/server/widgets/upgrades';
+import {getPrisma} from '#lib/server/prisma.js';
+import {admin} from '#lib/server/widgets/service.js';
+import {writeAuditLog} from '#lib/server/api/admin.js';
+import {failure,success} from '#lib/server/api/response.js';
+import {lockWidgetWrites} from '#lib/server/widgets/upgrades.js';
 export async function DELETE({locals,params}:import('./$types').RequestEvent){
  const actor=admin(locals.user,'sources');const id=Number(params.id);
  if(!Number.isSafeInteger(id)||id<1)return failure(404,'NOT_FOUND','Source not found.');

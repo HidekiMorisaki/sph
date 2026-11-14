@@ -1,2 +1,2 @@
-<script lang="ts">import ProjectTicketPage from '$lib/components/projects/ProjectTicketPage.svelte';</script>
+<script lang="ts">import ProjectTicketPage from '#lib/components/projects/ProjectTicketPage.svelte';</script>
 <ProjectTicketPage view="gantt"/>

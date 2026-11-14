@@ -1,7 +1,7 @@
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { MAX_UPLOAD_BYTES, normalizeAvatarImage } from '$lib/server/api/avatar-image';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { MAX_UPLOAD_BYTES, normalizeAvatarImage } from '#lib/server/api/avatar-image.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 function avatarResponse(image: Uint8Array | null) {
 	const response = success({ image: image ? `data:image/png;base64,${Buffer.from(image).toString('base64')}` : null });

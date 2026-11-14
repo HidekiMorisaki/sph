@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { analyticsText } from '$lib/analytics';
-	import { localization } from '$lib/localization';
+	import { analyticsText } from '#lib/analytics.js';
+	import { localization } from '#lib/localization.js';
 	import DatePicker from './DatePicker.svelte';
 	let { id, fromMonth = $bindable(), toMonth = $bindable(), maxMonth, loading, onApply }: {
 		id: string; fromMonth: string; toMonth: string; maxMonth: string; loading: boolean; onApply: () => void;

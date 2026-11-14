@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '$lib/postal-address';
-	import { apiData } from '$lib/api';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import { addressLabels, validPostalCode, type AddressCountry, type PostalCandidate } from '#lib/postal-address.js';
+	import { apiData } from '#lib/api.js';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
 
 	let { countryCode, postalCode, language, onSelect }: {
 		countryCode: AddressCountry;

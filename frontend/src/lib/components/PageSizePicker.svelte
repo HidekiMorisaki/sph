@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import '$lib/styles/page-size-picker.css';
+	import '#lib/styles/page-size-picker.css';
 
 	let { value, options, label, onChange }: {
 		value: number; options: number[]; label: string; onChange: (value: number) => void;

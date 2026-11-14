@@ -22,7 +22,7 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Schedule and meeting invitations        | Manage personal and shared schedules, invitations, recurring events and changes to individual occurrences |
 | Notifications                          | Check unread notifications and open the related event, request or ticket        |
 | Work calendars                         | Define working days, holidays and working hours, and assign calendars to employees |
-| Workflow forms and approvals           | [Design forms, approve requests and settle cash advances and expenses](docs/Workflows.md) |
+| Workflow forms and approvals           | [Design forms, submit requests, manage sequential approvals and retain submission history](docs/Workflows.md) |
 | Teams, skills and engagements           | Manage teams, employee skills, clients and employee participation in engagements |
 | Location management                    | Manage branches, rooms, and storage locations                                   |
 | IT asset management                    | Manage IT asset records, assignments, returns, and change history               |
@@ -37,7 +37,6 @@ SME Portal Hub (abbreviated as SPH) is a web-based system that enables small and
 | Your goal                                              | Read this section                                                             |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | Try and evaluate the system                            | [Quick Start for Users](#quick-start-for-users)                               |
-| Try it on free cloud hosting (experimental deployment) | [Installing on blitz.cloud](#installing-on-blitz-cloud)                       |
 | Install on a server for access from other PCs          | [Installing on a server or another PC](#installing-on-a-server-or-another-pc) |
 | Diagnose an installation problem                       | [Quick Start troubleshooting](#quick-start-troubleshooting)                   |
 | Start or stop an existing installation                 | [Starting and stopping the system](#starting-and-stopping-the-system)         |
@@ -71,29 +70,6 @@ The installer supports English and Japanese. After selecting the display languag
 
 > [!NOTE]
 > At the "Sample data" prompt, select "2. Add" to automatically add sample data in the selected language. Use these samples to evaluate SPH.
-
-<a id="installing-on-blitz-cloud"></a>
-
-## Installing on blitz.cloud
-
-This option runs SPH and PostgreSQL on the blitz.cloud free plan, without Docker on your own computer. Use the free plan for evaluation; a paid plan is recommended if you intend to run SPH in production.
-
-1. Open the [blitz.cloud dashboard](https://dashboard.blitz.cloud/) and create a free account. You can register with email and password, GitHub, or Google. Confirm your email address if you receive a confirmation message, then follow the prompts to claim your `<account-name>.blitz.cloud` address. See the [official getting-started guide](https://blitz.cloud/docs/getting-started/).
-2. Choose **Host something new --> My own code** and enter the URL of the public [`HidekiMorisaki/sph`](https://github.com/HidekiMorisaki/sph) repository. You do not need to connect GitHub or fork the repository to use this public project. In **Advanced settings**, select the `main` branch and check or correct these three parts: `frontend` uses the root `Dockerfile` at `/`; `v1` uses `api/Dockerfile` at `/v1`; `migration` is **Runs before each new version** with `node /opt/sph-migration/scripts/migrate-and-initialize.mjs`. Do not use `db` or `gateway` if proposed. Leave **Needs a database** off; the installer will create and connect managed PostgreSQL. Choose an unused app address and submit the wizard. The first build may fail before the database and administrator settings exist; do not delete the app or database at this stage.
-3. Open **AI tools --> Keys --> Make a key**. Name the key something recognizable, such as `SPH installer`, and copy its value to a safe place when it appears. It cannot be shown again. When the installer asks for the API key, paste it into the hidden prompt. If you lose it, issue another key; use **Revoke** on the same page when you no longer need one. See the [official API-key guide](https://blitz.cloud/docs/ai-assistants/).
-4. Install [Node.js 22](https://nodejs.org/) and Git, then download the same branch selected in the wizard and run the installer:
-
-   ```bash
-   git clone --branch main --single-branch https://github.com/HidekiMorisaki/sph.git
-   cd sph
-   node scripts/install-blitz.mjs
-   ```
-
-5. Enter the API key, confirm the suggested blitz.cloud account name (or enter it if the service does not return one), then enter the app subdomain chosen in the wizard. If the blitz.cloud management API does not return the parts, check the three parts above under **Settings --> Parts** in the dashboard before typing `VERIFY` into the installer. The installer creates and connects PostgreSQL, then asks for initial administrator details. Accept the profile defaults with Enter or edit them. Choose a strong password and enter it twice; the API key and password have no defaults. The installer checks `/v1/health`, session, administrator sign-in, and sign-out before it removes the initial administrator settings and prints the HTTPS address.
-
-If installation stops, keep the app and database. Check the build in **Activity**, database migrations and administrator creation in **Logs --> migration**, the three parts in **Settings --> Parts**, and setting names in **Environment**. Never include setting values or the API key in logs or support messages. If the build or start failed, correct the cause and rerun the installer with the same branch and address. Retries preserve the existing database and encryption key. If the administrator already exists, enter the original sign-in credentials.
-
-The installer may time out waiting for `/v1/health` even though the build finishes later. Check **Activity** and verify that `https://<app>.<account>.blitz.cloud/v1/health` returns JSON with `responseCode: 200`, unauthenticated `/v1/auth/session` returns a 401 JSON response, and the administrator can sign in and out. If all succeed, do not rerun the installer. Remove every `INITIAL_ADMIN_*` setting under **Environment**, click **Restart now**, and check health again. Keep `DATABASE_URL` and `IT_ASSET_CREDENTIAL_ENCRYPTION_KEY`. You can revoke the API key under **AI tools** when you no longer need it.
 
 ## Installing on a server or another PC
 
@@ -244,23 +220,24 @@ Database data is stored in the named Docker volume `sph-db-data` and is retained
 
 ## Gallery
 
-Screenshots show v0.7.0 with fictional demo data in the dark theme. Financial figures, exchange rates and schedule appointments are illustrative.
-
-### Projects — ticket panel
-![Project ticket panel](./docs/gallery/ProjectTicketPanel_en.png)
-
-### Schedule
-![Schedule](./docs/gallery/Schedule_en.png)
-
 ### Dashboard
 ![Employee analytics](./docs/gallery/EmployeeAnalysis_en.png)
 ![Financial trends](./docs/gallery/FinancialTrends_en.png)
+
+### Schedule
+![Schedule](./docs/gallery/Schedule_en.png)
 
 ### Work calendars
 ![Work calendars](./docs/gallery/WorkCalendars_en.png)
 
 ### Employees
 ![Employees](./docs/gallery/EmployeeList_en.png)
+
+### Projects — ticket panel
+![Project ticket panel](./docs/gallery/ProjectTicketPanel_en.png)
+
+### Projects — Gantt chart
+![Project Gantt chart](./docs/gallery/ProjectGantt_en.png)
 
 ## Acknowledgements
 

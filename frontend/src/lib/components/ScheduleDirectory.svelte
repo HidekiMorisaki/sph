@@ -3,9 +3,9 @@
  import SearchSelect from './SearchSelect.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
  import { onMount,untrack } from 'svelte';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { scheduleRequest,type EmployeeChoice,type RoomChoice } from '$lib/schedule';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { scheduleRequest,type EmployeeChoice,type RoomChoice } from '#lib/schedule.js';
  let {kind='employees',selected=[],rowSelection=false,disabled=false,onSelect}:{kind?:'employees'|'rooms';selected?:number[];rowSelection?:boolean;disabled?:boolean;onSelect:(item:EmployeeChoice|RoomChoice)=>void}=$props();
  const instance=$props.id();
  let text=$derived(scheduleText[$localization.displayLanguage]);

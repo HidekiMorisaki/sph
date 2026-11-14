@@ -1,6 +1,6 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 export async function GET({locals}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'schedule.read');
  const row=await getPrisma().schedulePreference.findFirst({where:{employeeId:actor.id,deletedAt:null}});

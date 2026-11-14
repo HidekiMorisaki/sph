@@ -1,8 +1,8 @@
-import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { parseWorkCalendarEntryInput, workDateIsInCalendarYear } from '$lib/server/api/work-calendar-input';
-import { getPrisma } from '$lib/server/prisma';
+import { requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { parseWorkCalendarEntryInput, workDateIsInCalendarYear } from '#lib/server/api/work-calendar-input.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function PATCH({ locals, params, request }: import('./$types').RequestEvent) {
 	const actor = requireSystemAdminApi(locals.user);

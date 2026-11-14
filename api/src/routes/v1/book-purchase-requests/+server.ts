@@ -1,8 +1,8 @@
-import { getPrisma } from '$lib/server/prisma';
-import { purchaseActor, managedPurchaseBranches, createPurchaseRequest, purchaseInput } from '$lib/server/api/book-purchases';
-import { bookErrorResponse, objectBody, positiveId } from '$lib/server/api/books';
-import { parseListQuery, listMeta } from '$lib/server/api/query';
-import { success, failure } from '$lib/server/api/response';
+import { getPrisma } from '#lib/server/prisma.js';
+import { purchaseActor, managedPurchaseBranches, createPurchaseRequest, purchaseInput } from '#lib/server/api/book-purchases.js';
+import { bookErrorResponse, objectBody, positiveId } from '#lib/server/api/books.js';
+import { parseListQuery, listMeta } from '#lib/server/api/query.js';
+import { success, failure } from '#lib/server/api/response.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
  const actor = purchaseActor(locals.user, 'books.purchases.read');

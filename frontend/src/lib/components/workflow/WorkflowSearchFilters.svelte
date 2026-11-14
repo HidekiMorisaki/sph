@@ -2,8 +2,8 @@
  import SearchSelect from '../SearchSelect.svelte';
  import SearchMultiSelect from '../SearchMultiSelect.svelte';
  import FormCheckbox from '../FormCheckbox.svelte';
- import {localization} from '$lib/localization';
- import {searchChoiceLabel,type SearchContext} from '$lib/search';
+ import {localization} from '#lib/localization.js';
+ import {searchChoiceLabel,type SearchContext} from '#lib/search.js';
  let {options,contexts,onChange}:{options:Record<string,string|boolean>;contexts:SearchContext[];onChange:(options:Record<string,string|boolean>)=>void}=$props();
  let ja=$derived($localization.displayLanguage==='ja');
  const t=(a:string,b:string)=>ja?a:b;

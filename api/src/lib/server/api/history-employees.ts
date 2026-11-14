@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from '$lib/server/generated/prisma/client';
+import type { Prisma, PrismaClient } from '#lib/server/generated/prisma/client.js';
 
 type HistoryItem = { changes: Prisma.JsonValue };
 const employeeFields = new Set(['assigneeId', 'managerEmployeeId', 'deputyManagerEmployeeId']);

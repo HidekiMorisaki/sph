@@ -1,27 +1,28 @@
 <script lang="ts">
- import {formatHours} from '$lib/project-time';
+ import {customValueLabel} from '#lib/project-custom-fields.js';
+ import {formatHours} from '#lib/project-time.js';
  import type {Snippet} from 'svelte';
- import type {SearchState} from '$lib/search';
+ import type {SearchState} from '#lib/search.js';
  import MasterList from '../MasterList.svelte';
- import {formatEmployeeName,localization} from '$lib/localization';
- import {apiData} from '$lib/api';
- import type {Employee} from '$lib/employees';
+ import {formatEmployeeName,localization} from '#lib/localization.js';
+ import {apiData} from '#lib/api.js';
+ import type {Employee} from '#lib/employees.js';
  import EmployeeDetailModal from '../EmployeeDetailModal.svelte';
  import TextActionButton from '../TextActionButton.svelte';
  import StatusNotice from '../StatusNotice.svelte';
- import {ticketColumns} from '$lib/project-ticket-columns';
- import {day,personName,type Ticket,type Project,type Person} from '$lib/projects';
+ import {ticketColumns} from '#lib/project-ticket-columns.js';
+ import {day,personName,type Ticket,type Project,type Person} from '#lib/projects.js';
  type Row=Ticket&{parentNumber?:number|null;author?:Person;assignee?:Person|null;createdAt?:string;updatedAt?:string};
- let {projects,columns,onopen,searchState=$bindable(),endpoint,headerActions,onLoaded}:{projects:Project[];columns:string[];onopen:(t:Ticket,el:HTMLElement|null)=>void;searchState:SearchState;endpoint:string;headerActions:Snippet;onLoaded:(tickets:Ticket[],meta:Record<string,any>)=>void}=$props();
+ let {projects,columns,customColumns=[],onopen,searchState=$bindable(),endpoint,headerActions,onLoaded}:{projects:Project[];columns:string[];customColumns?:Array<{key:string;label:{ja:string;en:string}}>;onopen:(t:Ticket,el:HTMLElement|null)=>void;searchState:SearchState;endpoint:string;headerActions:Snippet;onLoaded:(tickets:Ticket[],meta:Record<string,any>)=>void}=$props();
  let list=$state<MasterList>();
  let employee=$state<Employee|null>(null),employeeFocus=$state<HTMLElement|null>(null),employeeLoading=$state(false),employeeError=$state('');
  export async function refresh(){await list?.refresh();}
  let ja=$derived($localization.displayLanguage==='ja');const tr=(j:string,e:string)=>ja?j:e;
- const label=(key:string)=>(({project:tr('プロジェクトID','Project ID'),projectName:tr('プロジェクト名','Project name'),ticket:tr('チケットID','Ticket ID'),title:tr('チケット名','Ticket name')} as Record<string,string>)[key]??ticketColumns.find(c=>c[0]===key)?.[ja?1:2]??key);
+ const label=(key:string)=>(({project:tr('プロジェクトID','Project ID'),projectName:tr('プロジェクト名','Project name'),ticket:tr('チケットID','Ticket ID'),title:tr('チケット名','Ticket name')} as Record<string,string>)[key]??ticketColumns.find(c=>c[0]===key)?.[ja?1:2]??customColumns.find(c=>c.key===key)?.label[ja?'ja':'en']??projects.flatMap(p=>(p.customFields??[]).map(f=>({key:'custom.'+f.id,label:p.name+'／'+f.name}))).find(f=>f.key===key)?.label??key);
  const sorts:Record<string,string>={projectName:'project',ticket:'code',title:'title',type:'type',status:'status',assignee:'assignee',priority:'priority',startsOn:'startsOn',dueOn:'dueOn',createdAt:'createdAt',updatedAt:'updatedAt'};
  function assignee(t:Row){return t.assignee??projects.find(p=>p.id===t.projectId)?.members.find(m=>m.employeeId===t.assigneeId)?.employee;}
  async function openEmployee(person:Person,trigger:HTMLElement){if(employeeLoading)return;employeeFocus=trigger;employeeLoading=true;employeeError='';try{const r=await fetch('/v1/employees/'+person.id,{cache:'no-store'});if(!r.ok)throw Error();employee=await apiData<Employee>(r);}catch{employeeError=tr('従業員詳細を表示できませんでした。','Unable to load employee details.');}finally{employeeLoading=false;}}
- function value(t:Row,key:string){const p=projects.find(p=>p.id===t.projectId);switch(key){
+ function value(t:Row,key:string){const p=projects.find(p=>p.id===t.projectId);if(key.startsWith('custom.')){const f=p?.customFields?.find(f=>'custom.'+f.id===key);return f?customValueLabel(f,t.customFields?.[f.id],ja):'—';}switch(key){
  case 'project':return p?.code??'';case 'projectName':return p?.name??'';case 'ticket':return t.code;case 'title':return t.title;
  case 'type':return p?.types.find(x=>x.id===t.typeId)?.name??'';case 'status':return p?.statuses.find(x=>x.id===t.statusId)?.name??'';
  case 'assignee':{const person=assignee(t);return person?formatEmployeeName({...person,middleName:null},$localization):'';}

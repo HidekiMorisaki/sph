@@ -1,5 +1,5 @@
 import { parseTeamIds } from './teams';
-import type { ApiErrorDetail } from '$lib/server/api/response';
+import type { ApiErrorDetail } from '#lib/server/api/response.js';
 import { addressCountry, validPostalCode, type AddressCountry } from './postal-address';
 
 const genders = new Set(['female', 'male', 'unspecified']);

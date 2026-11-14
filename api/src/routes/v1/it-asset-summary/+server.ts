@@ -1,9 +1,9 @@
 import type { RequestHandler } from './$types';
-import { requireScopedOperationApi, assetBranchWhere } from '$lib/server/api/branch-access';
-import { assetSummaryDate, unassignedAssetWhere } from '$lib/server/api/it-asset-summary';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { permissionOperations } from '$lib/server/auth/permissions';
+import { requireScopedOperationApi, assetBranchWhere } from '#lib/server/api/branch-access.js';
+import { assetSummaryDate, unassignedAssetWhere } from '#lib/server/api/it-asset-summary.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
 
 export const GET: RequestHandler = async ({ locals, setHeaders }) => {
 	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetRead);

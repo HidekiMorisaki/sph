@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import DetailModal from '$lib/components/DetailModal.svelte';
-	import DetailTabs from '$lib/components/DetailTabs.svelte';
-	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import DetailModal from '#lib/components/DetailModal.svelte';
+	import DetailTabs from '#lib/components/DetailTabs.svelte';
+	import MasterHistorySection from '#lib/components/MasterHistorySection.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	let { title, titleId, sectionTitle = title, closeLabel, returnFocus = null, endpoint, itemId, fields, dateFields = [], valueFormatters = {}, hiddenHistoryFields = [], details, tabbed = true, detailsLabel = '', headerActions, onClose }: {
 		title: string;

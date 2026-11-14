@@ -1,11 +1,11 @@
-import { emitNotification } from '$lib/server/notifications/producer';
+import { emitNotification } from '#lib/server/notifications/producer.js';
 import { createHash } from 'node:crypto';
 import { DateTime } from 'luxon';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
-import { throwApiError } from '$lib/server/api/response';
-import { requireOperationApi,writeAuditLog } from '$lib/server/api/admin';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { throwApiError } from '#lib/server/api/response.js';
+import { requireOperationApi,writeAuditLog } from '#lib/server/api/admin.js';
 import { inputEvent, expandSlots, ScheduleInputError, type EventInput, type Slot } from './time';
 
 export type Tx = Prisma.TransactionClient;

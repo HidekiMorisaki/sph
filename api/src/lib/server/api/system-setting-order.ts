@@ -1,6 +1,6 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { parseWorkforceOrder } from '$lib/server/api/workforce-order';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { parseWorkforceOrder } from '#lib/server/api/workforce-order.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export const systemSettingOrderResources = ['roles', 'external-links'] as const;
 export type SystemSettingOrderResource = (typeof systemSettingOrderResources)[number];

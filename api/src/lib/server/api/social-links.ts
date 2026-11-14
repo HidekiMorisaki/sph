@@ -1,4 +1,4 @@
-import type { ApiErrorDetail } from '$lib/server/api/response';
+import type { ApiErrorDetail } from '#lib/server/api/response.js';
 
 export const socialLinkPlatforms = ['github', 'linkedin', 'x', 'threads', 'bluesky', 'mastodon', 'facebook', 'instagram', 'youtube', 'qiita', 'note'] as const;
 export type SocialLinkPlatform = (typeof socialLinkPlatforms)[number];

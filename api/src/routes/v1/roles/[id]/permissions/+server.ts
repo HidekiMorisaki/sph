@@ -1,14 +1,14 @@
-import { derivedPermissionCodes, normalizePermissionScopes } from '$lib/server/auth/permission-dependencies';
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { permissionOperations, isSystemOnlyOperation } from '$lib/server/auth/permissions';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { parseRoleNameInput } from '$lib/server/api/role-input';
-import { failure, success } from '$lib/server/api/response';
-import { roleOutput, roleSelect } from '$lib/server/api/role-output';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
-import { editableCodesFrom, validateEditableRolePermissions } from '$lib/server/api/role-permissions';
+import { derivedPermissionCodes, normalizePermissionScopes } from '#lib/server/auth/permission-dependencies.js';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { permissionOperations, isSystemOnlyOperation } from '#lib/server/auth/permissions.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { parseRoleNameInput } from '#lib/server/api/role-input.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { roleOutput, roleSelect } from '#lib/server/api/role-output.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { editableCodesFrom, validateEditableRolePermissions } from '#lib/server/api/role-permissions.js';
 
 export async function PUT({ locals, params, request }: import('./$types').RequestEvent) {
 	const actor = requireSystemAdminApi(locals.user);

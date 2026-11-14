@@ -1,7 +1,7 @@
 import { requireBranchAccess, requireScopedOperationApi } from './branch-access';
-import { hasOwnBranchPermissionOperation } from '$lib/server/auth/permissions';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { hasOwnBranchPermissionOperation } from '#lib/server/auth/permissions.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { requireOperationApi, writeAuditLog } from './admin';
 import { BookInputError, objectBody, optionalText, positiveId, recordBookChange, requiredText } from './books';
 import { throwApiError } from './response';

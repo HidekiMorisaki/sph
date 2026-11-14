@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { writeAuditLog } from './admin';
 
 type FieldValue = { value: string | null; display: string | null };

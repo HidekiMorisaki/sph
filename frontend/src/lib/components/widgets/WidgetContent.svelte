@@ -1,9 +1,9 @@
 <script lang="ts">
- import RuntimeWidget from './RuntimeWidget.svelte';import type {WidgetValues} from '$lib/widgets';
- import {onMount} from 'svelte';import {localization} from '$lib/localization';
+ import RuntimeWidget from './RuntimeWidget.svelte';import type {WidgetValues} from '#lib/widgets.js';
+ import {onMount} from 'svelte';import {localization} from '#lib/localization.js';
  import DetailModal from '../DetailModal.svelte';
  import WidgetContent from './WidgetContent.svelte';import WidgetLink from './WidgetLink.svelte';import WorldClock from './WorldClock.svelte';
- import {widgetText,widgetDimensions,type WidgetDefinition,type WidgetSize,type WidgetData,type DataItem} from '$lib/widgets';
+ import {widgetText,widgetDimensions,type WidgetDefinition,type WidgetSize,type WidgetData,type DataItem} from '#lib/widgets.js';
  let {definition,size,data,note='',clockDesign='digital',scale=1,expandedView=false,measureOnly=false,previewOnly=false,fixedPreview=false,configuration={},initialRecords=[],instanceKey}: {definition:WidgetDefinition;size:WidgetSize;data:WidgetData;note?:string;clockDesign?:string;scale?:number;expandedView?:boolean;measureOnly?:boolean;previewOnly?:boolean;fixedPreview?:boolean;configuration?:WidgetValues;initialRecords?:Array<{recordKey:string;values:WidgetValues}>;instanceKey?:string}=$props();
  let lang:'ja'|'en'=$derived($localization.displayLanguage==='ja'?'ja':'en');let t=$derived(widgetText[lang]);
  let now=$state(new Date());let expanded=$state(false);let returnFocus=$state<HTMLElement|null>(null);let dimensions=$derived(widgetDimensions(definition,size));let showClockSeconds=$derived(dimensions.rows*dimensions.columns>=6);let limit=$derived(expandedView?500:3);let clockGrid=$state<HTMLDivElement>();let clockWidth=$state(190);let cityPage=$state(0);let clocks=$derived(data.world_clock??['Asia/Tokyo']);let clockItemWidth=$derived(210*scale);let capacity=$derived(Math.max(1,Math.floor((clockWidth+12)/(clockItemWidth+12))));let paging=$derived(clocks.length>capacity);let pageCount=$derived(Math.max(1,Math.floor((clockWidth-(paging?64:0)+12)/(clockItemWidth+12))));let lastCity=$derived(Math.max(0,clocks.length-pageCount));let cityStart=$derived(Math.min(cityPage,lastCity));

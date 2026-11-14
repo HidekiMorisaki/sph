@@ -1,5 +1,5 @@
-import { localeMessages } from '$lib/locale-messages';
-import type { DisplayLanguage } from '$lib/localization';
+import { localeMessages } from '#lib/locale-messages.js';
+import type { DisplayLanguage } from '#lib/localization.js';
 
 export type AnalyticsData = {
 	referenceDate: string;

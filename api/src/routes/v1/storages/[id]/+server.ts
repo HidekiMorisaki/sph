@@ -1,10 +1,10 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireLocationManagementApi } from '$lib/server/api/branch-access';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { getPrisma } from '$lib/server/prisma';
-import { failure, success } from '$lib/server/api/response';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireLocationManagementApi } from '#lib/server/api/branch-access.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 function input(value: unknown): { name: string; notes: string | null; branchId: number; roomId: number; sortOrder?: number } | null {
 	if (!value || typeof value !== 'object') return null;

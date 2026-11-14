@@ -1,15 +1,15 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import FormTabs from '$lib/components/FormTabs.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import FormTabs from '#lib/components/FormTabs.svelte';
  import { untrack,tick,onMount } from 'svelte';
- import { apiData } from '$lib/api';
- import { localeMessages } from '$lib/locale-messages';
- import { localization } from '$lib/localization';
- import { clientTextFields,workforceOptions,type WorkforceMaster } from '$lib/workforce';
+ import { apiData } from '#lib/api.js';
+ import { localeMessages } from '#lib/locale-messages.js';
+ import { localization } from '#lib/localization.js';
+ import { clientTextFields,workforceOptions,type WorkforceMaster } from '#lib/workforce.js';
  import SearchSelect from './SearchSelect.svelte';
  import DatePicker from './DatePicker.svelte';
  import PostalLookup from './PostalLookup.svelte';
- import {addressLabels,type AddressCountry} from '$lib/postal-address';
+ import {addressLabels,type AddressCountry} from '#lib/postal-address.js';
  import DetailModal from './DetailModal.svelte';
  import DiscardChangesDialog from './DiscardChangesDialog.svelte';
  import FormSection from './FormSection.svelte';

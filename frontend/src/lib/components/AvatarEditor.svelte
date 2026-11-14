@@ -1,9 +1,9 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
 	import { tick } from 'svelte';
-	import { apiData } from '$lib/api';
-	import { avatarImage, setAvatar } from '$lib/avatar';
-	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+	import { apiData } from '#lib/api.js';
+	import { avatarImage, setAvatar } from '#lib/avatar.js';
+	import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 
 	let { text }: { text: {
 		avatar: string; avatarHint: string; avatarChoose: string; avatarRemove: string; avatarZoom: string;

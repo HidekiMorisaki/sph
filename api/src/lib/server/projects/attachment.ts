@@ -1,6 +1,6 @@
 import { Unzip, UnzipInflate } from 'fflate';
-import { attachmentType } from '$lib/server/workflow/attachment';
-import { throwApiError } from '$lib/server/api/response';
+import { attachmentType } from '#lib/server/workflow/attachment.js';
+import { throwApiError } from '#lib/server/api/response.js';
 
 function bad():never{return throwApiError(422,'INVALID_ATTACHMENT','The file format or archive limits are invalid.');}
 const maxFile=10*1024*1024,maxExpanded=100*1024*1024;

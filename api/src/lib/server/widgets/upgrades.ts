@@ -1,4 +1,4 @@
-import type {Prisma} from '$lib/server/generated/prisma/client';
+import type {Prisma} from '#lib/server/generated/prisma/client.js';
 import {manifest, settings, canonical, type Manifest} from './contract';
 import {valuesFor, byteSize} from './storage-contract';
 

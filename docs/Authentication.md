@@ -69,3 +69,31 @@ Do not enable paid resources or change the sleep policy as part of recovery.
 If readiness remains unavailable, diagnose startup, database connectivity and
 migration state before rebuilding. Never expose credentials or connection strings
 in incident logs. Follow the backup/update procedure for an actual version update.
+
+## Account invitation links
+
+The **Generate invitation link** action is in the employee detail modal footer.
+Its existing operation permissions, employee eligibility and branch restrictions
+still apply. The employee editor no longer includes the action.
+
+System administrators configure the link lifetime in **System settings → Other → Account
+invitations**, using an integer from 1 to 60 minutes (default: 30).
+The information icon beside the validity field opens the range and issuance-policy
+explanation; it is not displayed as permanent form text.
+`GET /v1/account-invitation-settings` and `PATCH /v1/account-invitation-settings`
+use `{ "validityMinutes": 30 }` within the standard API envelope. They require
+`system.manage` plus `system.invitations.read` or `system.invitations.update`,
+respectively. Updates are audited. Baseline m0046 creates the singleton settings
+table and grants the new operations only to the active system-administrator role
+with an active global system-management grant. Fresh installations use the same
+operation catalog. Settings are included in active-data backups.
+
+The API reads the setting when issuing a link, including automatic issuance on
+employee creation. Invitation responses retain `invitationUrl` and
+`invitationExpiresAt` and additionally return `invitationValidityMinutes`.
+The result modal places the shared copy icon to the right of the URL field and
+has no footer Close button; use the header close icon or Escape to return to
+employee details. It shows both the applied period and the expiration timestamp in
+the viewer's configured time zone. Changing the setting does not alter previously
+issued links. Reissuing invalidates older unused links; hashed tokens, single use,
+the five-per-24-hours limit and account-setup eligibility checks are unchanged.

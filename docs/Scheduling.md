@@ -1,77 +1,83 @@
-# スケジュール・通知・会議室予約
+# Scheduling, notifications and meeting-room reservations
 
-「一般 → スケジュール」で個人・会議の予定を管理する。新規予定の操作は「予定追加」と表示する。勤務カレンダーは勤務日・祝日の背景情報として使い、予定の編集とは分離する。
+General → Schedule manages personal and meeting events. Add event creates a new event. Work calendars provide working-day/holiday background information and remain separate from event editing.
 
-## 予定表と予定
+## Calendars and events
 
-日・週・月、重ねて表示・並べて表示を選択できる。「本日」は現在日へ戻る。従業員の氏名・社員番号と拠点・部門で予定表を検索し、会議室の予定表も追加できる。色・順序・表示状態と表示方法は本人専用のサーバー設定に保存する。最大20予定表、縦時間軸の並列表示は5件ごとに切り替える。スマホの縦時間軸では日付選択と日別一覧を使う。横時間軸の日・週は画面の表示領域に合わせてセル幅を自動調整し、右端まで使う。
+Day, week and month views support overlaid or side-by-side calendars. Today returns to the current date. Search employee calendars by name/code, branch and department, and add meeting-room calendars. Colors, ordering, visibility and presentation preferences are saved privately on the server. At most 20 calendars can be selected; vertical side-by-side views page through five calendars at a time. Compact vertical views use a date selector and daily list. Horizontal day/week views adapt cell widths to the available space.
 
-ページ内の設定アイコンから開く個人設定モーダルは「基本設定」「表示設定」のカードで構成する。「基本設定」では検索なしの「週の開始曜日」「予定表」（重ねて表示／並べて表示）、「表示設定」では「時間軸」（縦方向／横方向）を選び、保存で反映する。時間軸は日・週表示に適用し、月表示はカレンダー形式を維持する。`timeAxis` は既存の本人設定JSONに保存し、省略時は `vertical` として扱う。横方向では選択した従業員1人につき1行（会議室は1室につき1行）とし、日付・時間を左から右へ表示する。日表示は時間目盛り、週表示は日付目盛りの7列とする。週表示では各日の予定を時刻付きカードで並べ、空きセルからは終日予定を作成できる。画面幅・予定表パネルの開閉に合わせて列幅を再計算する。「重ねて表示／並べて表示」にかかわらず各予定表を1行にまとめ、重複予定は同じ人の行内で別の段に表示する。終日予定は対象の日付に表示する。日表示では夏時間の23時間・25時間の日も実時刻に沿って配置する。週表示の日付列は夏時間の有無にかかわらず均等幅とし、予定の移動は表示タイムゾーンのローカル時刻を保って日単位で行う。予定のクリック・空き枠からの作成・主催者の移動は既存の詳細・編集モーダルにつなぎ、保存までは予定を更新しない。終了時刻のドラッグ変更は後述の確認フローから直接保存する。予定表の選択カードはPCではページ内の三本線アイコン、スマホではカード見出しのアコーディオンで開閉する。日付・予定一覧は折りたたまない。初回はPCが展開、スマホが折りたたみ。開閉状態はブラウザーの `schedule-calendar-panel:v1:{employeeId}` に `desktopExpanded`／`mobileExpanded` として利用者別・表示モード別に保存する。スマホ横向きは共通のコンパクト表示条件に従う。再訪・再読込で復元し、保存不可や不正な値でも既定値で操作できる。開閉はサーバーの予定表設定を変更しない。
+The page settings modal contains Basic settings (week start and overlaid/side-by-side calendars) and Display settings (vertical/horizontal time axis), using non-searchable choices where appropriate. Save applies the selections. `timeAxis` is stored in the existing private preference JSON and defaults to `vertical`; month view stays a calendar grid.
 
-通常の予定はスケジュール閲覧者に詳細を共有する。非公開予定の詳細は主催者と現在の参加者だけが閲覧できる。他者には日時と「予定あり」だけを返し、管理者にも詳細閲覧の例外を設けない。予定表の追加は編集権限を与えない。
+Horizontal mode uses one row per employee or room, with time running left to right regardless of the overlay preference. Day view has time ticks; week view has seven equal date columns with event times on cards and creates all-day drafts from empty cells. Overlapping events occupy separate lanes within their owner's row. All-day events appear on their dates. Day view follows real instants across 23-/25-hour daylight-saving days; week moves preserve local wall time in the display zone. Widths recalculate with viewport and calendar-panel changes. Clicking an event, creating from a free slot or moving an organizer's event opens the shared detail/editor flow; no change is saved before confirmation. End-time resizing uses the direct-save flow below.
 
-詳細モーダルは「基本情報」「場所・会議室」「説明」「参加者」の共通カードで表示する。任意情報が空のカードは省略し、本人の出欠回答は参加者カード内に置く。PCは基本情報と場所の項目を2列、スマホは1列で表示する。終了ラベルは「終了」（英語はEnd）とし、終了時点を含まない内部の期間計算は維持する。非公開の詳細を閲覧できない場合は、開始・終了と「予定あり」だけを表示する。
+The calendar-selection panel toggles from the page menu icon on desktop and its heading accordion on compact screens. Date/event lists remain visible. It initially opens on desktop and collapses on compact screens. Browser key `schedule-calendar-panel:v1:{employeeId}` stores `desktopExpanded` and `mobileExpanded` separately per user/mode. The common compact query also covers touch landscape. Invalid/unavailable storage uses defaults and does not prevent operation; panel toggles do not change server calendar preferences.
 
-主催者は編集・取消、参加者は自分の出欠回答を行う。時間の終了端をドラッグした変更は修正フォームを開かずに保存する。繰り返し予定では、通知確認の前に「この回だけ／すべての予定／キャンセル」を選ぶ。他の参加者がいる場合は「参加者に予定変更を通知しますか？」を表示し、通知する・通知しない・キャンセルを選ぶ。参加者の重複がある場合は継続確認を行い、会議室の重複・同時更新は拒否する。時間変更専用PATCHは所有者・revision・対象範囲・参照・空き状況をサーバー側で再検証し、日時以外の項目を各回で保持する。全件変更も個別に修正した件名や参加者を上書きしない。時刻・参加者を変更した開催回は未回答へ戻り、件名・説明だけの変更では回答を維持する。参加者の時間重複は確認後に保存でき、会議室の重複は保存できない。空き時間確認が失敗した場合は空きと表示しない。保存失敗時は下書きを保持する。
+Ordinary event details are shared with schedule readers. Private details are visible only to the organizer and current participants; others, including administrators, see only the time and Busy. Adding a calendar never grants editing rights.
 
-毎日・毎週・毎月・毎年、間隔・曜日・月の日付、回数または終了日を指定する。最長1年・最大366開催回。主催者が開催回を開くと「この日の予定だけ修正」ができ、編集フォームで今回・以降・すべてを選択する。シリーズ変更では個別変更を保持するかを選び、空き時間確認で変更・保持・取消件数を確認する。
+Detail dialogs use Basic information, Location/meeting room, Description and Participants cards. Empty optional cards are omitted; the current participant's response appears within Participants. Basic/location fields use two desktop columns and one compact column. End is the visible label; internal intervals still exclude their endpoint. Restricted private details expose only start/end and Busy.
 
-開催回のキーと位置番号は不変とする。条件変更後も対応する位置のキーを再利用し、新しい位置に新規キーを発行する。不要となった開催回は取消として残す。以降の条件はシリーズ定義のセグメントとして保存し、それ以前の条件を変えない。個別の移動・取消は例外として扱う。
+Organizers edit/cancel events; participants answer only for themselves. Dragging the end time saves without opening the editor. Recurring events first ask for this occurrence/all occurrences/cancel, before notification confirmation. With other participants, ask whether to notify them, offering notify/do not notify/cancel. Participant overlap requires explicit continuation; room conflicts and stale revisions reject the change. The dedicated time PATCH revalidates owner, revision, scope, references and availability on the server. It preserves non-time fields for each occurrence, including individually changed titles/participants on all-occurrence changes. Time/participant changes reset affected responses to unanswered; title/description-only edits retain responses. Failed availability checks must not be shown as availability. Save failures retain the draft.
 
-「コピーして作成」は閲覧可能な開催回の実際の日時・本文・公開範囲・参加者候補・会議室候補を単発の下書きへコピーする。新しい主催者は本人となる。繰り返し、回答、予約、通知、既読情報と元のキーは継承しない。保存までは登録・予約・通知を行わず、保存時に参照先と空きを再検証する。
+Recurrence supports daily/weekly/monthly/yearly patterns, intervals, weekdays/month days, and count or end date, bounded to one year and 366 occurrences. Organizers can edit one occurrence, this and following occurrences, or the whole series. Series edits choose whether to retain exceptions; availability previews show changed, retained and cancelled counts.
 
-予定編集、繰り返し・取消対象、出欠回答、会議室予約設定・解除、予定表の表示設定は共通フォーム部品を使う。日時・繰り返し終了日・表示日は共通DatePicker、IANAタイムゾーン・公開範囲・繰り返し条件等はSearchSelect、文字・数値・色はFormInput、説明・解除理由はFormTextarea、終日・曜日・例外保持・予約許可・表示状態はFormCheckboxとする。予定表追加は共通AddButton、モーダルの確定操作はModalActionButtonを使用する。日付や選択欄のEscapeは選択だけを閉じて操作元へ戻り、下書きを保持する。空き確認後に条件や例外保持を変更した場合は再確認を求める。
+Occurrence keys and sequence positions are immutable. Pattern changes reuse keys at corresponding positions and allocate keys only for new positions; removed occurrences remain cancelled. Following-only changes create definition segments without changing earlier patterns. Individual moves/cancellations remain exceptions.
 
-## 共通通知
+Create a copy copies the readable occurrence's actual time, text, visibility and participant/room candidates into a single-event draft owned by the current user. It does not inherit recurrence, responses, reservations, notices, read state or original keys. Nothing is created/reserved/notified until saving, when references and availability are checked again.
 
-通知メニューは幅640px（狭い画面では左右8pxの余白）とし、下線型の「すべて」「未読」「ワークフロー」「プロジェクト管理」「おしらせ」タブに分類別の未読件数を表示する。キーワードは250ms後に自動検索し、読み込み済みの20件だけでなく本人宛ての全通知を絞り込む。タブの件数は検索に連動し、ベルは全体の未読件数を維持する。カード全体が内部リンクになり、右端の削除操作は独立する。カード内の個別既読ボタンは設けない。対象詳細が実際に表示された時点で既読化し、遷移・詳細取得の失敗や閲覧不可では未読を維持する。
+Forms use the shared DatePicker, SearchSelect, FormInput, FormTextarea and FormCheckbox components for dates, zones/choices, text/numbers/colors, descriptions/reasons and boolean selections respectively. AddButton adds calendars; ModalActionButton confirms dialogs. Escape in a date/choice popup closes only that popup and restores focus without losing drafts. Changing conditions or exception retention after an availability preview requires another check.
 
-GET `/v1/notifications` は `category=all|workflows|projects|information`（既定all）と `search`（200文字・空白区切り10語まで、AND部分一致）を受け付ける。`unread=true` と併用できる。通知種別の表示文言、および現在の閲覧権限で読めるチケット名・プロジェクト名／コード・申請名・予定名を検索する。任意のSQL・ワイルドカードとしては解釈しない。既存の `meta.unreadCount`／`readCount` は全体件数、`total` は絞り込み後の件数、`unreadCounts` は検索に一致する全ページの `all`／`unread`／`workflows`／`projects`／`information` の未読件数である。本人宛て、有効レコード、対応する閲覧権限と通知版の制約を維持する。
+## Shared notifications
 
-テーマ切替の左のベルで全件・未読を確認する。通知メニューの見出しに閉じる×ボタンは置かず、ベルの再クリック・メニュー外クリック・Escapeで閉じる。開いた直後と最後の通知を削除した後はベルをフォーカスの起点にし、Escapeで閉じるとベルへフォーカスを戻す。開くだけでは既読にせず、対象詳細の表示成功または見出しの一括既読操作で既読化する。クリックすると対象開催回を開き、本人の保存済み予定表は変えない。対象がなくなった場合や非公開詳細を閲覧できなくなった場合は案内を表示する。既読は出欠回答と独立する。通知見出しの右側には「既読通知削除」「全て既読にする」のアイコンを置き、一括既読のテキストリンクは置かない。各通知の右端の×で未読・既読にかかわらず本人の受信記録だけを論理削除する。一括削除は一覧取得時点までに作成・既読化された通知だけを対象にし、未読・取得後に既読化された通知を残す。共有の通知イベント、他の受信者、元の予定は変更しない。削除後は先頭ページと件数を取り直す。詳細を×ボタンまたはEscapeで閉じると、現在の履歴エントリーのURLからoccurrence指定を取り除き、再読み込みで閉じた詳細が再表示されないようにする。他のクエリ・ハッシュ・履歴状態を保ち、同じ通知を選び直せば再び開く。
+The menu is 640px wide, with 8px side gaps on narrow screens. Underlined All, Unread, Workflows, Projects and Information tabs show category unread counts. Keywords search after 250ms across all notices for the recipient, not just the loaded 20. Tab counts follow the search; the bell retains the overall unread count. Each card is an internal link with a separate delete action and no per-card read button. A notice becomes read only after its target detail is successfully displayed. Failed navigation/fetches and denied targets leave it unread.
 
-`notification_events` は種別・版・発生元・型付き対象参照・発生日時・重複防止キー、`notification_recipients` は本人ごとの既読状態を保持する。本文・HTML・任意URLを保存しない。取得時に現在の権限で文面と内部リンクを解決する。初回の生成元は招待・重要変更・取消・出欠回答・管理者による予約解除。開催回単位の変更と通知作成を同一トランザクションで確定し、シリーズの変更は受信者ごとにまとめる。
+`GET /v1/notifications` accepts `category=all|workflows|projects|information` (default all), `unread=true`, and `search` (200 characters, at most ten whitespace-separated terms, AND substring matching). Searches include localized type text and currently readable ticket/project names and codes, request names and event names. Input is not arbitrary SQL or a wildcard expression. `meta.unreadCount` / `readCount` remain overall counts; `total` is the filtered count. `unreadCounts` gives search-matching, all-page unread counts for `all`, `unread`, `workflows`, `projects` and `information`. Recipient ownership, active records, current read permissions and notification-version checks remain mandatory.
 
-共通ヘッダーの単一インスタンスが表示中30秒ごと・フォーカス復帰時に取得する。非表示中は取得せず、進行中リクエストを重複させない。ログアウト・利用者変更時は要求を中断し、通知状態を破棄する。今後の通知は型・権限検査・文面／内部遷移の解決処理を追加して扱う。
+The bell to the left of the theme toggle opens the menu. Clicking it again, clicking outside or Escape closes it; there is no heading close button. Focus starts at the bell on opening and after deleting the last notice, and Escape returns focus there. Opening alone does not mark notices read. The heading provides Delete read notifications and Mark all as read icons, without a duplicate text link. A card's delete button logically deletes only the current user's recipient record, whether read or unread. Bulk deletion includes only notices created and marked read by the list snapshot cutoff; it retains unread notices and those read afterward. Shared events, other recipients and source events are unchanged. Deletion refreshes the first page and counts.
 
-## 会議室と予約基盤
+Targets resolve to their current internal event/request/ticket detail and permissions. Schedule notifications open their occurrence without changing saved calendars. Removed/inaccessible targets show an explanation. Read state is separate from attendance. Closing occurrence details removes only the occurrence parameter from the current history URL, preserving other query/hash/history state so reload does not reopen the dialog; selecting the same notice can reopen it.
 
-会議室の予約設定は「システム設定 → 会議室の予約設定」から共通モーダルを開き、システム管理者だけが利用する。設定の取得・保存と管理用の予約一覧は、APIでも既存のシステム管理者検査とRoom操作権限の両方を確認する。初期状態は予約不可。予約可否と実在するIANAタイムゾーンを設定する。閉鎖拠点や無効なRoomは新規予約対象にしない。将来予約がある施設は削除・予約不可化・タイムゾーン変更を拒否する。通常の予定作成から行う会議室予約と、会議室マスター管理の既存権限は変更しない。
+`notification_events` stores type, version, source, typed target references, timestamp and deduplication key; `notification_recipients` stores per-user read state. No body, HTML or arbitrary URL is stored. Text and links resolve with current permissions at read time. Producers include schedule invitations, important changes, cancellation, responses and administrator reservation release, as well as workflow and Projects events. Occurrence changes and schedule notices commit together; series changes are grouped per recipient. See [Workflows](Workflows.md) and [Projects](Projects.md) for their target behavior.
 
-予約資源は `reservable_resources`、確保区間は `resource_reservations` に分離する。資源はRoomまたは将来の個別IT資産への外部キーを持ち、一開催回から複数資源を関連付けられる。現行入力は会議室1室だけを受け付ける。機器の予約は常設割当や貸出・返却と独立した拡張とする。
+A single shared-header instance polls every 30 seconds while visible and on focus return. Hidden pages skip polling; in-flight requests do not overlap. Logout/user changes abort requests and clear state. New types must add explicit permission, text and internal-target resolution.
 
-全予約処理はREAD COMMITTEDのトランザクションで要求資源のIDを昇順にロックし、その後の新しいスナップショットで重複を再検査する。区間は `[開始, 終了)` とし、隣接を許可する。繰り返しを含む要求全体が成功するか、全体がロールバックする。変更・取消・管理者解除・施設の無効化も同じ資源ロックに従う。
+## Rooms and reservation infrastructure
 
-システム管理者は理由と監査を伴って会議室の予約だけを解除でき、予定そのものや非公開本文の閲覧権限は得ない。施設管理の予約一覧にも本文・件名・参加者を返さない。主催者が退職しても履歴を残し、残存予約はこの解除操作で整理する。
+System settings → Meeting room booking settings opens the shared administrator-only dialog. Settings and administrative reservation-list APIs require both the system administrator check and the corresponding Room operation. Rooms initially disallow booking. Configure bookability and a valid IANA zone. Closed branches and inactive rooms cannot receive new reservations. Future reservations prevent deletion, disabling booking or zone changes. Ordinary event booking and existing room-master rights remain separate.
 
-時刻付き予定はUTC瞬間と元IANAゾーン、繰り返しは元地域の壁時計で扱う。終日は日付と排他的終了日を保持し、施設占有区間は施設自身のタイムゾーンの日付境界を使う。存在しない入力時刻は422、重複時刻はUTCオフセットの指定を要求する。繰り返しの存在しない日付・時刻はスキップする。
+`reservable_resources` identifies resources; `resource_reservations` stores occupied intervals. A resource references a Room or a future individual IT asset; an occurrence can relate to multiple resources. Current input accepts one room only. Equipment booking remains a future extension separate from permanent assignment or lending/return.
 
-## RESTと認可
+READ COMMITTED transactions lock requested resource IDs in ascending order and then check overlap using a fresh snapshot. Intervals are `[start, end)`, so adjacency is allowed. The entire request, including recurrence, succeeds or rolls back. Updates, cancellation, administrative release and resource disabling follow the same locking rule.
 
-全APIは同一オリジンのgateway経由・サーバーセッション認証を使用する。
+Administrators can release only a room reservation with a reason and audit entry; this grants no right to edit the event or read private content. Administrative reservation lists do not expose event text/title/participants. Organizer retirement preserves history; remaining reservations can be handled through this release operation.
 
-| リソース | 用途 |
+Timed events store UTC instants and the original IANA zone; recurrence uses that zone's wall clock. All-day events store dates and an exclusive end date; occupancy uses the resource zone's date boundaries. Nonexistent local times return 422; ambiguous times require an explicit UTC offset. Recurrence skips nonexistent dates/times.
+
+## REST and authorization
+
+All APIs use server-side sessions through the same-origin gateway.
+
+| Resource | Purpose |
 | --- | --- |
-| `POST /v1/schedule-events` | 予定・シリーズの作成。`Idempotency-Key`ヘッダー必須 |
-| `GET /v1/schedule-occurrences` | 最大42日・20予定表の期間取得 |
-| `GET/PATCH/DELETE /v1/schedule-occurrences/{key}` | 安全化した詳細、主催者による変更・取消 |
-| `PUT /v1/schedule-occurrences/{key}/response` | 本人の出欠回答 |
-| `/v1/schedule-employees`・`/v1/schedule-resources` | 最小限の従業員検索・予約可能会議室の検索 |
-| `/v1/schedule-context` | 選択予定表の勤務日・祝日背景 |
-| `POST /v1/schedule-availability` | 下書き・シリーズ変更の空き確認と対象件数 |
-| `/v1/employees/me/schedule-preferences` | 本人専用の表示設定 |
-| `/v1/notifications`・`/{id}/read-receipt`・`/read-receipts` | 本人宛て通知と既読情報。DELETE `/v1/notifications?read=true&through=...` は既読一括削除、DELETE `/v1/notifications/{id}` は本人の個別通知削除 |
-| `/v1/rooms/{id}/booking-settings`・`/reservations` | システム管理者専用の施設設定と予約区間一覧 |
-| `PUT /v1/resource-reservations/{id}/release` | システム管理者による理由付き解除 |
+| `POST /v1/schedule-events` | Create an event/series; requires an `Idempotency-Key` header |
+| `GET /v1/schedule-occurrences` | Retrieve a period of at most 42 days and 20 calendars |
+| `GET/PATCH/DELETE /v1/schedule-occurrences/{key}` | Redacted detail and organizer update/cancellation |
+| `PUT /v1/schedule-occurrences/{key}/response` | Current participant's response |
+| `/v1/schedule-employees`, `/v1/schedule-resources` | Minimal employee and bookable-room searches |
+| `/v1/schedule-context` | Working-day/holiday background for selected calendars |
+| `POST /v1/schedule-availability` | Draft/series availability and affected counts |
+| `/v1/employees/me/schedule-preferences` | Private display preferences |
+| `/v1/notifications`, `/v1/notifications/{id}/read-receipt`, `/v1/notifications/read-receipts` | Recipient notices/read state; DELETE with `read=true&through=...` bulk-deletes read notices, DELETE `/{id}` deletes one recipient record |
+| `/v1/rooms/{id}/booking-settings`, `/v1/rooms/{id}/reservations` | Administrator-only room settings and occupied intervals |
+| `PUT /v1/resource-reservations/{id}/release` | Administrator release with a reason |
 
-一覧は共通の `sortBy/sortOrder/offset/limit` を使用し、既定100・最大500とする。画面は全ページの成功後に期間データを表示する。401未認証、403権限不足、409古いrevision・予約競合・冪等キー不一致、422入力不正をJSONのHTTP一致したenvelopeで返す。保護された応答はprivate/no-storeとする。
+Lists use common `sortBy/sortOrder/offset/limit`, default 100 and maximum 500. The UI displays period data only after all pages succeed. JSON envelopes match HTTP status: 401 unauthenticated, 403 denied, 409 stale revision/reservation conflict/idempotency mismatch, and 422 invalid input. Protected responses are private/no-store.
 
-スケジュールには閲覧・作成・主催更新・主催取消・本人回答・予約・表示設定の操作権限、通知には閲覧・既読更新・削除の操作権限がある。削除は独立した `notifications.delete` で保護する。初期5ロールに通常利用を追加し、独自ロールには自動付与しない。会議室の予約設定・管理用予約一覧はシステム管理者に限定し、業務・サーバー・拠点管理者と一般ユーザーは403で拒否する。予約強制解除はシステム管理者専用の操作コードと既存のシステム管理者検査の両方で保護する。
+Schedule operations separately protect reading, creation, organizer update/cancel, own responses, booking and preferences. Notifications have separate read/read-update/delete operations; deletion requires `notifications.delete`. Initial five roles receive ordinary use; custom roles are not automatically extended. Administrative booking settings/lists reject other roles with 403. Forced release requires both its system-only operation and the existing system administrator check.
 
-DB変更はv0.7.0の集約マイグレーション `m0035` に含める。旧m0035〜m0038は人間の指示によりm0035へ集約し、既存環境はインストーラーで再構築する。m0034以前は変更しない。新規表は整数自動採番主キー・別の一意キー・レコード管理日時と論理削除を持つ。採用ライブラリの版・原文・追加の由来表示は `licenses/README.md` と各schedulerライセンス記録を参照する。
+m0035 contains the scheduling/notification schema and the employee-departure/purchase changes described separately. m0034 and earlier remain unchanged. New tables have auto-increment integer primary keys, separate unique keys, management timestamps and logical deletion. Fresh installations run the current chain; existing released installations use the reviewed update path. Earlier development histories require a separately verified, backed-up transition, not a blanket reinstall. See [Backup, update, and restore](Backup_Update_and_Restore.md). Library versions, original terms and attribution are in the product-root `licenses/README.md` and scheduler license records.
 
-通知削除権限も集約マイグレーション `m0035` で追加する。既存の初期5ロールは、有効な通知閲覧・既読更新の全体権限を保持する場合だけ削除権限を追加し、独自ロールや撤回済みの設定を自動拡張しない。通知削除権限の追加処理では既存通知を書き換えない。
+m0035 also adds notification deletion operations. Existing initial roles receive them only if they retain active global notification read/read-update grants; custom/revoked settings are not automatically expanded. This grant addition does not rewrite existing notices.
 
-単発予定の取消では「この予定を取り消しますか？」という確認だけを表示し、取消対象の選択欄は表示しない。繰り返し予定だけが今回・以降・すべての対象を選択する。単発の取消API入力は常に `scope: single` とする。
+Cancelling a single event shows only its confirmation, without a recurrence-scope selector; input always uses `scope: single`. Recurring cancellation offers this occurrence/following/all.
 
-UTCオフセットの選択欄は、選択タイムゾーンと入力した開始・終了日時を照合して、同じ現地時刻が重複する場合だけ表示する。開始・終了のうち該当する側だけを必須表示し、選択肢はその日時で有効なオフセットに限定する。通常のAsia/Tokyo・一意な日時・終日予定では表示しない。タイムゾーンや日時を変更した場合は以前の選択を解除し、不要なオフセットを単発予定のAPI入力へ送らない。繰り返し予定では一意な初回日時のオフセットを内部で補完し、後の回が夏時間の境界にかかる場合も既存のサーバー検証を維持する。存在しない現地時刻は選択で補正せず、引き続きサーバー側で拒否する。
+UTC-offset controls appear only for the ambiguous start/end local times in the selected zone, with values valid for that date. Ordinary unique times (including typical Asia/Tokyo times) and all-day dates show no control. Changing zone/time clears old choices. Single-event input omits unnecessary offsets; recurring input internally supplies a unique first-occurrence offset while preserving later daylight-saving validation. Nonexistent wall times remain invalid.

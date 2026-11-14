@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { ItAssetValidationError } from './it-asset-errors';
 import { itAssetInclude } from './it-asset-input';
 import { operatingSystemName } from './operating-system-name';

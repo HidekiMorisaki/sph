@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import ChangeHistorySection from '$lib/components/ChangeHistorySection.svelte';
-	import type { ChangeHistoryEntry } from '$lib/change-history';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import ChangeHistorySection from '#lib/components/ChangeHistorySection.svelte';
+	import type { ChangeHistoryEntry } from '#lib/change-history.js';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	let { endpoint, itemId, fieldLabels, dateFields = [], valueFormatters = {}, hiddenFields = [], collapsible = true, onEmployeeClick }: {
 		endpoint: string;

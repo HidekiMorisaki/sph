@@ -1,12 +1,12 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
 	import { onMount } from 'svelte';
-	import { apiData } from '$lib/api';
-	import { localization } from '$lib/localization';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import DetailModal from '$lib/components/DetailModal.svelte';
+	import { apiData } from '#lib/api.js';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import DetailModal from '#lib/components/DetailModal.svelte';
 	import SystemMetricChart from './SystemMetricChart.svelte';
 
 	type Measurement = { cpuPercent: number | null; memoryUsed: number | null; memoryTotal: number | null; apiMemory: number | null; diskAvailable: number | null; diskTotal: number | null; databaseBytes: number | null };

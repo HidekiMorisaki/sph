@@ -1,8 +1,8 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
-import { env } from '$env/dynamic/private';
-import { getPrisma } from '$lib/server/prisma';
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
+import * as env from '$app/env/private';
+import { getPrisma } from '#lib/server/prisma.js';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
 import { createSession, hashPassword, verifyPassword } from './session';
 
 export const LOGIN_WINDOW_SECONDS = 15 * 60;

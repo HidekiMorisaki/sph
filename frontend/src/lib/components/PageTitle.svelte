@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { productName } from '$lib/brand';
+	import { productName } from '#lib/brand.js';
 
 	let { title = '' }: { title?: string } = $props();
 </script>

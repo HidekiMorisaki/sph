@@ -1,4 +1,5 @@
 {
+	"otherTab": "その他",
 	"masterManagementTab": "マスター管理",
 	"financialTab": "経営状況",
 	"financialPeriodTab": "年度設定",
@@ -197,5 +198,11 @@
 		"closeHelp": "サーバー状態の説明を閉じる",
 		"measurementScope": "計測対象",
 		"historyHelp": "履歴と収集間隔"
-	}
+	},
+	"accountInvitations": "アカウント招待",
+	"invitationValidityMinutes": "招待リンクの有効期間（分）",
+	"invitationSettingsDescription": "1〜60分の整数で指定してください。変更は以後に発行する招待リンクに適用され、発行済みリンクの有効期限は変わりません。",
+	"invitationSettingsInvalid": "有効期間は1〜60分の整数で入力してください。",
+	"invitationSettingsSaved": "招待リンクの有効期間を保存しました。",
+	"invitationSettingsSaveFailed": "招待リンクの設定を保存できませんでした。再度お試しください。"
 }

@@ -89,37 +89,25 @@ The dump includes application rows, audit/history data, logically deleted rows, 
 
 ## Consolidated initial schema
 
-The initial schema is now a single migration, `20261003000000_initial_baseline`.
-It creates the completed schema with no business data. Only foreign-key constraint
-additions use `ALTER TABLE`; columns, keys, checks, functions, indexes and triggers
-are created in their final form. Required initialization and optional localized
-samples run separately in the installer migration job.
+Fresh installations use the single `m0046/migration.sql` baseline. It creates
+all 123 application tables in their final form, including SQL-only checks,
+partial indexes, generated IDs, business-code sequences, functions and triggers.
+There are no intermediate column/type/check alterations, renames, data backfills
+or retired OKR tables. Final foreign-key attachment and sequence ownership are
+resolved after the referenced tables exist. The complete migration is atomic.
 
-An existing database must not execute the initial SQL again. Update and restore
-tools verify the full backup and compare the complete current schema with the
-baseline before replacing **only** Prisma's infrastructure migration history.
-Application rows, deleted rows, authentication fields and sequence values are
-unchanged. The eight supported legacy migration names/checksums are checked;
-unfinished migrations, unknown history and schema differences stop the operation.
-Prior history is kept in `migration-history-before-baseline.json` beside the
-complete backup. Databases already on the baseline are left as they are.
+The baseline registers the seven current official widget releases (initially
+unapproved) and the default account-invitation lifetime. Administrator profiles,
+role grants, required master data and optional localized samples are initialized
+by the separate installer job, with the same behavior as the previous chain.
 
-For a supervised development checkout already containing the consolidated source:
-
-```powershell
-docker compose -f docker-compose.local.yml stop gateway frontend api
-./scripts/backup.ps1
-docker compose -f docker-compose.local.yml build migration
-# Replace the host path with the verified backup directory just created.
-docker compose -f docker-compose.local.yml run --rm --no-deps --volume 'C:\protected\sph-backup:/baseline-backup' migration node scripts/baseline-existing.mjs /baseline-backup/manifest.json
-docker compose -f docker-compose.local.yml run --rm --no-deps migration
-docker compose -f docker-compose.local.yml start api frontend gateway
-```
-
-Do not reset the database or manually edit checksums to resolve a rejected
-baseline. Keep the backup, diagnose the difference and leave application services
-stopped until a compatible migration plan is available. The existing full backup
-can still be restored using a compatible source revision.
+Existing migration histories must not replay this SQL. This source consolidation
+supports a fresh installation, not an automatic transition from an older chain.
+The `baseline-existing.mjs` maintenance helper verifies a backed-up installation's
+single current migration name/checksum and leaves history unchanged. It rejects
+older, unknown or unfinished histories; it no longer rewrites Prisma metadata.
+Restore older backups with their matching source revision. Do not edit checksums
+to conceal a history mismatch.
 
 ## Restore a backup
 

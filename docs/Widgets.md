@@ -2,10 +2,12 @@
 
 SDK v2 is the current authoring format. System administrators can create HTML/CSS/JavaScript widgets in Development → Widgets (`/widget-editor`), save private drafts, export HTTPS catalogues and request administrator approval. All seven official widgets use the same sandbox/Worker SDK. See [Widget SDK](Widget_SDK.md) for the current format and developer workflow. Legacy declarative text/list/clock/records definitions remain supported; the former built-in calculator/timer/note view types are retired.
 
-The sections below describe the current official widgets and their API contract.
+The sections below describe the current official widgets, shared APIs and the
+legacy declarative contract. Contract 1 examples are not the format of the
+current official SDK releases.
 
 
-The current storage contract is [Widget storage](Widget_Storage.md). New v0.6.0 installations use shared JSONB records; the old note/time-zone layout format is not supported.
+The current storage contract is [Widget storage](Widget_Storage.md). Current installations use shared JSONB records; the old note/time-zone layout format is not supported.
 
 System settings shows a per-release user count and asks for confirmation before
 stopping a release with users. Hidden cards are included; duplicate cards from
@@ -27,7 +29,7 @@ source listing and catalogue refresh operations remain in the Sources card.
 
 My Page has a catalogue modal and independently configurable widget cards.
 All current size IDs use ASCII `rowsxcolumns` and match their `sizeLayouts` entry.
-The m0032 migration seeds exactly seven current 1.0.1 official releases, initially disabled. Initial master setup verifies the complete definitions and enables all seven, with or without samples. Each user chooses their own placements. No old official releases or widget-version upgrade blocks are bundled.
+The m0046 migration seeds exactly seven current 1.0.1 official releases, initially disabled. Initial master setup verifies the complete definitions and enables all seven, with or without samples. Each user chooses their own placements. No old official releases or widget-version upgrade blocks are bundled.
 Run `node scripts/build-widget-catalogue.mjs --check` and `node scripts/build-widget-seed.mjs --check` from the product root to verify the catalogue and canonical seed digests. See [Themes.md](Themes.md) for the theme token contract.
 The migration clears obsolete legacy widget
 placements; m0033 removes the old placement table. The size column has no default:
@@ -206,7 +208,7 @@ There are no new dependencies, fonts, images or third-party calculator code.
 ## Developer information
 
 A manifest may include `author` (a nonempty string, at most 160 characters) and
-`description: {"ja":"説明", "en":"Description"}` (both nonempty, at most 10,000
+`description: {"ja":"Localized description", "en":"Description"}` (both nonempty, at most 10,000
 characters each). These fields are included in the immutable definition and digest;
 publish a new version when changing them. Descriptions are plain escaped text,
 with line breaks preserved. No HTML or Markdown is executed.
@@ -215,7 +217,7 @@ with line breaks preserved. No HTML or Markdown is executed.
 each instance. Author falls back to `provider`; missing descriptions are `null` and
 shown as not provided. Official definitions use the same metadata fields.
 
-## Contract 1
+## Legacy declarative contract (schemaVersion 1)
 
 The root object has exactly `schemaVersion: 1` and `widgets` (up to 100 releases).
 A release has these fields; unknown fields or unsupported capabilities fail closed:
@@ -226,7 +228,7 @@ A release has these fields; unknown fields or unsupported capabilities fail clos
   "provider": "Example company",
   "version": "1.0.0",
   "schemaVersion": 1,
-  "name": { "ja": "拠点の時計", "en": "Branch clock" },
+  "name": { "ja": "Localized clock name", "en": "Branch clock" },
   "sizes": ["1x2", "1x4"],
   "sizeLayouts": {"1x2": {"rows": 1, "columns": 2}, "1x4": {"rows": 1, "columns": 4}},
   "capabilities": ["world_clock"],
@@ -247,7 +249,9 @@ to SPH books/my-page/personal-settings/employees pages; numeric employee/book ID
 Detail modals use the existing API permissions and return focus to their trigger. There are no
 HTML, JavaScript, expressions, CSS, arbitrary API calls, external scripts or iframes.
 SPH renders ordinary escaped text; widget definitions never receive session tokens.
-An isolated web renderer is a future contract, not part of this implementation.
+These restrictions apply to declarative version 1. The implemented schemaVersion 2
+[SDK runtime](Widget_SDK.md) separately supports isolated HTML/CSS and Worker
+JavaScript; all current official releases use that runtime.
 
 Capabilities: `book_notices` and `book_loans` (current user's active loans, requires
 `books.read`); `account` (current user's email and role names); `world_clock` (IANA
@@ -263,9 +267,7 @@ up to three entries and open the full bounded response in a common modal.
 
 There are at most 64 size choices (the 8 × 8 combinations).
 `sizeLayouts` is required and must exactly cover `sizes`. Each size ID must be `rowsxcolumns` using ASCII `x`, for example `1x2` or `6x6`; rows and columns must be integers 1–8 and must match the ID. Old size names such as `small`, `medium`, `large` and `compact` are rejected.
-Without this optional map, only legacy small/medium/large are supported, with
-1×1 / 1×2 / 2×2 footprints respectively. Undefined, duplicate or invalid sizes
-are rejected by the REST contract. The DB enforces the identifier format too.
+Omitting this map is rejected, as are undefined, duplicate or invalid sizes. The DB enforces the identifier format too.
 Independently of immutable manifest settings, instances with `world_clock` may
 include renderer-owned `clockDesign: ["digital"]` or `["analog"]`. An absent value
 keeps the existing digital appearance. The server rejects other values, multiple
@@ -314,7 +316,7 @@ layout stays empty.
 
 ## Programmer calculator
 
-`sph.calculator` 1.0.1 is named 電卓（標準） / Calculator (Standard).
+`sph.calculator` 1.0.1 is named Calculator (Standard).
 
 `sph.programmer_calculator` 1.0.1 offers HEX/DEC/OCT/BIN, 8/16/32/64 bits,
 signed/unsigned decimal interpretation, integer arithmetic, remainder, AND/OR/XOR/NOT
@@ -324,7 +326,7 @@ Shifts accept 0 through width minus one and right shift fills with zero.
 Operations execute in input order. Widening signed negatives extends their sign;
 narrowing keeps low bits. Width or signed-mode changes clear pending operations;
 base changes preserve them. Invalid digits and out-of-range entries are ignored.
-Sizes are 3×2, 3×3 and 3×4 cells, with 32px minimum button heights and no internal scrolling.
+Sizes are 2×2, 3×2, 3×3 and 3×4 cells, with 32px minimum button heights and no internal scrolling.
 Numeric and arithmetic keys expand evenly to fill the available body height;
 base, hexadecimal and bitwise keys stay compact.
 Base-selection labels use 16px text and conversion headings use bold 14px text, with 14px values.
@@ -362,16 +364,16 @@ application layout; the card grid adds no top margin.
 
 ## Timer, Stopwatch, Unit converter and Note
 
-These application-owned blocks are each the only block in a definition. They
-cannot declare data capabilities, code or arbitrary parameters. Timer, Stopwatch
-and Unit converter use dedicated layouts; Stopwatch and Unit converter require
-at least two rows, while Timer and Note allow one or more.
-Timer has a single 1×2 size, Stopwatch and Unit converter each have a single 2×2 size,
-and Note has 2×2 (`small`) and 1×2 (`compact`).
+These official 1.0.1 widgets each use one schemaVersion 2 runtime block with
+bundled HTML/CSS/Worker JavaScript and no data capabilities. Timer and Unit
+converter each offer `1x2`; Stopwatch offers `2x2`; Note offers `2x2` and `1x2`.
+These are literal size IDs, not the removed `small`/`compact` aliases.
 On compact screens timing/converter cards use full width and natural content height;
 timing content is bounded by the viewport with a 360px floor for short landscape
 screens. Notes keep their authored height to bound the text, including in previews.
-Fetch the official catalogue and approve each release before adding it.
+Fresh installation enables the seven official releases during initial setup.
+Existing environments retain their approval state; a stopped release must be
+approved before it can be added.
 
 Timer is a countdown; Stopwatch is a separate widget. Neither has a mode switch.
 Both offer start, pause/resume and reset; Stopwatch records up to 100 cumulative
@@ -389,7 +391,7 @@ size, with live results and unit swapping. US liquid and Imperial gallons are
 distinct; SI prefixes use powers of 1000 and binary prefixes use powers of 1024.
 Results use JavaScript finite numbers and display up to 12 significant digits,
 with scientific notation for very large or small magnitudes to keep results bounded.
-From/to pickers share a row to fit the 2×2 footprint.
+From/to pickers share a row within the declared `1x2` footprint.
 Empty/invalid/overflowing inputs have no result; temperatures below absolute zero
 are rejected. Input and choices are not persisted. Conversion factors and
 temperature relations were checked against [NIST SP 811 Appendix B.8](https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors/nist-guide-si-appendix-b8),
@@ -399,8 +401,8 @@ Units use the international foot, international acre and avoirdupois pound.
 All implementation code is original; no third-party libraries or assets were added.
 
 Note declares a single `storage` record named `default`, with `values.note` as
-plain text up to 5,000 UTF-16 units. Its optional title remains the renderer-owned
-`settings.title: ["…"]` display preference (40 UTF-16 units, one line, trimmed).
+plain text up to 5,000 UTF-16 units. Its optional title is the SDK configuration field `title` (40 UTF-16 units),
+stored in instance `settings.custom` and delivered as `context.configuration.title`.
 The settings modal uses the shared record REST API and can save content and display
 settings atomically. Missing/empty titles show only the widget name; long titles
 are truncated beside the action icons. See [Widget storage](Widget_Storage.md).
@@ -435,6 +437,6 @@ duration feedback or completion. Stopwatch always reserves a visible lap region;
 a bordered placeholder explains how to record the first lap, then yields to the
 list and returns after reset.
 
-The note widget is named メモ / Note. When empty, its entire body is a dashed,
+The note widget is named Note. When empty, its entire body is a dashed,
 bordered placeholder using the same spacing, border and text colors as the empty
 stopwatch lap area. Entered notes retain the existing text and overflow behavior.

@@ -1,8 +1,8 @@
-import {requireOperationApi,writeAuditLog} from '$lib/server/api/admin';
-import {getPrisma} from '$lib/server/prisma';
-import {success,failure} from '$lib/server/api/response';
-import {searchBody} from '$lib/server/api/search-conditions';
-import {parseColumns,storedColumns,defaultColumns} from '$lib/server/projects/project-columns';
+import {requireOperationApi,writeAuditLog} from '#lib/server/api/admin.js';
+import {getPrisma} from '#lib/server/prisma.js';
+import {success,failure} from '#lib/server/api/response.js';
+import {searchBody} from '#lib/server/api/search-conditions.js';
+import {parseColumns,storedColumns,defaultColumns} from '#lib/server/projects/project-columns.js';
 export const GET:import('./$types').RequestHandler=async({locals,setHeaders})=>{
  const actor=requireOperationApi(locals.user,'projects.read');
  const settings=await getPrisma().employeeSettings.findFirst({where:{employeeId:actor.id,deletedAt:null},select:{projectColumns:true}});

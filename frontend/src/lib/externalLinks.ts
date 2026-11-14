@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import type { ApiSuccess } from '$lib/api';
+import type { ApiSuccess } from '#lib/api.js';
 
 export type ExternalLink = {
 	id: number;

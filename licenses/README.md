@@ -1,6 +1,6 @@
 # Third-party licenses
 
-## v0.7.0 license exclusions
+## License exclusions and reviewed dependency changes
 
 The four historical missing-grant candidates are excluded before installation,
 including copies embedded in compiler/checker bundles. See
@@ -12,13 +12,19 @@ runner described there, so no npm 12 candidate or npm runtime is introduced.
 The source-only distribution boundary remains in force.
 
 
-The SPH security backports for SvelteKit 2.70.3 and deepmerge 4.3.1 preserve
-their original MIT notices and record every original/modified file hash in each
+SvelteKit 3.2.0 supersedes the former Kit 2 backport with its original upstream
+escaped cache-policy implementation. Its exact source is checked. The retained
+SPH deepmerge 4.3.1 backport preserves its original MIT notice and records every
+original/modified file hash in each
 project's `licenses/security-patches.json`. The complete changes and original
 notices are in `licenses/dependency-security-patches.txt` (also served by the
 frontend under `/licenses/`). Preparation applies only the reviewed changes;
 build/check rejects unpatched or unknown code. Version-based npm audit warnings
-remain visible. These backports do not approve unrelated license residuals.
+remain visible. These checks do not approve unrelated license residuals.
+
+The Vite 8/Rolldown/esbuild build composition, exact native source notices,
+standard-library originals and supported platform boundaries are documented in
+[`build-native/README.md`](build-native/README.md).
 
 Projects Markdown uses the explicitly approved `marked@18.1.2` parser in frontend
 and API. Its complete official LICENSE includes both the Marked MIT grant and
@@ -103,7 +109,7 @@ migration images retain these notices alongside the installed packages.
 The source-map-js 1.2.2 BSD notice and official archive source are retained in
 [`api/licenses/source-map-js-1.2.2.txt`](../api/licenses/source-map-js-1.2.2.txt)
 and [`frontend/licenses/source-map-js-1.2.2.txt`](../frontend/licenses/source-map-js-1.2.2.txt).
-These notices accompany the API, frontend, migration and blitz.cloud images.
+These notices accompany the API, frontend and migration images.
 
 The sveltekit update notices and exact archive sources for frontend are retained in
 [`frontend/licenses/dependency-sveltekit.txt`](../frontend/licenses/dependency-sveltekit.txt) and included in its images.
@@ -153,12 +159,14 @@ texts at the published version's gitHead are recorded in
 `npm-supplemental-manifest.json`, with copies in the API licenses and frontend
 static licenses. Keep these originals with their corresponding components.
 
-A source tag is not approval to redistribute every locally built image. Original
-license texts remain unconfirmed for the historical candidates listed in that
-supplemental manifest, including @prisma/dev; current prepared sources exclude them. A Dockerfile or lockfile reference
-is distinct from copying those packages into a distributed archive. Before
-publishing migration/development/cloud images or an archive containing installed
-dependencies, resolve those candidates and the historical embedded-bundle review.
-Do not replace missing original grants with SPDX labels or guessed copyright text.
+Original license texts remain unconfirmed for the historical candidates listed
+in the supplemental manifest, including @prisma/dev; current prepared sources
+exclude them. Source distribution retains the reviewed preparation code, original
+notices and exclusion records. Do not replace missing original grants with SPDX
+labels or guessed copyright text.
 
 The scheduler uses the pinned FullCalendar Standard 6.1.22 plugins (no premium plugins), Luxon 3.7.2, rrule 2.8.1 and their reviewed dependencies. Exact archive sources, integrities and original notices, including python-dateutil and the embedded Closure modulo attribution, are in `api/licenses/scheduler.txt`, `frontend/licenses/scheduler.txt` and the browser copy `frontend/static/licenses/scheduler.txt`. Preserve all of these with corresponding builds.
+
+The v0.8.0 runtime security update originals and exact sources are recorded in
+[`runtime/`](runtime/README.md), including Node embedded-component notices,
+PostgreSQL, Go, zlib and the changed Alpine runtime components.

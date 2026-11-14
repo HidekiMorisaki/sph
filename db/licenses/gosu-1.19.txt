@@ -1,4 +1,6 @@
-gosu 1.19 rebuilt without source changes using Go 1.26.10.
+SPH gosu 1.19 rebuilt using Go 1.26.11, 2026-11-14.
+Original executable source is unchanged; go.mod/go.sum select the reviewed
+moby/sys/user 0.4.1 parser instead of 0.1.0. x/sys remains 0.1.0.
 Source: https://github.com/tianon/gosu/archive/refs/tags/1.19.tar.gz
 
 
@@ -204,7 +206,7 @@ Source: https://github.com/tianon/gosu/archive/refs/tags/1.19.tar.gz
    See the License for the specific language governing permissions and
    limitations under the License.
 
-Original file github.com/moby/sys/user@v0.1.0/LICENSE
+Original file github.com/moby/sys/user@v0.4.1/LICENSE
 
                                  Apache License
                            Version 2.0, January 2004

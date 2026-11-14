@@ -1,11 +1,11 @@
 <script lang="ts">
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountMenu from './AccountMenu.svelte';
- import type { SessionUser } from '$lib/auth';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+ import type { SessionUser } from '#lib/auth.js';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 	import { onMount } from 'svelte';
-	import { appearance, initializeAppearance, setColorMode } from '$lib/themes/appearance';
+	import { appearance, initializeAppearance, setColorMode } from '#lib/themes/appearance.js';
 
 	type Breadcrumb = { label: string; href?: string };
 

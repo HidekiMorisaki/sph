@@ -12,12 +12,16 @@
   },
   {
     "name": "Go standard library",
-    "version": "1.26.10",
-    "source": "https://raw.githubusercontent.com/golang/go/go1.26.10/LICENSE",
+    "version": "1.26.11",
+    "source": "https://raw.githubusercontent.com/golang/go/go1.26.11/LICENSE",
     "files": [
       {
-        "name": "go-1.26.10-LICENSE",
+        "name": "go-1.26.11-LICENSE",
         "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+      },
+      {
+        "name": "go-1.26.11-PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc"
       }
     ]
   },
@@ -416,14 +420,16 @@
   },
   {
     "name": "github.com/go-chi/chi/v5",
-    "version": "5.3.2",
-    "source": "https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.zip",
+    "version": "5.5.0",
+    "source": "https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.5.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\github.com__go-chi__chi__v5@5.3.2__LICENSE",
-        "sha256": "a2d51b7515acfaff2f7a88688650f2fc4fd99561383e72bba2305e3db59a1647"
+        "name": "github.com/go-chi/chi/v5@v5.5.0/LICENSE",
+        "sha256": "a2d51b7515acfaff2f7a88688650f2fc4fd99561383e72bba2305e3db59a1647",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "39f8416f36d5b177b0ce5d48cf21b3f460df9260feafab1fb8c1410fde0901dc"
   },
   {
     "name": "github.com/go-jose/go-jose/v3",
@@ -590,54 +596,61 @@
   },
   {
     "name": "github.com/klauspost/compress",
-    "version": "1.20.1",
-    "source": "https://proxy.golang.org/github.com/klauspost/compress/@v/v1.20.1.zip",
+    "version": "1.20.4",
+    "source": "https://proxy.golang.org/github.com/klauspost/compress/@v/v1.20.4.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__LICENSE",
-        "sha256": "0d9e582ee4bff57bf1189c9e514e6da7ce277f9cd3bc2d488b22fbb39a6d87cf"
+        "name": "github.com/klauspost/compress@v1.20.4/LICENSE",
+        "sha256": "0d9e582ee4bff57bf1189c9e514e6da7ce277f9cd3bc2d488b22fbb39a6d87cf",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__gzhttp__LICENSE",
-        "sha256": "2252a5b1e2b1d3663b53ea77051b8ed065cb9270a3d1174d5d6ead8a2de051b6"
+        "name": "github.com/klauspost/compress@v1.20.4/gzhttp/LICENSE",
+        "sha256": "2252a5b1e2b1d3663b53ea77051b8ed065cb9270a3d1174d5d6ead8a2de051b6",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__internal__lz4ref__LICENSE",
-        "sha256": "6a358d2540ca14048f02d366f23787c0a480157e58f058113f0e27168dd4e447"
+        "name": "github.com/klauspost/compress@v1.20.4/internal/lz4ref/LICENSE",
+        "sha256": "6a358d2540ca14048f02d366f23787c0a480157e58f058113f0e27168dd4e447",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__internal__snapref__LICENSE",
-        "sha256": "f69f157b0be75da373605dbc8bbf142e8924ee82d8f44f11bcaf351335bf98cf"
+        "name": "github.com/klauspost/compress@v1.20.4/internal/snapref/LICENSE",
+        "sha256": "f69f157b0be75da373605dbc8bbf142e8924ee82d8f44f11bcaf351335bf98cf",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__s2__LICENSE",
-        "sha256": "08683b14bda8ae3538abf19e1879e853a39e3b8276a8d673363b529d15a61c1a"
+        "name": "github.com/klauspost/compress@v1.20.4/s2/LICENSE",
+        "sha256": "08683b14bda8ae3538abf19e1879e853a39e3b8276a8d673363b529d15a61c1a",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__s2__cmd__internal__filepathx__LICENSE",
-        "sha256": "8582c87d9a6baa28f7827c5205b7d16c3179bc794ebd4c7cc287c49a89b7eaa1"
+        "name": "github.com/klauspost/compress@v1.20.4/s2/cmd/internal/filepathx/LICENSE",
+        "sha256": "8582c87d9a6baa28f7827c5205b7d16c3179bc794ebd4c7cc287c49a89b7eaa1",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__s2__cmd__internal__readahead__LICENSE",
-        "sha256": "10fa24a602fde465db603cd5d546e37e33642a73cd24ddf5910be81724fec8b2"
+        "name": "github.com/klauspost/compress@v1.20.4/s2/cmd/internal/readahead/LICENSE",
+        "sha256": "10fa24a602fde465db603cd5d546e37e33642a73cd24ddf5910be81724fec8b2",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__snappy__AUTHORS",
-        "sha256": "f6f3821e64460346c1ed1a15fb32b94ad241617276b60726c1350ca315309463"
+        "name": "github.com/klauspost/compress@v1.20.4/snappy/LICENSE",
+        "sha256": "f69f157b0be75da373605dbc8bbf142e8924ee82d8f44f11bcaf351335bf98cf",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__snappy__LICENSE",
-        "sha256": "f69f157b0be75da373605dbc8bbf142e8924ee82d8f44f11bcaf351335bf98cf"
+        "name": "github.com/klauspost/compress@v1.20.4/snappy/xerial/LICENSE",
+        "sha256": "d4ff111fa30ac75e28dca3868de957a3b73ff50b76bc4b8fe5c3a1f008d26703",
+        "retainedIn": "security-updates-2026-11-14.txt"
       },
       {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__snappy__xerial__LICENSE",
-        "sha256": "d4ff111fa30ac75e28dca3868de957a3b73ff50b76bc4b8fe5c3a1f008d26703"
-      },
-      {
-        "name": "caddy-license-audit\\github.com__klauspost__compress@1.20.1__zstd__internal__xxhash__LICENSE.txt",
-        "sha256": "f566a9f97bacdaf00d9f21dd991e81dc11201c4e016c86b470799429a1c9a79c"
+        "name": "github.com/klauspost/compress@v1.20.4/zstd/internal/xxhash/LICENSE.txt",
+        "sha256": "f566a9f97bacdaf00d9f21dd991e81dc11201c4e016c86b470799429a1c9a79c",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "680860caaacbb74f2010f32e4eb81f14cdc597e8a4633c7316946ab7cca5895a"
   },
   {
     "name": "github.com/klauspost/cpuid/v2",
@@ -1629,14 +1642,21 @@
   },
   {
     "name": "golang.org/x/crypto",
-    "version": "0.57.0",
-    "source": "https://proxy.golang.org/golang.org/x/crypto/@v/v0.57.0.zip",
+    "version": "0.59.0",
+    "source": "https://proxy.golang.org/golang.org/x/crypto/@v/v0.59.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__crypto@0.57.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/crypto@v0.59.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/crypto@v0.59.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "b5cff645013a39d6b3348dce3c53eb452de71309f9a6831c5b12b3f8d6caf1d2"
   },
   {
     "name": "golang.org/x/crypto/x509roots/fallback",
@@ -1662,14 +1682,21 @@
   },
   {
     "name": "golang.org/x/net",
-    "version": "0.60.0",
-    "source": "https://proxy.golang.org/golang.org/x/net/@v/v0.60.0.zip",
+    "version": "0.62.0",
+    "source": "https://proxy.golang.org/golang.org/x/net/@v/v0.62.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__net@0.60.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/net@v0.62.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/net@v0.62.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "50e869800f4921e910eb6550369f937c7187d130a7f7f78a26ef9b589a7071a6"
   },
   {
     "name": "golang.org/x/oauth2",
@@ -1684,47 +1711,75 @@
   },
   {
     "name": "golang.org/x/sync",
-    "version": "0.23.0",
-    "source": "https://proxy.golang.org/golang.org/x/sync/@v/v0.23.0.zip",
+    "version": "0.25.0",
+    "source": "https://proxy.golang.org/golang.org/x/sync/@v/v0.25.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__sync@0.23.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/sync@v0.25.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/sync@v0.25.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "c27da17d7e217dec0c2f8c715e5ce2b92815fa76fc08da13c41a73dd6a67dfe0"
   },
   {
     "name": "golang.org/x/sys",
-    "version": "0.48.0",
-    "source": "https://proxy.golang.org/golang.org/x/sys/@v/v0.48.0.zip",
+    "version": "0.50.0",
+    "source": "https://proxy.golang.org/golang.org/x/sys/@v/v0.50.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__sys@0.48.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/sys@v0.50.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/sys@v0.50.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "b115e8a144a7c9d1df3ffb8af20b283e162844b5b624a97ee342955cca69b9e6"
   },
   {
     "name": "golang.org/x/term",
-    "version": "0.46.0",
-    "source": "https://proxy.golang.org/golang.org/x/term/@v/v0.46.0.zip",
+    "version": "0.48.0",
+    "source": "https://proxy.golang.org/golang.org/x/term/@v/v0.48.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__term@0.46.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/term@v0.48.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/term@v0.48.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "3f6dfe1b6031005d556ad54027c191636299aa4496fd631d1b1dcd23ada8bec7"
   },
   {
     "name": "golang.org/x/text",
-    "version": "0.42.0",
-    "source": "https://proxy.golang.org/golang.org/x/text/@v/v0.42.0.zip",
+    "version": "0.44.0",
+    "source": "https://proxy.golang.org/golang.org/x/text/@v/v0.44.0.zip",
     "files": [
       {
-        "name": "caddy-license-audit\\golang.org__x__text@0.42.0__LICENSE",
-        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+        "name": "golang.org/x/text@v0.44.0/LICENSE",
+        "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+        "retainedIn": "security-updates-2026-11-14.txt"
+      },
+      {
+        "name": "golang.org/x/text@v0.44.0/PATENTS",
+        "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+        "retainedIn": "security-updates-2026-11-14.txt"
       }
-    ]
+    ],
+    "archiveSha256": "e51c60a7d121a493048b1638023983ce183bd5d70df1db495423ce1415663202"
   },
   {
     "name": "golang.org/x/time",

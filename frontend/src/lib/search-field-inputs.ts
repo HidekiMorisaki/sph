@@ -1,4 +1,4 @@
-import {selectionNode,selectionValues} from './search-selection';
+import {selectionNode,selectionValues,unsetSelection} from './search-selection';
 import { emptyGroup, type SearchField, type SearchGroup, type SearchNode, type SearchRule } from './search';
 
 export type SearchInputField = {
@@ -46,6 +46,7 @@ export function searchFieldValue(node: SearchNode | undefined, item: SearchInput
 	if(item.field.type==='choice'&&item.field.unsetMode){const values=selectionValues(node,item);if(values)return [values.join(','),''];}
 	const rule = node && fieldRule(node, item);
 	if (!rule) return ['', ''];
+	if (rule.operator === 'unset' && searchFieldRange(item.field) && item.field.unsetMode === 'value') return [unsetSelection, ''];
 	if (rule.operator === 'between') return Array.isArray(rule.value) ? [String(rule.value[0]), String(rule.value[1])] : ['', ''];
 	if (item.numericRange && rule.operator === 'eq') return [String(rule.value ?? ''), String(rule.value ?? '')];
 	return rule.operator === 'lte' ? ['', String(rule.value ?? '')] : [String(rule.value ?? ''), ''];
@@ -54,6 +55,10 @@ export function searchFieldValue(node: SearchNode | undefined, item: SearchInput
 export function searchFieldNode(item: SearchInputField, values: [string, string]): SearchNode | undefined {
 	const [from, to] = values;
 	if(item.field.type==='choice'&&item.field.unsetMode)return selectionNode(item,from?from.split(','):[]);
+	if(searchFieldRange(item.field)&&item.field.unsetMode==='value'&&from===unsetSelection){
+	 const rule:SearchRule={kind:'rule',field:item.field.code,operator:'unset'};
+	 return item.root===true?rule:{...emptyGroup(),context:item.context,match:'some',children:[rule]};
+	}
 	if (!from && !to) return;
 	const range = searchFieldRange(item.field) || item.numericRange;
 	const scalar = (value: string) => item.field.type === 'number' ? Number(value) : value;

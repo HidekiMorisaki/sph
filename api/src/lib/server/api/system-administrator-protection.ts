@@ -1,7 +1,7 @@
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasPermissionOperation } from '$lib/server/auth/permissions';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasPermissionOperation } from '#lib/server/auth/permissions.js';
 import { throwApiError } from './response';
 
 // All paths that can remove an administrator use the same transaction lock.

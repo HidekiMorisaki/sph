@@ -1,7 +1,7 @@
 <script lang="ts">
  import {tick,type Snippet} from 'svelte';
  import DragHandleIcon from './DragHandleIcon.svelte';
- import {localization} from '$lib/localization';
+ import {localization} from '#lib/localization.js';
  let {ids,label,labelFor,disabled=false,canDrag=()=>true,groupFor=()=>'',table=false,header,children,onreorder}:{ids:number[];label:string;labelFor:(id:number)=>string;disabled?:boolean;canDrag?:(id:number)=>boolean;groupFor?:(id:number)=>string;table?:boolean;header?:Snippet;children:Snippet<[number]>;onreorder:(ids:number[],moved:number,target:number)=>void}=$props();
  const owner=$props.id();let root=$state<HTMLElement>(),active=$state<number|null>(null),preview=$state<number[]>([]),target=$state<number|null>(null),pointer=$state<number|null>(null),announcement=$state('');
  let shown=$derived(active===null?ids:preview);

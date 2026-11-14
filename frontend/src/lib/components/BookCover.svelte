@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { localization } from '$lib/localization';
-	import { apiData } from '$lib/api';
+	import { localization } from '#lib/localization.js';
+	import { apiData } from '#lib/api.js';
 	let { titleId, image, refresh = 0, large = false }: { titleId: number | null; image?: string | null; refresh?: number; large?: boolean } = $props();
 	let source = $state('/images/book-cover-none.svg');
 	let alt = $derived(source === '/images/book-cover-none.svg'

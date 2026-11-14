@@ -1,10 +1,10 @@
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { hashPassword } from '$lib/server/auth/session';
-import { isStrongPassword } from '$lib/server/auth/password';
-import { invitationHash, readInvitationToken } from '$lib/server/auth/invitation';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { hashPassword } from '#lib/server/auth/session.js';
+import { isStrongPassword } from '#lib/server/auth/password.js';
+import { invitationHash, readInvitationToken } from '#lib/server/auth/invitation.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const invalid = () => failure(400, 'INVALID_INVITATION', 'This invitation is invalid or has expired.');
 

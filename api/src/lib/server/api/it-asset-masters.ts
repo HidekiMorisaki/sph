@@ -1,8 +1,8 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import type { ListQuery } from '$lib/server/api/query';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import type { ListQuery } from '#lib/server/api/query.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export const itAssetMasterResources = ['it-asset-types', 'manufacturers', 'cpu-types', 'operating-system-vendors', 'operating-systems', 'it-asset-statuses'] as const;
 export type ItAssetMasterResource = (typeof itAssetMasterResources)[number];

@@ -157,6 +157,10 @@ enum DisposalDatePolicy {
 }
 
 model Employee {
+ ProjectExpense_authorId ProjectExpense[] @relation("ProjectExpense_authorId")
+ ProjectBaseline_authorId ProjectBaseline[] @relation("ProjectBaseline_authorId")
+ ProjectProgressRecord_authorId ProjectProgressRecord[] @relation("ProjectProgressRecord_authorId")
+ ProjectEvmReport_authorId ProjectEvmReport[] @relation("ProjectEvmReport_authorId")
   markdownImages ProjectMarkdownImage[]
   projectMemberemployeeId     ProjectMember[]            @relation("ProjectMemberemployeeId")
   projectTicketassigneeId     ProjectTicket[]            @relation("ProjectTicketassigneeId")
@@ -633,7 +637,7 @@ model WorkforceChangeHistory {
 model Team {
   id          Int            @id @default(autoincrement())
   code        String         @unique @default(dbgenerated("('TEAM-'::text || (nextval('team_code_seq'::regclass))::text)")) @db.VarChar(64)
-  /// Migration m0031 enforces case-insensitive, trimmed uniqueness for active team names.
+  /// Baseline m0046 enforces case-insensitive, trimmed uniqueness for active team names.
   name        String         @db.VarChar(128)
   description String?        @db.VarChar(5000)
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1556,6 +1560,17 @@ model SystemMetricSample {
   @@map("system_metric_samples")
 }
 
+model AccountInvitationSetting {
+  id              Int       @id @default(autoincrement())
+  key             String    @unique @default("main") @db.VarChar(32)
+  validityMinutes Int       @default(30) @map("validity_minutes")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("account_invitation_settings")
+}
+
 model AccountInvitation {
   id           Int       @id @default(autoincrement())
   tokenHash    String    @unique @map("token_hash")
@@ -1825,6 +1840,13 @@ model NotificationRecipient {
 }
 
 model Project {
+ ProjectEvmSetting_projectId ProjectEvmSetting[] @relation("ProjectEvmSetting_projectId")
+ ProjectCostRate_projectId ProjectCostRate[] @relation("ProjectCostRate_projectId")
+ ProjectExpense_projectId ProjectExpense[] @relation("ProjectExpense_projectId")
+ ProjectBaseline_projectId ProjectBaseline[] @relation("ProjectBaseline_projectId")
+ ProjectProgressRecord_projectId ProjectProgressRecord[] @relation("ProjectProgressRecord_projectId")
+ ProjectEvmReport_projectId ProjectEvmReport[] @relation("ProjectEvmReport_projectId")
+  customFields ProjectCustomField[]
   markdownImages ProjectMarkdownImage[]
   id                             Int                     @id @default(autoincrement())
   code                           String                  @unique @default(dbgenerated("('PJT-'::text || nextval('project_code_seq'::regclass))"))
@@ -1869,6 +1891,7 @@ model ProjectMember {
 }
 
 model ProjectTicketType {
+  customFields ProjectCustomFieldType[]
   milestone Boolean @default(false)
   id                      Int                 @id @default(autoincrement())
   projectId               Int                 @map("project_id")
@@ -1926,6 +1949,10 @@ model ProjectTypeStatus {
 }
 
 model ProjectTicket {
+ ProjectExpense_ticketId ProjectExpense[] @relation("ProjectExpense_ticketId")
+ ProjectBaselineItem_ticketId ProjectBaselineItem[] @relation("ProjectBaselineItem_ticketId")
+ ProjectProgressRecord_ticketId ProjectProgressRecord[] @relation("ProjectProgressRecord_ticketId")
+  customFields ProjectCustomFieldValue[]
   markdownImages ProjectMarkdownImage[]
   id                          Int                     @id @default(autoincrement())
   projectId                   Int                     @map("project_id")
@@ -2129,4 +2156,238 @@ model ProjectHistory {
   @@index([ticketId])
   @@index([actorId])
   @@map("project_history")
+}
+
+model ProjectCustomField {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  projectId Int @map("project_id")
+  name String @db.VarChar(128)
+  kind String @db.VarChar(20)
+  description String @default("")
+  required Boolean @default(false)
+  enabled Boolean @default(true)
+  position Int @default(0)
+  defaultValue Json? @map("default_value")
+  min Decimal? @db.Decimal(20,6)
+  max Decimal? @db.Decimal(20,6)
+  maxLength Int? @map("max_length")
+  project Project @relation(fields:[projectId],references:[id],onDelete:Restrict)
+  options ProjectCustomFieldOption[]
+  types ProjectCustomFieldType[]
+  values ProjectCustomFieldValue[]
+  @@unique([projectId,name])
+  @@index([projectId,enabled,position])
+  @@map("project_custom_fields")
+}
+
+model ProjectCustomFieldOption {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  fieldId Int @map("field_id")
+  name String @db.VarChar(128)
+  enabled Boolean @default(true)
+  position Int @default(0)
+  field ProjectCustomField @relation(fields:[fieldId],references:[id],onDelete:Restrict)
+  selections ProjectCustomFieldSelection[]
+  @@unique([fieldId,name])
+  @@map("project_custom_field_options")
+}
+
+model ProjectCustomFieldType {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  fieldId Int @map("field_id")
+  typeId Int @map("type_id")
+  field ProjectCustomField @relation(fields:[fieldId],references:[id],onDelete:Restrict)
+  type ProjectTicketType @relation(fields:[typeId],references:[id],onDelete:Restrict)
+  @@unique([fieldId,typeId])
+  @@map("project_custom_field_types")
+}
+
+model ProjectCustomFieldValue {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  fieldId Int @map("field_id")
+  ticketId Int @map("ticket_id")
+  value Json
+  field ProjectCustomField @relation(fields:[fieldId],references:[id],onDelete:Restrict)
+  ticket ProjectTicket @relation(fields:[ticketId],references:[id],onDelete:Restrict)
+  selections ProjectCustomFieldSelection[]
+  @@unique([ticketId,fieldId])
+  @@index([fieldId,ticketId])
+  @@map("project_custom_field_values")
+}
+
+model ProjectCustomFieldSelection {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  valueId Int @map("value_id")
+  optionId Int @map("option_id")
+  value ProjectCustomFieldValue @relation(fields:[valueId],references:[id],onDelete:Restrict)
+  option ProjectCustomFieldOption @relation(fields:[optionId],references:[id],onDelete:Restrict)
+  @@unique([valueId,optionId])
+  @@index([optionId,valueId])
+  @@map("project_custom_field_selections")
+}
+
+model ProjectEvmSetting {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectEvmSetting_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ enabled Boolean @map("enabled") @default(false)
+ startMonth DateTime @map("start_month") @db.Date
+ currency String @map("currency") @db.VarChar(3) @default("JPY")
+ @@unique([projectId])
+ @@map("project_evm_settings")
+}
+
+model ProjectCostRate {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectCostRate_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ startsOn DateTime @map("starts_on") @db.Date
+ hourlyRate Decimal @map("hourly_rate") @db.Decimal(20,2)
+ @@unique([projectId,startsOn])
+ @@map("project_cost_rates")
+}
+
+model ProjectExpense {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectExpense_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ code String @map("code") @db.VarChar(64)
+ ticketId Int @map("ticket_id")
+ ticketIdReference ProjectTicket @relation("ProjectExpense_ticketId",fields:[ticketId],references:[id],onDelete:Restrict)
+ incurredOn DateTime @map("incurred_on") @db.Date
+ amount Decimal @map("amount") @db.Decimal(20,2)
+ category String @map("category") @db.VarChar(100)
+ evidence String @map("evidence")
+ authorId Int @map("author_id")
+ authorIdReference Employee @relation("ProjectExpense_authorId",fields:[authorId],references:[id],onDelete:Restrict)
+ @@unique([projectId,code])
+ @@map("project_expenses")
+}
+
+model ProjectBaseline {
+ scopeSnapshot Json @default("{}") @map("scope_snapshot") @db.JsonB
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectBaseline_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ version Int @map("version")
+ title String @map("title") @db.VarChar(200)
+ reason String @map("reason")
+ state String @map("state") @db.VarChar(16) @default("draft")
+ authorId Int @map("author_id")
+ authorIdReference Employee @relation("ProjectBaseline_authorId",fields:[authorId],references:[id],onDelete:Restrict)
+ confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(3)
+ @@unique([projectId,version])
+ ProjectBaselineItem_baselineId ProjectBaselineItem[] @relation("ProjectBaselineItem_baselineId")
+ ProjectEvmReport_baselineId ProjectEvmReport[] @relation("ProjectEvmReport_baselineId")
+ @@map("project_baselines")
+}
+
+model ProjectBaselineItem {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ baselineId Int @map("baseline_id")
+ baselineIdReference ProjectBaseline @relation("ProjectBaselineItem_baselineId",fields:[baselineId],references:[id],onDelete:Restrict)
+ ticketId Int @map("ticket_id")
+ ticketIdReference ProjectTicket @relation("ProjectBaselineItem_ticketId",fields:[ticketId],references:[id],onDelete:Restrict)
+ budget Decimal @map("budget") @db.Decimal(20,2)
+ title String @map("title") @db.VarChar(500)
+ @@unique([baselineId,ticketId])
+ ProjectBaselineMonth_itemId ProjectBaselineMonth[] @relation("ProjectBaselineMonth_itemId")
+ @@map("project_baseline_items")
+}
+
+model ProjectBaselineMonth {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ itemId Int @map("item_id")
+ itemIdReference ProjectBaselineItem @relation("ProjectBaselineMonth_itemId",fields:[itemId],references:[id],onDelete:Restrict)
+ month DateTime @map("month") @db.Date
+ amount Decimal @map("amount") @db.Decimal(20,2)
+ @@unique([itemId,month])
+ @@map("project_baseline_months")
+}
+
+model ProjectProgressRecord {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectProgressRecord_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ ticketId Int @map("ticket_id")
+ ticketIdReference ProjectTicket @relation("ProjectProgressRecord_ticketId",fields:[ticketId],references:[id],onDelete:Restrict)
+ month DateTime @map("month") @db.Date
+ version Int @map("version")
+ percent Decimal @map("percent") @db.Decimal(5,2)
+ evidence String @map("evidence")
+ authorId Int @map("author_id")
+ authorIdReference Employee @relation("ProjectProgressRecord_authorId",fields:[authorId],references:[id],onDelete:Restrict)
+ @@unique([projectId,ticketId,month,version])
+ @@map("project_progress_records")
+}
+
+model ProjectEvmReport {
+ id Int @id @default(autoincrement())
+ recordKey String @unique @default(dbgenerated("gen_random_uuid()")) @map("record_key") @db.Uuid
+ revision Int @default(1)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+ projectId Int @map("project_id")
+ projectIdReference Project @relation("ProjectEvmReport_projectId",fields:[projectId],references:[id],onDelete:Restrict)
+ baselineId Int @map("baseline_id")
+ baselineIdReference ProjectBaseline @relation("ProjectEvmReport_baselineId",fields:[baselineId],references:[id],onDelete:Restrict)
+ month DateTime @map("month") @db.Date
+ version Int @map("version")
+ stale Boolean @map("stale") @default(false)
+ snapshot Json @map("snapshot") @db.JsonB
+ authorId Int @map("author_id")
+ authorIdReference Employee @relation("ProjectEvmReport_authorId",fields:[authorId],references:[id],onDelete:Restrict)
+ @@unique([projectId,month,version])
+ @@map("project_evm_reports")
 }

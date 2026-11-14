@@ -1,9 +1,10 @@
-import { error, type Handle } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { DEFAULT_LOCALIZATION } from '$lib/localization';
-import { loginUrl } from '$lib/login-redirect';
-import { readInitialSession } from '$lib/server/initial-localization';
-import { createHtmlPreloads } from '$lib/server/html-preloads';
+import { error } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
+import * as env from '$app/env/private';
+import { DEFAULT_LOCALIZATION } from '#lib/localization.js';
+import { loginUrl } from '#lib/login-redirect.js';
+import { readInitialSession } from '#lib/server/initial-localization.js';
+import { createHtmlPreloads } from '#lib/server/html-preloads.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// GHSA-pfhg-q3qv-9q6r: reject protocol-relative action paths before serving them.

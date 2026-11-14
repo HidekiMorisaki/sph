@@ -1,7 +1,7 @@
-import { permissionDependencies, derivedPermissionCodes } from '$lib/server/auth/permission-dependencies';
-import { requireSystemAdminApi } from '$lib/server/api/admin';
-import { branchEditablePermissionCatalog, editablePermissionCatalog, ownBranchOperations } from '$lib/server/auth/permissions';
-import { success } from '$lib/server/api/response';
+import { permissionDependencies, derivedPermissionCodes } from '#lib/server/auth/permission-dependencies.js';
+import { requireSystemAdminApi } from '#lib/server/api/admin.js';
+import { branchEditablePermissionCatalog, editablePermissionCatalog, ownBranchOperations } from '#lib/server/auth/permissions.js';
+import { success } from '#lib/server/api/response.js';
 
 export function GET({ locals }: import('./$types').RequestEvent) {
 	requireSystemAdminApi(locals.user);

@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export const masterHistoryFields = {
  clients: ['name', 'countryCode', 'postalCode', 'prefecture', 'city', 'streetAddress', 'buildingName', 'phoneNumber1', 'phoneNumber2', 'faxNumber1', 'faxNumber2', 'notes', 'companyName', 'contactName', 'contactDepartment', 'contactEmail', 'contactMobile'],

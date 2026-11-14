@@ -1,2 +1,2 @@
-import { searchFields } from '$lib/server/api/search';
+import { searchFields } from '#lib/server/api/search.js';
 export async function GET({locals}: import('./$types').RequestEvent) { return searchFields(locals.user,'engagements'); }

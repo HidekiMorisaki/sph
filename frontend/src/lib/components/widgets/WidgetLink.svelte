@@ -1,6 +1,6 @@
 <script lang="ts">
- import {apiData} from '$lib/api';import {localization} from '$lib/localization';import {widgetText} from '$lib/widgets';
- import type {Employee} from '$lib/employees';import EmployeeDetailModal from '../EmployeeDetailModal.svelte';import DetailModal from '../DetailModal.svelte';import StatusNotice from '../StatusNotice.svelte';
+ import {apiData} from '#lib/api.js';import {localization} from '#lib/localization.js';import {widgetText} from '#lib/widgets.js';
+ import type {Employee} from '#lib/employees.js';import EmployeeDetailModal from '../EmployeeDetailModal.svelte';import DetailModal from '../DetailModal.svelte';import StatusNotice from '../StatusNotice.svelte';
  let {href,label}:{href:string;label:string}=$props();
  let t=$derived(widgetText[$localization.displayLanguage==='ja'?'ja':'en']);let detail=$derived(/^\/(employees|books)\/([1-9]\d*)$/.exec(href));
  let employee=$state<Employee|null>(null),book=$state<{name:string;author:string|null;publisher:string|null;isbn:string|null;sourceProvider:string|null;sourceUrl:string|null;sourceRetrievedAt:string|null;notes:string|null}|null>(null),loading=$state(false),error=$state('');let trigger=$state<HTMLElement|null>(null);

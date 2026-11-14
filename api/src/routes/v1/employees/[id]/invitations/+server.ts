@@ -1,12 +1,12 @@
-import { employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { lockSystemAdministrators, protectSystemAdministrator } from '$lib/server/api/system-administrator-protection';
-import { dev } from '$app/environment';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { allowsSensitiveRequest } from '$lib/server/api/sensitive-transport';
-import { INVITATION_DAILY_LIMIT, issueInvitation } from '$lib/server/auth/invitation';
-import { getPrisma } from '$lib/server/prisma';
+import { employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { lockSystemAdministrators, protectSystemAdministrator } from '#lib/server/api/system-administrator-protection.js';
+import { dev } from '$app/env';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { allowsSensitiveRequest } from '#lib/server/api/sensitive-transport.js';
+import { INVITATION_DAILY_LIMIT, issueInvitation } from '#lib/server/auth/invitation.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function POST({ params, locals, request, url }: import('./$types').RequestEvent) {
 	const { actor, branchId } = requireScopedOperationApi(locals.user, 'employees.manage');

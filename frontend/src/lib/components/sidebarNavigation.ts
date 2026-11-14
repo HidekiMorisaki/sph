@@ -1,5 +1,5 @@
-import { localeMessages } from '$lib/locale-messages';
-import type { DisplayLanguage } from '$lib/localization';
+import { localeMessages } from '#lib/locale-messages.js';
+import type { DisplayLanguage } from '#lib/localization.js';
 
 export type Link = { text: string; href: string };
 export type Item = { id: string; text: string; icon: string; href?: string; children?: Link[]; badge?: string; external?: boolean };
@@ -50,7 +50,7 @@ export const menus = localizedMenus('en');
 
 export function breadcrumbsForPath(path: string, title: string, language: DisplayLanguage = 'en'): Breadcrumb[] {
 	const breadcrumbs: Breadcrumb[] = [{ label: localeMessages[language].navigation.home, ...(path === '/' ? {} : { href: '/my-page' }) }];
-	if(/^\/projects\/[A-Z][A-Z0-9_]{0,63}\//.test(path)){const id=path.split('/')[2],view=path.split('/')[3];const labels:Record<string,string>={overview:language==='ja'?'概要':'Overview',tickets:language==='ja'?'チケット':'Tickets','ticket-panel':language==='ja'?'チケットパネル':'Ticket panel',gantt:language==='ja'?'ガントチャート':'Gantt chart',history:language==='ja'?'履歴':'History',members:language==='ja'?'参加者':'Members',settings:language==='ja'?'設定':'Settings'};return [...breadcrumbs,{label:language==='ja'?'プロジェクト':'PROJECTS'},{label:language==='ja'?'プロジェクト一覧':'Project list',href:'/projects'},{label:title,href:'/projects/'+id+'/overview'},{label:labels[view]??view}];}
+	if(/^\/projects\/[A-Z][A-Z0-9_]{0,63}\//.test(path)){const id=path.split('/')[2],view=path.split('/')[3];const labels:Record<string,string>={evm:'EVM',overview:language==='ja'?'概要':'Overview',tickets:language==='ja'?'チケット':'Tickets','ticket-panel':language==='ja'?'チケットパネル':'Ticket panel',gantt:language==='ja'?'ガントチャート':'Gantt chart',history:language==='ja'?'履歴':'History',members:language==='ja'?'参加者':'Members',settings:language==='ja'?'設定':'Settings'};return [...breadcrumbs,{label:language==='ja'?'プロジェクト':'PROJECTS'},{label:language==='ja'?'プロジェクト一覧':'Project list',href:'/projects'},{label:title,href:'/projects/'+id+'/overview'},{label:labels[view]??view}];}
 	if (path === '/my-page') return [...breadcrumbs, { label: localeMessages[language].navigation.items.myPage }];
 	for (const group of localizedMenus(language)) {
 		for (const item of group.items) {

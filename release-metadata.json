@@ -3,6 +3,39 @@
 	"repositoryUrl": "https://github.com/HidekiMorisaki/sph",
 	"revisionHistory": [
 		{
+			"version": "0.8.0",
+			"releasedAt": "2026-11-15",
+			"changeGroups": {
+				"newFeatures": [
+					"v0_8_0_monthly_evm",
+					"v0_8_0_code_block_titles",
+					"v0_8_0_child_ticket_creation",
+					"v0_8_0_ticket_history"
+				],
+				"improvements": [
+					"v0_8_0_framework_security",
+					"v0_8_0_runtime_security",
+					"v0_8_0_gosu_parser",
+					"v0_8_0_editor_tabs_notifications",
+					"v0_8_0_invitation_action_location",
+					"v0_8_0_invitation_settings",
+					"v0_8_0_copy_icons",
+					"v0_8_0_unset_date_search",
+					"v0_8_0_project_history_visibility",
+					"v0_8_0_installer_ticket_history",
+					"v0_8_0_blitz_retirement",
+					"v0_8_0_migration_baseline"
+				],
+				"bugFixes": [
+					"v0_8_0_schedule_reopen",
+					"v0_8_0_schedule_read_receipt",
+					"v0_8_0_notification_refresh",
+					"v0_8_0_workflow_template_search",
+					"v0_8_0_calendar_list_spacing"
+				]
+			}
+		},
+		{
 			"version": "0.7.0",
 			"releasedAt": "2026-11-01",
 			"changeGroups": {
@@ -205,6 +238,6 @@
 		}
 	],
 	"noticeIds": [
-		"v0_7_0_development_notice"
+		"v0_8_0_development_notice"
 	]
 }

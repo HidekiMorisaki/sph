@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALIZATION } from '$lib/localization';
+import { DEFAULT_LOCALIZATION } from '#lib/localization.js';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = ({ locals, setHeaders, url }) => {

@@ -1,13 +1,13 @@
 import {createHash} from 'node:crypto';
-import {getPrisma} from '$lib/server/prisma';
-import {Prisma} from '$lib/server/generated/prisma/client';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
-import {requireOperationApi,requireSystemAdminApi,writeAuditLog} from '$lib/server/api/admin';
-import {throwApiError,success} from '$lib/server/api/response';
-import {hasPermissionOperation,branchGlobalOperations} from '$lib/server/auth/permissions';
-import {employeeReferenceDate} from '$lib/server/api/employee-derived';
-import {emitNotification} from '$lib/server/notifications/producer';
-import {definitionErrors,normalize,attachmentKeys,type Definition,type Values,type WorkflowRoute} from '$lib/workflow-form';
+import {getPrisma} from '#lib/server/prisma.js';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
+import {requireOperationApi,requireSystemAdminApi,writeAuditLog} from '#lib/server/api/admin.js';
+import {throwApiError,success} from '#lib/server/api/response.js';
+import {hasPermissionOperation,branchGlobalOperations} from '#lib/server/auth/permissions.js';
+import {employeeReferenceDate} from '#lib/server/api/employee-derived.js';
+import {emitNotification} from '#lib/server/notifications/producer.js';
+import {definitionErrors,normalize,attachmentKeys,type Definition,type Values,type WorkflowRoute} from '#lib/workflow-form.js';
 import {attachmentType} from './attachment';
 type Tx=Prisma.TransactionClient;
 

@@ -1,7 +1,7 @@
-import { requireUser } from '$lib/server/auth/session';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireUser } from '#lib/server/auth/session.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals }: import('./$types').RequestEvent) {
 	const user = requireUser(locals.user);

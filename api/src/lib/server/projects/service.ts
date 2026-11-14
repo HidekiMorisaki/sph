@@ -1,13 +1,15 @@
+import {customFieldDefinitions,saveCustomFieldDefinitions,customValues,saveCustomValues} from './custom-fields';
+import {projectEmployeeWhere,projectEmployeeDirectory} from './employee-directory';
 import {bindMarkdownImages} from './markdown-images';
-import { Prisma, type Project, type ProjectTicket } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { throwApiError } from '$lib/server/api/response';
+import { Prisma, type Project, type ProjectTicket } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { throwApiError } from '#lib/server/api/response.js';
 import {projectSuccess as success,timeMinutes} from './time';
-import { searchBody } from '$lib/server/api/search-conditions';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { emitNotification } from '$lib/server/notifications/producer';
+import { searchBody } from '#lib/server/api/search-conditions.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { emitNotification } from '#lib/server/notifications/producer.js';
 import { validateProjectAttachment } from './attachment';
 import {normalizeProjectCode,ticketCode,parseTicketCode} from './codes';
 
@@ -36,6 +38,17 @@ function date(v:unknown):Date|null{if(v===null||v==='')return null;if(typeof v!=
 function revision(b:Body,current:number){if(b.revision!==current)fail('REVISION_CONFLICT',409);}
 export const projectVisibility=(a:Actor)=>administrator(a)?Prisma.sql`true`:Prisma.sql`(p.visibility='internal' OR EXISTS (SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.employee_id=${a.id} AND m.deleted_at IS NULL))`;
 
+async function historyResponse(tx:Tx,url:URL,p:Project,ticketId?:number){
+ const projectId=p.id;
+   const q=parseListQuery(url,['id','createdAt'] as const,'createdAt');const where={projectId,deletedAt:null,...(ticketId===undefined?{}:{ticketId})};const items=await tx.projectHistory.findMany({where,include:{actor:{select:personSelect}},orderBy:[{[q.sortBy]:q.sortOrder},{id:'desc'}],skip:q.offset,take:q.limit});
+   const referenceIds=new Set(items.flatMap(h=>h.ticketId===null?[]:[h.ticketId]));
+   const collectParents=(value:unknown)=>{if(!value||typeof value!=='object'||Array.isArray(value))return;const row=value as Record<string,unknown>;if(typeof row.parentId==='number')referenceIds.add(row.parentId);for(const key of ['before','after'])collectParents(row[key]);};
+   items.forEach(h=>collectParents(h.detail));
+   const refs=await tx.projectTicket.findMany({where:{projectId,id:{in:[...referenceIds]}},select:{id:true,number:true}});
+   const codeFor=(id:unknown)=>{const t=refs.find(t=>t.id===id);return t?ticketCode(p.code,t.number):null;};
+   const displayDetail=(value:unknown):unknown=>{if(!value||typeof value!=='object'||Array.isArray(value))return value;const row={...value as Record<string,unknown>};if('parentId' in row){row.parentCode=codeFor(row.parentId);delete row.parentId;}for(const key of ['before','after'])if(row[key])row[key]=displayDetail(row[key]);return row;};
+   return success(items.map(h=>({...h,ticketCode:codeFor(h.ticketId),detail:displayDetail(h.detail)})),200,listMeta(q,items.length,await tx.projectHistory.count({where})));
+}
 export async function projectList(user:Actor|null,url:URL,conditions:Prisma.Sql=Prisma.sql`true`){
  const a=requireOperationApi(user,'projects.read'),q=parseListQuery(url,projectSorts,'name');
  const term=url.searchParams.get('search')??'';if(term.length>500)fail('INVALID_SEARCH');
@@ -62,7 +75,7 @@ async function log(tx:Tx,a:Actor,projectId:number,kind:string,detail:Prisma.Inpu
  await tx.projectHistory.create({data:{projectId,ticketId,actorId:a.id,kind,detail}});
  await writeAuditLog(tx,a.id,kind,'projects',projectId,{ticketId});
 }
-async function employee(tx:Tx,employeeId:number){if(!await tx.employee.findFirst({where:{id:employeeId,...activeEmployee},select:{id:true}}))fail('INVALID_EMPLOYEE');}
+async function employee(tx:Tx,employeeId:number){if(!await tx.employee.findFirst({where:{id:employeeId,...projectEmployeeWhere()},select:{id:true}}))fail('INVALID_EMPLOYEE');}
 async function managerEligible(tx:Tx,employeeId:number){
  const rows=await tx.$queryRaw<{eligible:boolean}[]>`SELECT EXISTS (
   SELECT 1 FROM employees e JOIN employee_roles er ON er.employee_id=e.id AND er.deleted_at IS NULL
@@ -77,9 +90,17 @@ async function managerEligible(tx:Tx,employeeId:number){
  ) AS eligible`;
  return rows[0].eligible;
 }
-async function notify(tx:Tx,a:Actor,t:ProjectTicket,type:string,extra:number[]=[]){
- const watchers=await tx.projectWatcher.findMany({where:{ticketId:t.id,deletedAt:null},select:{employeeId:true}});
- const candidates=[...new Set([t.assigneeId,...watchers.map(w=>w.employeeId),...extra].filter((n):n is number=>n!==null&&n!==a.id))];
+async function notificationRecipients(tx:Tx,projectId:number,value:unknown):Promise<number[]>{
+ const input=value??[];
+ if(!Array.isArray(input)||input.length>50||input.some(x=>typeof x!=='number'||!Number.isSafeInteger(x)||x<=0||x>2147483647))fail('INVALID_MENTIONS');
+ const ids=[...new Set(input as number[])];
+ const count=await tx.projectMember.count({where:{projectId,employeeId:{in:ids},deletedAt:null,employee:activeEmployee}});
+ if(count!==ids.length)fail('INVALID_MENTIONS');
+ return ids;
+}
+async function notify(tx:Tx,a:Actor,t:ProjectTicket,type:string,extra:number[]=[],automatic=true){
+ const watchers=automatic?await tx.projectWatcher.findMany({where:{ticketId:t.id,deletedAt:null},select:{employeeId:true}}):[];
+ const candidates=[...new Set([automatic?t.assigneeId:null,...watchers.map(w=>w.employeeId),...extra].filter((n):n is number=>n!==null&&n!==a.id))];
  const members=await tx.projectMember.findMany({where:{projectId:t.projectId,employeeId:{in:candidates},deletedAt:null},select:{employeeId:true}});
  const people=await tx.employee.findMany({where:{id:{in:members.map(m=>m.employeeId)},...activeEmployee},select:{id:true}});
  await emitNotification(tx,{type,version:1,source:'projects',targetType:'project-ticket',targetKey:String(t.id),deduplicationKey:'project:'+crypto.randomUUID(),recipientIds:people.map(p=>p.id)});
@@ -91,12 +112,13 @@ async function configuration(tx:Tx,projectId:number){
 export async function detail(tx:Tx,a:Actor,projectId:number){
  const {p,role}=await access(tx,a,projectId),config=await configuration(tx,projectId);
  const members=await tx.projectMember.findMany({where:{projectId,deletedAt:null},include:{employee:{select:personSelect}},orderBy:{id:'asc'}});
+ const eligible=new Set((await tx.employee.findMany({where:{id:{in:members.map(m=>m.employeeId)},...activeEmployee},select:{id:true}})).map(e=>e.id));
  const counts=await tx.projectTicket.groupBy({by:['statusId'],where:{projectId,deletedAt:null},_count:true});
  const minutes=await tx.projectTimeEntry.aggregate({where:{deletedAt:null,ticket:{projectId,deletedAt:null}},_sum:{minutes:true}});
  const estimate=await tx.projectTicket.aggregate({where:{projectId,deletedAt:null},_sum:{estimatedMinutes:true}});
  const engagement=p.engagementId&&a.permissionOperations.includes('engagements.read')?await tx.engagement.findFirst({where:{id:p.engagementId,deletedAt:null},select:{id:true,name:true,code:true,contractStartsOn:true,contractEndsOn:true}}):null;
  const {engagementId:unused,nextTicketNumber:counter,...safe}=p;void unused;void counter;
- return {...safe,role,engagement,...config,members,counts,actualMinutes:minutes._sum.minutes??0,estimatedMinutes:estimate._sum.estimatedMinutes??0,operations:a.permissionOperations.filter(op=>op.startsWith('projects.'))};
+ return {...safe,customFields:await customFieldDefinitions(tx,projectId),role,engagement,...config,members:members.map(m=>({...m,canReceiveNotifications:eligible.has(m.employeeId)})),counts,actualMinutes:minutes._sum.minutes??0,estimatedMinutes:estimate._sum.estimatedMinutes??0,operations:a.permissionOperations.filter(op=>op.startsWith('projects.'))};
 }
 async function createProject(tx:Tx,a:Actor,b:Body){
  keys(b,['code','name','description','visibility','engagementId']);
@@ -127,7 +149,8 @@ async function ticketRows(tx:Tx,projectId:number,url:URL){
  const referenceIds=[...items.map(t=>t.parentId),...relations.flatMap(r=>[r.fromId,r.toId])].filter((id):id is number=>id!==null);
  const references=await tx.projectTicket.findMany({where:{projectId,id:{in:[...new Set(referenceIds)]}},select:{id:true,number:true}});
  const codeFor=(id:number|null)=>{const t=references.find(t=>t.id===id);return t?ticketCode(project.code,t.number):null;};
- return success(items.map(t=>({...t,code:ticketCode(project.code,t.number),parentCode:codeFor(t.parentId),actualMinutes:sums.find(s=>s.ticketId===t.id)?._sum.minutes??0})),200,{...listMeta(q,items.length,total),relations:relations.map(r=>({...r,fromCode:codeFor(r.fromId),toCode:codeFor(r.toId)}))});
+ const values=await customValues(tx,items.map(t=>t.id));
+ return success(items.map(t=>({...t,customFields:values[t.id]??{},code:ticketCode(project.code,t.number),parentCode:codeFor(t.parentId),actualMinutes:sums.find(s=>s.ticketId===t.id)?._sum.minutes??0})),200,{...listMeta(q,items.length,total),relations:relations.map(r=>({...r,fromCode:codeFor(r.fromId),toCode:codeFor(r.toId)}))});
 }
 async function ticketDetail(tx:Tx,projectId:number,ticketId:number){
  const t=await tx.projectTicket.findFirst({where:{id:ticketId,projectId,deletedAt:null}});if(!t)missing();
@@ -139,7 +162,7 @@ async function ticketDetail(tx:Tx,projectId:number,ticketId:number){
   tx.projectWatcher.findMany({where:{ticketId,deletedAt:null},select:{employeeId:true}})]);
  const project=await tx.project.findUniqueOrThrow({where:{id:projectId},select:{code:true}});
  const parent=t.parentId?await tx.projectTicket.findFirst({where:{id:t.parentId,projectId},select:{number:true}}):null;
- return {...t,code:ticketCode(project.code,t.number),parentCode:parent?ticketCode(project.code,parent.number):null,comments,checklists,timeEntries,attachments,watchers};
+ return {...t,customFields:(await customValues(tx,[ticketId]))[ticketId]??{},code:ticketCode(project.code,t.number),parentCode:parent?ticketCode(project.code,parent.number):null,comments,checklists,timeEntries,attachments,watchers};
 }
 async function validTree(tx:Tx,projectId:number,ticketId:number|null,parentId:number|null){
  const rows=await tx.projectTicket.findMany({where:{projectId,deletedAt:null},select:{id:true,parentId:true}}),byId=new Map(rows.map(r=>[r.id,r.parentId]));
@@ -150,7 +173,7 @@ async function validTree(tx:Tx,projectId:number,ticketId:number|null,parentId:nu
  if(ticketId){let descendants=[ticketId],height=0;while(descendants.length){height++;if(depth+height-1>20)fail('HIERARCHY_LIMIT');const parents=new Set(descendants);descendants=rows.filter(r=>r.id!==ticketId&&r.parentId!==null&&parents.has(r.parentId)).map(r=>r.id);}}
 }
 async function ticketData(tx:Tx,a:Actor,p:Project,b:Body,old:ProjectTicket|null){
- keys(b,['revision','title','description','parentId','typeId','statusId','assigneeId','priority','startsOn','dueOn','estimatedMinutes','position','labels']);
+ keys(b,['revision','title','description','parentId','typeId','statusId','assigneeId','priority','startsOn','dueOn','estimatedMinutes','position','labels','customFields','mentionIds']);
  const typeId=b.typeId===undefined?old?.typeId:id(b.typeId);if(!typeId)fail('TYPE_REQUIRED');
  const links=await tx.projectTypeStatus.findMany({where:{projectId:p.id,typeId,deletedAt:null,type:{deletedAt:null},status:{deletedAt:null}}});
  const statusId=b.statusId===undefined?old?.statusId??links.find(l=>l.initial)?.statusId:id(b.statusId);
@@ -170,9 +193,7 @@ export async function projectApi(e:Event){
  const path=(e.params.path??'').split('/').filter(Boolean);
  if(!path.length&&method==='GET')return projectList(a,e.url);
  if(path[0]==='directory'&&path.length===1&&method==='GET'){
-  if(!allowed(a,'create')&&!allowed(a,'members.manage'))fail('PERMISSION_REQUIRED',403);const q=parseListQuery(e.url,['id','firstName','lastName'] as const,'lastName');const term=e.url.searchParams.get('search')??'';if(term.length>255)fail('INVALID_SEARCH');
-  const where={...activeEmployee,...(term?{AND:[{OR:[{firstName:{contains:term,mode:'insensitive' as const}},{lastName:{contains:term,mode:'insensitive' as const}},{employeeCode:{contains:term,mode:'insensitive' as const}}]}]}:{})};
-  const [items,total]=await Promise.all([getPrisma().employee.findMany({where,select:personSelect,orderBy:[{[q.sortBy]:q.sortOrder},{id:'asc'}],skip:q.offset,take:q.limit}),getPrisma().employee.count({where})]);return success(items,200,listMeta(q,items.length,total));
+  if(!allowed(a,'create')&&!allowed(a,'members.manage'))fail('PERMISSION_REQUIRED',403);return projectEmployeeDirectory(e.url);
  }
  const isUpload=path[3]==='attachments'&&method==='POST';
  let bytes:Uint8Array|undefined,upload:{name:string;mime:string;bytes:Buffer}|undefined;
@@ -191,7 +212,7 @@ export async function projectApi(e:Event){
   if(!path.length){if(method!=='POST')fail('METHOD_NOT_ALLOWED',405);requireOperationApi(a,'projects.create');return createProject(tx,a,b);}
   const projectId=await projectIdentity(tx,path[0]);
   if(method!=='GET')await tx.$queryRaw`SELECT id FROM projects WHERE id=${projectId} FOR UPDATE`;
-  const {p,role,admin}=await access(tx,a,projectId,method!=='GET',['members','settings'].includes(path[1]??'')||path.length===1&&method!=='GET');
+  const {p,role,admin}=await access(tx,a,projectId,method!=='GET',['members','settings','custom-fields'].includes(path[1]??'')||path.length===1&&method!=='GET');
   if(method!=='GET'&&p.status==='archived'&&path.length!==1)fail('PROJECT_ARCHIVED',409);
   if(admin&&role==='manager'&&method!=='GET'&&!await tx.projectMember.findFirst({where:{projectId,employeeId:a.id,role:'manager',deletedAt:null}}))await writeAuditLog(tx,a.id,'project.admin_intervention','projects',projectId);
   if(path.length===1){
@@ -208,14 +229,7 @@ export async function projectApi(e:Event){
    if(method==='DELETE'){requireOperationApi(a,'projects.delete');if(Number(e.url.searchParams.get('revision'))!==p.revision)fail('REVISION_CONFLICT',409);await tx.project.update({where:{id:projectId},data:{deletedAt:new Date(),revision:{increment:1}}});await log(tx,a,projectId,'project.deleted',{});return success(null);}
   }
   if(path[1]==='history'&&path.length===2&&method==='GET'){
-   const q=parseListQuery(e.url,['id','createdAt'] as const,'createdAt');const where={projectId,deletedAt:null};const items=await tx.projectHistory.findMany({where,include:{actor:{select:personSelect}},orderBy:[{[q.sortBy]:q.sortOrder},{id:'desc'}],skip:q.offset,take:q.limit});
-   const referenceIds=new Set(items.flatMap(h=>h.ticketId===null?[]:[h.ticketId]));
-   const collectParents=(value:unknown)=>{if(!value||typeof value!=='object'||Array.isArray(value))return;const row=value as Record<string,unknown>;if(typeof row.parentId==='number')referenceIds.add(row.parentId);for(const key of ['before','after'])collectParents(row[key]);};
-   items.forEach(h=>collectParents(h.detail));
-   const refs=await tx.projectTicket.findMany({where:{projectId,id:{in:[...referenceIds]}},select:{id:true,number:true}});
-   const codeFor=(id:unknown)=>{const t=refs.find(t=>t.id===id);return t?ticketCode(p.code,t.number):null;};
-   const displayDetail=(value:unknown):unknown=>{if(!value||typeof value!=='object'||Array.isArray(value))return value;const row={...value as Record<string,unknown>};if('parentId' in row){row.parentCode=codeFor(row.parentId);delete row.parentId;}for(const key of ['before','after'])if(row[key])row[key]=displayDetail(row[key]);return row;};
-   return success(items.map(h=>({...h,ticketCode:codeFor(h.ticketId),detail:displayDetail(h.detail)})),200,listMeta(q,items.length,await tx.projectHistory.count({where})));
+   return historyResponse(tx,e.url,p);
   }
   if(path[1]==='members'&&path.length<=3&&method!=='GET'){
    requireOperationApi(a,'projects.members.manage');revision(b,p.revision);keys(b,['revision','employeeId','role']);const employeeId=path[2]?id(path[2]):id(b.employeeId);
@@ -233,14 +247,21 @@ export async function projectApi(e:Event){
   if(path[1]==='settings'&&path.length===2&&method==='PUT'){
    requireOperationApi(a,'projects.settings.manage');await saveSettings(tx,a,p,b);return success(await detail(tx,a,projectId));
   }
+  if(path[1]==='custom-fields'&&path.length===2){
+   if(method==='GET')return success(await customFieldDefinitions(tx,projectId));
+   if(method==='PUT'){requireOperationApi(a,'projects.settings.manage');await saveCustomFieldDefinitions(tx,projectId,p.revision,b);await log(tx,a,projectId,'project.custom_fields_updated',JSON.parse(JSON.stringify(await customFieldDefinitions(tx,projectId))));return success(await detail(tx,a,projectId));}
+   fail('METHOD_NOT_ALLOWED',405);
+  }
   if(path[1]!=='tickets')missing();
   if(path.length===2){
    if(method==='GET')return ticketRows(tx,projectId,e.url);
    if(method==='POST'){
-    requireOperationApi(a,'projects.tickets.create');if(p.nextTicketNumber>=2147483647)fail('TICKET_NUMBER_EXHAUSTED',409);const data=await ticketData(tx,a,p,b,null);
+    requireOperationApi(a,'projects.tickets.create');if(p.nextTicketNumber>=2147483647)fail('TICKET_NUMBER_EXHAUSTED',409);const recipients=await notificationRecipients(tx,projectId,b.mentionIds);const data=await ticketData(tx,a,p,b,null);
     const t=await tx.projectTicket.create({data:{...data,projectId,number:p.nextTicketNumber,authorId:a.id}});
+    const custom=await saveCustomValues(tx,projectId,t.id,t.typeId,b.customFields,true);
+    await log(tx,a,projectId,'ticket.custom_fields_updated',JSON.parse(JSON.stringify(custom)),t.id);
     await bindMarkdownImages(tx,a,t.description,{targetType:'ticket',projectId,ticketId:t.id,commentId:null});
-    await tx.project.update({where:{id:projectId},data:{nextTicketNumber:{increment:1},revision:{increment:1}}});await log(tx,a,projectId,'ticket.created',{title:t.title,number:t.number,description:t.description},t.id);await notify(tx,a,t,'project.assigned');return success(await ticketDetail(tx,projectId,t.id),201);
+    await tx.project.update({where:{id:projectId},data:{nextTicketNumber:{increment:1},revision:{increment:1}}});await log(tx,a,projectId,'ticket.created',{title:t.title,number:t.number,description:t.description},t.id);await notify(tx,a,t,t.assigneeId?'project.assigned':'project.ticket.created',recipients);return success(await ticketDetail(tx,projectId,t.id),201);
    }
    fail('METHOD_NOT_ALLOWED',405);
   }
@@ -249,19 +270,21 @@ export async function projectApi(e:Event){
   const t=await tx.projectTicket.findFirst({where:{...(/^[1-9]\d*$/.test(path[2])?{id:id(path[2])}:{number:parsed!.number}),projectId,deletedAt:null}});if(!t)missing();const ticketId=t.id;
   if(method==='GET'){
    if(path.length===3)return success(await ticketDetail(tx,projectId,ticketId));
+   if(path[3]==='history'&&path.length===4)return historyResponse(tx,e.url,p,ticketId);
    if(path[3]==='attachments'&&path.length===5){const file=await tx.projectAttachment.findFirst({where:{id:id(path[4]),ticketId,deletedAt:null}});if(!file)missing();return new Response(file.content,{headers:{'content-type':file.mime,'content-disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(file.name),'x-content-type-options':'nosniff','content-security-policy':"sandbox; default-src 'none'",'cache-control':'private, no-store'}});}
    missing();
   }
   const rev=method==='DELETE'||isUpload?Number(e.url.searchParams.get('revision')):b.revision;revision({revision:rev},t.revision);
+  if(path.length===3||path[3]==='time-entries')await tx.projectEvmReport.updateMany({where:{projectId,deletedAt:null,stale:false},data:{stale:true}});
   let result:unknown=null;let changeDetail:Prisma.InputJsonValue={};const snapshot=(value:unknown)=>JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   if(path.length===3){
-   if(method==='PATCH'){requireOperationApi(a,'projects.tickets.update');const data=await ticketData(tx,a,p,b,t);if(data.parentId===t.parentId&&data.position!==t.position){const movingUp=data.position<t.position;await tx.projectTicket.updateMany({where:{projectId,parentId:t.parentId,deletedAt:null,id:{not:ticketId},position:movingUp?{gte:data.position,lt:t.position}:{gt:t.position,lte:data.position}},data:{position:{increment:movingUp?1:-1},revision:{increment:1}}});}await bindMarkdownImages(tx,a,data.description,{targetType:'ticket',projectId,ticketId,commentId:null});const updated=await tx.projectTicket.update({where:{id:ticketId},data});await log(tx,a,projectId,'ticket.updated',{before:JSON.parse(JSON.stringify(t)),after:JSON.parse(JSON.stringify(updated))},ticketId);if(t.assigneeId!==updated.assigneeId)await notify(tx,a,updated,'project.assigned');}
+   if(method==='PATCH'){requireOperationApi(a,'projects.tickets.update');const recipients=await notificationRecipients(tx,projectId,b.mentionIds);const data=await ticketData(tx,a,p,b,t);if(data.parentId===t.parentId&&data.position!==t.position){const movingUp=data.position<t.position;await tx.projectTicket.updateMany({where:{projectId,parentId:t.parentId,deletedAt:null,id:{not:ticketId},position:movingUp?{gte:data.position,lt:t.position}:{gt:t.position,lte:data.position}},data:{position:{increment:movingUp?1:-1},revision:{increment:1}}});}await bindMarkdownImages(tx,a,data.description,{targetType:'ticket',projectId,ticketId,commentId:null});const updated=await tx.projectTicket.update({where:{id:ticketId},data});const custom=await saveCustomValues(tx,projectId,ticketId,updated.typeId,b.customFields,false);await log(tx,a,projectId,'ticket.custom_fields_updated',JSON.parse(JSON.stringify(custom)),ticketId);await log(tx,a,projectId,'ticket.updated',{before:JSON.parse(JSON.stringify(t)),after:JSON.parse(JSON.stringify(updated))},ticketId);if(t.assigneeId!==updated.assigneeId)await notify(tx,a,updated,'project.assigned',recipients);else await notify(tx,a,updated,'project.ticket.updated',recipients,false);}
    else if(method==='DELETE'){requireOperationApi(a,'projects.tickets.delete');if(await tx.projectTicket.count({where:{parentId:ticketId,deletedAt:null}}))fail('TICKET_HAS_CHILDREN',409);await tx.projectTicket.update({where:{id:ticketId},data:{deletedAt:new Date()}});await log(tx,a,projectId,'ticket.deleted',{},ticketId);}
    else fail('METHOD_NOT_ALLOWED',405);
   }else if(path[3]==='comments'){
    requireOperationApi(a,'projects.comments.manage');keys(b,['revision','body','mentionIds']);
-   if(method==='POST'&&path.length===4){const mentions=b.mentionIds??[];if(!Array.isArray(mentions)||mentions.length>50)fail('INVALID_MENTIONS');const ids=mentions.map(x=>id(x));const count=await tx.projectMember.count({where:{projectId,employeeId:{in:[...new Set(ids)]},deletedAt:null}});if(count!==new Set(ids).size)fail('INVALID_MENTIONS');const comment=await tx.projectComment.create({data:{ticketId,authorId:a.id,body:str(b.body,20000,false,true)}});await bindMarkdownImages(tx,a,comment.body,{targetType:'comment',projectId,ticketId,commentId:comment.id});changeDetail={after:snapshot(comment)};await notify(tx,a,t,'project.comment',ids);}
-   else if(path.length===5&&['PATCH','DELETE'].includes(method)){const c=await tx.projectComment.findFirst({where:{id:id(path[4]),ticketId,deletedAt:null}});if(!c)missing();if(c.authorId!==a.id&&role!=='manager')fail('COMMENT_OWNER_REQUIRED',403);if(method==='PATCH')await bindMarkdownImages(tx,a,str(b.body,20000,false,true),{targetType:'comment',projectId,ticketId,commentId:c.id});changeDetail={before:snapshot(c),after:snapshot(await tx.projectComment.update({where:{id:c.id},data:method==='DELETE'?{deletedAt:new Date()}:{body:str(b.body,20000,false,true),revision:{increment:1}}}))};}
+   if(method==='POST'&&path.length===4){const ids=await notificationRecipients(tx,projectId,b.mentionIds);const comment=await tx.projectComment.create({data:{ticketId,authorId:a.id,body:str(b.body,20000,false,true)}});await bindMarkdownImages(tx,a,comment.body,{targetType:'comment',projectId,ticketId,commentId:comment.id});changeDetail={after:snapshot(comment)};await notify(tx,a,t,'project.comment',ids);}
+   else if(path.length===5&&['PATCH','DELETE'].includes(method)){const c=await tx.projectComment.findFirst({where:{id:id(path[4]),ticketId,deletedAt:null}});if(!c)missing();if(c.authorId!==a.id&&role!=='manager')fail('COMMENT_OWNER_REQUIRED',403);if(method==='PATCH'){const recipients=await notificationRecipients(tx,projectId,b.mentionIds);await bindMarkdownImages(tx,a,str(b.body,20000,false,true),{targetType:'comment',projectId,ticketId,commentId:c.id});await notify(tx,a,t,'project.comment.updated',recipients,false);}changeDetail={before:snapshot(c),after:snapshot(await tx.projectComment.update({where:{id:c.id},data:method==='DELETE'?{deletedAt:new Date()}:{body:str(b.body,20000,false,true),revision:{increment:1}}}))};}
    else fail('METHOD_NOT_ALLOWED',405);
   }else if(path[3]==='checklists'){
    requireOperationApi(a,'projects.tickets.update');keys(b,['revision','text','completed','position']);if(b.completed!==undefined&&typeof b.completed!=='boolean')fail('INVALID_CHECKLIST');
@@ -329,7 +352,7 @@ async function saveSettings(tx:Tx,a:Actor,p:Project,b:Body){
  await tx.project.update({where:{id:p.id},data:{revision:{increment:1}}});await log(tx,a,p.id,'project.settings_updated',JSON.parse(JSON.stringify(await configuration(tx,p.id))));
 }
 
-export const projectNotificationTypes=['project.assigned','project.comment'];
+export const projectNotificationTypes=['project.assigned','project.comment','project.ticket.created','project.ticket.updated','project.comment.updated'];
 export async function resolveProjectNotification(key:string,a:Actor){
  if(!/^\d+$/.test(key)||!allowed(a,'read'))return {title:null,href:null,available:false};
  const t=await getPrisma().projectTicket.findFirst({where:{id:Number(key),deletedAt:null,project:{deletedAt:null,OR:administrator(a)?undefined:[{visibility:'internal'},{projectMemberprojectId:{some:{employeeId:a.id,deletedAt:null}}}]}},select:{id:true,title:true,number:true,project:{select:{code:true}}}});

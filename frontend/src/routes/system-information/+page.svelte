@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { apiData } from '$lib/api';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import PageTabs from '$lib/components/PageTabs.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import SystemInformationSection from '$lib/components/system-settings/SystemInformationSection.svelte';
-	import SystemMonitoringSection from '$lib/components/system-settings/SystemMonitoringSection.svelte';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import { apiData } from '#lib/api.js';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import PageTabs from '#lib/components/PageTabs.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import SystemInformationSection from '#lib/components/system-settings/SystemInformationSection.svelte';
+	import SystemMonitoringSection from '#lib/components/system-settings/SystemMonitoringSection.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
 	let loading = $state(true);

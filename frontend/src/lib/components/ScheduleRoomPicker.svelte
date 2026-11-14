@@ -1,8 +1,8 @@
 <script lang="ts">
  import { onMount } from 'svelte';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { allSchedulePages,type RoomChoice } from '$lib/schedule';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { allSchedulePages,type RoomChoice } from '#lib/schedule.js';
  import SearchSelect from './SearchSelect.svelte';
  let {value=null,disabled=false,onSelect}:{value?:number|null;disabled?:boolean;onSelect:(room:RoomChoice|null)=>void}=$props();
  let text=$derived(scheduleText[$localization.displayLanguage]);

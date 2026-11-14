@@ -1,15 +1,18 @@
 <script lang="ts">
+ import InfoPopover from '#lib/components/InfoPopover.svelte';
+ import CustomFieldSettings from './CustomFieldSettings.svelte';
+ import AddButton from '#lib/components/AddButton.svelte';
  import {untrack} from 'svelte';
- import {localization} from '$lib/localization';
- import {canProject,projectRequest,projectError,type Project,type TypeStatus} from '$lib/projects';
- import {settingsConfig,settingsPayload,rebaseMappings,typeRows,statusRows,linkRows,type SettingsSection} from '$lib/project-settings';
- import FormInput from '$lib/components/FormInput.svelte';
- import FormCheckbox from '$lib/components/FormCheckbox.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import DeleteIconButton from '$lib/components/DeleteIconButton.svelte';
- import SortableList from '$lib/components/SortableList.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
+ import {localization} from '#lib/localization.js';
+ import {canProject,projectRequest,projectError,type Project,type TypeStatus} from '#lib/projects.js';
+ import {settingsConfig,settingsPayload,rebaseMappings,typeRows,statusRows,linkRows,type SettingsSection} from '#lib/project-settings.js';
+ import FormInput from '#lib/components/FormInput.svelte';
+ import FormCheckbox from '#lib/components/FormCheckbox.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import DeleteIconButton from '#lib/components/DeleteIconButton.svelte';
+ import SortableList from '#lib/components/SortableList.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
  let {project,onsaved,ondirty,engagements=[],engagementsAvailable=false}:{project:Project;engagements?:Array<{id:number;name:string}>;engagementsAvailable?:boolean;onsaved:(p:Project)=>void;ondirty:(v:boolean)=>void}=$props();
  let ja=$derived($localization.displayLanguage==='ja');const tr=(j:string,e:string)=>ja?j:e;
  type Section=SettingsSection|'basic';
@@ -23,8 +26,9 @@
  let next=$state(-1),saving=$state<Section|null>(null),typeMigrations=$state<Record<string,string>>({}),typeStatusMigrations=$state<Record<string,string>>({}),statusMigrations=$state<Record<string,string>>({}),mappingMigrations=$state<Record<string,string>>({});
  type Message={text:string;tone:'success'|'error'|'warning'};
  let messages=$state<Record<Section,Message|null>>({basic:null,types:null,statuses:null,mappings:null});
+ let customDirty=$state(false);
  let dirtyTypes=$derived(JSON.stringify(typeRows(types))!==JSON.stringify(persisted.types)),dirtyStatuses=$derived(JSON.stringify(statusRows(statuses))!==JSON.stringify(persisted.statuses)),dirtyMappings=$derived(JSON.stringify(linkRows(links))!==JSON.stringify(persisted.typeStatuses));
- $effect(()=>ondirty(dirtyBasic||dirtyTypes||dirtyStatuses||dirtyMappings));
+ $effect(()=>ondirty(dirtyBasic||dirtyTypes||dirtyStatuses||dirtyMappings||customDirty));
  function receive(p:Project,section:Section|null){
   const before=persisted,after=settingsConfig(p),keepTypes=section!=='types'&&dirtyTypes,keepStatuses=section!=='statuses'&&dirtyStatuses,keepLinks=section!=='mappings'&&dirtyMappings;
   if(!keepTypes)types=typeRows(after.types);if(!keepStatuses)statuses=statusRows(after.statuses);
@@ -70,7 +74,7 @@
  {#if canProject(project,'settings.manage',true)}
 
  <section class="settings-card" data-settings-card="types" aria-labelledby="project-types-heading">
-  <header><h2 id="project-types-heading">{tr('種別','Types')}</h2></header><div class="card-body">{@render message('types')}
+  <header><div class="card-title"><h2 id="project-types-heading">{tr('種別','Types')}</h2><InfoPopover label={tr('種別の説明','Types help')}><p>{tr('新しい種別には保存済みの状態と初期状態を設定します。保存後に下のカードで変更できます。','New types start with saved statuses. Customize them in the status mapping card after saving.')}</p></InfoPopover></div><AddButton label={tr('種別を追加','Add type')} disabled={saving!==null||types.length>=30} onclick={()=>{change('types');types=[...types,{id:next--,name:'',position:types.length,milestone:false}];}}/></header><div class="card-body">{@render message('types')}
   <div class="column-head type-columns" aria-hidden="true"><span>{tr('種別名','Type name')}</span><span>{tr('マイルストーン','Milestone')}</span><span></span></div>
   <SortableList ids={types.map(t=>t.id)} label={tr('種別の順番を変更','Reorder types')} labelFor={id=>types.find(t=>t.id===id)?.name??''} disabled={saving==='types'} onreorder={ids=>{change('types');types=ids.map(id=>types.find(t=>t.id===id)!);}}>
    {#snippet children(id:number)}{@const type=types.find(t=>t.id===id)!}<div class="type-columns definition-row">
@@ -79,15 +83,13 @@
     <DeleteIconButton label={tr('種別を削除','Delete type')+' · '+type.name} disabled={saving!==null||types.length===1} onclick={()=>{change('types');types=types.filter(t=>t.id!==id);}}/>
    </div>{/snippet}
   </SortableList>
-  <ActionButton label={tr('種別を追加','Add type')} disabled={saving!==null||types.length>=30} onclick={()=>{change('types');types=[...types,{id:next--,name:'',position:types.length,milestone:false}];}}/>
-  {#if types.some(t=>t.id<0)}<p class="hint">{tr('新しい種別には保存済みの状態と初期状態を設定します。保存後に下のカードで変更できます。','New types start with saved statuses. Customize them in the status mapping card after saving.')}</p>{/if}
   {#each removedTypes as old}<div class="migration"><SearchSelect label={old.name+' → '+tr('移行先の種別（使用中の場合）','Replacement type (if used)')} field={'replace-type-'+old.id} value={typeMigrations[old.id]??''} options={types.map(t=>({value:String(t.id),label:t.name}))} onSelect={v=>{change('types');typeMigrations={...typeMigrations,[old.id]:v};}}/>
    {#each persisted.typeStatuses.filter(l=>l.typeId===old.id&&!targetTypeStatuses(Number(typeMigrations[old.id])).some(s=>s.id===l.statusId)) as oldLink}<SearchSelect label={persisted.statuses.find(s=>s.id===oldLink.statusId)?.name??''} field={`type-status-replacement-${old.id}-${oldLink.statusId}`} value={typeStatusMigrations[old.id+':'+oldLink.statusId]??''} options={targetTypeStatuses(Number(typeMigrations[old.id])).map(s=>({value:String(s.id),label:s.name}))} onSelect={v=>typeStatusMigrations={...typeStatusMigrations,[old.id+':'+oldLink.statusId]:v}}/>{/each}
   </div>{/each}
   </div>{@render footer('types',dirtyTypes,types.some(t=>!t.name.trim()))}
  </section>
  <section class="settings-card" data-settings-card="statuses" aria-labelledby="project-statuses-heading">
-  <header><h2 id="project-statuses-heading">{tr('状態','Statuses')}</h2></header><div class="card-body">{@render message('statuses')}
+  <header><h2 id="project-statuses-heading">{tr('状態','Statuses')}</h2><AddButton label={tr('状態を追加','Add status')} disabled={saving!==null||statuses.length>=50} onclick={()=>{change('statuses');statuses=[...statuses,{id:next--,name:'',category:'open',position:statuses.length}];}}/></header><div class="card-body">{@render message('statuses')}
   <div class="column-head status-columns" aria-hidden="true"><span>{tr('状態名','Status name')}</span><span>{tr('区分','Category')}</span><span></span></div>
   <SortableList ids={statuses.map(s=>s.id)} label={tr('状態の順番を変更','Reorder statuses')} labelFor={id=>statuses.find(s=>s.id===id)?.name??''} disabled={saving==='statuses'} onreorder={ids=>{change('statuses');statuses=ids.map(id=>statuses.find(s=>s.id===id)!);}}>
    {#snippet children(id:number)}{@const status=statuses.find(s=>s.id===id)!}<div class="status-columns definition-row">
@@ -96,14 +98,12 @@
     <DeleteIconButton label={tr('状態を削除','Delete status')+' · '+status.name} disabled={saving!==null||statuses.length===1} onclick={()=>{change('statuses');statuses=statuses.filter(s=>s.id!==id);}}/>
    </div>{/snippet}
   </SortableList>
-  <ActionButton label={tr('状態を追加','Add status')} disabled={saving!==null||statuses.length>=50} onclick={()=>{change('statuses');statuses=[...statuses,{id:next--,name:'',category:'open',position:statuses.length}];}}/>
   {#each removedStatusLinks as old}<SearchSelect label={(persisted.types.find(t=>t.id===old.typeId)?.name??'')+' / '+(persisted.statuses.find(s=>s.id===old.statusId)?.name??'')+' → '+tr('移行先','Replacement')} field={`replace-status-${old.typeId}-${old.statusId}`} value={statusMigrations[old.typeId+':'+old.statusId]??''} options={statuses.filter(s=>!old.initial||!['done','cancelled'].includes(s.category)).map(s=>({value:String(s.id),label:s.name}))} onSelect={v=>{change('statuses');statusMigrations={...statusMigrations,[old.typeId+':'+old.statusId]:v};}}/>{/each}
   {#each changedInitials as old}<SearchSelect label={(persisted.types.find(t=>t.id===old.typeId)?.name??'')+' · '+tr('新しい初期状態','New initial status')} field={'replace-initial-'+old.typeId} value={statusMigrations['initial:'+old.typeId]??''} options={statuses.filter(s=>!['done','cancelled'].includes(s.category)).map(s=>({value:String(s.id),label:s.name}))} onSelect={v=>{change('statuses');statusMigrations={...statusMigrations,['initial:'+old.typeId]:v};}}/>{/each}
   </div>{@render footer('statuses',dirtyStatuses,statuses.some(s=>!s.name.trim()))}
  </section>
  <section class="settings-card" data-settings-card="mappings" aria-labelledby="project-mappings-heading">
-  <header><h2 id="project-mappings-heading">{tr('種別ごとの状態','Statuses by type')}</h2></header><div class="card-body">{@render message('mappings')}
-  <p class="hint">{tr('保存済みの種別と状態を使用します。使用する状態を選び、ハンドルで表示順を変更してください。','Uses saved types and statuses. Select allowed statuses and drag their handles to change the order.')}</p>
+  <header><div class="card-title"><h2 id="project-mappings-heading">{tr('種別ごとの状態','Statuses by type')}</h2><InfoPopover label={tr('種別ごとの状態の説明','Statuses by type help')}><p>{tr('保存済みの種別と状態を使用します。使用する状態を選び、ハンドルで表示順を変更してください。','Uses saved types and statuses. Select allowed statuses and drag their handles to change the order.')}</p></InfoPopover></div></header><div class="card-body">{@render message('mappings')}
   {#each persisted.types as type}<fieldset><legend>{type.name}</legend>
    <SearchSelect label={tr('初期状態','Initial status')} field={'initial-'+type.id} value={String(links.find(l=>l.typeId===type.id&&l.initial)?.statusId??'')} options={allowed(type.id).filter(o=>!['done','cancelled'].includes(persisted.statuses.find(s=>String(s.id)===o.value)?.category??''))} disabled={saving==='mappings'} searchable={false} onSelect={v=>initial(type.id,Number(v))}/>
    <SortableList ids={linkOrder(type.id)} label={tr('使用可能状態の順番を変更','Reorder allowed statuses')} labelFor={id=>persisted.statuses.find(s=>s.id===id)?.name??''} canDrag={id=>links.some(l=>l.typeId===type.id&&l.statusId===id)} disabled={saving==='mappings'} onreorder={ids=>reorderLinks(type.id,ids)}>
@@ -114,9 +114,12 @@
   </div>{@render footer('mappings',dirtyMappings)}
  </section>
 {/if}
+{#if canProject(project,'settings.manage',true)}<CustomFieldSettings {project} {onsaved} ondirty={v=>customDirty=v}/>{/if}
 </div>
 <style>
+ .card-title{display:flex;align-items:center;gap:8px;min-width:0}
+ header{display:flex;align-items:center;justify-content:space-between;gap:12px}
  .settings-card[data-settings-card="basic"] h2{font-size:var(--font-size-section)}.basic-fields :global(.required){color:var(--danger)}
  .basic-fields.card-body{display:flex;flex-wrap:wrap;align-items:start}.basic-field{flex:0 0 auto;width:10rem;max-width:100%;min-width:0}.basic-name,.basic-engagement{width:16rem}.basic-fields :global(.status-notice){flex-basis:100%}@media(max-width:700px),(min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.basic-field{width:100%}.basic-fields :global(input),.basic-fields :global(.form-select-trigger){min-height:44px}}
- .settings{display:grid;gap:20px;min-width:0}.settings-card{min-width:0;border:1px solid var(--border);border-radius:var(--sph-radius-8px);background:var(--surface);box-shadow:var(--shadow)}header{padding:16px 20px;border-bottom:1px solid var(--border)}h2{font-size:var(--font-size-body);margin:0;font-weight:600}.card-body{display:grid;gap:14px;padding:20px;min-width:0}.column-head{margin-left:40px;color:var(--muted);font-size:var(--font-size-support)}.type-columns{display:grid;grid-template-columns:minmax(0,1fr) 120px 32px;gap:12px;align-items:center}.status-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,.55fr) 32px;gap:12px;align-items:center}.definition-row{min-height:36px}.milestone-cell{display:flex;align-items:center;justify-content:center;height:36px}.milestone-cell :global(.form-checkbox-field){justify-content:center}.column-head.type-columns>span:nth-child(2){text-align:center}footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--border)}fieldset{min-width:0;border:1px solid var(--border);border-radius:var(--sph-radius-4px);padding:16px;display:grid;gap:12px}legend{font-weight:500}.hint{margin:0;font-size:var(--font-size-support);line-height:1.6;color:var(--muted)}.migration{display:grid;gap:12px}@media(max-width:700px){header,footer{padding:14px 12px}.card-body{padding:16px 12px}.type-columns{grid-template-columns:minmax(0,1fr) 100px 32px;gap:8px}.status-columns{gap:8px;grid-template-columns:minmax(0,1fr) 112px 32px}.milestone-cell,.definition-row{min-height:44px}.milestone-cell{height:44px}fieldset{padding:12px}}
+ .settings{display:grid;gap:20px;min-width:0}.settings-card{min-width:0;border:1px solid var(--border);border-radius:var(--sph-radius-8px);background:var(--surface);box-shadow:var(--shadow)}header{padding:16px 20px;border-bottom:1px solid var(--border)}h2{font-size:var(--font-size-body);margin:0;font-weight:600}.card-body{display:grid;gap:14px;padding:20px;min-width:0}.column-head{margin-left:40px;color:var(--muted);font-size:var(--font-size-support)}.type-columns{display:grid;grid-template-columns:minmax(0,1fr) 120px 32px;gap:12px;align-items:center}.status-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,.55fr) 32px;gap:12px;align-items:center}.definition-row{min-height:36px}.milestone-cell{display:flex;align-items:center;justify-content:center;height:36px}.milestone-cell :global(.form-checkbox-field){justify-content:center}.column-head.type-columns>span:nth-child(2){text-align:center}footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--border)}fieldset{min-width:0;border:1px solid var(--border);border-radius:var(--sph-radius-4px);padding:16px;display:grid;gap:12px}legend{font-weight:500}.migration{display:grid;gap:12px}@media(max-width:700px){header,footer{padding:14px 12px}.card-body{padding:16px 12px}.type-columns{grid-template-columns:minmax(0,1fr) 100px 32px;gap:8px}.status-columns{gap:8px;grid-template-columns:minmax(0,1fr) 112px 32px}.milestone-cell,.definition-row{min-height:44px}.milestone-cell{height:44px}fieldset{padding:12px}}
 </style>

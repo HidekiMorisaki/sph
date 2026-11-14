@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prepareEditorTab } from '$lib/modal-tabs';
+	import { prepareEditorTab } from '#lib/modal-tabs.js';
 	import MenuItemIcon from './MenuItemIcon.svelte';
 
 	let { editLabel, deleteLabel, onEdit, onDelete, disabled = false, editing = true }: {

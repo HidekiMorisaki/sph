@@ -7,9 +7,9 @@
  import interactionPlugin from '@fullcalendar/interaction';
  import luxonPlugin from '@fullcalendar/luxon3';
  import ja from '@fullcalendar/core/locales/ja';
- import { localization } from '$lib/localization';
- import type { ScheduleItem,CalendarChoice } from '$lib/schedule';
- import { scheduleText } from '$lib/schedule-text';
+ import { localization } from '#lib/localization.js';
+ import type { ScheduleItem,CalendarChoice } from '#lib/schedule.js';
+ import { scheduleText } from '#lib/schedule-text.js';
  let {view,date,firstDay,items,calendars,context=[],editable,creatable,onOpen,onCreate,onMove,onResize=onMove}:{view:'day'|'week'|'month';date:string;firstDay:number;items:ScheduleItem[];calendars:CalendarChoice[];context?:{date:string;kind:string;title:string}[];editable:boolean;creatable:boolean;onOpen:(item:ScheduleItem)=>void;onCreate:(start:string,end:string,allDay:boolean)=>void;onMove:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void;onResize?:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void}=$props();
  let host:HTMLDivElement;let calendar=$state.raw<Calendar>();
  const views={day:'timeGridDay',week:'timeGridWeek',month:'dayGridMonth'};

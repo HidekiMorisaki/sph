@@ -1,21 +1,21 @@
-# テーマ基盤
+# Theme foundation
 
-現在は既存の外観を持つ組込み `default` だけを提供します。個人設定のテーマ選択、DB項目、設定APIは追加していません。テーマIDと明暗モードは別の概念です。
+The built-in `default` theme is the only theme currently supplied and preserves the established appearance. There is no personal theme selector, theme database field or theme settings API. Theme identity and light/dark mode are separate concepts.
 
-## 適用と拡張
+## Application and extension
 
-- `frontend/src/lib/themes/appearance.ts` が許可されたテーマIDと `light` / `dark` を検証し、`html[data-ui-theme]` / `html[data-theme]` に適用します。不明な値は `default` / `dark` に戻します。
-- 右上の明暗切替と、既存のブラウザー保存キー `theme` を維持します。初回描画前に復元し、ストレージが使用できなくても切替できます。SSRの共有storeへ利用者別状態を書き込みません。
-- `default.css` は既存の意味別変数（`--text`、`--surface`、`--action-primary` など）と追加の `--sph-*` トークンを定義します。`tokens.json` が値と利用元、`widget-token-names.json` がiframeへ渡す許可リストです。
-- 追加テーマは同梱CSSとして `:root[data-ui-theme="テーマID"]` で上書きし、必要に応じて `[data-theme="dark"]` と組み合わせます。テーマ登録・型・検証も同時に更新します。任意CSSや外部URLを個人設定から取り込みません。
-- 対象は色、角丸、影、フォント、余白です。構造、ブレークポイント、テーブル幅、操作領域の最小寸法はテーマから変更しません。データの意味を持つ利用者指定色は保持します。新しいフォント等を追加する場合は導入前にライセンスを確認してください。
+- `frontend/src/lib/themes/appearance.ts` validates the allowed theme ID and `light` / `dark`, applying them through `html[data-ui-theme]` / `html[data-theme]`. Unknown values fall back to `default` / `dark`.
+- The top-right light/dark toggle retains the browser storage key `theme`. It restores the mode before the initial paint and still works when storage is unavailable. User-specific state is not written to a shared SSR store.
+- `default.css` defines the existing semantic variables (`--text`, `--surface`, `--action-primary`, etc.) and additional `--sph-*` tokens. `tokens.json` records their values and consumers; `widget-token-names.json` is the allowlist passed to widget iframes.
+- Additional bundled themes would override `:root[data-ui-theme="theme-id"]`, optionally combined with `[data-theme="dark"]`. Registration, types and validation must be updated together. Personal settings do not import arbitrary CSS or external URLs.
+- Themes cover colors, radii, shadows, fonts and spacing. They must not change structure, breakpoints, table widths or minimum interaction areas. Preserve user-selected colors that carry data meaning. Review licenses before introducing fonts or other assets.
 
-新しいUIは対応する意味別変数や `--sph-*` を使用します。寸法別トークンは現在の外観を保つための共通値です。変更時は全利用元への影響を確認し、独立した意味が必要な場合は用途別トークンを追加します。
+New UI uses the corresponding semantic variables and `--sph-*` tokens. Dimension tokens preserve the current appearance. Check all consumers when changing a value; introduce a semantic token when a separate meaning is needed.
 
-## ウィジェットと移行
+## Widgets and installation
 
-iframeには既定値と許可リスト内のホストトークンだけを渡します。SDKの従来の明暗モード・色変数を維持し、`themeId` / `themeTokens` を追加します。色モードの更新ではWorkerを再作成せず、context変更通知を使います。公式1.0.1のCSSは旧ホストでも動くよう値のフォールバックを持ちます。
+Iframes receive only defaults and allowlisted host tokens. SDK context retains the existing mode/color variables and adds `themeId` / `themeTokens`. Mode changes update context without recreating the Worker. Official 1.0.1 CSS includes fallbacks for older hosts.
 
-新規インストールではm0032が現行の公式1.0.1を7件だけ登録します。初期マスター作成で7件を利用許可します。旧版の定義・登録処理・配置移行処理は同梱しません。
+For fresh installations, m0046 seeds exactly seven current official 1.0.1 releases. Initial master setup enables all seven. Old official definitions and their seed/placement migration blocks are not bundled. Existing catalogue updates follow the compatibility and permission-preservation rules in [Widgets](Widgets.md); fresh-install seed generation is not an existing-environment upgrade procedure.
 
-製品ルートで `node scripts/build-widget-catalogue.mjs --check` と `node scripts/build-widget-seed.mjs --check` を実行して同期を確認します。シード生成は `--write` で新規インストール用SQLだけを更新し、DBには接続しません。
+Run `node scripts/build-widget-catalogue.mjs --check` and `node scripts/build-widget-seed.mjs --check` from the product root to check synchronization. Seed generation with `--write` changes only fresh-install SQL and does not connect to a database.

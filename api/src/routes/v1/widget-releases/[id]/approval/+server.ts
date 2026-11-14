@@ -1,7 +1,7 @@
-import {retiredOfficialRelease} from '$lib/server/widgets/retirement';
-import {widgetUsageCounts,widgetGroupUsageCount} from '$lib/server/widgets/usage';
-import {lockWidgetWrites,latestRelease} from '$lib/server/widgets/upgrades';
-import {getPrisma} from '$lib/server/prisma';import {admin} from '$lib/server/widgets/service';import {writeAuditLog} from '$lib/server/api/admin';import {success,failure} from '$lib/server/api/response';
+import {retiredOfficialRelease} from '#lib/server/widgets/retirement.js';
+import {widgetUsageCounts,widgetGroupUsageCount} from '#lib/server/widgets/usage.js';
+import {lockWidgetWrites,latestRelease} from '#lib/server/widgets/upgrades.js';
+import {getPrisma} from '#lib/server/prisma.js';import {admin} from '#lib/server/widgets/service.js';import {writeAuditLog} from '#lib/server/api/admin.js';import {success,failure} from '#lib/server/api/response.js';
 export async function PUT({locals,request,params}:import('./$types').RequestEvent){
  const actor=admin(locals.user,'approvals'),b=await request.json().catch(()=>null),id=Number(params.id);
  if(!Number.isSafeInteger(id)||id<1||typeof b?.allowed!=='boolean'||typeof b?.digest!=='string')return failure(400,'INVALID_APPROVAL','Approval requires the reviewed release digest.');

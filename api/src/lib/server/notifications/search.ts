@@ -1,10 +1,13 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
 import {workflowVisibility} from '../workflow/search';
 import {projectVisibility} from '../projects/service';
 import {ticketCodeExpression} from '../projects/codes';
 
 const labels:Record<string,string>={
+ 'project.ticket.created':'プロジェクト チケットが作成されました Ticket created',
+ 'project.ticket.updated':'プロジェクト チケットが更新されました Ticket updated',
+ 'project.comment.updated':'プロジェクト チケットのコメントが編集されました Ticket comment edited',
  'project.assigned':'プロジェクト チケットが割り当てられました Ticket assigned',
  'project.comment':'プロジェクト チケットにコメントが追加されました New ticket comment',
  'workflow.requested':'ワークフロー 承認依頼 Approval requested','workflow.approved':'ワークフロー 承認されました Approved',

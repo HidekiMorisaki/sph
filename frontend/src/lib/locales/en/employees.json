@@ -1,4 +1,6 @@
 {
+	"invitationValidity": "Valid for: {1} min",
+	"invitationExpiry": "Expires at: {1}",
 	"departure": {
 		"retire": "Confirm returns and retirement date", "delete": "Confirm returns and deletion date",
 		"notice": "All IT assets and borrowed books must be returned before retirement or deletion. Confirm that the physical items have been received.",
@@ -104,7 +106,7 @@
 	"lastAdministrator": "At least one active system administrator must remain after the change.",
 	"roleHelp": "Only a System Administrator can change a role with system management permission.",
 	"deleteConfirm": "Delete {1}?",
-	"invitationDescription": "Send this link to the employee below yourself. It is shown only now and expires at {1}.",
+	"invitationDescription": "Send this link to the employee below yourself. It is shown only now.",
 	"examples": {
 		"employeeCode": "e.g. JPDEMO00000001",
 		"firstName": "e.g. Hana",

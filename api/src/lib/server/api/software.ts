@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
-import { env } from '$env/dynamic/private';
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import * as env from '$app/env/private';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { throwApiError } from './response';
 import { writeAuditLog } from './admin';
 import { purchaseMoney } from './purchase-money';

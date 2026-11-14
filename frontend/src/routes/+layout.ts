@@ -1,8 +1,8 @@
 import type { LayoutLoad } from './$types';
 import { get } from 'svelte/store';
-import { browser } from '$app/environment';
-import { localization, hasInitialLocalization } from '$lib/localization';
-import { loadLocaleNamespaces, namespacesForPath, setActiveNamespaces } from '$lib/locale-messages';
+import { browser } from '$app/env';
+import { localization, hasInitialLocalization } from '#lib/localization.js';
+import { loadLocaleNamespaces, namespacesForPath, setActiveNamespaces } from '#lib/locale-messages.js';
 
 export const load: LayoutLoad = async ({ url, data }) => {
 	const namespaces = namespacesForPath(url.pathname);

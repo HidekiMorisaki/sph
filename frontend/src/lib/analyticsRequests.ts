@@ -1,5 +1,5 @@
-import { apiData } from '$lib/api';
-import type { AnalyticsData } from '$lib/analytics';
+import { apiData } from '#lib/api.js';
+import type { AnalyticsData } from '#lib/analytics.js';
 
 export type AnalyticsFailure = 'error' | 'forbidden' | 'invalidReferenceDate' | 'referenceDateMismatch' | 'invalidMonth' | 'reversedPeriod' | 'futureMonth';
 export class AnalyticsRequestError extends Error {

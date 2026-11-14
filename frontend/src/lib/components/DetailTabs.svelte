@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { stickyTabBackdrop } from '$lib/sticky-tab-backdrop';
+	import { stickyTabBackdrop } from '#lib/sticky-tab-backdrop.js';
 	import { onMount, tick, type Snippet } from 'svelte';
 	import PageTabs from './PageTabs.svelte';
-	import { modalTabs, type ModalTabKind } from '$lib/modal-tabs';
-	import { localization } from '$lib/localization';
-	import { detailTabsSize } from '$lib/detail-tabs-size';
+	import { modalTabs, type ModalTabKind } from '#lib/modal-tabs.js';
+	import { localization } from '#lib/localization.js';
+	import { detailTabsSize } from '#lib/detail-tabs-size.js';
 	let { tabs, active = $bindable('basic'), label, kind = 'basic', idPrefix }: {
 		idPrefix?: string;
 		kind?: ModalTabKind;

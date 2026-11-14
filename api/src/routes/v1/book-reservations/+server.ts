@@ -1,11 +1,11 @@
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
-import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
-import { BookInputError, bookErrorResponse, nextBookCode, objectBody, positiveId, recordBookChange } from '$lib/server/api/books';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { lockEmployeeAllocation } from '#lib/server/api/employee-availability.js';
+import { businessDate, lockBookQueue, reconcileBookQueue } from '#lib/server/api/book-circulation.js';
+import { BookInputError, bookErrorResponse, nextBookCode, objectBody, positiveId, recordBookChange } from '#lib/server/api/books.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	const actor = requireOperationApi(locals.user, permissionOperations.bookRead);

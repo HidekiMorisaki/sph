@@ -25,13 +25,17 @@ assert.equal(hash(await read('frontend/static/fonts/' + font.distributedFile)), 
 assert.equal((await read('frontend/static/fonts/COPYRIGHT.txt')).toString().trim(), font.copyright);
 assert.ok((await read('frontend/static/fonts/OFL.txt')).toString().includes('SIL OPEN FONT LICENSE Version 1.1'));
 assert.ok((await read('frontend/static/licenses/gentelella-MIT.txt')).toString().includes('Copyright'));
+const native = await json('licenses/build-native/manifest.json');
+for (const entry of native.retainedArtifacts) assert.equal(hash(await read('licenses/build-native/' + entry.file)), entry.sha256, 'Native original notice changed: ' + entry.file);
 const supplemental = await json('licenses/npm-supplemental-manifest.json');
 for (const path of ['api/licenses/npm-SUPPLEMENTAL-NOTICES.txt', 'frontend/static/licenses/npm-SUPPLEMENTAL-NOTICES.txt']) assert.equal(hash(await read(path)), supplemental.noticeSha256);
 for (const project of ['api', 'frontend']) {
  const manifest = await json(project + '/licenses/distribution-manifest.json');
+ const lock = await json(project + '/package-lock.json');
  for (const packageName of ['node_modules/is-module', 'node_modules/pg-types', 'node_modules/pgpass']) {
   if (project === 'frontend' && packageName !== 'node_modules/is-module') continue;
-  assert.ok(manifest.entries.some(entry => entry.package === packageName && /readme/i.test(entry.file)), 'README grant omitted: ' + packageName);
+  if (lock.packages[packageName]) assert.ok(manifest.entries.some(entry => entry.package === packageName && /readme/i.test(entry.file)), 'README grant omitted: ' + packageName);
+  else assert.ok(!manifest.entries.some(entry => entry.package === packageName), 'Stale excluded-package notice: ' + packageName);
  }
  assert.ok(manifest.entries.some(entry => entry.package === 'node_modules/typescript' && entry.file === 'ThirdPartyNoticeText.txt'), 'TypeScript notice omitted');
 }

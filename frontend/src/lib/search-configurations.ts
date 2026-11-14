@@ -35,6 +35,7 @@ function businessConfiguration(target: 'teams'|'skills'|'clients'|'engagements'|
 // interaction, rendering, persistence and condition conversion. API definitions
 // remain the authority for which fields and related contexts are available.
 export const searchConfigurations: Record<SearchTarget, SearchConfiguration> = {
+ projectMembers:{fieldsEndpoint:'/v1/project-member-search-fields',keywordExample:'keyword',filterNameExample:'filterName',fields:{rootContext:'employee',initialSection:'basic',sections(contexts){return [{code:'basic',fields:(contexts.find(c=>c.code==='employee')?.fields??[]).map(field=>({context:'employee',field,root:true}))},{code:'organization',fields:contexts.filter(c=>c.code!=='employee').flatMap(c=>c.fields.map(field=>({context:c.code,field})))},{code:'quick',fields:[]}];}}},
  projectTickets:{fieldsEndpoint:'/v1/project-ticket-search-fields',keywordExample:'projectsKeyword',filterNameExample:'projectsFilterName',fields:{rootContext:'ticket',initialSection:'basic',sections(contexts){const fields=(contexts.find(c=>c.code==='ticket')?.fields??[]).map(field=>({context:'ticket',field,root:true}));return [{code:'basic',fields:fields.filter(f=>!['createdAt','updatedAt'].includes(f.field.code))},{code:'management',fields:fields.filter(f=>['createdAt','updatedAt'].includes(f.field.code))},{code:'quick',fields:[]}];}}},
  projects:businessConfiguration('projects'),
  teams:businessConfiguration('teams'),skills:businessConfiguration('skills'),clients:businessConfiguration('clients'),engagements:businessConfiguration('engagements'),

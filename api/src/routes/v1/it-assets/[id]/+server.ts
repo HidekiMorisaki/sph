@@ -1,17 +1,17 @@
-import { lockEmployeeAllocation } from '$lib/server/api/employee-availability';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { authorizeCredentialChange, applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '$lib/server/api/it-asset-credentials';
-import { parseId } from '$lib/server/api/database';
-import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '$lib/server/api/it-asset-input';
-import { reserveManagementCode, resolveManagementCode } from '$lib/server/api/it-asset-management-code';
-import { ItAssetValidationError, itAssetErrorResponse } from '$lib/server/api/it-asset-errors';
-import { changeAssignee, readAssetFields, recordAssetChange } from '$lib/server/api/it-asset-history';
-import { softDeleteAssetIpAddresses, syncAssetIpAddresses } from '$lib/server/api/it-asset-network';
-import { itAssetOutput } from '$lib/server/api/it-asset-output';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { lockEmployeeAllocation } from '#lib/server/api/employee-availability.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { assetBranchWhere, requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { authorizeCredentialChange, applyCredentialChanges, parseCredentialChanges, softDeleteAssetCredentials } from '#lib/server/api/it-asset-credentials.js';
+import { parseId } from '#lib/server/api/database.js';
+import { itAssetInclude, itAssetReferenceErrors, parseItAssetInput } from '#lib/server/api/it-asset-input.js';
+import { reserveManagementCode, resolveManagementCode } from '#lib/server/api/it-asset-management-code.js';
+import { ItAssetValidationError, itAssetErrorResponse } from '#lib/server/api/it-asset-errors.js';
+import { changeAssignee, readAssetFields, recordAssetChange } from '#lib/server/api/it-asset-history.js';
+import { softDeleteAssetIpAddresses, syncAssetIpAddresses } from '#lib/server/api/it-asset-network.js';
+import { itAssetOutput } from '#lib/server/api/it-asset-output.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ params, locals }: import('./$types').RequestEvent) { const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetRead); const id = parseId(params.id); if (!id) return failure(404, 'NOT_FOUND', 'Not found.'); const item = await getPrisma().itAsset.findFirst({ where: { id, deletedAt: null, ...assetBranchWhere(branchId) }, include: itAssetInclude }); return item ? success(itAssetOutput(item)) : failure(404, 'NOT_FOUND', 'Not found.'); }
 export async function PATCH({ params, locals, request }: import('./$types').RequestEvent) {

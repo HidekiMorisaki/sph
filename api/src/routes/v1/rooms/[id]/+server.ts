@@ -1,11 +1,11 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { lockResources } from '$lib/server/schedule/service';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { requireLocationManagementApi } from '$lib/server/api/branch-access';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { lockResources } from '#lib/server/schedule/service.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { requireLocationManagementApi } from '#lib/server/api/branch-access.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 function input(value: unknown) {
 	if (!value || typeof value !== 'object') return null; const body = value as Record<string, unknown>;

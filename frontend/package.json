@@ -13,16 +13,16 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-node": "^5.5.7",
-		"@sveltejs/kit": "^2.70.3",
-		"@sveltejs/vite-plugin-svelte": "^6.2.4",
+		"@sveltejs/adapter-node": "6.0.2",
+		"@sveltejs/kit": "3.2.0",
+		"@sveltejs/vite-plugin-svelte": "7.3.1",
 		"@types/luxon": "3.7.1",
 		"@types/node": "22.20.5",
 		"svelte": "file:../vendor/npm/generated/svelte-5.57.2",
 		"svelte-check": "file:../vendor/npm/generated/svelte-check-4.4.6",
-		"typescript": "^5.9.3",
-		"vite": "7.3.7",
-		"@rollup/plugin-commonjs": "file:../vendor/npm/generated/plugin-commonjs-29.0.3"
+		"typescript": "6.0.3",
+		"vite": "file:../vendor/npm/generated/vite-8.3.8",
+		"esbuild": "0.28.2"
 	},
 	"dependencies": {
 		"@fullcalendar/core": "6.1.22",
@@ -35,10 +35,9 @@
 		"marked": "18.1.2"
 	},
 	"overrides": {
-		"@sveltejs/kit": {
-			"cookie": "0.7.2"
-		},
-		"@rollup/plugin-commonjs": "$@rollup/plugin-commonjs",
 		"svelte": "$svelte"
+	},
+	"imports": {
+		"#lib/*": "./src/lib/*"
 	}
 }

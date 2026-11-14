@@ -1,13 +1,13 @@
 <script lang="ts">
- import {unsetSelection,selectionValues,selectionNode,choiceConditionNode,choiceConditionValues,type SelectionField} from '$lib/search-selection';
- import { localization } from '$lib/localization';
- import { searchMessages, searchChoiceLabel, operatorLabels, emptyGroup, localDateTime, zonedDateTime, type SearchGroup, type SearchNode, type SearchRule, type SearchField, type SearchContext } from '$lib/search';
+ import {unsetSelection,selectionValues,selectionNode,choiceConditionNode,choiceConditionValues,type SelectionField} from '#lib/search-selection.js';
+ import { localization } from '#lib/localization.js';
+ import { searchMessages, searchChoiceLabel, operatorLabels, emptyGroup, localDateTime, zonedDateTime, type SearchGroup, type SearchNode, type SearchRule, type SearchField, type SearchContext } from '#lib/search.js';
  import SearchConditionGroup from './SearchConditionGroup.svelte';
  import SearchSelect from './SearchSelect.svelte';
  import SearchMultiSelect from './SearchMultiSelect.svelte';
  import DatePicker from './DatePicker.svelte';
  import FormInput from './FormInput.svelte';
- import { searchInputExample } from '$lib/search-input-examples';
+ import { searchInputExample } from '#lib/search-input-examples.js';
  let {group,contexts,contextCode,depth=0,onChange,onRemove}:{group:SearchGroup;contexts:SearchContext[];contextCode:string;depth?:number;onChange:(group:SearchGroup)=>void;onRemove?:()=>void}=$props();
  const id=$props.id();
  let language=$derived($localization.displayLanguage);
@@ -24,10 +24,10 @@
  function chooseValues(index:number,field:SearchField,values:string[],negative=false){const node=choiceConditionNode(field,values,negative);if(node)update(index,node);else remove(index);}
  function update(index:number,node:SearchNode){onChange({...group,children:group.children.map((child,i)=>i===index?node:child)});}
  function remove(index:number){onChange({...group,children:group.children.filter((_,i)=>i!==index)});}
- function initialRule(field:SearchField):SearchRule{return {kind:'rule',field:field.code,operator:'eq',value:field.type==='boolean'?true:field.type==='number'?0:field.choices?.[0]??''};}
+ function initialRule(field:SearchField):SearchRule{return {kind:'rule',field:field.code,operator:field.multiple?'in':'eq',value:field.multiple?[]:field.type==='boolean'?true:field.type==='number'?0:field.choices?.[0]??''};}
  function addRule(){if(!active?.fields.length)return;onChange({...group,children:[...group.children,initialRule(active.fields[0])]});}
  function addGroup(){if(depth>=2)return;const context=contexts.find(c=>c.code===nextContext);const child:SearchGroup=context?.related?{...emptyGroup(),context:context.code,match:'some'}:emptyGroup();onChange({...group,children:[...group.children,child]});}
- function changeOperator(index:number,node:SearchRule,field:SearchField,operator:string){const value=['set','unset'].includes(operator)?undefined:operator==='relative'?[0,30]:operator==='between'?[field.type==='number'?0:'',field.type==='number'?0:'']:['in','notIn'].includes(operator)?[]:initialRule(field).value;update(index,{kind:'rule',field:node.field,operator,...(value===undefined?{}:{value})});}
+ function changeOperator(index:number,node:SearchRule,field:SearchField,operator:string){const value=['set','unset'].includes(operator)?undefined:operator==='relative'?[0,30]:operator==='between'?[field.type==='number'?0:'',field.type==='number'?0:'']:['in','allIn','notIn'].includes(operator)?[]:initialRule(field).value;update(index,{kind:'rule',field:node.field,operator,...(value===undefined?{}:{value})});}
  function changeValue(index:number,node:SearchRule,field:SearchField,value:string,part?:number){const next=field.type==='number'||node.operator==='relative'?(value===''?'':Number(value)):field.type==='datetime'?zonedDateTime(value,$localization.timeZone):value; if(part===undefined)update(index,{...node,value:next});else{const values=Array.isArray(node.value)?[...node.value]:['',''];values[part]=next;update(index,{...node,value:values});}}
 </script>
 
@@ -55,7 +55,7 @@
      <SearchSelect label={t.operator} field={`${id}-${index}-operator`} value={node.operator} searchable={false} options={field.operators.map(code=>({value:code,label:operatorLabels[code]?.[language==='ja'?0:1]??code}))} onSelect={operator=>changeOperator(index,node,field,operator)}/>
      {#if !['set','unset'].includes(node.operator)}
       {#if field.type==='boolean'}<SearchSelect label={t.value} field={`${id}-${index}-value`} value={String(node.value)} searchable={false} options={[{value:'true',label:t.yes},{value:'false',label:t.no}]} onSelect={v=>update(index,{...node,value:v==='true'})}/>
-      {:else if ['in','notIn'].includes(node.operator)}<SearchMultiSelect label={t.value} field={`${id}-${index}-value`} values={Array.isArray(node.value)?node.value.map(String):[]} options={[...(field.unsetMode==='value'&&depth<2?[{value:unsetSelection,label:t.notSet}]:[]),...choices(field)]} placeholder={t.notSpecified} onChange={values=>field.unsetMode==='value'?chooseValues(index,field,values,node.operator==='notIn'):update(index,{...node,value:values})}/>
+      {:else if ['in','allIn','notIn'].includes(node.operator)}<SearchMultiSelect label={t.value} field={`${id}-${index}-value`} values={Array.isArray(node.value)?node.value.map(String):[]} options={[...(field.unsetMode==='value'&&depth<2&&node.operator!=='allIn'?[{value:unsetSelection,label:t.notSet}]:[]),...choices(field)]} placeholder={t.notSpecified} onChange={values=>field.unsetMode==='value'&&node.operator!=='allIn'?chooseValues(index,field,values,node.operator==='notIn'):update(index,{...node,value:values})}/>
       {:else if field.type==='choice'}<SearchSelect label={t.value} field={`${id}-${index}-value`} value={String(node.value??'')} options={[...(field.unsetMode==='value'?[{value:unsetSelection,label:t.notSet}]:[]),...(field.options??field.choices?.map(v=>({value:v,label:searchChoiceLabel(v,active?.code??contextCode,language)}))??[])]} onSelect={value=>update(index,value===unsetSelection?{kind:'rule',field:node.field,operator:node.operator==='ne'?'set':'unset'}:{...node,value})}/>
       {:else}
        <div class="condition-values" style:--value-width={field.type==='datetime'&&node.operator!=='relative'?'224px':field.type==='date'&&node.operator!=='relative'?'156px':field.type==='number'||node.operator==='relative'?'112px':'208px'}>

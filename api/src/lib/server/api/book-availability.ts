@@ -1,4 +1,4 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 
 /** Shared predicate for catalog output and search, evaluated before pagination. */
 export function bookRentableSql(title = 'title', branch?: string) {

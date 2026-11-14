@@ -1,4 +1,4 @@
-import { getPrisma } from '$lib/server/prisma';
+import { getPrisma } from '#lib/server/prisma.js';
 import { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, HolidayYearUnavailableError, fetchHolidayData } from '../../../scripts/holiday-source.mjs';
 
 export { CABINET_OFFICE_HOLIDAY_CSV_URL, OPM_HOLIDAY_ICS_URL, HolidayYearUnavailableError, parseCabinetOfficeHolidayCsv, parseOpmHolidayIcs } from '../../../scripts/holiday-source.mjs';

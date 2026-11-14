@@ -1,10 +1,10 @@
-import { localeMessages, loadActiveLocale, formatLocaleTemplate, type MessageLanguage } from '$lib/locale-messages';
+import { localeMessages, loadActiveLocale, formatLocaleTemplate, type MessageLanguage } from '#lib/locale-messages.js';
 import { get, writable, type Writable } from 'svelte/store';
 import { getContext } from 'svelte';
-import { browser } from '$app/environment';
-import { productName } from '$lib/brand';
-import { formatPersonName, type PersonNameOrder, type PersonNameParts } from '$lib/person-name';
-import type { FinancialCurrency } from '$lib/financial-currency';
+import { browser } from '$app/env';
+import { productName } from '#lib/brand.js';
+import { formatPersonName, type PersonNameOrder, type PersonNameParts } from '#lib/person-name.js';
+import type { FinancialCurrency } from '#lib/financial-currency.js';
 
 export const GENDER_VALUES = ['female', 'male', 'unspecified'] as const;
 export type GenderValue = (typeof GENDER_VALUES)[number];

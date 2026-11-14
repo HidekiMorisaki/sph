@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Prisma } from '$lib/server/generated/prisma/client';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
 import { failure, type ApiErrorDetail } from './response';
 
 export class BookInputError extends Error {

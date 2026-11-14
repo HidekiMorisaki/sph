@@ -1,6 +1,6 @@
 # Gateway runtime license record
 
-The gateway builds the official Caddy v2.11.7 entry point with Go 1.26.10.
+The gateway builds the official Caddy v2.11.7 entry point with Go 1.26.11.
 `gateway/go.mod` and `gateway/go.sum` pin the selected sources. go-jose/v4 is
 updated to v4.1.6. Because upstream has no v3 release fixing CVE-2026-116587,
 `gateway/patches/go-jose-v3-jwk.go` backports the v4.1.6 private RSA modulus and
@@ -38,3 +38,10 @@ edited; section headings in the bundle identify the source of each text.
 When changing the binary, modules, toolchain or pinned image, repeat the runtime inventory, inspect the
 actual versioned source archives and license obligations, and regenerate this
 record before distributing the new image.
+
+The 2026-11-14 update selects x/net 0.62.0, x/crypto 0.59.0, chi 5.5.0,
+compress 1.20.4 and their required x/sync, x/sys, x/term and x/text versions.
+All exact-version original/nested notices and patent grants are retained in
+`security-updates-2026-11-14.txt`; their archive/notice hashes and sources are in
+`manifest.json`. Original baseline notices remain as historical attribution.
+The Go standard-library and patent originals are the adjacent 1.26.11 files.

@@ -1,7 +1,7 @@
-import { requestAnalytics } from '$lib/analyticsRequests';
-import { createAnalyticsPdf } from '$lib/analyticsPdf';
-import type { LocalizationSettings } from '$lib/localization';
-import { loadPdfFont } from '$lib/pdfFont';
+import { requestAnalytics } from '#lib/analyticsRequests.js';
+import { createAnalyticsPdf } from '#lib/analyticsPdf.js';
+import type { LocalizationSettings } from '#lib/localization.js';
+import { loadPdfFont } from '#lib/pdfFont.js';
 
 export type AnalyticsPdfSelection = { referenceDate: string; fromMonth: string; toMonth: string };
 export async function prepareAnalyticsPdfDownload(selection: AnalyticsPdfSelection, settings: LocalizationSettings, fetcher: typeof fetch = fetch) {

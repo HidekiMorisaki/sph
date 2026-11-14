@@ -1,7 +1,7 @@
 <script lang="ts">
- import { localization } from '$lib/localization';
- import { apiData } from '$lib/api';
- import { bookPurchaseMessages } from '$lib/book-purchase-messages';
+ import { localization } from '#lib/localization.js';
+ import { apiData } from '#lib/api.js';
+ import { bookPurchaseMessages } from '#lib/book-purchase-messages.js';
  let { titleId = null, branchId, quantity = $bindable(1), reason = $bindable(''), ready = $bindable(false) }: { titleId?: number | null; branchId?: number; quantity?: number; reason?: string; ready?: boolean } = $props();
  let text = $derived(bookPurchaseMessages[$localization.displayLanguage]);
  let counts = $state({ available: 0, loaned: 0, unavailable: 0 });

@@ -1,12 +1,12 @@
-import {retiredOfficialRelease} from '$lib/server/widgets/retirement';
-import {getPrisma} from '$lib/server/prisma';
-import {admin,personal} from '$lib/server/widgets/service';
-import {parseListQuery,listMeta} from '$lib/server/api/query';
-import {success} from '$lib/server/api/response';
-import {hasPermissionOperation} from '$lib/server/auth/permissions';
-import type {Manifest} from '$lib/server/widgets/contract';
-import {widgetUsageCounts,widgetGroupUsageCount} from '$lib/server/widgets/usage';
-import {releaseGroups,latestRelease,assessUpgrade,compareVersions} from '$lib/server/widgets/upgrades';
+import {retiredOfficialRelease} from '#lib/server/widgets/retirement.js';
+import {getPrisma} from '#lib/server/prisma.js';
+import {admin,personal} from '#lib/server/widgets/service.js';
+import {parseListQuery,listMeta} from '#lib/server/api/query.js';
+import {success} from '#lib/server/api/response.js';
+import {hasPermissionOperation} from '#lib/server/auth/permissions.js';
+import type {Manifest} from '#lib/server/widgets/contract.js';
+import {widgetUsageCounts,widgetGroupUsageCount} from '#lib/server/widgets/usage.js';
+import {releaseGroups,latestRelease,assessUpgrade,compareVersions} from '#lib/server/widgets/upgrades.js';
 export async function GET({locals,url}:import('./$types').RequestEvent){
  const review=url.searchParams.get('review')==='true';const actor=review?admin(locals.user,'approvals'):personal(locals.user);
  const q=parseListQuery(url,['id','widgetCode','version'] as const,'id');

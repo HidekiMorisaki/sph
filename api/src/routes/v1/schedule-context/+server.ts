@@ -1,7 +1,7 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { calendarQuery } from '$lib/server/schedule/query';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { calendarQuery } from '#lib/server/schedule/query.js';
 export async function GET({locals,url}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'schedule.read'),q=calendarQuery(url,actor.id,actor.timeZone),db=getPrisma();
  const start=new Date(q.start.getTime()-86400000),end=new Date(q.end.getTime()+86400000);

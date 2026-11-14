@@ -1,17 +1,17 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import { operationAccess } from '$lib/operation-access';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
  import { onMount } from 'svelte';
- import { apiData } from '$lib/api';
- import type { SessionUser } from '$lib/auth';
- import type { Employee } from '$lib/employees';
- import { localeMessages } from '$lib/locale-messages';
- import { formatEmployeeName, formatTimestamp, localization } from '$lib/localization';
- import type { Team } from '$lib/teams';
+ import { apiData } from '#lib/api.js';
+ import type { SessionUser } from '#lib/auth.js';
+ import type { Employee } from '#lib/employees.js';
+ import { localeMessages } from '#lib/locale-messages.js';
+ import { formatEmployeeName, formatTimestamp, localization } from '#lib/localization.js';
+ import type { Team } from '#lib/teams.js';
  import DetailModal from './DetailModal.svelte';
- import DetailTabs from '$lib/components/DetailTabs.svelte';
+ import DetailTabs from '#lib/components/DetailTabs.svelte';
  import AddButton from './AddButton.svelte';
  import DetailActionButtons from './DetailActionButtons.svelte';
  import EmployeeDetailModal from './EmployeeDetailModal.svelte';

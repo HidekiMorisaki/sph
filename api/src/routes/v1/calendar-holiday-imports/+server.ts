@@ -1,10 +1,10 @@
-import { requireOperationApi, requireSystemAdminApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { WORK_CALENDAR_MIN_YEAR, WORK_CALENDAR_MAX_YEAR, parseHolidayImportInput } from '$lib/server/api/work-calendar-input';
-import { HolidayYearUnavailableError, importPublicHolidays } from '$lib/server/calendar-holidays';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, requireSystemAdminApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { WORK_CALENDAR_MIN_YEAR, WORK_CALENDAR_MAX_YEAR, parseHolidayImportInput } from '#lib/server/api/work-calendar-input.js';
+import { HolidayYearUnavailableError, importPublicHolidays } from '#lib/server/calendar-holidays.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['completedAt', 'status', 'createdAt'] as const;
 

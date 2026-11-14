@@ -1,5 +1,5 @@
-import { failure, success } from '$lib/server/api/response';
-import { capabilitiesFor, operationScopesFor } from '$lib/server/auth/permissions';
+import { failure, success } from '#lib/server/api/response.js';
+import { capabilitiesFor, operationScopesFor } from '#lib/server/auth/permissions.js';
 
 export function GET({ locals }: import('./$types').RequestEvent) {
 	if (!locals.user) {

@@ -1,7 +1,7 @@
 <script lang="ts">
- import {untrack,onMount,tick} from 'svelte';import {COMPACT_CONTENT_QUERY} from '$lib/responsive-layout';import {apiData} from '$lib/api';import {localization} from '$lib/localization';
- import {runtimeConfiguration,widgetText,widgetPreview,widgetSizeLabel,widgetDimensions,widgetUsesCompactLayout,type WidgetData,type WidgetInstance,type WidgetSize,type WidgetRecord,type WidgetValues} from '$lib/widgets';
- import {widgetContentScale,WIDGET_GAP} from '$lib/widget-layout';
+ import {untrack,onMount,tick} from 'svelte';import {COMPACT_CONTENT_QUERY} from '#lib/responsive-layout.js';import {apiData} from '#lib/api.js';import {localization} from '#lib/localization.js';
+ import {runtimeConfiguration,widgetText,widgetPreview,widgetSizeLabel,widgetDimensions,widgetUsesCompactLayout,type WidgetData,type WidgetInstance,type WidgetSize,type WidgetRecord,type WidgetValues} from '#lib/widgets.js';
+ import {widgetContentScale,WIDGET_GAP} from '#lib/widget-layout.js';
  import RuntimeFields from './RuntimeFields.svelte';
  import ModalActionButton from '../ModalActionButton.svelte';
  import FormInput from '../FormInput.svelte';

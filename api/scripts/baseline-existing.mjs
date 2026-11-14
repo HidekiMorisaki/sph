@@ -1,11 +1,10 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync, createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, createReadStream } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { Client } from 'pg';
-import { schemaSnapshot } from './schema-snapshot.mjs';
 
 // Explicit maintenance operation only; never called by deployment or startup.
-// Replaces only Prisma's history after a verified full backup and exact schema check.
+// Current-baseline verification only. Historical migration rewrites are retired.
 const definition = JSON.parse(readFileSync(new URL('baseline-definition.json',import.meta.url),'utf8'));
 const sql = readFileSync(new URL(`../prisma/migrations/${definition.migration}/migration.sql`,import.meta.url));
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -24,23 +23,12 @@ try {
  await client.query('SELECT pg_advisory_xact_lock($1)',[814_623_507]);
  await client.query('LOCK TABLE _prisma_migrations IN ACCESS EXCLUSIVE MODE');
  const history = (await client.query('SELECT * FROM _prisma_migrations ORDER BY migration_name')).rows;
- const baseline = history.find(r=>r.migration_name===definition.migration && r.checksum===digest(sql) && r.finished_at && !r.rolled_back_at);
- if (baseline || (process.argv.includes('--if-legacy') && history.length===0)) {
-  await client.query('COMMIT'); console.log('Consolidated baseline is already recorded.');
- } else {
-  if (history.length!==definition.legacyMigrations.length || history.some((r,i) => r.migration_name!==definition.legacyMigrations[i].migration_name || r.checksum!==definition.legacyMigrations[i].checksum || !r.finished_at || r.rolled_back_at || r.logs)) throw new Error('Legacy migration history differs or includes an unfinished migration.');
-  if (JSON.stringify(await schemaSnapshot(client))!==JSON.stringify(definition.schema)) throw new Error('Database schema differs from the consolidated baseline; no history was changed.');
-  const archive = resolve(dirname(manifestPath),'migration-history-before-baseline.json');
-  const archived = {backupId:manifest.backupId,baseline:definition.migration,baselineChecksum:digest(sql),history};
-  if (existsSync(archive)) {
-   if (JSON.stringify(JSON.parse(readFileSync(archive,'utf8')))!==JSON.stringify(archived)) throw new Error('A different archived migration history already exists.');
-  } else writeFileSync(archive,JSON.stringify(archived,null,2)+'\n',{flag:'wx',mode:0o600});
-  // Infrastructure metadata only. Application rows and their sequences are untouched.
-  await client.query('DELETE FROM _prisma_migrations');
-  await client.query('INSERT INTO _prisma_migrations (id,checksum,finished_at,migration_name,started_at,applied_steps_count) VALUES ($1,$2,CURRENT_TIMESTAMP,$3,CURRENT_TIMESTAMP,0)',[randomUUID(),digest(sql),definition.migration]);
-  await client.query('COMMIT');
-  console.log('Recorded the consolidated baseline without executing schema SQL; previous migration history is retained with the full backup.');
+ if (history.length!==1 || history[0].migration_name!==definition.migration || history[0].checksum!==digest(sql) || !history[0].finished_at || history[0].rolled_back_at || history[0].logs) {
+  throw new Error('This installation does not use the current fresh-install baseline. Historical migration transitions are unsupported; no history was changed.');
  }
+ await client.query('COMMIT');
+ console.log('Current fresh-install baseline verified; no migration history was changed.');
+
 } catch (error) {
  await client.query('ROLLBACK').catch(()=>undefined);
  throw error;

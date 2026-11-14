@@ -4,6 +4,38 @@
 
 User-facing changes to SME Portal Hub are documented below by release.
 
+## [v0.8.0] - 2026-11-15
+
+### New features
+
+- Added monthly earned value management (EVM) to projects. Monthly budgets, standard hourly rates, time entries, expenses and evidence-based progress produce planned value (PV), earned value (EV) and actual cost (AC), with variance, efficiency and completion forecasts. Baselines and confirmed reports retain versions and correction history, with project-specific charts.
+- Added code block titles in project descriptions, ticket descriptions and comments. Write :title after the language name to show the title in the code header.
+- Added a Child tickets card to ticket details, with direct child creation using a fixed project and parent, and return to the parent after saving or cancelling.
+- Added a History tab to ticket details for updates and related operations, including comments, checklists, time entries and attachments. Description changes show added and removed lines in the original Markdown.
+
+### Existing feature improvements
+
+- Migrated to SvelteKit 3.2.0 and incorporated security fixes in the related web toolchain.
+- Updated Node.js to 22.23.5, PostgreSQL to 16.16 and Go to 1.26.11, and incorporated security fixes in gateway dependencies and OS packages.
+- Improved the database startup user-switching helper (gosu) to reject oversized user and group entries.
+- Changed project and ticket descriptions and comments to Input/Preview tabs. Ticket creation and editing, and comment creation and editing, now provide a searchable Users to notify field for selecting multiple recipients.
+- Moved Generate invitation link from the employee editor to the employee detail footer.
+- Made the validity period of employee invitation links configurable in System settings.
+- Unified the code, email address, invitation link and password copy buttons with a shared copy icon.
+- Enabled Not set searches for ticket start and due dates and other optional search dates, including retirement, disposal, contract and book-copy purchase dates.
+- Made project history details always visible and removed the collapse controls and Changes heading.
+- Extended optional installation data with two description revisions and status, comment and checklist history. Tickets in all three projects demonstrate description differences.
+- Discontinued the blitz.cloud distribution and removed its installer, deployment configuration and installation instructions. Use the standard Docker installation.
+- Consolidated fresh-install database migrations into a single baseline that creates the final tables, columns and constraints directly.
+
+### Bug fixes
+
+- Fixed reopening schedule details from the same notification after closing them.
+- Prevented schedule notifications from being marked as read before detail rendering completes or when detail loading is cancelled or superseded.
+- Fixed duplicate notification requests when focus or visibility changes occur while a request is in progress.
+- Fixed workflow list searches failing when a template filter is selected.
+- Fixed missing vertical padding around calendar names in the desktop work-calendar selection list.
+
 ## [v0.7.0] - 2026-11-01
 
 ### New features

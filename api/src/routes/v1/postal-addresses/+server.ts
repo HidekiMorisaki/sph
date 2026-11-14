@@ -1,6 +1,6 @@
-import { requireAuthenticatedApi } from '$lib/server/api/admin';
-import { addressCountry, postalLookupCode, validPostalCode } from '$lib/server/api/postal-address';
-import { failure, success } from '$lib/server/api/response';
+import { requireAuthenticatedApi } from '#lib/server/api/admin.js';
+import { addressCountry, postalLookupCode, validPostalCode } from '#lib/server/api/postal-address.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 type PostalCandidate = { prefecture: string; city: string; streetAddress: string };
 

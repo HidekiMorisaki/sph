@@ -1,10 +1,10 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
-import { parseId } from '$lib/server/api/database';
-import { authorizeReturns, departureAssets } from '$lib/server/api/employee-offboarding';
-import { failure, success } from '$lib/server/api/response';
-import { protectSystemAdministrator } from '$lib/server/api/system-administrator-protection';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { hasScopedPermissionOperation } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { parseId } from '#lib/server/api/database.js';
+import { authorizeReturns, departureAssets } from '#lib/server/api/employee-offboarding.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { protectSystemAdministrator } from '#lib/server/api/system-administrator-protection.js';
 
 export async function GET({locals,params}:import('./$types').RequestEvent){
  const {actor,branchId}=requireScopedOperationApi(locals.user,'employees.read'),id=parseId(params.id);

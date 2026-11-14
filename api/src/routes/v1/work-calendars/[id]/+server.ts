@@ -1,9 +1,9 @@
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { parseWorkCalendarInput } from '$lib/server/api/work-calendar-input';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { parseWorkCalendarInput } from '#lib/server/api/work-calendar-input.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, params }: import('./$types').RequestEvent) {
 	requireOperationApi(locals.user, permissionOperations.calendarRead);

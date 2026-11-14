@@ -1,11 +1,11 @@
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { failure, success } from '$lib/server/api/response';
-import { parseEmployeeIdsInput } from '$lib/server/api/work-calendar-input';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { parseEmployeeIdsInput } from '#lib/server/api/work-calendar-input.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const employeeSelect = { id: true, employeeCode: true, firstName: true, middleName: true, lastName: true } as const;
 const sortFields = ['employee', 'employeeCode'] as const;

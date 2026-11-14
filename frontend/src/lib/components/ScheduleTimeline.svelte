@@ -1,10 +1,10 @@
 <script lang="ts">
  import { onMount } from 'svelte';
  import { DateTime } from 'luxon';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { timelineDays,timelineEvents } from '$lib/schedule-timeline';
- import type { ScheduleItem,CalendarChoice } from '$lib/schedule';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { timelineDays,timelineEvents } from '#lib/schedule-timeline.js';
+ import type { ScheduleItem,CalendarChoice } from '#lib/schedule.js';
  let {view,date,firstDay,items,calendars,context=[],editable,creatable,onOpen,onCreate,onMove,onResize=onMove}:{view:'day'|'week';date:string;firstDay:number;items:ScheduleItem[];calendars:CalendarChoice[];context?:{calendarKey?:string;date:string;kind:string;title:string}[];editable:boolean;creatable:boolean;onOpen:(item:ScheduleItem)=>void;onCreate:(start:string,end:string,allDay:boolean)=>void;onMove:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void;onResize?:(item:ScheduleItem,start:string,end:string,allDay:boolean)=>void}=$props();
  let text=$derived(scheduleText[$localization.displayLanguage]),days=$derived(timelineDays(date,view,firstDay,$localization.timeZone));
  const eventHeight=48,laneGap=4,contextHeight=24;

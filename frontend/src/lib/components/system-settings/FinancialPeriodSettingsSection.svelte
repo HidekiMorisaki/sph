@@ -1,14 +1,14 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
 	import { onMount, tick } from 'svelte';
-	import { apiData } from '$lib/api';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import { apiData } from '#lib/api.js';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 	let {onSaved}:{onSaved?:()=>void}=$props();
 	type Settings = { basis: 'calendar' | 'fiscal'; fiscalStartMonth: number };
 	let text = $derived(localeMessages[$localization.displayLanguage].financial);

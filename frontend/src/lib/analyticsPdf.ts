@@ -1,8 +1,8 @@
 import { jsPDF } from '../../vendor/jspdf/index.js';
-import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '$lib/analytics';
-import { productName } from '$lib/brand';
-import { DISPLAY_LANGUAGES, formatDate, formatMonthYear, type LocalizationSettings } from '$lib/localization';
-import { niceAxis } from '$lib/chartAxis';
+import { analyticsPeriodError, analyticsText, genderPieSlices, visibleAgeGroups, type AnalyticsData } from '#lib/analytics.js';
+import { productName } from '#lib/brand.js';
+import { DISPLAY_LANGUAGES, formatDate, formatMonthYear, type LocalizationSettings } from '#lib/localization.js';
+import { niceAxis } from '#lib/chartAxis.js';
 
 const fontName = 'NotoSansJP';
 const colors = { ink: '#243449', muted: '#607086', border: '#dce4ec', blue: '#337ab7', green: '#168b75', orange: '#b85b16', pale: '#f4f7fa', white: '#ffffff' };

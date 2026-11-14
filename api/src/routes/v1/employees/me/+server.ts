@@ -1,9 +1,9 @@
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { employeeConflictResponse } from '$lib/server/api/employee-errors';
-import { readEmployeeFields, recordEmployeeChange } from '$lib/server/api/employee-history';
-import { parseEmployeeSelfInput } from '$lib/server/api/employee-input';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { employeeConflictResponse } from '#lib/server/api/employee-errors.js';
+import { readEmployeeFields, recordEmployeeChange } from '#lib/server/api/employee-history.js';
+import { parseEmployeeSelfInput } from '#lib/server/api/employee-input.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const employeeProfileSelect = {
 	id: true,

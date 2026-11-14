@@ -1,19 +1,20 @@
 <script lang="ts">
-	import {unsetSelection,readSelection,replaceSelection} from '$lib/search-selection';
+	import {unsetSelection,readSelection,replaceSelection} from '#lib/search-selection.js';
 	import { onMount, tick, type Snippet } from 'svelte';
-	import { localization } from '$lib/localization';
-	import { emptyGroup, localDateTime, zonedDateTime, searchMessages, searchChoiceLabel, type SearchContext, type SearchGroup } from '$lib/search';
-	import { splitSearchFields, searchFieldValue, searchFieldNode, type SearchInputField } from '$lib/search-field-inputs';
- import { ruleCount, type SearchNode } from '$lib/search';
- import type { SearchFieldsConfiguration, SearchSection } from '$lib/search-configurations';
+	import { localization } from '#lib/localization.js';
+	import { emptyGroup, localDateTime, zonedDateTime, searchMessages, searchChoiceLabel, type SearchContext, type SearchGroup } from '#lib/search.js';
+	import { splitSearchFields, searchFieldValue, searchFieldNode, type SearchInputField } from '#lib/search-field-inputs.js';
+ import { ruleCount, type SearchNode } from '#lib/search.js';
+ import type { SearchFieldsConfiguration, SearchSection } from '#lib/search-configurations.js';
  import SearchConditionGroup from './SearchConditionGroup.svelte';
  import BranchCopyCountFields from './BranchCopyCountFields.svelte';
 	import DatePicker from './DatePicker.svelte';
+	import FormCheckbox from './FormCheckbox.svelte';
 	import FormInput from './FormInput.svelte';
-	import { searchInputExample } from '$lib/search-input-examples';
+	import { searchInputExample } from '#lib/search-input-examples.js';
 	import SearchSelect from './SearchSelect.svelte';
 	import SearchMultiSelect from './SearchMultiSelect.svelte';
-	import { sharedSearchOptions, hasSelectionCondition } from '$lib/shared-search-options';
+	import { sharedSearchOptions, hasSelectionCondition } from '#lib/shared-search-options.js';
 	let { configuration, storageKey, contexts, conditions, onChange, quickFilters, quickCount = 0, userId = null, options = {}, onOptionsChange }: { configuration: SearchFieldsConfiguration; storageKey: string; contexts: SearchContext[]; conditions: SearchGroup; onChange: (value: SearchGroup) => void; quickFilters?: Snippet; quickCount?: number; userId?: number | null; options?: Record<string,string|boolean>; onOptionsChange?: (options:Record<string,string|boolean>)=>void } = $props();
 	const sharedKey = (item:SearchInputField) => !onOptionsChange ? undefined : storageKey.startsWith('project-tickets-v1') && item.field.code === 'assignee' ? 'assigneeIds' : storageKey === 'employees' && item.field.code === 'selection' ? sharedSearchOptions[item.context] : undefined;
 	function sharedValues(key:string):string[] { return typeof options[key] === 'string' ? options[key].split(',').map(value=>key==='assigneeIds'&&value==='unassigned'?unsetSelection:value) : []; }
@@ -29,7 +30,7 @@
  let activeSection = $state('');
  const fieldWidth = (field: SearchInputField['field']) => configuration.widths?.[field.code] ?? (field.type === 'datetime' ? '464px' : field.type === 'date' ? '336px' : '208px');
  let visibleSections = $derived(sections.filter(section => section.code === 'quick' && quickFilters || section.fields.length || section.contexts?.length));
- const relatedNodes = (section: SearchSection) => split.remaining.children.filter((node): node is import('$lib/search').SearchGroup => node.kind === 'group' && section.contexts?.some(context => context.code === node.context) === true);
+ const relatedNodes = (section: SearchSection) => split.remaining.children.filter((node): node is import('#lib/search.js').SearchGroup => node.kind === 'group' && section.contexts?.some(context => context.code === node.context) === true);
  function count(section: SearchSection): number {
   return section.code === 'quick' ? quickCount : section.fields.reduce((sum, item) => sum + (split.represented.has(item) || sharedKey(item) && options[sharedKey(item)!] ? 1 : 0), 0) + relatedNodes(section).reduce((sum, node) => sum + Math.max(1, ruleCount(node)), 0);
  }
@@ -68,7 +69,9 @@
 	});
 	function update(item: SearchInputField, value: string, part = 0) {
 		const values = searchFieldValue(split.represented.get(item), item);
-		values[part] = item.field.type === 'datetime' && value ? zonedDateTime(value, $localization.timeZone) : value;
+		if(values[0]===unsetSelection){values[0]='';values[1]='';}
+		values[part] = value!==unsetSelection && item.field.type === 'datetime' && value ? zonedDateTime(value, $localization.timeZone) : value;
+		if(value===unsetSelection){values[0]=unsetSelection;values[1]='';dateOpen='';}
 		const node = searchFieldNode(item, values);
 		const nodes = fields.flatMap(field => field === item ? node ? [node] : [] : split.represented.has(field) ? [split.represented.get(field)!] : []);
 		onChange({ ...emptyGroup(), children: [...nodes, ...split.remaining.children] });
@@ -107,12 +110,13 @@
 									{/each}
 								</div>
 							{:else if field.type === 'date' || field.type === 'datetime'}
-								<span class="range-label">{label}</span><div class="range-inputs">
+								{@const isUnset=value[0]===unsetSelection}
+								<div class="date-range-heading" role="group" aria-label={label}><span class="range-label">{label}</span>{#if field.unsetMode==='value'}<FormCheckbox label={t.notSet} field={`${id}-${item.context}-${field.code}-unset`} checked={isUnset} onChange={checked=>update(item,checked?unsetSelection:'')}/>{/if}</div><div class="range-inputs">
 									{#each [0, 1] as part}
 										{@const partLabel = `${label} ${part === 0 ? t.from : t.until}`}
 										{@const key = `${id}-${item.context}-${field.code}-${part}`}
 										{#if part === 1}<span class="range-separator" aria-hidden="true">-</span>{/if}
-										<DatePicker label={partLabel} showLabel={false} field={key} mode={field.type === 'datetime' ? 'datetime' : 'date'} value={field.type === 'datetime' ? localDateTime(value[part], $localization.timeZone) : value[part]} open={dateOpen === key} onToggle={() => dateOpen = dateOpen === key ? '' : key} onSelect={v => { update(item, v, part); dateOpen = ''; }} />
+										<DatePicker label={partLabel} showLabel={false} field={key} mode={field.type === 'datetime' ? 'datetime' : 'date'} disabled={isUnset} value={isUnset?'':field.type === 'datetime' ? localDateTime(value[part], $localization.timeZone) : value[part]} open={!isUnset&&dateOpen === key} onToggle={() => dateOpen = dateOpen === key ? '' : key} onSelect={v => { update(item, v, part); dateOpen = ''; }} />
 									{/each}
 								</div>
 							{:else if field.type === 'choice' || field.type === 'boolean'}
@@ -138,6 +142,7 @@
 </div>
 
 <style>
+	.date-range-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--sph-space-8px);margin-bottom:var(--sph-space-6px)}.date-range-heading .range-label{margin:0}
 	.additional-condition{font-size:var(--font-size-support);color:var(--muted);margin:var(--sph-space-6px) 0 0;line-height:var(--sph-leading-1-6)}
  .related-actions{display:flex;flex-wrap:wrap;gap:var(--sph-space-8px);margin-top:var(--sph-space-12px)}.related-actions button{min-height:32px;padding:var(--sph-space-5px) var(--sph-space-10px);border:1px solid var(--border);border-radius:var(--sph-radius-6px);background:var(--surface);color:var(--text);font:inherit;font-size:var(--font-size-body);cursor:pointer}
 	.category-tabs{display:flex;gap:var(--sph-space-4px);overflow-x:auto;border-bottom:1px solid var(--border);margin-top:var(--sph-space-12px)}.category-tabs button{display:flex;align-items:center;gap:var(--sph-space-6px);flex:none;min-height:36px;padding:var(--sph-space-8px) var(--sph-space-10px);border:0;border-radius:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:var(--font-size-body);white-space:nowrap;cursor:pointer}.category-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--action-primary);font-weight:var(--sph-weight-600)}.category-tabs button:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}.condition-count{border-radius:var(--sph-radius-10px);padding:var(--sph-space-1px) var(--sph-space-6px);background:var(--bg);font-size:var(--font-size-support)}.category-panel{padding:var(--sph-space-12px) var(--sph-space-4px) var(--sph-space-4px) 0}.category-panel[hidden]{display:none}.category-panel:focus-visible{outline:2px solid var(--action-primary);outline-offset:-2px}

@@ -1,14 +1,14 @@
-import { canonicalIsbn } from '$lib/server/api/book-isbn';
-import { createPurchaseRequest, purchaseInput, purchaseActor } from '$lib/server/api/book-purchases';
-import { writeAuditLog, requireOperationApi } from '$lib/server/api/admin';
-import { BookInputError, bookErrorResponse, nextBookCode, objectBody, optionalText, recordBookChange, requiredText } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
-import { lookupOpenBdBooks, openBdSourceUrl, BookLookupUnavailable } from '$lib/server/api/openbd-book-lookup';
-import { importOpenBdCover, type CoverImport } from '$lib/server/api/openbd-book-cover';
+import { canonicalIsbn } from '#lib/server/api/book-isbn.js';
+import { createPurchaseRequest, purchaseInput, purchaseActor } from '#lib/server/api/book-purchases.js';
+import { writeAuditLog, requireOperationApi } from '#lib/server/api/admin.js';
+import { BookInputError, bookErrorResponse, nextBookCode, objectBody, optionalText, recordBookChange, requiredText } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { lookupOpenBdBooks, openBdSourceUrl, BookLookupUnavailable } from '#lib/server/api/openbd-book-lookup.js';
+import { importOpenBdCover, type CoverImport } from '#lib/server/api/openbd-book-cover.js';
 
-import { bookList } from '$lib/server/api/book-list';
+import { bookList } from '#lib/server/api/book-list.js';
 export async function GET({locals,url}: import('./$types').RequestEvent){return bookList(locals.user,url);}
 
 export async function POST({ locals, request, fetch }: import('./$types').RequestEvent) {

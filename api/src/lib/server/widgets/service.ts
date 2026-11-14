@@ -1,10 +1,10 @@
 import {initializeRecords} from './records';
 import {initialRecordsFor} from './storage-contract';
 import bundled from '../../../../widgets/catalogue.json';
-import { getPrisma } from '$lib/server/prisma';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { throwApiError } from '$lib/server/api/response';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { throwApiError } from '#lib/server/api/response.js';
 import { catalogue, manifest, digest, settings, type Manifest } from './contract';
 import { publicJson } from './public-json';
 import { widgetInformation } from './information';

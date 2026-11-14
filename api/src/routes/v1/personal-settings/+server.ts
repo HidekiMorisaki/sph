@@ -1,7 +1,7 @@
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { failure, success } from '$lib/server/api/response';
-import { DEFAULT_DISPLAY_CURRENCY, DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayCurrency, isDisplayLanguage, isTimeZone, type DisplayCurrency, type DisplayLanguage } from '$lib/server/auth/localization';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { DEFAULT_DISPLAY_CURRENCY, DEFAULT_DISPLAY_LANGUAGE, DEFAULT_TIME_ZONE, isDisplayCurrency, isDisplayLanguage, isTimeZone, type DisplayCurrency, type DisplayLanguage } from '#lib/server/auth/localization.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 function output(settings: { timeZone: string; displayLanguage: string; displayCurrency: string } | null) {
 	return {

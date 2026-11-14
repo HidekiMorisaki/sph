@@ -1,6 +1,6 @@
 <script lang="ts">
  import {tick} from 'svelte';
- import {localization} from '$lib/localization';
+ import {localization} from '#lib/localization.js';
  import FormInput from './FormInput.svelte';
  let {label,field,value,disabled=false,onSelect}:{label:string;field:string;value:string;disabled?:boolean;onSelect:(value:string)=>void}=$props();
  const presets=[

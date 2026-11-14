@@ -1,11 +1,11 @@
 <script lang="ts">
  import SearchMultiSelect from './SearchMultiSelect.svelte';
  import SearchSelect from './SearchSelect.svelte';
- import { localization } from '$lib/localization';
- import { localeMessages } from '$lib/locale-messages';
- import { searchMessages, type SearchGroup } from '$lib/search';
- import { unsetSelection } from '$lib/search-selection';
- import { readSkillSelection, replaceSkillSelection, type SkillSelection } from '$lib/search-skills';
+ import { localization } from '#lib/localization.js';
+ import { localeMessages } from '#lib/locale-messages.js';
+ import { searchMessages, type SearchGroup } from '#lib/search.js';
+ import { unsetSelection } from '#lib/search-selection.js';
+ import { readSkillSelection, replaceSkillSelection, type SkillSelection } from '#lib/search-skills.js';
  let { conditions, onConditionsChange, fallback, options, onLegacyClear }: { conditions: SearchGroup; onConditionsChange: (value: SearchGroup) => void; fallback: SkillSelection; options: {value:string;label:string}[]; onLegacyClear: (selection:SkillSelection) => void } = $props();
  let t = $derived(searchMessages[$localization.displayLanguage]);
  let text = $derived(localeMessages[$localization.displayLanguage].workforce);

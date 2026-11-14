@@ -1,16 +1,33 @@
 # Advanced search and personal saved filters
 
+## Optional date values
+
+Advanced search date ranges expose a Not set checkbox for existing optional date
+and datetime fields. This includes ticket start/due dates, employee retirement,
+branch opening/closing, IT asset disposal, engagement contract/participation end
+dates, optional software contract/key/assignment dates, book-copy purchases,
+reservation expiry and source-check/retrieval dates. Optional analytics reference
+dates use the same control. Required dates and creation/update timestamps retain
+their range controls without an unset checkbox.
+
+Checking Not set clears the date bounds, closes the picker and disables both
+bounds; unchecking removes that condition. Saved filters restore the checkbox.
+The persisted predicate uses the existing `unset` operator without a value.
+Related fields retain `match: some`: an existing record with an empty date is
+different from having no related record. Use the related-record conditions for
+absence of a record. OR groups and additional repeated predicates remain intact.
+
 The employee, book, IT asset, workflow and business-management catalogs have a search area above the data card. The existing
 registration actions, columns, sort controls, page sizes, and pagination remain in
 the data card. IT asset specifics are documented in [IT asset search](IT_Asset_Search.md).
 
 ## Projects
 
-The General-group Projects catalogue also uses SearchPanel/SearchFields/MasterList.
+The dedicated Projects-group catalogue also uses SearchPanel/SearchFields/MasterList.
 `POST /v1/project-searches` and `GET /v1/project-search-fields` support code, name,
 description, visibility, project status and timestamps, requiring `projects.read`.
 All results/counts apply current membership and internal visibility on the server.
-`m0037` adds the separate saved-filter target `projects`; ownership, revision,
+Baseline `m0046` includes the separate saved-filter target `projects`; ownership, revision,
 32-filter limit and existing `search_filters.*` guards remain unchanged. Browser
 preferences use `projects-v1` so the legacy Engagement preference transfer cannot
 consume new Projects settings. Workspace ticket filters are separate from this
@@ -45,14 +62,14 @@ share the same list service. Sort allowlists and limits remain resource-specific
 definitions reject unknown options and internal identifiers.
 
 `/v1/search-filters` accepts the additional targets `teams`, `skills`, `clients`
-and `engagements`. Consolidated migration m0037 replaces the target CHECK constraint once with its final definition, including business lists, Projects and projectTickets. Existing
+and `engagements`. Baseline m0046 creates the target CHECK constraint with its final definition, including business lists, Projects and projectTickets. Existing
 personal ownership, `search_filters.*` permissions, the 32-active-filters limit
 per employee/target, revision conflict checks, audit and soft deletion apply.
 
 ## Using the search area
 
-Empty search selections use **指定なし / Any**; they impose no condition. Optional
-choice fields additionally offer **未設定 / Not set**. Selecting concrete values
+Empty search selections use **Any**; they impose no condition. Optional
+choice fields additionally offer **Not set**. Selecting concrete values
 and Not set matches either a selected value or missing data (OR). Required fields
 and fields with a guaranteed stored default do not offer Not set. Registration
 forms and missing-value displays in result lists retain their existing labels.
@@ -82,7 +99,7 @@ as `(skill A OR no skills) AND (skill B OR no skills)` within the depth-3 limit.
 Clearing the shared search removes both ordinary and missing-value conditions.
 
 Team selectors show names and use surrogate IDs. Internal automatically allocated
-team codes are not search fields or option-search terms. Consolidated m0031
+team codes are not search fields or option-search terms. Baseline m0046
 creates filters using the current ID-based format from the start. Legacy
 explicit team-code predicates require replacement with name-based team selection;
 they are rejected rather than silently changing their meaning.
@@ -277,7 +294,7 @@ Each employee may have 32 active filters per target. Updates, renames, and delet
 remain available at or above the limit. Existing records above 32 are preserved;
 new saves are refused until the active count drops below 32.
 A 409 response with `error.code: FILTER_LIMIT_REACHED` displays the dedicated
-Japanese message: 「保存件数が上限に達しています。保存済みフィルターを削除することで新規保存が可能になります。」
+localized filter-limit message explaining that deleting a saved filter permits a new save.
 The save dialog preserves the entered name and conditions and clears this notice
 on close. Revision conflicts use a separate message.
 
@@ -383,10 +400,10 @@ Unauthenticated requests return 401; missing operations return 403; invalid
 conditions return 422; another owner's filter ID returns 404. Retrieving a saved
 filter revalidates its current field permissions and selections before reuse.
 
-Consolidated migration `m0031` adds `saved_search_filters`, owner FK with Restrict, management
+Baseline `m0046` creates `saved_search_filters`, owner FK with Restrict, management
 timestamps, a unique `filter_code` independent of the display name, and an update-time
-trigger. It adds four individually configurable operations for the five initial
-roles, without changing custom roles or unrelated grants. The existing branch-role
+trigger. Installer setup initializes four individually configurable operations for the
+five initial roles, without changing custom roles or unrelated grants. The existing branch-role
 session normalization recognizes those four global grants because the resources
 are owner-scoped; resource reads retain their existing scopes. In particular,
 this does not create a new global book-read grant for a branch-limited role.

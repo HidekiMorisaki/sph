@@ -1,7 +1,8 @@
 SPH downstream security changes, 2026-10-31
 
 Modified deepmerge 4.3.1: write own data properties without invoking prototype setters.
-Modified SvelteKit 2.70.3: escape the cache-control meta attribute on prerendered pages.
+Former SvelteKit 2.70.3 backport superseded by the unmodified upstream 3.2.0 fix.
+The exact upstream render source is checked; the real malicious-header prerender passed.
 Original sources remain npm-registry packages; exact original and modified file hashes
 and the complete changes are in licenses/security-patches.json.
 GHSA-pfhg-q3qv-9q6r is mitigated by rejecting leading // paths in SPH hooks.

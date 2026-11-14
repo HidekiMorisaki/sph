@@ -1,8 +1,8 @@
-import { createFinancialTrendsPdf } from '$lib/financialTrendsPdf';
-import type { FinancialCurrency } from '$lib/financial-currency';
-import type { FinancialTrendsResponse } from '$lib/financialTrendsData';
-import type { LocalizationSettings } from '$lib/localization';
-import { loadPdfFont } from '$lib/pdfFont';
+import { createFinancialTrendsPdf } from '#lib/financialTrendsPdf.js';
+import type { FinancialCurrency } from '#lib/financial-currency.js';
+import type { FinancialTrendsResponse } from '#lib/financialTrendsData.js';
+import type { LocalizationSettings } from '#lib/localization.js';
+import { loadPdfFont } from '#lib/pdfFont.js';
 
 export type FinancialTrendsPdfSelection = { startYear: number; endYear: number; currency: FinancialCurrency };
 

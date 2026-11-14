@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { requireOperationApi,requireSystemAdminApi,writeAuditLog } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { lockResources,notify,missing } from '$lib/server/schedule/service';
+import { requireOperationApi,requireSystemAdminApi,writeAuditLog } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { lockResources,notify,missing } from '#lib/server/schedule/service.js';
 export async function PUT({locals,params,request}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(requireSystemAdminApi(locals.user),'schedule.reservations.release'),id=Number(params.id),b=await request.json().catch(()=>null);
  if(!Number.isSafeInteger(id)||id<1||typeof b?.reason!=='string'||!b.reason.trim()||b.reason.length>1000) throwApiError(422,'REASON_REQUIRED','Enter a release reason.');

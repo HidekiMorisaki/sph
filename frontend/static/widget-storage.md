@@ -2,7 +2,7 @@
 
 # Widget storage and declarative record UI
 
-This is the storage contract for new v0.6.0 installations. The unpublished m0032
+This is the storage contract for fresh installations. The fresh-install m0046
 includes `widget_records`. Older development databases and note/time-zone layout
 payloads are not supported; recreate the installation with the installer. There
 is no data-copy or migration-checksum reconciliation procedure for this change.

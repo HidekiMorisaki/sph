@@ -1,7 +1,7 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import type {Condition,Field} from '$lib/workflow-form';
- import {choose} from '$lib/workflow-client';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import type {Condition,Field} from '#lib/workflow-form.js';
+ import {choose} from '#lib/workflow-client.js';
  import Control from './WorkflowControl.svelte';
  let {value=$bindable(),fields,ja=true,label,beforeChange=()=>{}}:{value?:Condition;fields:Field[];ja?:boolean;label:string;beforeChange?:()=>void}=$props();
  const t=(a:string,b:string)=>choose(ja,a,b);

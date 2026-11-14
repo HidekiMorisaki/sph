@@ -1,11 +1,11 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import { onMount, tick, untrack } from 'svelte';
- import { apiData } from '$lib/api';
- import type { SessionUser } from '$lib/auth';
- import type { Team } from '$lib/teams';
- import { localeMessages } from '$lib/locale-messages';
- import { localization } from '$lib/localization';
+ import { apiData } from '#lib/api.js';
+ import type { SessionUser } from '#lib/auth.js';
+ import type { Team } from '#lib/teams.js';
+ import { localeMessages } from '#lib/locale-messages.js';
+ import { localization } from '#lib/localization.js';
  import DetailModal from './DetailModal.svelte';
  import StatusNotice from './StatusNotice.svelte';
  import TeamDetailModal from './TeamDetailModal.svelte';

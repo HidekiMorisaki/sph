@@ -1,7 +1,7 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { getPrisma } from '$lib/server/prisma';
-import { isItAssetMasterResource, type ItAssetMasterResource } from '$lib/server/api/it-asset-masters';
-import { parseWorkforceOrder } from '$lib/server/api/workforce-order';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { isItAssetMasterResource, type ItAssetMasterResource } from '#lib/server/api/it-asset-masters.js';
+import { parseWorkforceOrder } from '#lib/server/api/workforce-order.js';
 
 export const isItAssetOrderResource = isItAssetMasterResource;
 export const parseItAssetOrder = parseWorkforceOrder;

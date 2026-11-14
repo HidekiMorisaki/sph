@@ -1,6 +1,6 @@
-import { localeMessages } from '$lib/locale-messages';
-import { bookPurchaseMessages } from '$lib/book-purchase-messages';
-import { scheduleText } from '$lib/schedule-text';
+import { localeMessages } from '#lib/locale-messages.js';
+import { bookPurchaseMessages } from '#lib/book-purchase-messages.js';
+import { scheduleText } from '#lib/schedule-text.js';
 
 export type ModalTabKind = 'basic' | 'asset' | 'employee' | 'branch' | 'client' | 'team' | 'contract' | 'book' | 'role' | 'schedule';
 export type ModalTabDefinition = { id: string; label: string };

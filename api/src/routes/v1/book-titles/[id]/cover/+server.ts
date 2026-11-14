@@ -1,9 +1,9 @@
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { MAX_BOOK_COVER_BYTES, normalizeBookCover } from '$lib/server/api/book-cover';
-import { recordBookChange } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { MAX_BOOK_COVER_BYTES, normalizeBookCover } from '#lib/server/api/book-cover.js';
+import { recordBookChange } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const pathId = (value: string) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
 export async function GET({ locals, params }: import('./$types').RequestEvent) {

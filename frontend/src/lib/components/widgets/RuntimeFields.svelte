@@ -1,5 +1,5 @@
 <script lang="ts">
- import type {WidgetStorage,WidgetValues} from '$lib/widgets';
+ import type {WidgetStorage,WidgetValues} from '#lib/widgets.js';
  import FormInput from '../FormInput.svelte';
  import FormTextarea from '../FormTextarea.svelte';
  import FormCheckbox from '../FormCheckbox.svelte';

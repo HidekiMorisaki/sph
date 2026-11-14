@@ -1,8 +1,8 @@
 <script lang="ts">
- import FormInput from '$lib/components/FormInput.svelte';
- import FormTextarea from '$lib/components/FormTextarea.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import DatePicker from '$lib/components/DatePicker.svelte';
+ import FormInput from '#lib/components/FormInput.svelte';
+ import FormTextarea from '#lib/components/FormTextarea.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import DatePicker from '#lib/components/DatePicker.svelte';
  const uid=$props.id();
  let {label,field=uid,kind='text',value=$bindable(''),options=[],required=false,disabled=false,placeholder='',rows=3,maxlength,min,max,step,inputmode,error='',reset=false,beforeChange=()=>{},onValueChange}:{
   label:string;field?:string;kind?:'text'|'number'|'time'|'url'|'email'|'tel'|'textarea'|'select'|'date'|'datetime';value?:string;options?:{value:string;label:string}[];required?:boolean;disabled?:boolean;placeholder?:string;rows?:number;maxlength?:number;min?:string;max?:string;step?:string;inputmode?:'text'|'decimal'|'numeric'|'tel'|'email'|'url';error?:string;reset?:boolean;beforeChange?:()=>void;onValueChange?:(value:string)=>void;

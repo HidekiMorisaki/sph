@@ -1,9 +1,9 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { bodyObject, contractInput, contractMetrics, recordSoftwareChange } from '$lib/server/api/software';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { bodyObject, contractInput, contractMetrics, recordSoftwareChange } from '#lib/server/api/software.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, params }: import('./$types').RequestEvent) {
 	requireOperationApi(locals.user, permissionOperations.softwareRead);

@@ -13,7 +13,7 @@ const sql=['-- BEGIN official-widget-seed',...widgets.map(w=>{
  const json=canonical(w),digest=createHash('sha256').update(json).digest('hex');
  return `INSERT INTO widget_releases(source_id,widget_code,version,definition,digest) SELECT id,'${quote(w.id)}','${quote(w.version)}','${quote(json)}'::jsonb,'${digest}' FROM widget_sources WHERE source_key='sph-official';`;
 }),"INSERT INTO widget_approvals(release_id,allowed) SELECT id,false FROM widget_releases;",'-- END official-widget-seed'].join('\n');
-const file=new URL('api/prisma/migrations/m0032/migration.sql',root),source=readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const file=new URL('api/prisma/migrations/m0046/migration.sql',root),source=readFileSync(file,'utf8').replaceAll('\r\n','\n');
 const pattern=/-- BEGIN official-widget-seed\n[\s\S]*?\n-- END official-widget-seed/;
 assert.ok(pattern.test(source),'Fresh-install seed section is missing.');
 if(process.argv.includes('--write'))writeFileSync(file,source.replace(pattern,()=>sql));

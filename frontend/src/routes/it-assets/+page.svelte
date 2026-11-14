@@ -1,46 +1,47 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import TextActionButton from '$lib/components/TextActionButton.svelte';
- import PurchaseMoneyFields from "$lib/components/PurchaseMoneyFields.svelte";
- import { purchaseText, validPurchaseAmount, displayPurchaseMoney } from "$lib/purchase-money";
+ import CopyIconButton from '#lib/components/CopyIconButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import TextActionButton from '#lib/components/TextActionButton.svelte';
+ import PurchaseMoneyFields from "#lib/components/PurchaseMoneyFields.svelte";
+ import { purchaseText, validPurchaseAmount, displayPurchaseMoney } from "#lib/purchase-money.js";
  let moneyText=$derived(purchaseText[$localization.displayLanguage]);
- import FormTabs from '$lib/components/FormTabs.svelte';
- import { forgetDetailReturn } from '$lib/detail-modal-return';
- import { operationAccess } from '$lib/operation-access';
+ import FormTabs from '#lib/components/FormTabs.svelte';
+ import { forgetDetailReturn } from '#lib/detail-modal-return.js';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
-	import SearchPanel from '$lib/components/SearchPanel.svelte';
-	import { initialSearch, type SearchContext } from '$lib/search';
+	import SearchPanel from '#lib/components/SearchPanel.svelte';
+	import { initialSearch, type SearchContext } from '#lib/search.js';
 	import { page } from '$app/state';
-	import { replaceState, afterNavigate } from '$app/navigation';
-	import { localizeAssetReason, assetErrorMessage } from '$lib/asset-errors';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { goto, afterNavigate } from '$app/navigation';
+	import { localizeAssetReason, assetErrorMessage } from '#lib/asset-errors.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
 	import { onMount, tick } from 'svelte';
-	import { apiData } from '$lib/api';
-	import type { ChangeHistoryEntry } from '$lib/change-history';
-	import AddButton from '$lib/components/AddButton.svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import ChangeHistorySection from '$lib/components/ChangeHistorySection.svelte';
-	import EmployeeDetailModal from '$lib/components/EmployeeDetailModal.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
-	import DetailModal from '$lib/components/DetailModal.svelte';
-	import DetailTabs from '$lib/components/DetailTabs.svelte';
-	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
-	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
-	import FormSection from '$lib/components/FormSection.svelte';
-	import MasterList from '$lib/components/MasterList.svelte';
-	import ViewportListPage from '$lib/components/ViewportListPage.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import SearchMultiSelect from '$lib/components/SearchMultiSelect.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { formatDate, formatEmployeeName, localization } from '$lib/localization';
-	import { formSnapshot } from '$lib/modalForm';
-	import type { Employee } from '$lib/employees';
-	import { operatingSystemName, type OperatingSystemParts } from '$lib/operating-system-name';
+	import { apiData } from '#lib/api.js';
+	import type { ChangeHistoryEntry } from '#lib/change-history.js';
+	import AddButton from '#lib/components/AddButton.svelte';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import ChangeHistorySection from '#lib/components/ChangeHistorySection.svelte';
+	import EmployeeDetailModal from '#lib/components/EmployeeDetailModal.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
+	import DetailModal from '#lib/components/DetailModal.svelte';
+	import DetailTabs from '#lib/components/DetailTabs.svelte';
+	import DetailActionButtons from '#lib/components/DetailActionButtons.svelte';
+	import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+	import FormSection from '#lib/components/FormSection.svelte';
+	import MasterList from '#lib/components/MasterList.svelte';
+	import ViewportListPage from '#lib/components/ViewportListPage.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import SearchMultiSelect from '#lib/components/SearchMultiSelect.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { formatDate, formatEmployeeName, localization } from '#lib/localization.js';
+	import { formSnapshot } from '#lib/modalForm.js';
+	import type { Employee } from '#lib/employees.js';
+	import { operatingSystemName, type OperatingSystemParts } from '#lib/operating-system-name.js';
 
 	let text = $derived(localeMessages[$localization.displayLanguage].assets);
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
@@ -99,13 +100,13 @@
     let summaryOrigin = $state(false);
     function restoreAssetOptions(options: Record<string,string|boolean>) {
         assetOptions = {...options};
-        const url = new URL(page.url);
+        const url = new URL(page.url.href);
         for (const key of ['unassigned','branchId','typeIds']) {
             url.searchParams.delete(key);
             const value=options[key];
             if(value!==undefined && value!==false && value!=='')url.searchParams.set(key,String(value));
         }
-        replaceState(url,page.state);
+        if(url.href!==page.url.href)void goto(url,{shallow:true,replace:true,reset:false,state:page.state});
     }
 	let manufacturers = $state<Named[]>([]);
 	let cpus = $state<Named[]>([]);
@@ -780,7 +781,7 @@
 					{#if revealedPassword}<label>{text.storedPassword}<input value={revealedPassword} type="text" readonly autocomplete="off" onclick={(event) => event.currentTarget.select()}/></label>{:else}<label>{text.currentPassword}<input bind:value={currentPassword} type="password" maxlength="1024" autocomplete="current-password" onkeydown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void revealCredential(); } }}/></label>{/if}
 					{#if revealError}<StatusNotice message={revealError} tone={revealError === text.passwordCopied ? 'success' : 'error'} onDismiss={() => revealError = ''} />{/if}
 				</div>
-				<footer class="app-modal-footer"><ModalActionButton class="secondary" type="button" disabled={revealing} onclick={closeCredentialAccess} variant="secondary" data-button-scope="button-e1c0a75c5d">{common.close}</ModalActionButton>{#if revealedPassword}<ModalActionButton class="app-primary-action" type="button" onclick={() => void copyRevealedPassword()} variant="primary" data-button-scope="button-e1c0a75c5d">{text.copyPassword}</ModalActionButton>{:else}<ModalActionButton class="app-primary-action" type="button" disabled={revealing || !currentPassword} onclick={() => void revealCredential()} variant="primary" data-button-scope="button-e1c0a75c5d">{revealing ? text.verifying : text.reveal}</ModalActionButton>{/if}</footer>
+				<footer class="app-modal-footer"><ModalActionButton class="secondary" type="button" disabled={revealing} onclick={closeCredentialAccess} variant="secondary" data-button-scope="button-e1c0a75c5d">{common.close}</ModalActionButton>{#if revealedPassword}<CopyIconButton label={text.copyPassword} onclick={() => void copyRevealedPassword()}/>{:else}<ModalActionButton class="app-primary-action" type="button" disabled={revealing || !currentPassword} onclick={() => void revealCredential()} variant="primary" data-button-scope="button-e1c0a75c5d">{revealing ? text.verifying : text.reveal}</ModalActionButton>{/if}</footer>
 			</dialog>
 		</ModalBackdrop>
 	{/if}

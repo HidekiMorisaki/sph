@@ -1,16 +1,16 @@
 <script lang="ts">
  import {untrack} from 'svelte';
  import {beforeNavigate} from '$app/navigation';
- import {localization} from '$lib/localization';
- import type {Project} from '$lib/projects';
- import {projectRequest,projectError} from '$lib/projects';
- import DetailModal from '$lib/components/DetailModal.svelte';
- import FormInput from '$lib/components/FormInput.svelte';
+ import {localization} from '#lib/localization.js';
+ import type {Project} from '#lib/projects.js';
+ import {projectRequest,projectError} from '#lib/projects.js';
+ import DetailModal from '#lib/components/DetailModal.svelte';
+ import FormInput from '#lib/components/FormInput.svelte';
  import MarkdownEditor from './MarkdownEditor.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
- import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
+ import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
  let {onclose,onsaved,returnFocus=null,engagements=[]}:{onclose:()=>void;onsaved:(p:Project)=>void;returnFocus?:HTMLElement|null;engagements?:Array<{id:number;name:string}>}=$props();
  let imagesUploading=$state(false);
  let ja=$derived($localization.displayLanguage==='ja');const t=(j:string,e:string)=>ja?j:e;

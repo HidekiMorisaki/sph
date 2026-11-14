@@ -1,6 +1,6 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { failure, type ApiErrorDetail } from '$lib/server/api/response';
-import { ManagementCodeExhaustedError, ManagementCodeValidationError } from '$lib/server/api/it-asset-management-code';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { failure, type ApiErrorDetail } from '#lib/server/api/response.js';
+import { ManagementCodeExhaustedError, ManagementCodeValidationError } from '#lib/server/api/it-asset-management-code.js';
 
 export class ItAssetValidationError extends Error {
 	constructor(readonly details: ApiErrorDetail[]) { super('Invalid IT asset input.'); }

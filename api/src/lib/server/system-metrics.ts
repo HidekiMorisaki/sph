@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { readFile, statfs } from 'node:fs/promises';
 import { cpus, freemem, totalmem, uptime } from 'node:os';
 import { getPrisma } from './prisma';

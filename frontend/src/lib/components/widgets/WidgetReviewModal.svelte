@@ -1,9 +1,9 @@
 <script lang="ts">
  import {onMount,untrack} from 'svelte';
- import {localization} from '$lib/localization';
- import {runtimeConfiguration,widgetDefaultSize,widgetDimensions,widgetPreview,widgetSizeLabel,widgetText,type WidgetRelease,type WidgetSize,type WidgetValues} from '$lib/widgets';
- import {WIDGET_CONTENT_BASE_SIZE,WIDGET_GAP} from '$lib/widget-layout';
- import {previewValues} from '$lib/widget-record-values';
+ import {localization} from '#lib/localization.js';
+ import {runtimeConfiguration,widgetDefaultSize,widgetDimensions,widgetPreview,widgetSizeLabel,widgetText,type WidgetRelease,type WidgetSize,type WidgetValues} from '#lib/widgets.js';
+ import {WIDGET_CONTENT_BASE_SIZE,WIDGET_GAP} from '#lib/widget-layout.js';
+ import {previewValues} from '#lib/widget-record-values.js';
  import DetailModal from '../DetailModal.svelte';
  import DetailTabs from '../DetailTabs.svelte';
  import ModalActionButton from '../ModalActionButton.svelte';

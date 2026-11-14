@@ -1,10 +1,10 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { equivalentIsbns, normalizeIsbn } from '$lib/server/api/book-isbn';
-import { lookupOpenBdBooks, BookLookupUnavailable } from '$lib/server/api/openbd-book-lookup';
-import { importOpenBdCover } from '$lib/server/api/openbd-book-cover';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { equivalentIsbns, normalizeIsbn } from '#lib/server/api/book-isbn.js';
+import { lookupOpenBdBooks, BookLookupUnavailable } from '#lib/server/api/openbd-book-lookup.js';
+import { importOpenBdCover } from '#lib/server/api/openbd-book-cover.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const limits = new Map<number, { count: number; resetsAt: number }>();
 

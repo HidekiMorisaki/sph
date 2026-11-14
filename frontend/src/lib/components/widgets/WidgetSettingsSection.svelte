@@ -1,12 +1,12 @@
 <script lang="ts">
- import StatusSwitch from '$lib/components/StatusSwitch.svelte';
- import ControlButton from '$lib/components/ControlButton.svelte';
+ import StatusSwitch from '#lib/components/StatusSwitch.svelte';
+ import ControlButton from '#lib/components/ControlButton.svelte';
  import FormInput from '../FormInput.svelte';
  import FormSection from '../FormSection.svelte';
  import AddButton from '../AddButton.svelte';
  import SearchSelect from '../SearchSelect.svelte';
  import DetailModal from '../DetailModal.svelte';import ModalActionButton from '../ModalActionButton.svelte';
- import {onMount,tick} from 'svelte';import {apiData} from '$lib/api';import {localization} from '$lib/localization';import {widgetText,type WidgetRelease} from '$lib/widgets';
+ import {onMount,tick} from 'svelte';import {apiData} from '#lib/api.js';import {localization} from '#lib/localization.js';import {widgetText,type WidgetRelease} from '#lib/widgets.js';
  import StatusNotice from '../StatusNotice.svelte';import WidgetReviewModal from './WidgetReviewModal.svelte';
  let lang:'ja'|'en'=$derived($localization.displayLanguage==='ja'?'ja':'en');let t=$derived(widgetText[lang]);
  type CatalogueRelease=WidgetRelease&{sourceId:number};

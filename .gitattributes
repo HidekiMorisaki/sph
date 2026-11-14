@@ -9,3 +9,22 @@ frontend/static/licenses/highlightjs-11.12.0.txt -text
 
 # Preserve official unified-diff bytes, including required context prefixes.
 db/patches/*.patch -text -whitespace
+
+# Preserve exact upstream runtime notice bytes referenced by the source manifests.
+licenses/runtime/*-LICENSE -text -whitespace
+licenses/runtime/*-COPYRIGHT -text -whitespace
+licenses/runtime/*-NOTICE -text -whitespace
+licenses/runtime/*-Copyright -text -whitespace
+db/licenses/*-LICENSE -text -whitespace
+db/licenses/*-COPYRIGHT -text -whitespace
+db/licenses/*-NOTICE -text -whitespace
+db/licenses/*-Copyright -text -whitespace
+licenses/caddy/go-1.26.11-* -text -whitespace
+licenses/caddy/security-updates-2026-11-14.txt -text -whitespace
+licenses/build-native/* -text -whitespace
+licenses/build-native/README.md text eol=lf
+licenses/build-native/manifest.json text eol=lf
+
+# These generated collections retain original upstream legal text, including whitespace.
+api/licenses/npm-THIRD_PARTY_NOTICES.txt -whitespace
+frontend/static/licenses/THIRD_PARTY_NOTICES.txt -whitespace

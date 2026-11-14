@@ -1,7 +1,7 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
-	import { localization } from '$lib/localization';
-	import { localeMessages } from '$lib/locale-messages';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages } from '#lib/locale-messages.js';
 	import { onMount, tick } from 'svelte';
 	import ModalBackdrop from './ModalBackdrop.svelte';
 

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { apiData } from '$lib/api';
+import { apiData } from '#lib/api.js';
 
 export const avatarImage = writable<string | null>(null);
 let loadedFor: number | null = null;

@@ -1,6 +1,6 @@
 <script lang="ts">
- import type {MarkdownNode} from '$lib/project-markdown';
- import {referenceParts} from '$lib/project-markdown';
+ import type {MarkdownNode} from '#lib/project-markdown.js';
+ import {referenceParts} from '#lib/project-markdown.js';
  import MarkdownNodes from './MarkdownNodes.svelte';
  import MarkdownCode from './MarkdownCode.svelte';
  import MarkdownImage from './MarkdownImage.svelte';
@@ -18,7 +18,7 @@
  {:else if node.kind==='break'}<br/>
  {:else if node.kind==='rule'}<hr/>
  {:else if node.kind==='inline-code'}<code class="inline-code">{node.text}</code>
- {:else if node.kind==='code'}<MarkdownCode source={node.text??''} language={node.language}/>
+ {:else if node.kind==='code'}<MarkdownCode source={node.text??''} language={node.language} title={node.title}/>
  {:else if node.kind==='link'}{#if node.href}<a href={node.href} rel="noopener noreferrer"><MarkdownNodes nodes={node.children??[]} linkify={false}/></a>{:else}<MarkdownNodes nodes={node.children??[]} linkify={false}/>{/if}
  {:else if node.kind==='image'}{#if node.href?.startsWith('sph-image:')}<MarkdownImage href={node.href} alt={node.text}/>{:else if node.href}<a href={node.href} rel="noopener noreferrer">{node.text||node.href}</a>{:else}<span>{node.text}</span>{/if}
  {:else if node.kind==='list'}{#if node.ordered}<ol start={node.start}><MarkdownNodes nodes={node.children??[]} {links} {linkify}/></ol>{:else}<ul><MarkdownNodes nodes={node.children??[]} {links} {linkify}/></ul>{/if}

@@ -1,6 +1,6 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { employeeDerivedValues, employeeReferenceDate } from '$lib/server/api/employee-derived';
-import { socialLinkPlatforms } from '$lib/server/api/social-links';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { employeeDerivedValues, employeeReferenceDate } from '#lib/server/api/employee-derived.js';
+import { socialLinkPlatforms } from '#lib/server/api/social-links.js';
 
 export const employeeSafeSelect = {
 	id: true,

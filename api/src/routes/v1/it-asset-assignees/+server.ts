@@ -1,7 +1,7 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals }: import('./$types').RequestEvent) {
 	const { branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetManagement);

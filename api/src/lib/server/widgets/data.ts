@@ -1,12 +1,12 @@
-import {getPrisma} from '$lib/server/prisma';
+import {getPrisma} from '#lib/server/prisma.js';
 import {personal} from './service';
 import {isRetiredOfficial} from './retirement';
 import {manifest,settings} from './contract';
 import {localDate} from './local-date';
-import {throwApiError} from '$lib/server/api/response';
-import {requireOperationApi} from '$lib/server/api/admin';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
-import {businessDate,plusDays} from '$lib/server/api/book-circulation';
+import {throwApiError} from '#lib/server/api/response.js';
+import {requireOperationApi} from '#lib/server/api/admin.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
+import {businessDate,plusDays} from '#lib/server/api/book-circulation.js';
 
 export async function widgetData(user:AuthenticatedUser|null,key:string) {
  const actor=personal(user),db=getPrisma();

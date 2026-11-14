@@ -1,8 +1,8 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { getPrisma } from '$lib/server/prisma';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { ListQuery } from '$lib/server/api/query';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { ListQuery } from '#lib/server/api/query.js';
 import { addressCountry, validPostalCode, type AddressCountry } from './postal-address';
 
 export const employeeMasterResources = ['departments', 'employee-groups', 'positions', 'employment-types', 'branches'] as const;

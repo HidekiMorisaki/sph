@@ -1,9 +1,9 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { parseListQuery,listMeta } from '$lib/server/api/query';
-import { notifications,notificationCategories,type NotificationCategory } from '$lib/server/notifications';
-import { allowedNotificationTypes } from '$lib/server/notifications';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { parseListQuery,listMeta } from '#lib/server/api/query.js';
+import { notifications,notificationCategories,type NotificationCategory } from '#lib/server/notifications/index.js';
+import { allowedNotificationTypes } from '#lib/server/notifications/index.js';
+import { getPrisma } from '#lib/server/prisma.js';
 export async function GET({locals,url}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'notifications.read'),q=parseListQuery(url,['createdAt'],'createdAt');
  if(q.sortOrder!=='desc'&&url.searchParams.has('sortOrder'))throwApiError(422,'INVALID_SORT_ORDER','Notifications use descending time order.');

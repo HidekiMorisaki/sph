@@ -1,8 +1,8 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
 	import { onMount, tick } from 'svelte';
-	import PageTitle from '$lib/components/PageTitle.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
+	import PageTitle from '#lib/components/PageTitle.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
 
 	let token = $state('');
 	let ready = $state(false);

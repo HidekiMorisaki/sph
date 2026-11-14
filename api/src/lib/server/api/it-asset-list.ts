@@ -1,14 +1,14 @@
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { assetBranchWhere, requireScopedOperationApi } from './branch-access';
 import { parseAssetSummaryFilters, unassignedAssetWhere, unassignedAssetSql } from './it-asset-summary';
-import { permissionOperations } from '$lib/server/auth/permissions';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
 import { itAssetInclude } from './it-asset-input';
 import { itAssetOutput } from './it-asset-output';
 import { listMeta, parseListQuery } from './query';
 import { containsPattern, parseVisibleSearch } from './visible-list-search';
 import { success, throwApiError } from './response';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['id', 'assetTag', 'type', 'manufacturer', 'modelNumber', 'serialNumber', 'branch', 'room', 'storage', 'user', 'status', 'ramGb', 'purchasedOn', 'disposalOn', 'createdAt', 'updatedAt'] as const;
 type SortField = (typeof sortFields)[number];

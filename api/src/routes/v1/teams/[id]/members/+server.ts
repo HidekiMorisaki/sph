@@ -1,10 +1,10 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { parseId } from '$lib/server/api/database';
-import { parseListQuery, listMeta, parseSearch } from '$lib/server/api/query';
-import { teamReader } from '$lib/server/api/teams';
-import { employeeSafeSelect, employeeOutput } from '$lib/server/api/employee-output';
-import { success, failure } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { parseId } from '#lib/server/api/database.js';
+import { parseListQuery, listMeta, parseSearch } from '#lib/server/api/query.js';
+import { teamReader } from '#lib/server/api/teams.js';
+import { employeeSafeSelect, employeeOutput } from '#lib/server/api/employee-output.js';
+import { success, failure } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, params, url }: import('./$types').RequestEvent) {
  teamReader(locals.user);

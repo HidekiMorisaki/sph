@@ -1,17 +1,17 @@
 <script lang="ts">
  import InfoIconButton from './InfoIconButton.svelte';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ControlButton from '$lib/components/ControlButton.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ControlButton from '#lib/components/ControlButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import DragHandleIcon from './DragHandleIcon.svelte';
- import { operationAccess } from '$lib/operation-access';
+ import { operationAccess } from '#lib/operation-access.js';
  const allowedOperation = operationAccess();
- import {onMount,tick,untrack} from 'svelte';import {apiData} from '$lib/api';import type {SessionUser} from '$lib/auth';
- import {COMPACT_CONTENT_QUERY} from '$lib/responsive-layout';
- import {localization} from '$lib/localization';import {localeMessages} from '$lib/locale-messages';
- import {runtimeConfiguration,widgetDefaultSize,widgetPreview,widgetText,widgetDimensions,widgetUsesCompactLayout,widgetSizeLabel,latestWidgetReleases,type WidgetLayout,type WidgetInstance,type WidgetRelease,type WidgetSize,type WidgetValues} from '$lib/widgets';
+ import {onMount,tick,untrack} from 'svelte';import {apiData} from '#lib/api.js';import type {SessionUser} from '#lib/auth.js';
+ import {COMPACT_CONTENT_QUERY} from '#lib/responsive-layout.js';
+ import {localization} from '#lib/localization.js';import {localeMessages} from '#lib/locale-messages.js';
+ import {runtimeConfiguration,widgetDefaultSize,widgetPreview,widgetText,widgetDimensions,widgetUsesCompactLayout,widgetSizeLabel,latestWidgetReleases,type WidgetLayout,type WidgetInstance,type WidgetRelease,type WidgetSize,type WidgetValues} from '#lib/widgets.js';
  import MasterPageHeader from './MasterPageHeader.svelte';import StatusNotice from './StatusNotice.svelte';
- import DetailModal from './DetailModal.svelte';import SearchSelect from './SearchSelect.svelte';import SearchMultiSelect from './SearchMultiSelect.svelte';import FormInput from './FormInput.svelte';import {placeWidgets,planWidgetMove,widgetAnchor,anchorSettings,widgetColumns,widgetCellSize,WIDGET_COLUMN_WIDTH,widgetContentScale,WIDGET_GAP,WIDGET_MAX_ROW,type WidgetMove,type WidgetPosition} from '$lib/widget-layout';
+ import DetailModal from './DetailModal.svelte';import SearchSelect from './SearchSelect.svelte';import SearchMultiSelect from './SearchMultiSelect.svelte';import FormInput from './FormInput.svelte';import {placeWidgets,planWidgetMove,widgetAnchor,anchorSettings,widgetColumns,widgetCellSize,WIDGET_COLUMN_WIDTH,widgetContentScale,WIDGET_GAP,WIDGET_MAX_ROW,type WidgetMove,type WidgetPosition} from '#lib/widget-layout.js';
  import RuntimeFields from './widgets/RuntimeFields.svelte';
  import FormTextarea from './FormTextarea.svelte';
  import WidgetSettingsModal from './widgets/WidgetSettingsModal.svelte';

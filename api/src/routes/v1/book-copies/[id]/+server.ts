@@ -1,11 +1,11 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { purchaseMoney } from '$lib/server/api/purchase-money';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { businessDate, hasSpareAvailableCopy, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
-import { BookInputError, bookErrorResponse, dateField, objectBody, optionalText, positiveId, recordBookChange } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { purchaseMoney } from '#lib/server/api/purchase-money.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { businessDate, hasSpareAvailableCopy, lockBookQueue, reconcileBookQueue } from '#lib/server/api/book-circulation.js';
+import { BookInputError, bookErrorResponse, dateField, objectBody, optionalText, positiveId, recordBookChange } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const pathId = (value: string) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
 

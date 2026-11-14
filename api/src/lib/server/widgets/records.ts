@@ -1,9 +1,9 @@
 import {randomUUID} from 'node:crypto';
-import {getPrisma} from '$lib/server/prisma';
-import {Prisma} from '$lib/server/generated/prisma/client';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
-import {requireOperationApi,writeAuditLog} from '$lib/server/api/admin';
-import {throwApiError} from '$lib/server/api/response';
+import {getPrisma} from '#lib/server/prisma.js';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
+import {requireOperationApi,writeAuditLog} from '#lib/server/api/admin.js';
+import {throwApiError} from '#lib/server/api/response.js';
 import {manifest,settings} from './contract';
 import {isRetiredOfficial} from './retirement';
 import {lockWidgetWrites} from './upgrades';

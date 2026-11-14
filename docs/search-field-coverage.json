@@ -1,6 +1,15 @@
 {
   "schemaVersion": 1,
   "employeeRelations": {
+    "markdownImages": "exclude: private Projects Markdown image data; resource access is checked by Projects APIs",
+    "projectMemberemployeeId": "exclude: Projects membership is searched and authorized in Projects, not employee search",
+    "projectTicketassigneeId": "exclude: Projects ticket assignees use Projects search and visibility",
+    "projectTicketauthorId": "exclude: Projects ticket authors are outside employee search",
+    "projectCommentauthorId": "exclude: Projects comment authors are outside employee search",
+    "projectTimeEntryemployeeId": "exclude: Projects time entries are outside employee search",
+    "projectWatcheremployeeId": "exclude: private Projects watch state is outside employee search",
+    "projectAttachmentuploaderId": "exclude: protected Projects attachments are outside employee search",
+    "projectHistoryactorId": "exclude: Projects history is outside employee search",
     "workflowRequests": "exclude: workflow requests are searched on the workflow page",
     "workflowSteps": "exclude: workflow steps use workflow-specific authorization",
     "workflowActions": "exclude: workflow action history",
@@ -6056,6 +6065,42 @@
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {
+      "source": "Employee.markdownImages",
+      "classification": "exclude: private Projects Markdown image data; resource access is checked by Projects APIs"
+    },
+    {
+      "source": "Employee.projectMemberemployeeId",
+      "classification": "exclude: Projects membership is searched and authorized in Projects, not employee search"
+    },
+    {
+      "source": "Employee.projectTicketassigneeId",
+      "classification": "exclude: Projects ticket assignees use Projects search and visibility"
+    },
+    {
+      "source": "Employee.projectTicketauthorId",
+      "classification": "exclude: Projects ticket authors are outside employee search"
+    },
+    {
+      "source": "Employee.projectCommentauthorId",
+      "classification": "exclude: Projects comment authors are outside employee search"
+    },
+    {
+      "source": "Employee.projectTimeEntryemployeeId",
+      "classification": "exclude: Projects time entries are outside employee search"
+    },
+    {
+      "source": "Employee.projectWatcheremployeeId",
+      "classification": "exclude: private Projects watch state is outside employee search"
+    },
+    {
+      "source": "Employee.projectAttachmentuploaderId",
+      "classification": "exclude: protected Projects attachments are outside employee search"
+    },
+    {
+      "source": "Employee.projectHistoryactorId",
+      "classification": "exclude: Projects history is outside employee search"
+    },
+    {
       "source": "Employee.workflowRequests",
       "classification": "exclude: workflow requests are searched on the workflow page"
     },
@@ -7577,6 +7622,14 @@
       ]
     },
     {
+      "source": "EmployeeSettings.projectColumns",
+      "classification": "Private Projects catalogue column preferences; no employee search field is exposed."
+    },
+    {
+      "source": "EmployeeSettings.projectTicketColumns",
+      "classification": "Private Projects ticket column preferences; no employee search field is exposed."
+    },
+    {
       "source": "EmployeeSettings.analyticsSelection",
       "search": [
         {
@@ -8377,6 +8430,10 @@
     },
     {
       "source": "EmploymentType.employees",
+      "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
+    },
+    {
+      "source": "Engagement.projectengagementId",
       "classification": "Relation boundary: linkage/back-reference; ordinary fields of the explicitly joined master are listed separately. No recursive graph traversal."
     },
     {

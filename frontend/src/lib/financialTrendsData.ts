@@ -1,4 +1,4 @@
-import type { FinancialCurrency } from '$lib/financial-currency';
+import type { FinancialCurrency } from '#lib/financial-currency.js';
 
 export type FinancialTrend = {
 	year: number;

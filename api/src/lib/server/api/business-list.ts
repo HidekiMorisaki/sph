@@ -1,6 +1,6 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { requireOperationApi } from './admin';
 import { businessSearchContexts, businessSorts, teamMemberCount, type BusinessTarget } from './business-search-registry';
 import { listMeta, parseListQuery, parseSearch } from './query';

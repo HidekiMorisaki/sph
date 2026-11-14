@@ -1,8 +1,8 @@
-import { requireLocationManagementApi } from '$lib/server/api/branch-access';
-import { requireSystemAdminApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { parseListQuery,listMeta } from '$lib/server/api/query';
-import { getPrisma } from '$lib/server/prisma';
+import { requireLocationManagementApi } from '#lib/server/api/branch-access.js';
+import { requireSystemAdminApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { parseListQuery,listMeta } from '#lib/server/api/query.js';
+import { getPrisma } from '#lib/server/prisma.js';
 export async function GET({locals,params,url}:import('./$types').RequestEvent) {
  const {branchId}=requireLocationManagementApi(requireSystemAdminApi(locals.user)),id=Number(params.id),q=parseListQuery(url,['startsAt'],'startsAt'),db=getPrisma();
  if(!Number.isSafeInteger(id)||id<1||!await db.room.count({where:{id,deletedAt:null,...(branchId===null?{}:{branchId})}}))throwApiError(404,'NOT_FOUND','Not found.');

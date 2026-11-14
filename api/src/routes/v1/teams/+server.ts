@@ -1,8 +1,8 @@
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { businessList } from '$lib/server/api/business-list';
-import { parseTeam, teamReader, teamSelect, teamConflictResponse } from '$lib/server/api/teams';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { businessList } from '#lib/server/api/business-list.js';
+import { parseTeam, teamReader, teamSelect, teamConflictResponse } from '#lib/server/api/teams.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
  return businessList(locals.user, 'teams', url);

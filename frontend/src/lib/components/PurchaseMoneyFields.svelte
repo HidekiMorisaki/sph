@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { localization } from '$lib/localization';
-	import { currencyOptions } from '$lib/financial-currency';
-	import { purchaseText } from '$lib/purchase-money';
+	import { localization } from '#lib/localization.js';
+	import { currencyOptions } from '#lib/financial-currency.js';
+	import { purchaseText } from '#lib/purchase-money.js';
 	import SearchSelect from './SearchSelect.svelte';
 	import InfoPopover from './InfoPopover.svelte';
 	import type { Snippet } from 'svelte';

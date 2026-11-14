@@ -1,4 +1,4 @@
-import type { EmployeeNameParts } from '$lib/localization';
+import type { EmployeeNameParts } from '#lib/localization.js';
 
 export type ChangeHistoryChange = {
 	field: string;

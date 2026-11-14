@@ -1,7 +1,7 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasScopedPermissionOperation } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { throwApiError } from './response';
 import { writeAuditLog } from './admin';
 import { readEmployeeFields, recordEmployeeChange } from './employee-history';

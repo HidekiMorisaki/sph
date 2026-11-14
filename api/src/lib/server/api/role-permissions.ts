@@ -1,5 +1,5 @@
-import { branchEditablePermissionCatalog, editablePermissionCatalog, ownBranchOperations } from '$lib/server/auth/permissions';
-import { normalizePermissionScopes } from '$lib/server/auth/permission-dependencies';
+import { branchEditablePermissionCatalog, editablePermissionCatalog, ownBranchOperations } from '#lib/server/auth/permissions.js';
+import { normalizePermissionScopes } from '#lib/server/auth/permission-dependencies.js';
 
 const allowedCodes = new Set<string>(editablePermissionCatalog.map(({ code }) => code));
 const branchAllowedCodes = new Set<string>(branchEditablePermissionCatalog.map(({ code }) => code));

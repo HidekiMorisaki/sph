@@ -1,6 +1,6 @@
-import {listRecords,mutateRecord,readRecordBody} from '$lib/server/widgets/records';
-import {parseListQuery,listMeta} from '$lib/server/api/query';
-import {success} from '$lib/server/api/response';
+import {listRecords,mutateRecord,readRecordBody} from '#lib/server/widgets/records.js';
+import {parseListQuery,listMeta} from '#lib/server/api/query.js';
+import {success} from '#lib/server/api/response.js';
 export async function GET({locals,params,url,setHeaders}:import('./$types').RequestEvent){
  setHeaders({'cache-control':'no-store'});
  const q=parseListQuery(url,['recordKey','createdAt','updatedAt'] as const,'createdAt');

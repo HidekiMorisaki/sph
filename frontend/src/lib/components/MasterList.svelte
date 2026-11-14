@@ -1,18 +1,18 @@
 <script lang="ts">
 	import ListCardTitle from './ListCardTitle.svelte';
 	import DragHandleIcon from './DragHandleIcon.svelte';
-	import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
-	import type { SearchState } from '$lib/search';
-	import PaginationIcon from '$lib/components/PaginationIcon.svelte';
-	import '$lib/styles/table-scroll.css';
-	import { localization } from '$lib/localization';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
+	import { COMPACT_CONTENT_QUERY } from '#lib/responsive-layout.js';
+	import type { SearchState } from '#lib/search.js';
+	import PaginationIcon from '#lib/components/PaginationIcon.svelte';
+	import '#lib/styles/table-scroll.css';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
 	import { onMount, tick, untrack, type Snippet } from 'svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import SearchInput from '$lib/components/SearchInput.svelte';
-	import PageSizePicker from '$lib/components/PageSizePicker.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import '$lib/styles/page-size-picker.css';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import SearchInput from '#lib/components/SearchInput.svelte';
+	import PageSizePicker from '#lib/components/PageSizePicker.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import '#lib/styles/page-size-picker.css';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);
 	let mobileSettingsOpen = $state(false);

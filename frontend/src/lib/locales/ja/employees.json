@@ -1,4 +1,6 @@
 {
+	"invitationValidity": "有効期間：{1}分",
+	"invitationExpiry": "有効期限：{1}",
 	"departure": {
 		"retire": "返却確認と退職日の設定", "delete": "返却確認と削除日の設定",
 		"notice": "退職・削除する前に、すべてのIT資産と書籍の返却が必要です。実物を受領したことを確認してください。",
@@ -104,7 +106,7 @@
 	"lastAdministrator": "変更後も有効なシステム管理者を1人以上残す必要があります。",
 	"roleHelp": "システム管理権限を持つロールは、システム管理者だけが変更できます。",
 	"deleteConfirm": "{1}を削除しますか？",
-	"invitationDescription": "以下の従業員へ、このリンクをご自身で送信してください。リンクは今回だけ表示され、有効期限は{1}です。",
+	"invitationDescription": "次の従業員へ、このリンクをご自身で送信してください。リンクは今回だけ表示されます。",
 	"examples": {
 		"employeeCode": "例：JPDEMO00000001",
 		"firstName": "例：花",

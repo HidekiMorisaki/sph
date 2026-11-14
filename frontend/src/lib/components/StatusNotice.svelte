@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { localeMessages } from '$lib/locale-messages';
-	import { localization } from '$lib/localization';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import { localization } from '#lib/localization.js';
 
 	let {
 		message,

@@ -1,6 +1,6 @@
 <script lang="ts">
- import {localization} from '$lib/localization';
- import {widgetText,type WidgetInstance} from '$lib/widgets';
+ import {localization} from '#lib/localization.js';
+ import {widgetText,type WidgetInstance} from '#lib/widgets.js';
  import DetailModal from '../DetailModal.svelte';
  let {instance,returnFocus,onClose}:{instance:WidgetInstance;returnFocus:HTMLElement|null;onClose:()=>void}=$props();
  let lang:'ja'|'en'=$derived($localization.displayLanguage==='ja'?'ja':'en');

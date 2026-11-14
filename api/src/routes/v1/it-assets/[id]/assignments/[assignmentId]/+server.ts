@@ -1,10 +1,10 @@
-import { writeAuditLog } from '$lib/server/api/admin';
-import { assetBranchWhere, requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseId } from '$lib/server/api/database';
-import { readAssetFields, recordAssetChange } from '$lib/server/api/it-asset-history';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { assetBranchWhere, requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseId } from '#lib/server/api/database.js';
+import { readAssetFields, recordAssetChange } from '#lib/server/api/it-asset-history.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function PATCH({ params, locals }: import('./$types').RequestEvent) {
 	const { actor, branchId } = requireScopedOperationApi(locals.user, permissionOperations.assetManagement); const assetId = parseId(params.id); const assignmentId = parseId(params.assignmentId); if (!assetId || !assignmentId) return failure(404, 'NOT_FOUND', 'Not found.');

@@ -1,4 +1,4 @@
-import type { DisplayLanguage } from '$lib/localization';
+import type { DisplayLanguage } from '#lib/localization.js';
 
 // Source names stay in the database so an imported holiday can be displayed in either language.
 const usNamesInJapanese: Record<string, string> = {

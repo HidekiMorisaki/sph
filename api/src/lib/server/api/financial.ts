@@ -1,5 +1,5 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export type Basis = 'calendar' | 'fiscal';
 export type Currency = 'JPY' | 'USD';

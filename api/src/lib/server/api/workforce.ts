@@ -1,15 +1,15 @@
 import { businessList } from './business-list';
 import { readMasterSnapshot, recordMasterChange } from './master-history';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasScopedPermissionOperation } from '$lib/server/auth/permissions';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasScopedPermissionOperation } from '#lib/server/auth/permissions.js';
 import { requireOperationApi, writeAuditLog } from './admin';
 import { requireBranchAccess, requireScopedOperationApi } from './branch-access';
 import { parseId } from './database';
 import { employeeReferenceDate } from './employee-derived';
 import { listMeta, parseListQuery, parseSearch } from './query';
 import { failure, success, throwApiError } from './response';
-import { getPrisma } from '$lib/server/prisma';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export type MasterKind = 'skills' | 'engagements';
 export type RecordKind = 'skills' | 'participations';

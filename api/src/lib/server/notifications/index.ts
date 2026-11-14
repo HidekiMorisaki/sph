@@ -1,12 +1,12 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
 import {notificationSearch} from './search';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { getPrisma } from '$lib/server/prisma';
-import { resolveScheduleNotification,scheduleNotificationTypes } from '$lib/server/schedule/notification-resolver';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { resolveScheduleNotification,scheduleNotificationTypes } from '#lib/server/schedule/notification-resolver.js';
 // Register a domain's authorization, known types and typed internal target here.
 // The producer never stores HTML, arbitrary URLs or private message snapshots.
-import {resolveWorkflowNotification,workflowTypes} from '$lib/server/workflow/service';
-import {resolveProjectNotification,projectNotificationTypes} from '$lib/server/projects/service';
+import {resolveWorkflowNotification,workflowTypes} from '#lib/server/workflow/service.js';
+import {resolveProjectNotification,projectNotificationTypes} from '#lib/server/projects/service.js';
 const resolvers={
  'project-ticket':{types:projectNotificationTypes,canRead:(actor:AuthenticatedUser)=>actor.permissionOperations.includes('projects.read'),resolve:resolveProjectNotification},
  'workflow-action':{types:workflowTypes,canRead:(actor:AuthenticatedUser)=>actor.permissionOperations.includes('workflows.read'),resolve:resolveWorkflowNotification},

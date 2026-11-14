@@ -1,9 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import { env } from '$env/dynamic/private';
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import * as env from '$app/env/private';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import type { ApiErrorDetail } from './response';
 import { writeAuditLog } from './admin';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { requiredBranchScope } from './branch-access';
 import { throwApiError } from './response';
 

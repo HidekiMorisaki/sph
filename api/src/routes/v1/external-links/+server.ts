@@ -1,11 +1,11 @@
-import { requireAuthenticatedApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { duplicateField } from '$lib/server/api/database';
-import { parseExternalLinkInput } from '$lib/server/api/external-link-input';
-import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { duplicateField } from '#lib/server/api/database.js';
+import { parseExternalLinkInput } from '#lib/server/api/external-link-input.js';
+import { listMeta, parseListQuery, parseSearch } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['name', 'url', 'sortOrder', 'createdAt', 'updatedAt'] as const;
 const select = { id: true, name: true, url: true, sortOrder: true, notes: true, createdAt: true, updatedAt: true } as const;

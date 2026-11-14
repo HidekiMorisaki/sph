@@ -1,36 +1,36 @@
 <script lang="ts">
- import {notificationTargetRequest,confirmNotificationView} from '$lib/notification-view';
- import ActionButton from '$lib/components/ActionButton.svelte';
- import ControlButton from '$lib/components/ControlButton.svelte';
- import { COMPACT_CONTENT_QUERY } from '$lib/responsive-layout';
+ import {notificationTargetRequest,confirmNotificationView} from '#lib/notification-view.js';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import ControlButton from '#lib/components/ControlButton.svelte';
+ import { COMPACT_CONTENT_QUERY } from '#lib/responsive-layout.js';
  import { onMount,tick,untrack } from 'svelte';
  import { DateTime } from 'luxon';
  import { page } from '$app/state';
- import { afterNavigate,goto,replaceState } from '$app/navigation';
- import { readSessionUser } from '$lib/client-session';
- import { canOperate,type SessionUser } from '$lib/auth';
- import { localization } from '$lib/localization';
- import { scheduleText } from '$lib/schedule-text';
- import { scheduleRequest,allSchedulePages,type ScheduleSettings,type ScheduleItem,type ScheduleDraft,type EmployeeChoice,type RoomChoice } from '$lib/schedule';
- import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
- import ScheduleBoard from '$lib/components/ScheduleBoard.svelte';
- import ScheduleResize from '$lib/components/ScheduleResize.svelte';
- import ScheduleDirectory from '$lib/components/ScheduleDirectory.svelte';
- import ScheduleEditor from '$lib/components/ScheduleEditor.svelte';
- import ScheduleDetail from '$lib/components/ScheduleDetail.svelte';
- import DetailTabs from '$lib/components/DetailTabs.svelte';
- import DetailModal from '$lib/components/DetailModal.svelte';
- import DatePicker from '$lib/components/DatePicker.svelte';
- import SearchSelect from '$lib/components/SearchSelect.svelte';
- import FormCheckbox from '$lib/components/FormCheckbox.svelte';
- import FormColorPicker from '$lib/components/FormColorPicker.svelte';
- import AddButton from '$lib/components/AddButton.svelte';
- import StatusNotice from '$lib/components/StatusNotice.svelte';
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
- import FormSection from '$lib/components/FormSection.svelte';
- import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
- import {icons} from '$lib/components/sidebarNavigation';
- import {localeMessages} from '$lib/locale-messages';
+ import { goto } from '$app/navigation';
+ import { readSessionUser } from '#lib/client-session.js';
+ import { canOperate,type SessionUser } from '#lib/auth.js';
+ import { localization } from '#lib/localization.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { scheduleRequest,allSchedulePages,type ScheduleSettings,type ScheduleItem,type ScheduleDraft,type EmployeeChoice,type RoomChoice } from '#lib/schedule.js';
+ import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+ import ScheduleBoard from '#lib/components/ScheduleBoard.svelte';
+ import ScheduleResize from '#lib/components/ScheduleResize.svelte';
+ import ScheduleDirectory from '#lib/components/ScheduleDirectory.svelte';
+ import ScheduleEditor from '#lib/components/ScheduleEditor.svelte';
+ import ScheduleDetail from '#lib/components/ScheduleDetail.svelte';
+ import DetailTabs from '#lib/components/DetailTabs.svelte';
+ import DetailModal from '#lib/components/DetailModal.svelte';
+ import DatePicker from '#lib/components/DatePicker.svelte';
+ import SearchSelect from '#lib/components/SearchSelect.svelte';
+ import FormCheckbox from '#lib/components/FormCheckbox.svelte';
+ import FormColorPicker from '#lib/components/FormColorPicker.svelte';
+ import AddButton from '#lib/components/AddButton.svelte';
+ import StatusNotice from '#lib/components/StatusNotice.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+ import FormSection from '#lib/components/FormSection.svelte';
+ import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+ import {icons} from '#lib/components/sidebarNavigation.js';
+ import {localeMessages} from '#lib/locale-messages.js';
  let text=$derived(scheduleText[$localization.displayLanguage]);
  let user=$state<SessionUser|null>(null),settings=$state<ScheduleSettings>({view:'week',mode:'overlay',firstDay:1,calendars:[]}),revision=$state(0),ready=$state(false),date=$state(DateTime.now().toISODate()!),items=$state<ScheduleItem[]>([]),contextDays=$state<{calendarKey:string;date:string;kind:string;title:string}[]>([]),loading=$state(true),error=$state(''),notice=$state(''),prefSaving=$state(false),picker=$state(false),pickerKind=$state<'employees'|'rooms'>('employees'),batch=$state(0),selected=$state<ScheduleItem|null>(null),draft=$state<ScheduleDraft|null>(null),editing=$state<ScheduleItem|null>(null),draftSource=$state<ScheduleItem|null>(null),returnFocus=$state<HTMLElement|null>(null),mobileCalendar=$state('all');
  let resizeChange=$state<{item:ScheduleItem;end:string}|null>(null);
@@ -67,10 +67,8 @@
  function closeDetail(){
   ++detailGeneration;selected=null;loadedQuery='';
   if(page.url.searchParams.has('occurrence')){
-   const url=new URL(page.url);url.searchParams.delete('occurrence');const state=page.state;
-   replaceState(url,state);
-   // Shallow routing updates the address immediately; navigation also synchronizes page.url.
-   void goto(url,{replaceState:true,noScroll:true,keepFocus:true,state}).catch(()=>{/* The address remains clean if navigation fails. */});
+   const url=new URL(page.url.href);url.searchParams.delete('occurrence');
+   void goto(url,{shallow:true,replace:true,reset:false,state:page.state}).catch(()=>{notice=text.failed;});
   }
  }
  function newDraft(start?:string,end?:string,allDay=false){if(!user||!canOperate(user,'schedule.create'))return;returnFocus=document.activeElement as HTMLElement;editing=null;draftSource=null;selected=null;const local=(value:string)=>DateTime.fromISO(value,{zone:$localization.timeZone}).toFormat("yyyy-MM-dd'T'HH:mm");const now=DateTime.now().setZone($localization.timeZone).set({minute:0,second:0,millisecond:0});draft={title:'',description:'',location:'',visibility:'public',timeZone:$localization.timeZone,allDay,start:allDay?start!.slice(0,10):start?local(start):date+'T'+now.toFormat('HH:mm'),end:allDay?end!.slice(0,10):end?local(end):DateTime.fromISO(date+'T'+now.toFormat('HH:mm'),{zone:$localization.timeZone}).plus({hours:1}).toFormat("yyyy-MM-dd'T'HH:mm"),attendeeIds:[],resourceIds:[],recurrence:null};}
@@ -80,14 +78,21 @@
  function reorder(index:number,delta:number){const next=[...settings.calendars];[next[index],next[index+delta]]=[next[index+delta],next[index]];settings.calendars=next;void preferenceChanged();}
  onMount(()=>{const media=matchMedia(COMPACT_CONTENT_QUERY);compactMode=media.matches;const mediaChanged=()=>compactMode=media.matches;media.addEventListener('change',mediaChanged);let disposed=false;void(async()=>{try{user=await readSessionUser();if(!user||!canOperate(user,'schedule.read')){loading=false;return;}restorePanel();date=DateTime.now().setZone($localization.timeZone).toISODate()!;const result=await scheduleRequest<{revision:number;settings:ScheduleSettings}>('/v1/employees/me/schedule-preferences');if(disposed)return;settings=result.data.settings;revision=result.data.revision;ready=true;}catch{error=text.failed;loading=false;}})();return()=>{disposed=true;media.removeEventListener('change',mediaChanged);++generation;++detailGeneration;controller?.abort();};});
  $effect(()=>{const key=JSON.stringify([range,visible.map(c=>c.key)]);if(!ready||key===lastLoadKey)return;lastLoadKey=key;untrack(()=>void load());});
- function openQuery(){
-  const key=page.url.searchParams.get('occurrence')??'';
-  if(page.url.searchParams.get('notice')==='unavailable'){notice=text.unavailable;return;}
-  if(!key||key===loadedQuery)return;loadedQuery=key;void open({key});
- }
- $effect(()=>{if(ready)untrack(openQuery);});
- afterNavigate(()=>{loadedQuery='';if(ready)untrack(openQuery);});
- $effect(()=>{if($notificationTargetRequest&&selected?.detailAvailable)confirmNotificationView('schedule-occurrence',selected.key);});
+ $effect(()=>{
+  const enabled=ready,key=page.url.searchParams.get('occurrence')??'',unavailable=page.url.searchParams.get('notice')==='unavailable';
+  if(!enabled)return;
+  untrack(()=>{
+   if(unavailable){++detailGeneration;selected=null;loadedQuery='';notice=text.unavailable;return;}
+   if(!key){if(loadedQuery){++detailGeneration;selected=null;}loadedQuery='';return;}
+   if(key===loadedQuery)return;
+   loadedQuery=key;selected=null;void open({key});
+  });
+ });
+ $effect(()=>{
+  const target=$notificationTargetRequest,detail=selected,version=detailGeneration;
+  if(!target||!detail?.detailAvailable)return;
+  void tick().then(()=>{if(selected===detail&&version===detailGeneration)confirmNotificationView('schedule-occurrence',detail.key);});
+ });
 </script>
 <AssetManagementShell title={text.title}>
  <div class="schedule-page"><h1 class="sr-only">{text.title}</h1>

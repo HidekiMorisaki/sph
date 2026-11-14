@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { ticketProjectCode } from '$lib/projects';
+import { ticketProjectCode } from '#lib/projects.js';
 
 export function load({ url }: {url:URL}) {
  const ticket=url.searchParams.get('ticket');

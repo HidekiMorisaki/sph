@@ -1,8 +1,8 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { businessDate, plusDays } from '$lib/server/api/book-circulation';
-import { success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { businessDate, plusDays } from '#lib/server/api/book-circulation.js';
+import { success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals }: import('./$types').RequestEvent) {
 	const actor = requireOperationApi(locals.user, permissionOperations.bookRead);

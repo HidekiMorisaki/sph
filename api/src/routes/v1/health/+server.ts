@@ -1,6 +1,6 @@
-import { failure, success } from '$lib/server/api/response';
-import { systemInformation } from '$lib/server/system-information';
-import { validateCredentialEncryptionConfiguration } from '$lib/server/api/it-asset-credentials';
+import { failure, success } from '#lib/server/api/response.js';
+import { systemInformation } from '#lib/server/system-information.js';
+import { validateCredentialEncryptionConfiguration } from '#lib/server/api/it-asset-credentials.js';
 
 export function GET() {
 	try {

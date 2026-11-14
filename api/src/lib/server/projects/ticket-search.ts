@@ -1,6 +1,7 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
-import {getPrisma} from '$lib/server/prisma';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
+import {customValues} from './custom-fields';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import {getPrisma} from '#lib/server/prisma.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
 import {requireOperationApi} from '../api/admin';
 import {throwApiError} from '../api/response';
 import {projectSuccess as success} from './time';
@@ -47,6 +48,7 @@ export async function ticketSearchResults(user:AuthenticatedUser,definition:Sear
   const referenceIds=[...tickets.flatMap(t=>[t.id,t.parentId]),...relations.flatMap(r=>[r.fromId,r.toId])].filter((id):id is number=>id!==null);
   const references=await tx.projectTicket.findMany({where:{projectId:{in:projects.map(p=>p.id)},id:{in:[...new Set(referenceIds)]}},select:{id:true,projectId:true,number:true}});
   const codeFor=(id:number|null)=>{const t=references.find(t=>t.id===id),p=projects.find(p=>p.id===t?.projectId);return t&&p?ticketCode(p.code,t.number):null;};
-  return success(ids.map(({id})=>({...tickets.find(t=>t.id===id)!,code:codeFor(id),parentCode:codeFor(tickets.find(t=>t.id===id)!.parentId),parentNumber:tickets.find(t=>t.id===id)?.parent?.deletedAt===null?tickets.find(t=>t.id===id)?.parent?.number:null,actualMinutes:sums.find(s=>s.ticketId===id)?._sum.minutes??0})),200,{total:total.count,...(searchTotal===undefined?{}:{searchTotal}),offset,limit:definition.limit,projects,relations:relations.map(r=>({...r,fromCode:codeFor(r.fromId),toCode:codeFor(r.toId)}))});
+  const values=await customValues(tx,ids.map(t=>t.id));
+  return success(ids.map(({id})=>({...tickets.find(t=>t.id===id)!,customFields:values[id]??{},code:codeFor(id),parentCode:codeFor(tickets.find(t=>t.id===id)!.parentId),parentNumber:tickets.find(t=>t.id===id)?.parent?.deletedAt===null?tickets.find(t=>t.id===id)?.parent?.number:null,actualMinutes:sums.find(s=>s.ticketId===id)?._sum.minutes??0})),200,{total:total.count,...(searchTotal===undefined?{}:{searchTotal}),offset,limit:definition.limit,projects,relations:relations.map(r=>({...r,fromCode:codeFor(r.fromId),toCode:codeFor(r.toId)}))});
  },{isolationLevel:'RepeatableRead',timeout:30000});
 }

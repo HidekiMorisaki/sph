@@ -17,6 +17,7 @@
 {#if help}<div class="form-input-with-help"><div class="input-help-label"><span aria-hidden="true">{label}{#if required}<span class="required"> *</span>{/if}</span><InfoPopover {label}>{@render help()}</InfoPopover></div>{@render inputField(true)}</div>{:else}{@render inputField(false)}{/if}
 
 <style>
+	.required{color:var(--danger,var(--sph-color-danger))}
 	.form-input-with-help{min-width:0}.input-help-label{display:flex;align-items:center;gap:var(--sph-space-4px);margin-bottom:var(--sph-space-6px);color:var(--text);font-size:var(--font-size-support);font-weight:var(--sph-weight-500)}
 	input[type='color']{padding:var(--sph-space-4px);cursor:pointer}
 	.form-input-field{display:block;min-width:0;color:var(--text);font-size:var(--font-size-support);font-weight:var(--sph-weight-500)}.form-input-field>span{display:block;margin-bottom:var(--sph-space-6px)}.form-input-field>.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}

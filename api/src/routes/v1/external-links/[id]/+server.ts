@@ -1,9 +1,9 @@
-import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { parseExternalLinkInput } from '$lib/server/api/external-link-input';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { parseExternalLinkInput } from '#lib/server/api/external-link-input.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const select = { id: true, name: true, url: true, sortOrder: true, notes: true, createdAt: true, updatedAt: true } as const;
 

@@ -1,8 +1,8 @@
 <script lang="ts">
- import type { SessionUser } from '$lib/auth';
- import type { Team } from '$lib/teams';
- import { localeMessages } from '$lib/locale-messages';
- import { formatTimestamp, localization } from '$lib/localization';
+ import type { SessionUser } from '#lib/auth.js';
+ import type { Team } from '#lib/teams.js';
+ import { localeMessages } from '#lib/locale-messages.js';
+ import { formatTimestamp, localization } from '#lib/localization.js';
  import DetailModal from './DetailModal.svelte';
  import DetailTabs from './DetailTabs.svelte';
  import DetailActionButtons from './DetailActionButtons.svelte';

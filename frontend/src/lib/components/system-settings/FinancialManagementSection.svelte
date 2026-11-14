@@ -1,6 +1,6 @@
 <script lang="ts">
- import {localization} from '$lib/localization';
- import {localeMessages} from '$lib/locale-messages';
+ import {localization} from '#lib/localization.js';
+ import {localeMessages} from '#lib/locale-messages.js';
  import PageTabs from '../PageTabs.svelte';
  import FinancialPeriodSettingsSection from './FinancialPeriodSettingsSection.svelte';
  import FinancialRegistrationSection from './FinancialRegistrationSection.svelte';

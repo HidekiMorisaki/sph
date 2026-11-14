@@ -1,8 +1,8 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['sortOrder', 'name'] as const;
 

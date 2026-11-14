@@ -7,8 +7,8 @@
  import CodeEditor from '../CodeEditor.svelte';
  import PageTabs from '../PageTabs.svelte';
  import StatusNotice from '../StatusNotice.svelte';
- import type {CodeLanguage} from '$lib/code-highlight';
- import {onMount} from 'svelte';import {localization,applyLocalization} from '$lib/localization';import {readSessionUser} from '$lib/client-session';import {apiData} from '$lib/api';import RuntimeWidget from '$lib/components/widgets/RuntimeWidget.svelte';import type {WidgetDefinition} from '$lib/widgets';
+ import type {CodeLanguage} from '#lib/code-highlight.js';
+ import {onMount} from 'svelte';import {localization,applyLocalization} from '#lib/localization.js';import {readSessionUser} from '#lib/client-session.js';import {apiData} from '#lib/api.js';import RuntimeWidget from '#lib/components/widgets/RuntimeWidget.svelte';import type {WidgetDefinition} from '#lib/widgets.js';
  type Draft={id:number;widgetCode:string;version:string;revision:number;content:{metadata:string;html:string;css:string;javascript:string}};
  let ja=$derived($localization.displayLanguage==='ja'),drafts=$state<Omit<Draft,'content'>[]>([]),id=$state<number>(),revision=$state(0),widgetCode=$state('custom.calculator'),version=$state('1.0.0'),tab=$state('html'),message=$state(''),busy=$state(false),dirty=$state(false),allowed=$state(false),preview=$state<WidgetDefinition|null>(null),run=$state(0),previewTheme=$state('light'),previewLanguage=$state<'ja'|'en'>('ja'),previewSize=$state('2x2');
  const sourceKeys=['metadata','html','css','javascript'] as const;

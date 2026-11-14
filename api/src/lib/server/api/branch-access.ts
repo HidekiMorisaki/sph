@@ -1,7 +1,7 @@
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { hasOwnBranchPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { throwApiError } from '$lib/server/api/response';
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { hasOwnBranchPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { throwApiError } from '#lib/server/api/response.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 
 function combinedBranchScope(user: AuthenticatedUser, operation: string): number | null {
 	const scopes = [operation, user.activeOperation].filter((value): value is string => Boolean(value));

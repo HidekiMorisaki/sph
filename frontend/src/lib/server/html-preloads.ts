@@ -1,4 +1,4 @@
-import type { ResolveOptions } from '@sveltejs/kit';
+import type { ResolveOptions } from '@sveltejs/kit/hooks';
 
 const escapeAttribute = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 

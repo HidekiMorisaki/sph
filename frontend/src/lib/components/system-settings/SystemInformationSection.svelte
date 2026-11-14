@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { apiData } from '$lib/api';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { formatDate, localization } from '$lib/localization';
+	import { apiData } from '#lib/api.js';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import { formatDate, localization } from '#lib/localization.js';
 
-	import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '$lib/locale-messages';
-	import { localizedReleaseText } from '$lib/system-release-text';
+	import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '#lib/locale-messages.js';
+	import { localizedReleaseText } from '#lib/system-release-text.js';
 	function releaseTextSegments(change: string, language: MessageLanguage): Array<{ text: string; href?: string; code?: boolean }> {
 		const content = localizedReleaseText(change, language);
 		const segments: Array<{ text: string; href?: string; code?: boolean }> = [];

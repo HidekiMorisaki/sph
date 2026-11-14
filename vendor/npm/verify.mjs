@@ -5,13 +5,15 @@ const manifest=JSON.parse(await readFile(new URL('manifest.json',import.meta.url
 const helper=await readFile(new URL('helpers.cjs',import.meta.url));
 const lock=JSON.parse(await readFile(join(root,'package-lock.json'),'utf8'));
 for(const [location,pkg]of Object.entries(lock.packages)){
- if(/\/(?:is-reference|locate-character|@prisma\/dev)$/.test(location))throw Error('Unreviewed helper/development database remains in the lockfile: '+location);
+ if(/\/(?:is-reference|locate-character|@prisma\/dev|lightningcss(?:-[^/]+)?)$/.test(location))throw Error('Unreviewed helper/development database remains in the lockfile: '+location);
 }
 for(const item of manifest.packages){
  const location=join(root,'node_modules',item.name);let installed;
  try{installed=JSON.parse(await readFile(join(location,'package.json'),'utf8'));}catch(e){if(item.name==='prisma'&&e.code==='ENOENT')continue;throw e;}
  if(installed.version!==item.version){if(item.name==='svelte-check')continue;throw Error('Unexpected reviewed package version: '+item.name);}
  if(!installed.sphModified)throw Error('Unreviewed upstream package installed: '+item.name);
+ for(const [path,expected] of Object.entries(item.originalFiles??{}))if(hash(await readFile(join(location,path)))!==expected)throw Error('Original source differs: '+item.name+'/'+path);
+ for(const name of item.removedDependencies??[])if(installed.dependencies?.[name])throw Error('Excluded dependency reintroduced: '+name);
  for(const file of item.files){
   if(hash(await readFile(join(location,file.path)))!==file.modifiedSha256)throw Error('Reviewed source differs: '+item.name+'/'+file.path);
   if(item.name!=='prisma'&&!file.path.startsWith('src/')){

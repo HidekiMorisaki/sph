@@ -1,4 +1,4 @@
-import {Prisma} from '$lib/server/generated/prisma/client';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
 
 // Layouts are unique per employee. Include hidden instances, but never deleted
 // instances, layouts or employees; duplicate cards count as one user per release.

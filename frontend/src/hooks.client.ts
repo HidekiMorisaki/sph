@@ -1,5 +1,5 @@
-import type { ClientInit, HandleClientError } from '@sveltejs/kit';
-import { loginUrl } from '$lib/login-redirect';
+import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
+import { loginUrl } from '#lib/login-redirect.js';
 
 type GuardedFetch = typeof window.fetch & { sessionRedirectGuard?: true };
 

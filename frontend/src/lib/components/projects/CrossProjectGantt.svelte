@@ -1,8 +1,8 @@
 <script lang="ts">
  import {DateTime} from 'luxon';
- import {automaticGanttPeriod,ganttPeriodBounds,clipGanttTicket,ganttTicks,type GanttPeriod} from '$lib/project-gantt-period';
- import {localization} from '$lib/localization';
- import {day,ticketOrder,type Project,type Ticket,type Relation,type Person} from '$lib/projects';
+ import {automaticGanttPeriod,ganttPeriodBounds,clipGanttTicket,ganttTicks,type GanttPeriod} from '#lib/project-gantt-period.js';
+ import {localization} from '#lib/localization.js';
+ import {day,ticketOrder,type Project,type Ticket,type Relation,type Person} from '#lib/projects.js';
  import DragHandleIcon from '../DragHandleIcon.svelte';
  import StatusNotice from '../StatusNotice.svelte';
  let {tickets,projects,relations,onopen,mode='project',period=null,widthStorageKey}:{tickets:Ticket[];projects:Project[];relations:Relation[];mode?:string;period?:GanttPeriod|null;widthStorageKey:string;onopen:(t:Ticket,el:HTMLElement|null)=>void}=$props();

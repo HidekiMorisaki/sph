@@ -1,8 +1,8 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { requireOperationApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { failure, success } from '$lib/server/api/response';
-import { isWorkforceOrderResource, parseWorkforceOrder, reorderWorkforce, WorkforceOrderConflictError } from '$lib/server/api/workforce-order';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { isWorkforceOrderResource, parseWorkforceOrder, reorderWorkforce, WorkforceOrderConflictError } from '#lib/server/api/workforce-order.js';
 
 export async function PUT({ params, request, locals }: import('./$types').RequestEvent) {
 	requireSystemAdminApi(locals.user);

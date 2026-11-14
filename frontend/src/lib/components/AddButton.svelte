@@ -39,4 +39,5 @@
 	.app-add-icon:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
 	.app-add-icon:disabled{opacity:.5;cursor:not-allowed}
 	.app-add-icon svg{width:18px;height:18px}
+	@media(max-width:700px),(min-width:701px) and (max-width:1024px) and (max-height:500px) and (any-pointer:coarse){.app-add-icon{width:44px;height:44px}}
 </style>

@@ -1,14 +1,14 @@
-import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { duplicateField } from '$lib/server/api/database';
-import { readMasterSnapshot, recordMasterChange } from '$lib/server/api/master-history';
-import { parseRoleNameInput } from '$lib/server/api/role-input';
-import { validateEditableRolePermissions } from '$lib/server/api/role-permissions';
-import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import type { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
-import { roleOutput, roleSelect } from '$lib/server/api/role-output';
+import { requireOperationApi, requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { duplicateField } from '#lib/server/api/database.js';
+import { readMasterSnapshot, recordMasterChange } from '#lib/server/api/master-history.js';
+import { parseRoleNameInput } from '#lib/server/api/role-input.js';
+import { validateEditableRolePermissions } from '#lib/server/api/role-permissions.js';
+import { listMeta, parseListQuery, parseSearch } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { roleOutput, roleSelect } from '#lib/server/api/role-output.js';
 
 const sortFields = ['name', 'sortOrder'] as const;
 

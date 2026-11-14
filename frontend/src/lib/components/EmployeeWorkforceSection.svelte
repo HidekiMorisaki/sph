@@ -1,10 +1,10 @@
 <script lang="ts">
- import {localeMessages} from '$lib/locale-messages';
+ import {localeMessages} from '#lib/locale-messages.js';
  import type {Snippet} from 'svelte';
- import {localization,formatDate} from '$lib/localization';
- import {apiData} from '$lib/api';
- import type {ChangeHistoryEntry} from '$lib/change-history';
- import type {WorkforceRecord,RecordContext,RecordKind} from '$lib/workforce';
+ import {localization,formatDate} from '#lib/localization.js';
+ import {apiData} from '#lib/api.js';
+ import type {ChangeHistoryEntry} from '#lib/change-history.js';
+ import type {WorkforceRecord,RecordContext,RecordKind} from '#lib/workforce.js';
  import ChangeHistorySection from './ChangeHistorySection.svelte';
  import AddButton from './AddButton.svelte';
  import DetailActionButtons from './DetailActionButtons.svelte';

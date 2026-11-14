@@ -6,10 +6,10 @@ declare global {
 		interface Locals {
 			canManageDevelopment?: boolean;
 			displayLanguage?: 'en' | 'ja';
-			initialLocalization?: import('$lib/localization').LocalizationSettings;
+			initialLocalization?: import('#lib/localization.js').LocalizationSettings;
 		}
 		// interface PageData {}
-		interface PageState { employeeSearch?: import('$lib/search').SearchDefinition }
+		interface PageState { employeeSearch?: import('#lib/search.js').SearchDefinition }
 		// interface Platform {}
 	}
 }

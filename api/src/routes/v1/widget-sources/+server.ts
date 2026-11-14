@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { getPrisma } from '$lib/server/prisma';
-import { admin } from '$lib/server/widgets/service';
-import { publicUrl } from '$lib/server/widgets/public-json';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { failure,success } from '$lib/server/api/response';
-import { parseListQuery,listMeta } from '$lib/server/api/query';
+import { getPrisma } from '#lib/server/prisma.js';
+import { admin } from '#lib/server/widgets/service.js';
+import { publicUrl } from '#lib/server/widgets/public-json.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { failure,success } from '#lib/server/api/response.js';
+import { parseListQuery,listMeta } from '#lib/server/api/query.js';
 export async function GET({locals,url}:import('./$types').RequestEvent) {
  admin(locals.user,'sources');const q=parseListQuery(url,['id','name'] as const,'id');
  const where={deletedAt:null};const [items,total]=await Promise.all([getPrisma().widgetSource.findMany({where,orderBy:[{[q.sortBy]:q.sortOrder},{id:'asc'}],take:q.limit,skip:q.offset}),getPrisma().widgetSource.count({where})]);

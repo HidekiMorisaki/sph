@@ -1,11 +1,11 @@
 <script lang="ts">
- import ModalActionButton from '$lib/components/ModalActionButton.svelte';
+ import ModalActionButton from '#lib/components/ModalActionButton.svelte';
  import {onMount,untrack} from 'svelte';
- import {apiData} from '$lib/api';
- import {employeeSaveError} from '$lib/employee-messages';
- import {localeMessages} from '$lib/locale-messages';
- import {localization} from '$lib/localization';
- import type {Employee} from '$lib/employees';
+ import {apiData} from '#lib/api.js';
+ import {employeeSaveError} from '#lib/employee-messages.js';
+ import {localeMessages} from '#lib/locale-messages.js';
+ import {localization} from '#lib/localization.js';
+ import type {Employee} from '#lib/employees.js';
  import DetailModal from './DetailModal.svelte';
  import DatePicker from './DatePicker.svelte';
  import LoadingSpinner from './LoadingSpinner.svelte';

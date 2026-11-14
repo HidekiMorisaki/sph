@@ -1,12 +1,12 @@
 <script lang="ts">
- import ActionButton from '$lib/components/ActionButton.svelte';
- import {COMPACT_CONTENT_QUERY} from '$lib/responsive-layout';
- import {previewValues} from '$lib/widget-record-values';
- import {onMount,untrack} from 'svelte';import {localization} from '$lib/localization';import {apiData} from '$lib/api';
- import sandboxScript from '$lib/widget-sandbox.js.txt?raw';import RuntimeWidget from './RuntimeWidget.svelte';import type {WidgetDefinition,WidgetValues,WidgetRecord} from '$lib/widgets';
- import themeDefaults from '$lib/themes/default.css?raw';
- import themeTokenNames from '$lib/themes/widget-token-names.json';
- import mobileTypography from '$lib/widget-mobile-typography.css?raw';
+ import ActionButton from '#lib/components/ActionButton.svelte';
+ import {COMPACT_CONTENT_QUERY} from '#lib/responsive-layout.js';
+ import {previewValues} from '#lib/widget-record-values.js';
+ import {onMount,untrack} from 'svelte';import {localization} from '#lib/localization.js';import {apiData} from '#lib/api.js';
+ import sandboxScript from '#lib/widget-sandbox.js.txt?raw';import RuntimeWidget from './RuntimeWidget.svelte';import type {WidgetDefinition,WidgetValues,WidgetRecord} from '#lib/widgets.js';
+ import themeDefaults from '#lib/themes/default.css?raw';
+ import themeTokenNames from '#lib/themes/widget-token-names.json';
+ import mobileTypography from '#lib/widget-mobile-typography.css?raw';
  import DetailModal from '../DetailModal.svelte';
  let {definition,instanceKey,configuration={},records=[],preview=false,fixedPreview=false,measureOnly=false,size='',expanded=false,onHeight,language,theme,scale=1}:{definition:WidgetDefinition;instanceKey?:string;configuration?:WidgetValues;records?:Array<{recordKey:string;values:WidgetValues}>;preview?:boolean;fixedPreview?:boolean;measureOnly?:boolean;size?:string;expanded?:boolean;onHeight?:(height:number)=>void;language?:'ja'|'en';theme?:string;scale?:number}=$props();
  let documentUrl=$state('about:blank');let blobUrl:string|undefined;let frame=$state<HTMLIFrameElement>(),error=$state(''),running=$state(false),ready=$state(false),height=$state(240),full=$state(false);let fullHtml=$state('');let fullFromPointer=$state(false);let trigger=$state<HTMLElement|null>(null);let port:MessagePort|undefined;let memory:WidgetRecord[]=[];let active=true;let epoch=0;let initTimer:ReturnType<typeof setTimeout>|undefined;let connectListener:((event:MessageEvent)=>void)|undefined;

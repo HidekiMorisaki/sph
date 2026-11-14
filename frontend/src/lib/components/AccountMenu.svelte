@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { page } from '$app/state';
-	import { avatarImage } from '$lib/avatar';
-	import { localization } from '$lib/localization';
-	import { localeMessages } from '$lib/locale-messages';
-	import type { SessionUser } from '$lib/auth';
+	import { avatarImage } from '#lib/avatar.js';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import type { SessionUser } from '#lib/auth.js';
 	import { icons } from './sidebarNavigation';
 
 	let { user, onLogout }: { user: SessionUser; onLogout: () => void | Promise<void> } = $props();

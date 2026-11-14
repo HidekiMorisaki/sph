@@ -1,12 +1,12 @@
 <script lang="ts">
- import StatusSwitch from '$lib/components/StatusSwitch.svelte';
+ import StatusSwitch from '#lib/components/StatusSwitch.svelte';
  import {untrack} from 'svelte';
  import DetailModal from '../DetailModal.svelte';
  import ActionButton from '../ActionButton.svelte';
  import StatusNotice from '../StatusNotice.svelte';
  import SortableList from '../SortableList.svelte';
- import {localization} from '$lib/localization';
- import {projectColumns,defaultProjectColumns} from '$lib/project-columns';
+ import {localization} from '#lib/localization.js';
+ import {projectColumns,defaultProjectColumns} from '#lib/project-columns.js';
  let {columns,userId,onclose,onsaved,returnFocus}:{columns:string[];userId:number;onclose:()=>void;onsaved:(columns:string[])=>void;returnFocus:HTMLElement|null}=$props();
  let selected=$state(untrack(()=>[...columns])),order=$state(untrack(()=>[...columns,...projectColumns.map(c=>c[0]).filter(c=>!columns.includes(c))])),busy=$state(false),error=$state('');
  let ja=$derived($localization.displayLanguage==='ja');const tr=(j:string,e:string)=>ja?j:e;

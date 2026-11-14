@@ -1,9 +1,9 @@
-import { requireLocationManagementApi } from '$lib/server/api/branch-access';
-import { requireSystemAdminApi,writeAuditLog } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { zone,ScheduleInputError } from '$lib/server/schedule/time';
-import { lockResources,conflict } from '$lib/server/schedule/service';
+import { requireLocationManagementApi } from '#lib/server/api/branch-access.js';
+import { requireSystemAdminApi,writeAuditLog } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { zone,ScheduleInputError } from '#lib/server/schedule/time.js';
+import { lockResources,conflict } from '#lib/server/schedule/service.js';
 export async function GET({locals,params}:import('./$types').RequestEvent) {
  const {branchId}=requireLocationManagementApi(requireSystemAdminApi(locals.user)),id=Number(params.id);
  const room=Number.isSafeInteger(id)?await getPrisma().room.findFirst({where:{id,deletedAt:null,...(branchId===null?{}:{branchId})},include:{reservableResource:true}}):null;

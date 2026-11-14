@@ -1,9 +1,9 @@
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { searchBody } from '$lib/server/api/search-conditions';
-import { success, throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { searchBody } from '#lib/server/api/search-conditions.js';
+import { success, throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 import { parseTicketCode, projectCodePattern, ticketCode } from './codes';
 import { projectVisibility } from './service';
 

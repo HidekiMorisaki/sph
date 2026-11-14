@@ -1,8 +1,8 @@
-import { getPrisma } from '$lib/server/prisma';
-import { purchaseActor, requirePurchaseManager, rejectionReason } from '$lib/server/api/book-purchases';
-import { writeAuditLog } from '$lib/server/api/admin';
-import { bookErrorResponse, objectBody, recordBookChange } from '$lib/server/api/books';
-import { success, failure } from '$lib/server/api/response';
+import { getPrisma } from '#lib/server/prisma.js';
+import { purchaseActor, requirePurchaseManager, rejectionReason } from '#lib/server/api/book-purchases.js';
+import { writeAuditLog } from '#lib/server/api/admin.js';
+import { bookErrorResponse, objectBody, recordBookChange } from '#lib/server/api/books.js';
+import { success, failure } from '#lib/server/api/response.js';
 
 export async function PATCH({ locals, params, request }: import('./$types').RequestEvent) {
  const actor = purchaseActor(locals.user, 'books.purchases.manage');

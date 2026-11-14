@@ -1,8 +1,8 @@
-import { requireAuthenticatedApi, writeAuditLog } from '$lib/server/api/admin';
-import { failure, success } from '$lib/server/api/response';
-import { isStrongPassword } from '$lib/server/auth/password';
-import { hashPassword, SESSION_COOKIE_NAME, verifyPassword } from '$lib/server/auth/session';
-import { getPrisma } from '$lib/server/prisma';
+import { requireAuthenticatedApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { isStrongPassword } from '#lib/server/auth/password.js';
+import { hashPassword, SESSION_COOKIE_NAME, verifyPassword } from '#lib/server/auth/session.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function PATCH({ request, cookies, locals }: import('./$types').RequestEvent) {
 	const actor = requireAuthenticatedApi(locals.user);

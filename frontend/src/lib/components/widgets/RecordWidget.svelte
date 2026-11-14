@@ -1,8 +1,8 @@
 <script lang="ts">
  import {onMount} from 'svelte';
- import {localization} from '$lib/localization';
- import {COMPACT_CONTENT_QUERY} from '$lib/responsive-layout';
- import type {WidgetInstance,WidgetRecord,WidgetValues} from '$lib/widgets';
+ import {localization} from '#lib/localization.js';
+ import {COMPACT_CONTENT_QUERY} from '#lib/responsive-layout.js';
+ import type {WidgetInstance,WidgetRecord,WidgetValues} from '#lib/widgets.js';
  import DetailModal from '../DetailModal.svelte';
  import ModalActionButton from '../ModalActionButton.svelte';
  import FormInput from '../FormInput.svelte';

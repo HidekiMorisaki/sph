@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { SessionUser } from '$lib/auth';
-	import { readSessionUser } from '$lib/client-session';
-	import { applyLocalization, localization } from '$lib/localization';
-	import { localeMessages } from '$lib/locale-messages';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import MyPage from '$lib/components/MyPage.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import type { SessionUser } from '#lib/auth.js';
+	import { readSessionUser } from '#lib/client-session.js';
+	import { applyLocalization, localization } from '#lib/localization.js';
+	import { localeMessages } from '#lib/locale-messages.js';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import MyPage from '#lib/components/MyPage.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
 
 	let user = $state<SessionUser | null>(null);
 	let failed = $state(false);

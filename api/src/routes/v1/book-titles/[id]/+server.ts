@@ -1,11 +1,11 @@
-import { canonicalIsbn } from '$lib/server/api/book-isbn';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { BookInputError, bookErrorResponse, objectBody, optionalText, recordBookChange, requiredText } from '$lib/server/api/books';
-import { failure, success } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
-import { lookupOpenBdBooks, BookLookupUnavailable } from '$lib/server/api/openbd-book-lookup';
-import { importOpenBdCover } from '$lib/server/api/openbd-book-cover';
+import { canonicalIsbn } from '#lib/server/api/book-isbn.js';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { BookInputError, bookErrorResponse, objectBody, optionalText, recordBookChange, requiredText } from '#lib/server/api/books.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { lookupOpenBdBooks, BookLookupUnavailable } from '#lib/server/api/openbd-book-lookup.js';
+import { importOpenBdCover } from '#lib/server/api/openbd-book-cover.js';
 
 const pathId = (value: string) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
 

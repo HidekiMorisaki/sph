@@ -1,5 +1,5 @@
 import { isIP } from 'node:net';
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 import { ItAssetValidationError } from './it-asset-errors';
 
 export type AssetIpAddresses = { ipAddress1: string | null; ipAddress2: string | null };

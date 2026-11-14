@@ -1,9 +1,78 @@
-# Projects / プロジェクト
+# Projects
 
-## Ticket hierarchy search / チケットの親子検索
+## Member search
 
-Simple search offers Parent ticket / 親チケット and Child tickets / 子チケット,
-each with Any / 指定なし, None / なし and Present / あり. Advanced search exposes
+The Members page uses the shared employee-style search card with Simple search,
+Advanced search and Saved filters. Switch between Current members and Employees
+to add; the project always remains the server-enforced boundary. Search supports
+employee code, first/last name, full names with or without spaces, branch,
+employment type, group, department and position. Pagination is independent of the
+complete project membership configuration.
+
+Active and unprovisioned non-retired, non-deleted employees can join as editors or
+viewers and be assigned tickets. Suspended accounts are excluded from candidates.
+Membership does not provision login credentials or roles. Managers still require
+an active account and the existing management operations; notifications retain
+their active-account recipient checks. Already-registered members remain visible
+for membership maintenance, including when their account has been suspended.
+
+`GET /v1/project-member-search-fields` and `POST /v1/project-member-searches` use
+`projectId` and `view=members|candidates`. They return only minimal employee identity
+labels, never HR profiles. The candidate view requires the existing member-management
+operation and project-manager role; viewing members requires project access.
+Saved filters use the separate `projectMembers` target and the common condition
+schema. Baseline m0046 creates the saved-filter target check with this target
+included; no intermediate widening or existing-filter rewrite is performed. The older directory API
+also supports unprovisioned employees and full-name matching.
+
+## Project-specific custom fields
+
+Project managers with `projects.settings.manage` define ticket fields in
+**Project > Settings > Custom fields**. Fields start empty; names and choices
+are user-defined. Supported formats are single select, multiple select, integer,
+decimal, time, single-line text, multi-line text, date and checkbox. Definitions
+include description, required/optional, default value, order, active state and
+all/specific ticket types. Numeric bounds and text length limits are optional.
+Time fields accept hours to two decimal places and do not change standard time totals.
+
+The shared ticket creation/edit form and Overview tab use these definitions.
+Defaults apply only to new tickets. Required fields are checked on ticket saves,
+including existing tickets, but do not block comments or time entries. Values of
+inactive fields, inactive options and inapplicable ticket types are retained;
+Overview exposes inactive/inapplicable values in a collapsed section. Inactive
+options cannot be newly selected. Formats are immutable after creation; fields
+and options are deactivated instead of removed. Renaming preserves their IDs.
+
+`GET /v1/projects/{id}/custom-fields` reads definitions; `PUT` saves `{revision,
+fields}` and returns the refreshed project. Existing definition/option IDs must be
+retained, and negative temporary IDs identify new draft rows. `fields` includes
+name, kind, description, required, enabled, defaultValue, min, max, maxLength,
+typeIds and options. Array order determines display order; empty typeIds means all.
+Ticket APIs add `customFields`, an object keyed by numeric field ID. Values are
+strings, numbers, booleans, option IDs, option-ID arrays, or null. Omitted update
+keys retain their values; explicit null clears applicable fields. All validation,
+project membership, operations, archived-state and revision checks run in the API.
+Changes are recorded in project/ticket history.
+
+Personal display columns accept `custom.{fieldId}`. Search metadata supplies
+authorized fields and option labels to project and cross-project lists, Ticket
+panels and Gantt. Cross-project labels include project and field names; equal names
+never merge identities. Numeric/date comparisons, text matching, selection and
+unset predicates use the existing AND/OR and saved-filter contracts. Multiple
+selections support `in` (any), `allIn` (all) and `notIn` (none). Inapplicable
+tickets never match custom predicates, including unset and negative predicates.
+Unavailable fields/options make a saved condition invalid rather than silently
+discarding it. Custom fields do not add sorting, rollups or shared global masters.
+
+Baseline **m0046** creates the five custom-field tables in their final form.
+It replaces the complete historical chain for fresh installations; it is not
+an additive custom-field migration for an existing database. Older histories
+must not replay the baseline or rewrite historical checksums.
+
+## Ticket hierarchy search
+
+Simple search offers Parent ticket and Child tickets,
+each with Any, None and Present. Advanced search exposes
 the same fields in Basic information; both views share conditions and saved filters.
 The filters apply to global and project ticket lists, Ticket panels and Gantt views.
 
@@ -29,7 +98,13 @@ button at the top right. Project panels open their project directly; cross-proje
 panels first select a project. Saving refreshes the panel and opens the ticket,
 and closing restores focus to the plus button.
 
-## Project settings / プロジェクト設定
+## Project settings
+
+Types, Statuses and Custom fields use the common plus icon at the right edge of
+each card heading. Supplementary instructions open from the heading information
+icon; the custom-field editor uses the same information popover. The Danger zone
+has the same full-width heading divider as the other settings cards and a subtle
+rose-tinted background adjusted for light and dark themes.
 
 Name, Visibility, Engagement and Status are edited in the Settings tab's Basic
 information card. Existing projects have no Edit project button or edit modal;
@@ -50,8 +125,9 @@ unchanged.
 
 Project descriptions, ticket descriptions and comments support Markdown, including
 existing text. Source is retained verbatim, without converting saved text to HTML.
-Desktop editing shows the source and live preview together, with a collapsible
-preview; phones use Edit/Preview tabs. Native text editing, IME and undo remain available.
+Desktop and mobile editing use the common Input/Preview tabs. Each panel fills
+the editor width, with formatting tools below the Input tab and no redundant
+visible field or preview labels. The text area retains its accessible label. Native text editing, IME and undo remain available.
 Formatting tools use compact icons with localized accessible labels and hover
 titles, including tables, bulleted/numbered lists, checklists and strikethrough.
 Selected lines can be converted to lists. The Overview description has its own edit icon and expands into a full-
@@ -71,6 +147,18 @@ The approved Highlight.js 11.12.0 subset includes 193 definitions (including pla
 text) and 187 aliases. Grammars load as needed in a Worker; timeout, failure or an
 unknown language leaves the source readable. Escaped tokens are rendered as text,
 never injected HTML. Code fences retain their source.
+
+A fence may specify `language:title`, for example `SQL:Daily query`. The header
+shows `SQL : Daily query`; highlighting uses only the language, case-insensitively
+with the existing aliases. Spaces around the delimiter/title are trimmed, while
+spaces and additional colons inside the title are retained. An empty title keeps
+the ordinary language-only header. Use `text:title` for a plain-text block.
+Titles are literal escaped text, without Markdown/HTML or project-reference
+linking. Long titles wrap beside the copy icon. This applies to project/ticket
+descriptions and comments, including editor previews and saved content. Copy
+writes only the unchanged code body, without the language or title. The editor's
+language chooser and the stored Markdown source remain unchanged.
+
 
 Project and ticket IDs in ordinary text are resolved through
 `POST /v1/project-reference-resolutions` in batches of at most 500. Only existing,
@@ -96,7 +184,7 @@ and other body targets cannot be attached. Cancelling an editor cleans up its ow
 unbound drafts by logical deletion; saved images remain available for retained
 history. A project/ticket/comment deletion makes its bound images unavailable.
 
-Consolidated migration **m0038** adds image storage and separate image/read/create/delete
+Fresh-install baseline **m0046** creates image storage and retains separate image/read/create/delete
 operation codes. Existing active global read/attachment grants
 receive their corresponding new operations; scoped and revoked grants are not
 expanded. The existing body operation and project membership remain mandatory.
@@ -105,7 +193,30 @@ legacy migration histories require a separately approved, backed-up transition;
 never replay consolidated migrations or rewrite their history as part of this feature.
 
 Ticket details share one retained-tab modal across the ticket list, ticket panel and Gantt.
-Basic information, dates/time and description/labels use the common detail cards.
+The initial Overview tab contains custom fields, basic information, dates/time
+and description/labels using the common detail cards. A separate Child tickets
+tab follows Overview, before Comments, Checklist, Time, Files and Relations.
+Child tickets is available even when empty and retains its list state across tab
+switches. Its card loads direct, active
+children through the paginated project ticket REST endpoint with `parentId`,
+independently of the surrounding list's filters and page. Rows show Ticket ID,
+title, status and assignee, and open the selected child's detail.
+The common Add child ticket button is available with the existing creation
+operation and an editable project role, except in archived projects. It opens
+the ordinary creation form with the current project and parent fixed. Other
+fields use new-ticket defaults; dates, assignee, description and labels are not
+inherited. Save refreshes the parent's child list; cancel returns to the parent.
+The parent dialog remains mounted, preserving its tab, scroll and unsent comment.
+Opening a child detail asks before discarding a parent comment draft, then opens
+a nested detail modal while retaining the parent's DOM, selected tab, child-list
+page and scroll position. The root ticket URL stays anchored to the original
+parent. Header close, footer Close and Escape close only the current level and
+restore focus to the originating child row. Grandchildren use the same behavior.
+Updates or deletion in a nested detail refresh the retained parent and its child
+list through the existing REST endpoints. A failed load leaves the parent open.
+The same flow is used by cross-project and project ticket lists, panels, Gantt
+views and history links. Existing server-side membership, creation, same-project
+and maximum-depth checks remain authoritative; failures keep the child draft.
 Edit and delete actions use the common header icon controls; the detail footer contains Close only. The header star icon toggles the current user's watch state using the existing
 watchers API; outline star/plus means Watch and filled star/minus means Stop watching. All header glyphs are 18px; the accessible name and `aria-pressed` expose the current state.
 Tabbed dialogs reserve the largest natural panel height from first display,
@@ -122,13 +233,12 @@ requires its own existing operation. Final confirmation states that all informat
 belonging to the project will be deleted. Cancelling sends no delete request;
 the existing API authorization and logical-deletion behavior remain in force.
 
-Projects is internal work management, separate from client **Engagements / 案件**.
+Projects is internal work management, separate from client **Engagements**.
 The Projects sidebar group sits between General and Business Management.
 `/projects` opens the project catalogue; `/projects/tickets`, `/projects/ticket-panel`
 and `/projects/gantt` open cross-project work views without a project selection step.
 The former `/projects/board` and `/projects/{projectCode}/board` URLs are removed
-and return 404, without redirects. The Japanese name is チケットパネル and the English
-name is Ticket panel. Project-specific views use `/projects/{projectCode}/ticket-panel`.
+and return 404, without redirects. The current view name is Ticket panel. Project-specific views use `/projects/{projectCode}/ticket-panel`.
 Ticket panel project headings collapse or expand their own tickets, like Gantt project groups.
 Ticket panel and Gantt automatically display all matching tickets without a Load more control.
 This is a presentation rename: shared project/ticket tables, REST APIs, permissions
@@ -137,8 +247,8 @@ Existing engagement records and grants are not copied into this domain.
 
 ## Project and ticket identifiers
 
-User-facing labels consistently use **Project ID / プロジェクトID** and
-**Ticket ID / チケットID**. These labels refer to the existing `Project.code` and
+User-facing labels consistently use **Project ID** and
+**Ticket ID**. These labels refer to the existing `Project.code` and
 `ProjectTicket.code` business identifiers. Numeric surrogate `id` fields, API
 property names, validation codes and stored values are unchanged.
 
@@ -161,12 +271,12 @@ project's current detail/operations and membership are checked before proceeding
 Read-only/viewer projects cannot proceed. This presentation check does not replace
 the existing server-side creation guard. After saving, the list refreshes and
 opens the new ticket detail using its code URL. Embedded project lists retain
-their existing workspace-level create action without a duplicate plus button.
+their own Tickets card-header plus button, without a duplicate workspace-toolbar action.
 
 New projects require `code`: trim whitespace, uppercase ASCII lowercase letters,
 then validate `^[A-Z][A-Z0-9_]{0,63}$`. Hyphens and non-ASCII input are rejected.
 Codes are unique across active and deleted projects, cannot be changed, and are
-never reused. The creation form shows the rule; editing displays a disabled code.
+never reused. The creation form shows the rule; existing project settings do not permit code changes.
 Missing/invalid codes and attempted code changes return 422; duplicates return 409.
 
 Ticket `code` is generated by the API from the immutable project code and the
@@ -185,8 +295,9 @@ search exposes a string ticket-code field instead of numeric ticket ID/number.
 
 Browser URLs accept project codes and canonical full ticket codes only. Old numeric
 URLs and noncanonical ticket references return 404, with no redirects. No legacy
-PJT-code compatibility or existing-data migration is supplied: reinstall with the
-installer after this change. Reinstallation of the operational DB is a user action.
+PJT-code compatibility is supplied for browser routing. Existing data with codes
+outside the current format needs a separately planned transition. This routing
+rule does not authorize reinstallation or deletion of an operational database.
 
 ## Navigation, cross-project search and personal columns
 
@@ -229,7 +340,7 @@ and cannot replace newer results.
 Gantt uses one shared time axis for all loaded results, with collapsible
 project groups by default, assignee groups or a flat start-date order. Project
 groups retain parent hierarchy. Unassigned and unscheduled tickets stay visible.
-Assignee grouping labels NULL assignees as 担当者未設定 / Unassigned. It uses
+Assignee grouping labels NULL assignees as Unassigned. It uses
 the returned assignee person before membership fallback; an unavailable person
 on an assigned ticket is labelled Assignee unavailable rather than Unassigned.
 The Gantt ticket column starts at 260px and can be resized from its right
@@ -238,7 +349,7 @@ Widths range from 120px to 2000px; Home/End select those bounds and double-click
 restores 260px. Escape or pointer cancellation reverts an in-progress drag.
 Width persists per employee in the same browser across reloads and global/project
 views; no preference API or DB field is added. The visible view name is
-ガントチャート / Gantt chart; `/gantt` URLs remain unchanged.
+Gantt chart; `/gantt` URLs remain unchanged.
 Small neutral six-dot grips repeat along a thin neutral rail throughout the drag
 area; hover/drag emphasis stays neutral and the 44px hit area remains available.
 Pointer completion/cancellation clears the drag focus so grip outlines do not
@@ -314,13 +425,13 @@ entry into ID/name pairs in place, preserving their display and order. New saves
 use `{schemaVersion:2,columns:[...]}` in the existing JSON field, while GET/PUT
 responses retain `{employeeId,columns}`. Unset/invalid stored preferences use the
 defaults. No schema migration is required. Existing global Projects reader roles receive the new
-personal-preference operation in consolidated m0037; it grants no project or ticket mutation rights.
-Fresh initial roles include it. m0037 also adds the JSON preference column and
+personal-preference operation in the current initial role definitions; it grants no project or ticket mutation rights.
+Fresh initial roles include it. Baseline m0046 creates the JSON preference column and
 expands the saved-filter target constraint. No existing project data migration is
 required.
 
 Project catalogue columns are independently stored per employee in
-`employee_settings.project_columns` (JSONB, added in consolidated m0037).
+`employee_settings.project_columns` (JSONB, created by baseline m0046).
 `GET/PUT /v1/personal-settings/project-columns` returns `{employeeId,columns}`;
 PUT accepts `{columns}` and requires `projects.preferences.update` plus the
 matching `x-settings-owner` header. GET requires `projects.read`. The five allowed
@@ -332,7 +443,7 @@ Save, Cancel and Restore defaults behavior, keeping at least one column visible.
 Table and mobile rows use the same saved selection/order across browsers.
 Catalogue preferences do not change ticket columns, filters, sorting or page size.
 
-## First delivery
+## Implemented scope
 
 - Private projects by default; optional internal visibility. Project creation is
   enabled for the five initial employee roles. Custom roles remain explicitly
@@ -409,13 +520,11 @@ minutes (24 hours). Existing minute values and history are preserved, including
 when an unrelated field is edited. Totals sum unrounded minute values before
 rounding the final hours display to two decimals.
 
-Consolidated m0038 changes the two numeric column types without rewriting time
-history and adds Markdown image storage/grants and the final reference-update
-behavior. It replaces the former m0038–m0040 chain. New image foreign keys are
-created directly with ON UPDATE CASCADE and ON DELETE RESTRICT. Do not replay
-consolidated migrations or use blanket migrate deploy on databases with the old
-chain already applied; their history transition requires a separately approved,
-backed-up, schema-checked procedure.
+Baseline m0046 creates the two minute columns directly as NUMERIC(12,2).
+Markdown image references use ON UPDATE CASCADE and ON DELETE RESTRICT from the
+start. It does not run intermediate type conversions or rewrite time history.
+Existing installations require their matching historical source or a separately
+approved transition; do not replay the fresh-install SQL on them.
 Actual entries record employee, work date and notes. Entry authors and project
 managers can correct entries; all corrections are logged. Overview totals sum
 direct entries exactly once. Tree rollups include the displayed subtree and are
@@ -442,7 +551,10 @@ All browser and SSR access goes through REST and the same-origin gateway.
 | `/v1/project-search-fields` | GET authorized search definitions |
 | `/v1/project-ticket-searches` | POST authorized cross-project ticket search; optional fixed `projectId` query for individual views |
 | `/v1/project-ticket-search-fields` | GET authorized ticket search definitions/options |
-| `/v1/personal-settings/project-ticket-columns` | GET personal columns, PUT complete ordered selection |
+| `/v1/personal-settings/project-ticket-columns` | GET personal ticket columns, PUT complete ordered selection |
+| `/v1/personal-settings/project-columns` | GET personal catalogue columns, PUT complete ordered selection |
+| `/v1/project-reference-resolutions` | POST readable project/ticket reference resolution |
+| `/v1/project-markdown-images` and `/{key}` | POST private draft image; GET protected JSON image, DELETE own draft under current access checks |
 
 JSON responses include `status` and matching HTTP `responseCode`. File downloads
 return a protected binary response. Lists use the common allowlisted sort fields,
@@ -493,23 +605,17 @@ in API and browser distributions, with immutable source/digest verification.
 
 ## Migration and recovery
 
-Consolidated `m0037` (formerly m0037-m0041) adds 13 tables, an independent project code sequence, saved-search target,
-and new operation grants for existing initial roles. The engagement rename preserves
-existing records, permission IDs and grants. New installations initialize grants
-through the normal installer. New tables are created with their final foreign keys
-and CHECK constraints; the saved-search target constraint is replaced only once.
-The whole migration is atomic. Databases with the former m0038-m0041 history must
-not replay this migration or run blanket migrate deploy. Their history transition
-requires a separately approved procedure; the former independent application
-tools have been retired without modifying operational databases.
+The single fresh-install baseline `m0046` creates the complete final Projects
+schema, its independent project-code sequence, saved-search targets, Markdown
+image storage and final numeric time types. SQL-only checks, indexes, foreign
+keys and triggers are preserved from the former chain. Normal installer setup
+initializes permissions; the migration does not replay old rename, backfill,
+permission-transition or OKR-creation/removal steps.
 
-The subsequent m0038 consolidates the former m0038–m0040 chain in one
-transaction. Only existing tables require ALTER statements; image storage is
-created directly with its final constraints. Databases already carrying any of
-the former m0038/m0039/m0040 records must not rerun this SQL or rewrite checksums
-to conceal the mismatch. Their final schema remains compatible, but migration
-history maintenance is a separate operation. The old narrow local time/image
-application and v0.7.0 preparation tools are retired before opening a connection.
+Old development histories must not replay this baseline or rewrite checksums.
+The former narrow application and reconciliation tools are retired. Existing
+backups require their matching source revision or a separately approved history
+transition; this consolidation changes no operational database.
 
 The active-data recovery exporter retains Projects timestamps and tombstones,
 including type/status definitions required by history; it remaps relational and
@@ -528,13 +634,13 @@ Redmine source was inspected for concepts, not copied into SPH.
 | Source | Decision and delivery |
 | --- | --- |
 | [Jira reports](https://support.atlassian.com/jira-software-cloud/docs/generate-a-report/) and [work types](https://support.atlassian.com/jira-cloud-administration/docs/what-are-issue-types) | Keep type, status and work hierarchy separate; later sprint/backlog/releases and scope-change-aware burndown/velocity. |
-| [Redmine issues](https://www.redmine.org/projects/redmine/wiki/RedmineIssues), [7.0.2 issue model](https://github.com/redmine/redmine/blob/7.0.2/app/models/issue.rb), [relations](https://github.com/redmine/redmine/blob/7.0.2/app/models/issue_relation.rb) | First delivery has multi-level tickets, explicit links, cycle validation, time and journals. SPH uses soft deletion and transaction services rather than copying Rails callbacks or cascading deletes. |
-| [Asana dependencies](https://help.asana.com/s/article/how-to-use-task-dependencies), [workload](https://help.asana.com/s/article/reporting-with-workload?language=en_US), [goals](https://help.asana.com/s/article/lead-the-goals-management-process-in-your-organization-with-asana-goals) | Shared views now; later four dependency types, resource capacity, portfolios and outcomes/OKRs separate from task completion. |
-| [monday hierarchy API](https://developer.monday.com/api-reference/docs/working-with-multi-level-ticket panels) and [dependency behavior](https://support.monday.com/hc/en-us/articles/360007402599-Dependencies-on-monday-com) | One task model across hierarchy/views; distinguish input from rollup. Later typed custom fields and explicit scheduling modes; no arbitrary eval expressions. |
+| [Redmine issues](https://www.redmine.org/projects/redmine/wiki/RedmineIssues), [7.0.2 issue model](https://github.com/redmine/redmine/blob/7.0.2/app/models/issue.rb), [relations](https://github.com/redmine/redmine/blob/7.0.2/app/models/issue_relation.rb) | Current delivery has multi-level tickets, explicit links, cycle validation, time and journals. SPH uses soft deletion and transaction services rather than copying Rails callbacks or cascading deletes. |
+| [Asana dependencies](https://help.asana.com/s/article/how-to-use-task-dependencies), [workload](https://help.asana.com/s/article/reporting-with-workload?language=en_US), [goals](https://help.asana.com/s/article/lead-the-goals-management-process-in-your-organization-with-asana-goals) | Shared views now; later four dependency types and resource capacity; outcomes remain separate from task completion. |
+| [monday hierarchy API](https://developer.monday.com/api-reference/docs/working-with-multi-level-boards) and [dependency behavior](https://support.monday.com/hc/en-us/articles/360007402599-Dependencies-on-monday-com) | One task model across hierarchy/views; distinguish input from rollup. Later typed custom fields and explicit scheduling modes; no arbitrary eval expressions. |
 | [ClickUp Docs](https://help.clickup.com/hc/en-us/articles/6328174371351-Intro-to-Docs) and [time](https://help.clickup.com/hc/en-us/articles/6304291811479-Intro-to-time-tracking) | Time/comments/attachments now; versioned docs/wiki with task relationships later. |
 | [Wrike Gantt](https://www.wrike.com/features/gantt-chart/) | Basic dates/dependencies now; later baselines, critical path and change previews. |
 | [Trello checklists](https://support.atlassian.com/trello/docs/adding-checklists-to-cards/) and [automation](https://support.atlassian.com/trello/docs/automation-overview/) | Simple ticket panel/checklists now; later declarative triggers/actions with bounded runs, idempotency and audit. |
-| [Microsoft Project EVM](https://support.microsoft.com/en-us/project/earned-value-analysis-for-the-rest-of-us) | Keep baseline, status date, progress and actual costs distinct. Later PV/EV/AC and variances use auditable snapshots; no retrospective inference from current task status. |
+| [Microsoft Project EVM](https://support.microsoft.com/en-us/project/earned-value-analysis-for-the-rest-of-us) | Keep baseline, status date, progress and actual costs distinct. PV/EV/AC and variances use auditable snapshots; no retrospective inference from current task status. |
 
 When the installer option to add samples is selected on a fresh installation,
 three fictional internal projects (`DEVELOP`, `MIGRATION`, and
@@ -546,8 +652,22 @@ administrator is their project manager. Samples are part of the initial-data
 transaction; restarting services does not append them, and declining samples
 creates no projects or tickets.
 
+All three project descriptions, 30 ticket descriptions and three comments contain
+localized Markdown: headings, emphasis, lists, quotes, tables, task checklists and
+fenced code blocks with language labels and titles. The development project uses
+TypeScript, the migration project uses read-only SQL, and the website project
+uses HTML/CSS; JSON records identify each ticket. Project/ticket references and
+internal links lead to the installed records. These original fictional examples
+are documentation only and are never executed. This changes fresh-install content
+only; it does not migrate or reinsert existing project records.
+
+The initial empty-database check also accepts the single pristine invitation
+setting created by m0046 (key `main`, validity 30 minutes, no deletion or update).
+Modified or logically deleted invitation settings are rejected, as are existing
+business records. The initializer does not change the invitation configuration.
+
 Generated names, descriptions, labels, comments, history and identifiers do not
-contain `sample` or `サンプル`. Project IDs are DEVELOP, MIGRATION and WEBSITE;
+contain the English or Japanese sample marker. Project IDs are DEVELOP, MIGRATION and WEBSITE;
 ticket IDs inherit those prefixes. Installer option names remain unchanged.
 
 Subsequent stages, requiring their own detailed implementation plan:
@@ -555,23 +675,25 @@ Subsequent stages, requiring their own detailed implementation plan:
 1. Four dependency types, working calendars, preview/confirm scheduling, baselines
    and critical path. Prioritize SPH skill/available-capacity/engagement-period
    recommendations and explainable impacts of staffing changes.
-2. Agile backlog/sprints/releases/reports, docs/wiki, typed custom fields,
+2. Agile backlog/sprints/releases/reports, docs/wiki,
    templates, type-specific transition conditions and declarative automation.
-3. OKRs/portfolio, project budgets/cost/EVM, approved baseline changes and
-   equipment/license readiness. Project-level monetary authorization and actual
-   cost sources must be specified before financial implementation.
+3. Portfolio optimization, equipment/license readiness, accounting/approval
+   integration and foreign exchange. Monthly EVM are available
+   as described below; these later integrations remain roadmap items.
 
-SPH differentiation is the native combination of employee skills, work calendars,
-engagements, asset readiness and approvals. This is not a claim that competitors
-have no equivalent integration. Suggestions never silently assign employees or
+The roadmap targets tighter integration with employee skills, work calendars,
+engagement participation, asset readiness and approvals. Current Projects can
+reference an engagement, but do not implement staffing recommendations, capacity
+planning or automatic asset/approval coordination. The roadmap is not a claim
+that these integrations are already delivered or unique to SPH. Suggestions never silently assign employees or
 change contracts. CI/CD, external guests, external AI and collaborative realtime
 document editing are excluded from the first delivery.
 
 ### Search defaults and unassigned tickets
 
 Project-group simple and advanced searches use the same unset-selection label:
-指定なし / Any. This means no filter and is restored by Clear. The assignee quick
-filter additionally offers 未設定 / Not set: this selects tickets with a NULL
+Any. This means no filter and is restored by Clear. The assignee quick
+filter additionally offers Not set: this selects tickets with a NULL
 assignee ID. Missing or deleted employee records are not treated as NULL IDs.
 The existing `definition.options.assigneeIds` CSV accepts the reserved token
 `unassigned`, only for assignee quick filters. Combining it with employee IDs
@@ -580,3 +702,108 @@ are ANDed. The token survives session restoration and saved filters. Project
 visibility, reference validation, soft-delete filtering and pagination still
 apply. Shared ticket search controls provide this behavior in cross-project and
 individual ticket lists, ticket panels and Gantt pages.
+
+## Editor tabs and selected notification recipients
+
+Project descriptions (creation, editing and overview), ticket descriptions and
+comments use full-width Input/Preview tabs on desktop and mobile. Switching tabs
+keeps the text and image upload state. Widget editing is unchanged.
+
+Ticket creation/editing and comment creation/editing offer a searchable **Users to
+notify** multi-select. Candidates are project members with active, non-retired,
+non-deleted accounts, excluding the author. Selection starts empty, is limited to
+50 entries, and applies only to the current operation; it does not add watchers.
+Failed submissions keep the text and recipients. Successful submissions or
+cancellation clear the selection. Recipient-only changes count as unsaved edits.
+
+Ticket POST/PATCH accepts optional `mentionIds: number[]`, matching the existing
+comment POST/PATCH interface. Project detail members include the identity-safe
+`canReceiveNotifications: boolean`. The server revalidates active membership and
+account eligibility for explicit recipients before saving. Invalid selection
+returns 422 `INVALID_MENTIONS`; missing selection remains backwards compatible.
+
+Existing comment-addition and assignment notifications remain automatic. Selected
+recipients are added without duplicates or self-notifications. Ordinary ticket
+updates and comment edits notify only selected recipients. Creation without an
+assignee uses `project.ticket.created`; ordinary updates use
+`project.ticket.updated`, and comment edits use `project.comment.updated`.
+Assignment and comment-addition events retain their existing types. Notifications
+are committed with the ticket/comment transaction, and target resolution continues
+to enforce access to the ticket. No database migration is required.
+
+
+## Monthly EVM
+
+### Set up execution management
+
+Open a project's **EVM** tab. A project manager with monetary management permission
+can enable EVM from a selected month and choose JPY or USD. Amounts exclude tax.
+Set effective-dated project-wide standard hourly rates, select disjoint ticket
+work packages and allocate each budget across months. Parent and child work
+packages cannot both receive budget in the same baseline. No past opening
+balances or employee-specific salary costs are inferred.
+
+Save a draft or confirm a baseline with a reason. Confirmed baselines are retained;
+changes create another version. Currency and start month are locked after the
+first confirmed baseline. Add ticket expenses and record each work package's
+cumulative monthly progress with evidence. Time-entry costs use the work date and
+the hourly rate effective on that date, rounded per cost line (JPY whole units,
+USD cents). Frozen baseline hierarchy determines the work package attribution.
+Unmapped work, missing rates or unassessed monthly progress block confirmation.
+
+Preview calculations update automatically on initial load, baseline/month selection,
+and saved EVM changes. Review the work-package breakdown, then confirm a completed
+month. Loading and errors are visible; outdated requests cannot replace the current
+selection, and confirmation is disabled until a valid current calculation is ready. Baseline/report confirmation requires dedicated operations, with no second
+approver. Reports preserve the exact source evidence and calculated snapshot.
+Corrections to tickets, time, rates, expenses or progress flag affected reports
+for reconfirmation; a corrected report creates a new version and retains the old
+snapshot. Stale reports are excluded from portfolio totals.
+
+The cumulative PV/EV/AC chart and work-package variances support drill-down,
+keyboard/touch inspection. The data table is always visible in a separate bordered
+section below the chart; no previous/next buttons or inspection hint are shown. CV=EV−AC, SV=EV−PV, CPI=EV/AC and
+SPI=EV/PV. SV is money, not days late. EAC=BAC/CPI is a conditional forecast;
+zero denominators are displayed as unavailable.
+
+### Permissions and REST contract
+
+Operations:
+`projects.financial.read`, `projects.financial.manage`,
+`projects.baselines.confirm`, `projects.evm.confirm`. Monetary and confirmation
+operations default to system administrators only. Existing project membership and manager checks
+still apply; an operation grant alone does not reveal a private project.
+
+REST resources: `/v1/projects/{id}/evm-settings`, `cost-rates`, `expenses`, `baselines`,
+`progress-records`, `evm-preview`, `evm-reports`. Amounts and numeric outcomes
+are decimal strings. Existing ticket/time-entry APIs remain the actual-work
+source. Lists use bounded `offset`/`limit`; revisions reject conflicting writes
+with 409. Baselines, progress and reports append versions; they are not overwritten.
+The fresh-install `m0046` baseline includes project-level EVM and excludes the retired OKR tables and permissions.
+No additional third-party libraries or assets are included.
+
+
+### Optional installation data for EVM
+
+Selecting additional data during a fresh installation also configures the three
+fictional projects (DEVELOP, MIGRATION and WEBSITE) for monthly EVM. Each includes
+a confirmed baseline, five disjoint work packages, monthly budgets, standard hourly
+rates, time entries, expenses, evidence-based progress and three confirmed monthly
+reports. Months are relative to installation: the three most recent completed
+months. All three projects use JPY for Japanese installations and USD for English
+installations, including their budgets, standard hourly rates, expenses and reports.
+
+Open any of the three projects' **EVM** tabs for PV/EV/AC curves, variance
+breakdowns, report evidence and forecasts. Initial administrators can inspect the
+monetary data. These examples are fictional original application data. Both
+Japanese and English installations are supported. Without additional data these
+projects and management records are not created. Existing installations are not
+backfilled by this option.
+
+### Ticket history tab
+
+Ticket details include a History tab with all recorded ticket operations, newest first, including comments, time, checklists and attachments. Content is always visible. Description changes show a plain-text Markdown line diff with added (+) and removed (−) lines. Old records without both descriptions do not infer a diff. Large comparisons fall back to whole changed blocks.
+
+`GET /v1/projects/{project}/tickets/{ticket}/history` uses the existing `projects.read` and project visibility checks, accepts numeric IDs or codes, and returns the project-history shape with standard pagination and `id`/`createdAt` sorting. The default page size is 100 (maximum 500).
+
+Optional installation data includes two description revisions and related comment/checklist history for DEVELOP-0003, MIGRATION-0003 and WEBSITE-0003. Their latest description matches the final recorded revision; the first revision demonstrates unchanged, added and removed Markdown lines and a status change. These records are created only during initial optional-data installation, never backfilled into existing projects.

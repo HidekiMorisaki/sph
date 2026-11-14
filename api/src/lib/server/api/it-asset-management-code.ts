@@ -1,4 +1,4 @@
-import type { Prisma } from '$lib/server/generated/prisma/client';
+import type { Prisma } from '#lib/server/generated/prisma/client.js';
 
 export class ManagementCodeExhaustedError extends Error {
 	constructor() { super('No management codes remain for this type.'); }

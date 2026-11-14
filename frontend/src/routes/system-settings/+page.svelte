@@ -1,37 +1,38 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
- import WorkflowSettings from "$lib/components/workflow/WorkflowSettings.svelte";
- import FormTabs from '$lib/components/FormTabs.svelte';
- import DetailTabs from '$lib/components/DetailTabs.svelte';
- import WidgetSettingsSection from "$lib/components/widgets/WidgetSettingsSection.svelte";
+ import AccountInvitationSettingsSection from '#lib/components/system-settings/AccountInvitationSettingsSection.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
+ import WorkflowSettings from "#lib/components/workflow/WorkflowSettings.svelte";
+ import FormTabs from '#lib/components/FormTabs.svelte';
+ import DetailTabs from '#lib/components/DetailTabs.svelte';
+ import WidgetSettingsSection from "#lib/components/widgets/WidgetSettingsSection.svelte";
 	import { onMount, tick } from 'svelte';
-	import { apiData } from '$lib/api';
-	import AddButton from '$lib/components/AddButton.svelte';
-	import AssetManagementShell from '$lib/components/AssetManagementShell.svelte';
-	import DetailModal from '$lib/components/DetailModal.svelte';
-	import DetailActionButtons from '$lib/components/DetailActionButtons.svelte';
-	import MasterHistorySection from '$lib/components/MasterHistorySection.svelte';
-	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
-	import FormSection from '$lib/components/FormSection.svelte';
-	import MasterList from '$lib/components/MasterList.svelte';
-	import MasterPageHeader from '$lib/components/MasterPageHeader.svelte';
-	import PageTabs from '$lib/components/PageTabs.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import RoleManagementSection from '$lib/components/system-settings/RoleManagementSection.svelte';
-	import FinancialManagementSection from '$lib/components/system-settings/FinancialManagementSection.svelte';
-	import MasterManagementSection from '$lib/components/system-settings/MasterManagementSection.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import RoomBookingSettings from '$lib/components/RoomBookingSettings.svelte';
-	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
-	import {canOperate,type SessionUser} from '$lib/auth';
-	import {scheduleText} from '$lib/schedule-text';
-	import { loadExternalLinks, type ExternalLink } from '$lib/externalLinks';
-	import { formatTimestamp, localization } from '$lib/localization';
-	import { formSnapshot } from '$lib/modalForm';
+	import { apiData } from '#lib/api.js';
+	import AddButton from '#lib/components/AddButton.svelte';
+	import AssetManagementShell from '#lib/components/AssetManagementShell.svelte';
+	import DetailModal from '#lib/components/DetailModal.svelte';
+	import DetailActionButtons from '#lib/components/DetailActionButtons.svelte';
+	import MasterHistorySection from '#lib/components/MasterHistorySection.svelte';
+	import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+	import FormSection from '#lib/components/FormSection.svelte';
+	import MasterList from '#lib/components/MasterList.svelte';
+	import MasterPageHeader from '#lib/components/MasterPageHeader.svelte';
+	import PageTabs from '#lib/components/PageTabs.svelte';
+	import LoadingSpinner from '#lib/components/LoadingSpinner.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import RoleManagementSection from '#lib/components/system-settings/RoleManagementSection.svelte';
+	import FinancialManagementSection from '#lib/components/system-settings/FinancialManagementSection.svelte';
+	import MasterManagementSection from '#lib/components/system-settings/MasterManagementSection.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import RoomBookingSettings from '#lib/components/RoomBookingSettings.svelte';
+	import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+	import {canOperate,type SessionUser} from '#lib/auth.js';
+	import {scheduleText} from '#lib/schedule-text.js';
+	import { loadExternalLinks, type ExternalLink } from '#lib/externalLinks.js';
+	import { formatTimestamp, localization } from '#lib/localization.js';
+	import { formSnapshot } from '#lib/modalForm.js';
 
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { systemSettingError, systemSettingReason } from '$lib/system-setting-errors';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import { systemSettingError, systemSettingReason } from '#lib/system-setting-errors.js';
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings);
 	let common = $derived(localeMessages[$localization.displayLanguage].common);
 	function t(key: Exclude<keyof typeof text, 'monitoring'>, ...values: (string | number)[]) { return formatLocaleTemplate(text[key], ...values); }
@@ -80,6 +81,9 @@
 			if (response.status === 401) { window.location.assign('/'); return; }
 			if (!response.ok) throw new Error();
 			const user = (await apiData<{ user: SessionUser }>(response)).user;
+			// Keep the former invitation tab selection/deep link on its new parent.
+			try { const key='system-settings-tab:'+user.id;if(localStorage.getItem(key)==='account-invitations')localStorage.setItem(key,'other'); } catch { /* Default tab still works when storage is unavailable. */ }
+			if(window.location.hash==='#account-invitations')window.history.replaceState(null,'',window.location.pathname+window.location.search+'#other');
 			sessionUser=user;
 			accessDenied = !user.capabilities.canManageSystemSettings;
 		} catch { loadError = text.loadFailed; }
@@ -191,8 +195,9 @@
 		{:else}
 			{#each notices as message, index}<StatusNotice {message} tone={noticeIsError ? 'error' : 'success'} onDismiss={() => notices = notices.filter((_, noticeIndex) => noticeIndex !== index)} />{/each}
 			<div class="settings-layout">
-				<PageTabs embedded bind:active={activeSection} label={text.sections} idPrefix="system-setting" panelPrefix="" storageKey="system-settings-tab" tabs={[{id:'workflows',label:$localization.displayLanguage==='ja'?'ワークフロー':'Workflows'},{id:'widgets',label:$localization.displayLanguage==='ja'?'ウィジェット':'Widgets'},{id:'roles',label:text.roles},{id:'external-links',label:text.links},{id:'master-management',label:text.masterManagementTab},{id:'financial',label:text.financialTab},...(canOperate(sessionUser,'rooms.update')?[{id:'room-booking',label:bookingText.bookingSettings}]:[])]} />
+				<PageTabs embedded bind:active={activeSection} label={text.sections} idPrefix="system-setting" panelPrefix="" storageKey="system-settings-tab" tabs={[{id:'workflows',label:$localization.displayLanguage==='ja'?'ワークフロー':'Workflows'},{id:'widgets',label:$localization.displayLanguage==='ja'?'ウィジェット':'Widgets'},{id:'roles',label:text.roles},{id:'external-links',label:text.links},{id:'master-management',label:text.masterManagementTab},{id:'financial',label:text.financialTab},...(canOperate(sessionUser,'rooms.update')?[{id:'room-booking',label:bookingText.bookingSettings}]:[]),{id:'other',label:text.otherTab}]} />
 				<div class="settings-content">
+
  <div id="workflows" class="settings-card" role="tabpanel" aria-labelledby="system-setting-workflows-tab" hidden={activeSection!=='workflows'} tabindex="0">{#if workflowsOpened}<WorkflowSettings/>{/if}</div>
  {#if canOperate(sessionUser,'rooms.update')}<div id="room-booking" class="settings-card" role="tabpanel" aria-labelledby="system-setting-room-booking-tab" hidden={activeSection!=='room-booking'} tabindex="0"><section class="app-detail-section"><h3>{bookingText.bookingSettings}</h3><ModalActionButton label={bookingText.bookingSettings} variant="secondary" onclick={event=>{bookingTrigger=event.currentTarget instanceof HTMLElement?event.currentTarget:null;bookingOpen=true;}}/></section></div>{/if}
  <div id="widgets" class="settings-card" role="tabpanel" aria-labelledby="system-setting-widgets-tab" hidden={activeSection !== 'widgets'} tabindex="0"><WidgetSettingsSection /></div>
@@ -202,6 +207,7 @@
 					</div>
 					<div id="master-management" class="settings-card" role="tabpanel" aria-labelledby="system-setting-master-management-tab" hidden={activeSection!=='master-management'} tabindex="0">{#if masterOpened&&sessionUser}<MasterManagementSection user={sessionUser}/>{/if}</div>
  <div id="financial" class="settings-card" role="tabpanel" aria-labelledby="system-setting-financial-tab" hidden={activeSection!=='financial'} tabindex="0">{#if financialOpened}<FinancialManagementSection/>{/if}</div>
+ <div id="other" class="settings-card" role="tabpanel" aria-labelledby="system-setting-other-tab" hidden={activeSection!=='other'} tabindex="0">{#if activeSection==='other'}<AccountInvitationSettingsSection canUpdate={canOperate(sessionUser,'system.invitations.update')}/>{/if}</div>
 				</div>
 			</div>
 		{/if}
@@ -245,7 +251,7 @@
 	.settings-layout{--page-tabs-font-size:var(--font-size-support);--page-tabs-min-height:32px;--page-tabs-padding:10px 12px;--page-tabs-mobile-min-height:44px;--page-tabs-mobile-padding:8px}
 	.settings-content:has(:global(.app-modal-backdrop)){isolation:auto}
 	.settings-layout{background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);box-shadow:var(--shadow)}
-	.settings-card :global(.master-list),.settings-card :global(.financial-settings){border:0;border-radius:0 0 var(--sph-radius-6px) var(--sph-radius-6px);box-shadow:none}
+	.settings-card :global(.master-list),.settings-card :global(.financial-settings),.settings-card :global(.invitation-settings-section){border:0;border-radius:0 0 var(--sph-radius-6px) var(--sph-radius-6px);box-shadow:none}
 	.settings-card :global(.widget-settings > .panel),.settings-card :global(.finance-page > .panel){margin-bottom:0;border:0;border-radius:0 0 var(--sph-radius-6px) var(--sph-radius-6px);box-shadow:none}
 
 	.settings-page{width:100%}.settings-layout{min-width:0}.settings-content{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:0;isolation:isolate}.settings-card{position:relative;min-width:0;min-height:0;scroll-margin-top:72px}.settings-card :global(.master-list){max-height:none}.settings-card :global(.master-header){flex-wrap:wrap}.settings-card :global(th),.settings-card :global(td){padding-right:var(--sph-space-6px);padding-left:var(--sph-space-6px);overflow-wrap:anywhere}.settings-card :global(td:first-child){padding-left:var(--sph-space-10px)}.settings-card :global(.actions-cell){padding-right:var(--sph-space-6px);padding-left:var(--sph-space-2px)}.page-state{padding:var(--sph-space-24px);background:var(--surface);border:1px solid var(--border);border-radius:var(--sph-radius-6px);color:var(--muted)}.detail-link{color:var(--action-primary);overflow-wrap:anywhere}.external-link-dialog{width:min(100%,720px)}.external-link-form-body{grid-template-columns:1fr}.wide{grid-column:1/-1}

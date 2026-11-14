@@ -1,4 +1,4 @@
-# Asset Overview / 資産状況
+# Asset Overview
 
 `/asset-overview` displays current unassigned IT assets in the Dashboard group.
 The existing `/it-assets` page remains the asset management list.

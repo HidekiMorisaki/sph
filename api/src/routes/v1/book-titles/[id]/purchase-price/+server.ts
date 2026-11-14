@@ -1,8 +1,8 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { parseId } from '$lib/server/api/database';
-import { getPrisma } from '$lib/server/prisma';
-import { lookupOpenBdBooks, BookLookupUnavailable } from '$lib/server/api/openbd-book-lookup';
-import { failure, success } from '$lib/server/api/response';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { parseId } from '#lib/server/api/database.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { lookupOpenBdBooks, BookLookupUnavailable } from '#lib/server/api/openbd-book-lookup.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 const limits = new Map<number, { count: number; until: number }>();
 export async function GET({ locals, params, fetch }: import('./$types').RequestEvent) {

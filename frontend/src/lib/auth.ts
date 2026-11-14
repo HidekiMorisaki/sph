@@ -1,4 +1,4 @@
-import type { LocalizationSettings } from '$lib/localization';
+import type { LocalizationSettings } from '#lib/localization.js';
 
 export type Capabilities = {
  canReadFinancialInformation?: boolean;

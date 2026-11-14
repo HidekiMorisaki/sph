@@ -1,12 +1,12 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
-import { requireBranchAccess } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { duplicateField, parseId } from '$lib/server/api/database';
-import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
-import { cpuTypeConflictField, deleteItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput, updateItAssetMaster } from '$lib/server/api/it-asset-masters';
-import { failure, success, throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { requireBranchManagementApi, requireOperationApi } from '#lib/server/api/admin.js';
+import { requireBranchAccess } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { duplicateField, parseId } from '#lib/server/api/database.js';
+import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, isEmployeeMasterResource, masterInput, softDeleteMaster, updateMaster, type EmployeeMasterInput } from '#lib/server/api/employee-masters.js';
+import { cpuTypeConflictField, deleteItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput, updateItAssetMaster } from '#lib/server/api/it-asset-masters.js';
+import { failure, success, throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 function resource(value: string) {
 	if (!isEmployeeMasterResource(value) && !isItAssetMasterResource(value)) throwApiError(404, 'NOT_FOUND', 'The requested API resource was not found.');

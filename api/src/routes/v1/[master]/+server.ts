@@ -1,12 +1,12 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { requireBranchManagementApi, requireOperationApi } from '$lib/server/api/admin';
-import { referenceBranchScope } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, branchSortFields, createMaster, employeeGroupSortFields, isEmployeeMasterResource, listMasters, masterInput, namedMasterSortFields, type EmployeeMasterInput } from '$lib/server/api/employee-masters';
-import { cpuTypeConflictField, cpuTypeSortFields, createItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, listItAssetMasters, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput } from '$lib/server/api/it-asset-masters';
-import { listMeta, parseListQuery, parseSearch } from '$lib/server/api/query';
-import { duplicateField } from '$lib/server/api/database';
-import { failure, success, throwApiError } from '$lib/server/api/response';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { requireBranchManagementApi, requireOperationApi } from '#lib/server/api/admin.js';
+import { referenceBranchScope } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { BranchEmployeeReferenceError, BranchInUseError, EmployeeGroupDepartmentConflictError, EmployeeGroupDepartmentReferenceError, branchSortFields, createMaster, employeeGroupSortFields, isEmployeeMasterResource, listMasters, masterInput, namedMasterSortFields, type EmployeeMasterInput } from '#lib/server/api/employee-masters.js';
+import { cpuTypeConflictField, cpuTypeSortFields, createItAssetMaster, InactiveOperatingSystemVendorError, isItAssetMasterResource, listItAssetMasters, operatingSystemConflictField, operatingSystemNameError, parseItAssetMasterInput } from '#lib/server/api/it-asset-masters.js';
+import { listMeta, parseListQuery, parseSearch } from '#lib/server/api/query.js';
+import { duplicateField } from '#lib/server/api/database.js';
+import { failure, success, throwApiError } from '#lib/server/api/response.js';
 
 function resource(value: string) {
 	if (!isEmployeeMasterResource(value) && !isItAssetMasterResource(value)) throwApiError(404, 'NOT_FOUND', 'The requested API resource was not found.');

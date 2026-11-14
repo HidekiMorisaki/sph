@@ -1,9 +1,9 @@
-import { requireSystemAdminApi, writeAuditLog } from '$lib/server/api/admin';
-import { requireBranchAccess } from '$lib/server/api/branch-access';
-import { hasPermissionOperation, permissionOperations } from '$lib/server/auth/permissions';
-import { ensureBojRates, financialSettings, parseYear, periodMonths } from '$lib/server/api/financial';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireSystemAdminApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { requireBranchAccess } from '#lib/server/api/branch-access.js';
+import { hasPermissionOperation, permissionOperations } from '#lib/server/auth/permissions.js';
+import { ensureBojRates, financialSettings, parseYear, periodMonths } from '#lib/server/api/financial.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function PUT({ locals, params, request }: import('./$types').RequestEvent) {
 	requireSystemAdminApi(locals.user);

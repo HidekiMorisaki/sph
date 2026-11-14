@@ -1,7 +1,7 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { requireBranchManagementApi, requireMasterManagementApi } from '$lib/server/api/admin';
-import { isLocationOrderResource, parseLocationOrder, reorderLocations, LocationOrderConflictError } from '$lib/server/api/location-order';
-import { failure, success } from '$lib/server/api/response';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { requireBranchManagementApi, requireMasterManagementApi } from '#lib/server/api/admin.js';
+import { isLocationOrderResource, parseLocationOrder, reorderLocations, LocationOrderConflictError } from '#lib/server/api/location-order.js';
+import { failure, success } from '#lib/server/api/response.js';
 
 export async function PUT({ params, request, locals }: import('./$types').RequestEvent) {
 	requireSystemAdminApi(locals.user);

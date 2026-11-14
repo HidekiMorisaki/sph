@@ -1,10 +1,10 @@
 import { Lexer, type Token, type Tokens } from 'marked';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
-import { requireOperationApi, writeAuditLog } from '$lib/server/api/admin';
-import { success, throwApiError } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
-import { attachmentType } from '$lib/server/workflow/attachment';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
+import { requireOperationApi, writeAuditLog } from '#lib/server/api/admin.js';
+import { success, throwApiError } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { attachmentType } from '#lib/server/workflow/attachment.js';
 import { access } from './service';
 import { parseTicketCode,projectCodePattern } from './codes';
 

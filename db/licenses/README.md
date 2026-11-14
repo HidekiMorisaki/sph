@@ -1,8 +1,10 @@
 # PostgreSQL runtime security rebuild
 
-PostgreSQL remains 16.15 on the digest-pinned Alpine 3.24 image. No schema or
+PostgreSQL remains 16.16 on the digest-pinned Alpine 3.24 image. No schema or
 migration changes are made. gosu 1.19 is rebuilt from the original source using
-Go 1.26.10, with unchanged moby/sys/user 0.1.0 and x/sys 0.1.0 dependencies.
+Go 1.26.11. SPH changes only its module selection to moby/sys/user 0.4.1,
+which bounds passwd/group parsing; x/sys remains 0.1.0. The exact go.mod/go.sum
+are retained under `gosu/`. No gosu or module executable source is modified.
 Their Apache 2.0/BSD/patent originals and Go's license/patent originals are
 retained in `gosu-1.19.txt`. The build checks module integrity and verifies the
 version and privilege change to nobody. The original database entry point is
@@ -25,4 +27,7 @@ unrelated findings. The XML boundary harness must pass the patched source and
 fail against the original source; PostgreSQL XML/xpath and a complete private
 backup restore must pass before normal-local container recreation.
 
-Image redistribution remains outside the source-only release scope.
+The additional runtime originals and exact source hashes are recorded in
+`runtime-manifest.json`. zlib is 1.4, krb5-libs 1.22.3 and libxslt 1.1.43-r4.
+The full common review and redistribution boundary are in
+`../../licenses/runtime/README.md`. No unavailable OpenSSL update is claimed.

@@ -1,5 +1,5 @@
-FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS development
-RUN apk add --no-cache 'zlib>=1.3.2-r1' \
+FROM node:22.23.5-alpine3.24@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS development
+RUN apk add --no-cache 'zlib>=1.4-r0' \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/pnpm /usr/local/bin/pnpx
 
@@ -7,6 +7,8 @@ ENV TZ=Asia/Tokyo
 WORKDIR /app
 COPY api/package*.json api/.npmrc ./
 COPY LICENSE /LICENSE
+COPY licenses/runtime/ /licenses/runtime/
+COPY licenses/build-native/ /licenses/build-native/
 COPY vendor/npm/ /vendor/npm/
 RUN node /vendor/npm/prepare.mjs
 RUN node /vendor/npm/install.mjs
@@ -24,8 +26,8 @@ RUN rm -rf /vendor /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/c
  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/pnpm /usr/local/bin/pnpx
 CMD ["node", "scripts/migrate-and-initialize.mjs"]
 
-FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS production
-RUN apk add --no-cache 'zlib>=1.3.2-r1' \
+FROM node:22.23.5-alpine3.24@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS production
+RUN apk add --no-cache 'zlib>=1.4-r0' \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/pnpm /usr/local/bin/pnpx
 
@@ -35,6 +37,8 @@ ENV TZ=Asia/Tokyo
 WORKDIR /app
 COPY api/package*.json api/.npmrc ./
 COPY LICENSE /LICENSE
+COPY licenses/runtime/ /licenses/runtime/
+COPY licenses/build-native/ /licenses/build-native/
 COPY vendor/npm/ /vendor/npm/
 RUN node /vendor/npm/prepare.mjs
 RUN node /vendor/npm/install.mjs --omit=dev --omit=optional \

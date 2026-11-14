@@ -19,8 +19,8 @@ An image-build assertion rejects Prisma CLI and @prisma/dev in that runtime;
 the independent migration/build toolchain remains a separate license-review
 boundary. Keep original licenses with any installed packages and review formats
 that extract or bundle code separately. `sql-escaper` and `fast-uri` have no runtime
-dependencies. Excluding optional peers does not approve redistribution of the
-migration/build image or resolve the historical license residuals.
+dependencies. Current prepared sources exclude the historical unresolved candidates;
+see the supplemental manifest and reviewed toolchain records.
 
 The mysql2 3.24.6 archive integrity and both original license texts are retained in
 [`api/licenses/dependency-mysql2.txt`](../api/licenses/dependency-mysql2.txt),

@@ -1,14 +1,14 @@
-import { receivePurchaseCopies } from '$lib/server/api/book-purchases';
-import { purchaseMoney } from '$lib/server/api/purchase-money';
-import { writeAuditLog, requireOperationApi } from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { businessDate, lockBookQueue, reconcileBookQueue } from '$lib/server/api/book-circulation';
-import { BookInputError, bookErrorResponse, contentHash, dateField, nextBookCode, objectBody, optionalText, positiveId, recordBookChange } from '$lib/server/api/books';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success, throwApiError } from '$lib/server/api/response';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { hasOwnBranchPermissionOperation, hasPermissionOperation } from '$lib/server/auth/permissions';
-import { getPrisma } from '$lib/server/prisma';
+import { receivePurchaseCopies } from '#lib/server/api/book-purchases.js';
+import { purchaseMoney } from '#lib/server/api/purchase-money.js';
+import { writeAuditLog, requireOperationApi } from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { businessDate, lockBookQueue, reconcileBookQueue } from '#lib/server/api/book-circulation.js';
+import { BookInputError, bookErrorResponse, contentHash, dateField, nextBookCode, objectBody, optionalText, positiveId, recordBookChange } from '#lib/server/api/books.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success, throwApiError } from '#lib/server/api/response.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { hasOwnBranchPermissionOperation, hasPermissionOperation } from '#lib/server/auth/permissions.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 type CopyInput = { storageId: number; status: 'available' | 'unavailable'; notes: string | null; copyCode: string | null; purchaseAmount: string; purchaseCurrency: string };
 

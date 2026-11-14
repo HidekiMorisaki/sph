@@ -1,9 +1,9 @@
-import { calendarQuery } from '$lib/server/schedule/query';
-import { requireOperationApi } from '$lib/server/api/admin';
-import { success,throwApiError } from '$lib/server/api/response';
-import { parseListQuery,listMeta } from '$lib/server/api/query';
-import { getPrisma } from '$lib/server/prisma';
-import { occurrenceInclude,present } from '$lib/server/schedule/service';
+import { calendarQuery } from '#lib/server/schedule/query.js';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { success,throwApiError } from '#lib/server/api/response.js';
+import { parseListQuery,listMeta } from '#lib/server/api/query.js';
+import { getPrisma } from '#lib/server/prisma.js';
+import { occurrenceInclude,present } from '#lib/server/schedule/service.js';
 
 export async function GET({locals,url}:import('./$types').RequestEvent) {
  const actor=requireOperationApi(locals.user,'schedule.read'),q=parseListQuery(url,['startsAt'],'startsAt'),f=calendarQuery(url,actor.id,actor.timeZone);

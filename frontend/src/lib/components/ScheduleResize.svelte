@@ -1,8 +1,8 @@
 <script lang="ts">
  import { onMount,untrack } from 'svelte';
- import { scheduleRequest,ScheduleRequestError,type ScheduleItem } from '$lib/schedule';
- import { scheduleText } from '$lib/schedule-text';
- import { localization } from '$lib/localization';
+ import { scheduleRequest,ScheduleRequestError,type ScheduleItem } from '#lib/schedule.js';
+ import { scheduleText } from '#lib/schedule-text.js';
+ import { localization } from '#lib/localization.js';
  import DetailModal from './DetailModal.svelte';
  import ModalActionButton from './ModalActionButton.svelte';
  let {item,end,returnFocus,onClose,onSaved,onError}:{item:ScheduleItem;end:string;returnFocus:HTMLElement|null;onClose:()=>void;onSaved:()=>Promise<void>;onError:(message:string)=>void}=$props();

@@ -1,17 +1,17 @@
 <script lang="ts">
- import IconActionButton from '$lib/components/IconActionButton.svelte';
+ import IconActionButton from '#lib/components/IconActionButton.svelte';
 	import { onMount, tick, untrack } from 'svelte';
-	import DiscardChangesDialog from '$lib/components/DiscardChangesDialog.svelte';
-	import FormSection from '$lib/components/FormSection.svelte';
-	import ModalBackdrop from '$lib/components/ModalBackdrop.svelte';
-	import ModalActionButton from '$lib/components/ModalActionButton.svelte';
-	import SearchSelect from '$lib/components/SearchSelect.svelte';
-	import StatusNotice from '$lib/components/StatusNotice.svelte';
-	import { apiData } from '$lib/api';
-	import { localization } from '$lib/localization';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import { calendarErrorKey } from '$lib/work-calendar-errors';
-	import { formSnapshot } from '$lib/modalForm';
+	import DiscardChangesDialog from '#lib/components/DiscardChangesDialog.svelte';
+	import FormSection from '#lib/components/FormSection.svelte';
+	import ModalBackdrop from '#lib/components/ModalBackdrop.svelte';
+	import ModalActionButton from '#lib/components/ModalActionButton.svelte';
+	import SearchSelect from '#lib/components/SearchSelect.svelte';
+	import StatusNotice from '#lib/components/StatusNotice.svelte';
+	import { apiData } from '#lib/api.js';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import { calendarErrorKey } from '#lib/work-calendar-errors.js';
+	import { formSnapshot } from '#lib/modalForm.js';
 
 	export type WorkCalendarEntry = { id: number; workDate: string; entryType: 'working_day' | 'company_holiday'; title: string; note: string | null };
 

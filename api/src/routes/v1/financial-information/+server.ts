@@ -1,11 +1,11 @@
-import {requireSystemAdminApi} from '$lib/server/api/admin';
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { convertAmount, financialSettings, monthKey, parseYear, periodMonths, roundedAmount, type Currency } from '$lib/server/api/financial';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import { getPrisma } from '$lib/server/prisma';
+import {requireSystemAdminApi} from '#lib/server/api/admin.js';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { convertAmount, financialSettings, monthKey, parseYear, periodMonths, roundedAmount, type Currency } from '#lib/server/api/financial.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const sortFields = ['branchName', 'id'] as const;
 

@@ -1,8 +1,8 @@
 <script lang="ts">
  import {DateTime} from 'luxon';
- import {localization} from '$lib/localization';
- import {automaticGanttPeriod,validGanttPeriod,type GanttPeriod} from '$lib/project-gantt-period';
- import type {Ticket} from '$lib/projects';
+ import {localization} from '#lib/localization.js';
+ import {automaticGanttPeriod,validGanttPeriod,type GanttPeriod} from '#lib/project-gantt-period.js';
+ import type {Ticket} from '#lib/projects.js';
  import DatePicker from '../DatePicker.svelte';
  import ActionButton from '../ActionButton.svelte';
  let {tickets,onapply}:{tickets:Ticket[];onapply:(period:GanttPeriod|null)=>void}=$props();

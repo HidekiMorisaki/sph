@@ -1,6 +1,6 @@
 import {ticketSorts} from '../projects/ticket-search-registry';
-import { Prisma } from '$lib/server/generated/prisma/client';
-import type { AuthenticatedUser } from '$lib/server/auth/types';
+import { Prisma } from '#lib/server/generated/prisma/client.js';
+import type { AuthenticatedUser } from '#lib/server/auth/types.js';
 import { employeeReferenceDate } from './employee-derived';
 import { contextScope, contextsFor, operationScope, operatorsFor, type SearchTarget, type SearchField, type SearchContext } from './search-registry';
 import { throwApiError } from './response';
@@ -41,7 +41,7 @@ function validScalar(field: SearchField, value: unknown): string | number | bool
  if(field.choices&&!field.choices.includes(value))invalidSearch(field.code);
  return value.trim();
 }
-function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,depth: number,state: {rules:number;nodes:number},context: SearchContext): SearchNode {
+function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,depth: number,state: {rules:number;nodes:number},context: SearchContext,contexts:SearchContext[]): SearchNode {
  if(depth>3||++state.nodes>150)invalidSearch('conditions');
  const body=searchObject(value);
  if(body.kind==='group'){
@@ -50,12 +50,12 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
   let active=context;
   if(body.context!==undefined){
    if(depth===0||context.from||typeof body.context!=='string')invalidSearch('context');
-   const found=contextsFor(target).find(ctx=>ctx.code===body.context&&ctx.from); if(!found)invalidSearch('context');active=found;
+   const found=contexts.find(ctx=>ctx.code===body.context&&ctx.from); if(!found)invalidSearch('context');active=found;
    if(!['some','none'].includes(String(body.match)))invalidSearch('match');
    contextScope(active,user,target);
   }else if(body.match!==undefined)invalidSearch('match');
   if(depth>0&&!body.children.length&&body.context===undefined)invalidSearch('conditions');
-  return {kind:'group',mode:body.mode as 'all'|'any',...(body.context!==undefined?{context:active.code,match:body.match as 'some'|'none'}:{}),children:body.children.map(node=>parseNode(node,target,user,depth+1,state,active))};
+  return {kind:'group',mode:body.mode as 'all'|'any',...(body.context!==undefined?{context:active.code,match:body.match as 'some'|'none'}:{}),children:body.children.map(node=>parseNode(node,target,user,depth+1,state,active,contexts))};
  }
  keys(body,['kind','field','operator','value']);
  if(body.kind!=='rule'||++state.rules>50||typeof body.field!=='string'||typeof body.operator!=='string')invalidSearch('conditions');
@@ -67,7 +67,7 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
   if(!Array.isArray(body.value)||body.value.length!==2||body.value.some(v=>typeof v!=='number'||!Number.isSafeInteger(v)||Math.abs(v)>36500)||body.value[0]>body.value[1])invalidSearch(field.code);
   rule.value=body.value;return rule;
  }
- if(['between','in','notIn'].includes(body.operator)){
+ if(['between','in','allIn','notIn'].includes(body.operator)){
   if(!Array.isArray(body.value)||!body.value.length||body.value.length>100||(body.operator==='between'&&body.value.length!==2))invalidSearch(field.code);
   const values=body.value.map(item=>validScalar(field,item));
   if(values.some(v=>typeof v==='boolean'))invalidSearch(field.code);
@@ -76,22 +76,22 @@ function parseNode(value: unknown,target: SearchTarget,user: AuthenticatedUser,d
  }
  rule.value=validScalar(field,body.value);return rule;
 }
-export function parseSearchDefinition(value: unknown,target: SearchTarget,user: AuthenticatedUser): SearchDefinition {
+export function parseSearchDefinition(value: unknown,target: SearchTarget,user: AuthenticatedUser,contexts=contextsFor(target)): SearchDefinition {
  const body=searchObject(value);keys(body,['schemaVersion','keyword','conditions','sortBy','sortOrder','limit','options']);
  if(body.schemaVersion!==1||typeof body.keyword!=='string'||body.keyword.length>500)invalidSearch('keyword');
- const sorts: readonly string[]=target==='projectTickets'?ticketSorts:target==='projects'?['id','code','name','status','visibility','createdAt','updatedAt']:isBusinessTarget(target)?businessSorts[target]:target==='workflows'?['id','title','status','createdAt','updatedAt']:target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
+ const sorts: readonly string[]=target==='projectMembers'?['employeeCode','firstName','lastName']:target==='projectTickets'?ticketSorts:target==='projects'?['id','code','name','status','visibility','createdAt','updatedAt']:isBusinessTarget(target)?businessSorts[target]:target==='workflows'?['id','title','status','createdAt','updatedAt']:target==='employees'?employeeSorts:target==='assets'?assetSorts:bookSorts;
  if(typeof body.sortBy!=='string'||!sorts.includes(body.sortBy)||!['asc','desc'].includes(String(body.sortOrder)))invalidSearch('sort');
  if(body.sortBy==='teams')operationScope(user,'teams.read');
  if(typeof body.limit!=='number'||!Number.isInteger(body.limit)||body.limit<1||body.limit>500)invalidSearch('limit');
  const options=searchObject(body.options??{});
- keys(options,target==='projectTickets'?['projectIds','assigneeIds','typeIds','statusIds','categories']:target==='projects'||isBusinessTarget(target)?[]:target==='workflows'?['view','statuses','applicantIds','approverIds','finalApproverIds','currentAssigneeIds','includeHistory']:target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
+ keys(options,target==='projectMembers'?[]:target==='projectTickets'?['projectIds','assigneeIds','typeIds','statusIds','categories']:target==='projects'||isBusinessTarget(target)?[]:target==='workflows'?['view','statuses','applicantIds','approverIds','finalApproverIds','currentAssigneeIds','templateIds','includeHistory']:target==='employees'?['includeRetired','includeDeleted','branchIds','teamIds','skillIds','skillMode','minProficiency','participationStatus','endingWithinDays']:target==='assets'?['typeIds','branchId','unassigned']:['purchaseRequests']);
  for(const [key,val] of Object.entries(options)){
   if(['includeHistory','includeRetired','includeDeleted','purchaseRequests','unassigned'].includes(key)){if(typeof val!=='boolean')invalidSearch(key);}
   else if(typeof val!=='string'||val.length>1000)invalidSearch(key);
  }
  if(options.skillIds)operationScope(user,'skills.read');
  if(options.participationStatus||options.endingWithinDays)operationScope(user,'engagements.read');
- const conditions=parseNode(body.conditions,target,user,0,{rules:0,nodes:0},contextsFor(target)[0]);
+ const conditions=parseNode(body.conditions,target,user,0,{rules:0,nodes:0},contexts[0],contexts);
  if(conditions.kind!=='group')invalidSearch('conditions');
  if(conditions.children.length&&options.includeDeleted===true)invalidSearch('includeDeleted');
  return {schemaVersion:1,keyword:body.keyword.trim(),conditions,sortBy:body.sortBy,sortOrder:body.sortOrder as 'asc'|'desc',limit:body.limit,options:options as SearchDefinition['options']};
@@ -109,6 +109,14 @@ function scalarSql(field:SearchField,value:string|number|boolean):Prisma.Sql {
  return Prisma.sql`${value}`;
 }
 function ruleSql(rule:SearchRule,field:SearchField,user:AuthenticatedUser):Prisma.Sql {
+ if(field.custom?.multiple){
+  const raw=Prisma.raw(field.custom.value),values=(rule.value??[]) as string[];
+  const exists=Prisma.sql`(${raw} IS NOT NULL AND jsonb_array_length(${raw})>0)`;
+  if(rule.operator==='set')return exists;if(rule.operator==='unset')return Prisma.sql`NOT (${exists})`;
+  const tests=values.map(v=>Prisma.sql`${raw} @> ${JSON.stringify([Number(v)])}::jsonb`);
+  const matched=Prisma.sql`(${Prisma.join(tests,rule.operator==='allIn'?' AND ':' OR ')})`;
+  return rule.operator==='notIn'?Prisma.sql`NOT COALESCE(${matched},false)`:matched;
+ }
  const raw=field.source==='derived.teamMemberCount'?teamMemberCount(user):Prisma.sql`(${Prisma.raw(field.expression)})`, value=rule.value!;
  const column=field.type==='string'||field.type==='choice'?Prisma.sql`lower((${raw})::text)`:raw;
  const normalize=(value:string|number|boolean)=>scalarSql(field,typeof value==='string'&&['string','choice'].includes(field.type)?value.toLowerCase():value);
@@ -130,14 +138,13 @@ function ruleSql(rule:SearchRule,field:SearchField,user:AuthenticatedUser):Prism
  const expr=Prisma.sql`${column} ${Prisma.raw(operators[rule.operator])} ${normalize(value as string|number|boolean)}`;
  return rule.operator==='ne'?Prisma.sql`NOT COALESCE((${expr}),false)`:expr;
 }
-export function compileSearchConditions(definition:SearchDefinition,target:SearchTarget,user:AuthenticatedUser):Prisma.Sql {
- const contexts=contextsFor(target);
+export function compileSearchConditions(definition:SearchDefinition,target:SearchTarget,user:AuthenticatedUser,contexts=contextsFor(target)):Prisma.Sql {
  function compile(node:SearchNode,context:SearchContext):Prisma.Sql {
   if(node.kind==='rule'){
    const field=context.fields.find(f=>f.code===node.field)!;
    const scope=field.operation?operationScope(user,field.operation):null;
    const guard=scope===null?Prisma.sql`true`:Prisma.sql`${Prisma.raw(context.branch!)}=${scope}`;
-   return Prisma.sql`(${guard} AND (${ruleSql(node,field,user)}))`;
+   return Prisma.sql`(${guard} AND ${field.custom?Prisma.raw('('+field.custom.guard+')'):Prisma.sql`true`} AND (${ruleSql(node,field,user)}))`;
   }
   const active=node.context?contexts.find(ctx=>ctx.code===node.context)!:context;
   const children=node.children.map(child=>compile(child,active));

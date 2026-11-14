@@ -34,7 +34,9 @@ for (const project of ['api', 'frontend']) {
  const manifest = JSON.stringify({ project, packagesWithoutRootNotice: missing, entries: entries.map(({ text, ...e }) => e) }, null, 2) + '\n';
  const manifestPath = join(root, project, 'licenses/distribution-manifest.json');
  if (check) {
-  if (await readFile(output, 'utf8') !== notice || await readFile(manifestPath, 'utf8') !== manifest) throw Error('Distribution notices differ: ' + project);
+  // Checkout line endings may differ; source hashes in the exact manifest still
+  // verify the original upstream bytes. Never rewrite originals to pass this check.
+  if ((await readFile(output, 'utf8')).replaceAll('\r\n', '\n') !== notice.replaceAll('\r\n', '\n') || await readFile(manifestPath, 'utf8') !== manifest) throw Error('Distribution notices differ: ' + project);
  } else { await writeFile(output, notice); await writeFile(manifestPath, manifest); }
  console.log(JSON.stringify({ project, retainedOriginalFiles: entries.length, packagesWithoutRootNotice: missing }));
 }

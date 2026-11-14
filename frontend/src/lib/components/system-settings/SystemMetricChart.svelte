@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { localization } from '$lib/localization';
-	import { localeMessages } from '$lib/locale-messages';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages } from '#lib/locale-messages.js';
 	let { title, points, percent = false }: { title: string; points: Array<{ at: string; average: number | null; maximum: number | null; samples: number }>; percent?: boolean } = $props();
 	let text = $derived(localeMessages[$localization.displayLanguage].systemSettings.monitoring);
 	let selected = $state<number | null>(null);

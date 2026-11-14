@@ -1,5 +1,5 @@
 import apiReasons from './settings-api-reasons.json';
-import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '$lib/locale-messages';
+import { formatLocaleTemplate, localeMessages, type MessageLanguage } from '#lib/locale-messages.js';
 
 // Keep protocol reasons and local message keys in state, translating at render time.
 export function settingsFieldError(reason: string, language: MessageLanguage): string {

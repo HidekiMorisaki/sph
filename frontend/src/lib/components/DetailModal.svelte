@@ -2,7 +2,7 @@
 	import { onMount, tick, type Snippet } from 'svelte';
 	import ModalBackdrop from './ModalBackdrop.svelte';
 	import ModalHeader from './ModalHeader.svelte';
-	import { rememberDetailReturn, takeDetailReturn, forgetDetailReturn } from '$lib/detail-modal-return';
+	import { rememberDetailReturn, takeDetailReturn, forgetDetailReturn } from '#lib/detail-modal-return.js';
 
 	let {
 		title,

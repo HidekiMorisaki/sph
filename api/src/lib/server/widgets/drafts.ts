@@ -1,8 +1,8 @@
-import {getPrisma} from '$lib/server/prisma';
-import {Prisma} from '$lib/server/generated/prisma/client';
-import {requireOperationApi,requireSystemAdminApi,writeAuditLog} from '$lib/server/api/admin';
-import {throwApiError} from '$lib/server/api/response';
-import type {AuthenticatedUser} from '$lib/server/auth/types';
+import {getPrisma} from '#lib/server/prisma.js';
+import {Prisma} from '#lib/server/generated/prisma/client.js';
+import {requireOperationApi,requireSystemAdminApi,writeAuditLog} from '#lib/server/api/admin.js';
+import {throwApiError} from '#lib/server/api/response.js';
+import type {AuthenticatedUser} from '#lib/server/auth/types.js';
 export function draftActor(user:AuthenticatedUser|null,op:'read'|'create'|'update'|'delete'){
  requireSystemAdminApi(user);requireOperationApi(user,'widgets.read');return requireOperationApi(user,`widgets.drafts.${op}`);
 }

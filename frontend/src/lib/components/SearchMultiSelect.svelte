@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { localization } from '$lib/localization';
-	import { localeMessages, formatLocaleTemplate } from '$lib/locale-messages';
-	import {searchMessages} from '$lib/search';
+	import { localization } from '#lib/localization.js';
+	import { localeMessages, formatLocaleTemplate } from '#lib/locale-messages.js';
+	import {searchMessages} from '#lib/search.js';
 	import { tick } from 'svelte';
 
 	let commonText = $derived(localeMessages[$localization.displayLanguage].common);

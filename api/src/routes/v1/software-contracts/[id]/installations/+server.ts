@@ -1,10 +1,10 @@
-import { requireOperationApi } from '$lib/server/api/admin';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { parseBodyId, parseId } from '$lib/server/api/database';
-import { bodyObject, dateInput, fieldsOnly, optionalText, recordSoftwareChange } from '$lib/server/api/software';
-import { listMeta, parseListQuery } from '$lib/server/api/query';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireOperationApi } from '#lib/server/api/admin.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { parseBodyId, parseId } from '#lib/server/api/database.js';
+import { bodyObject, dateInput, fieldsOnly, optionalText, recordSoftwareChange } from '#lib/server/api/software.js';
+import { listMeta, parseListQuery } from '#lib/server/api/query.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 const day = () => new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
 

@@ -1,9 +1,9 @@
-import { requireScopedOperationApi } from '$lib/server/api/branch-access';
-import { permissionOperations } from '$lib/server/auth/permissions';
-import { ManagementCodeExhaustedError, formatManagementCode } from '$lib/server/api/it-asset-management-code';
-import { itAssetErrorResponse } from '$lib/server/api/it-asset-errors';
-import { failure, success } from '$lib/server/api/response';
-import { getPrisma } from '$lib/server/prisma';
+import { requireScopedOperationApi } from '#lib/server/api/branch-access.js';
+import { permissionOperations } from '#lib/server/auth/permissions.js';
+import { ManagementCodeExhaustedError, formatManagementCode } from '#lib/server/api/it-asset-management-code.js';
+import { itAssetErrorResponse } from '#lib/server/api/it-asset-errors.js';
+import { failure, success } from '#lib/server/api/response.js';
+import { getPrisma } from '#lib/server/prisma.js';
 
 export async function GET({ locals, url }: import('./$types').RequestEvent) {
 	requireScopedOperationApi(locals.user, permissionOperations.assetManagement);
